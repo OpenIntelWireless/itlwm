@@ -108,6 +108,8 @@
 #include "ieee80211_mira.h"
 #include "ieee80211_radiotap.h"
 
+#include <IOKit/network/IOMbufMemoryCursor.h>
+
 struct iwm_rx_radiotap_header {
 	struct ieee80211_radiotap_header wr_ihdr;
 	uint64_t	wr_tsft;
@@ -165,20 +167,24 @@ enum iwm_ucode_type {
 	IWM_UCODE_TYPE_MAX
 };
 
+struct iwm_fw_onesect {
+    void *fws_data;
+    uint32_t fws_len;
+    uint32_t fws_devoff;
+};
+
+struct iwm_fw_sects {
+    struct iwm_fw_onesect fw_sect[IWM_UCODE_SECT_MAX];
+    size_t fw_totlen;
+    int fw_count;
+};
+
 struct iwm_fw_info {
 	void *fw_rawdata;
 	size_t fw_rawsize;
 	int fw_status;
 
-	struct iwm_fw_sects {
-		struct iwm_fw_onesect {
-			void *fws_data;
-			uint32_t fws_len;
-			uint32_t fws_devoff;
-		} fw_sect[IWM_UCODE_SECT_MAX];
-		size_t fw_totlen;
-		int fw_count;
-	} fw_sects[IWM_UCODE_TYPE_MAX];
+	struct iwm_fw_sects fw_sects[IWM_UCODE_TYPE_MAX];
 };
 
 struct iwm_nvm_data {
@@ -232,12 +238,10 @@ struct iwm_host_cmd {
  */
 
 struct iwm_dma_info {
-	bus_dma_tag_t		tag;
-	bus_dmamap_t		map;
-	bus_dma_segment_t	seg;
-	bus_addr_t		paddr;
-	void 			*vaddr;
-	bus_size_t		size;
+	IOBufferMemoryDescriptor* buffer;
+    bus_addr_t        paddr;
+    void             *vaddr;
+    bus_size_t        size;
 };
 
 #define IWM_TX_RING_COUNT	256
@@ -245,12 +249,12 @@ struct iwm_dma_info {
 #define IWM_TX_RING_HIMARK	224
 
 struct iwm_tx_data {
-	bus_dmamap_t	map;
-	bus_addr_t	cmd_paddr;
-	bus_addr_t	scratch_paddr;
-	struct mbuf	*m;
-	struct iwm_node *in;
-	int done;
+	bus_dmamap_t    map;
+    bus_addr_t    cmd_paddr;
+    bus_addr_t    scratch_paddr;
+    mbuf_t m;
+    struct iwm_node *in;
+    int done;
 };
 
 struct iwm_tx_ring {
@@ -270,7 +274,7 @@ struct iwm_tx_ring {
 #define IWM_RBUF_SIZE		4096
 
 struct iwm_rx_data {
-	struct mbuf	*m;
+	mbuf_t m;
 	bus_dmamap_t	map;
 };
 
@@ -383,7 +387,7 @@ struct iwm_softc {
 	bus_dma_tag_t sc_dmat;
 	pci_chipset_tag_t sc_pct;
 	pcitag_t sc_pcitag;
-	const void *sc_ih;
+	IOInterruptEventSource *sc_ih;
 
 	/* TX scheduler rings. */
 	struct iwm_dma_info		sched_dma;
@@ -526,3 +530,21 @@ struct iwm_node {
 #define IWM_ICT_SIZE		4096
 #define IWM_ICT_COUNT		(IWM_ICT_SIZE / sizeof (uint32_t))
 #define IWM_ICT_PADDR_SHIFT	12
+
+struct pci_matchid {
+    int        pm_vid;
+    int    pm_pid;
+};
+
+static inline int
+pci_matchbyid(int vid, int pid, const struct pci_matchid *ids, int nent)
+{
+    const struct pci_matchid *pm;
+    int i;
+
+    for (i = 0, pm = ids; i < nent; i++, pm++)
+        if (vid == pm->pm_vid &&
+            pid == pm->pm_pid)
+            return (1);
+    return (0);
+}

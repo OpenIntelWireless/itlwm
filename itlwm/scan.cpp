@@ -1,0 +1,707 @@
+//
+//  scan.cpp
+//  itlwm
+//
+//  Created by 钟先耀 on 2020/2/19.
+//  Copyright © 2020 钟先耀. All rights reserved.
+//
+
+#include "itlwm.hpp"
+
+uint16_t itlwm::
+iwm_scan_rx_chain(struct iwm_softc *sc)
+{
+    uint16_t rx_chain;
+    uint8_t rx_ant;
+
+    rx_ant = iwm_fw_valid_rx_ant(sc);
+    rx_chain = rx_ant << IWM_PHY_RX_CHAIN_VALID_POS;
+    rx_chain |= rx_ant << IWM_PHY_RX_CHAIN_FORCE_MIMO_SEL_POS;
+    rx_chain |= rx_ant << IWM_PHY_RX_CHAIN_FORCE_SEL_POS;
+    rx_chain |= 0x1 << IWM_PHY_RX_CHAIN_DRIVER_FORCE_POS;
+    return htole16(rx_chain);
+}
+
+uint32_t itlwm::
+iwm_scan_rate_n_flags(struct iwm_softc *sc, int flags, int no_cck)
+{
+    uint32_t tx_ant;
+    int i, ind;
+
+    for (i = 0, ind = sc->sc_scan_last_antenna;
+        i < IWM_RATE_MCS_ANT_NUM; i++) {
+        ind = (ind + 1) % IWM_RATE_MCS_ANT_NUM;
+        if (iwm_fw_valid_tx_ant(sc) & (1 << ind)) {
+            sc->sc_scan_last_antenna = ind;
+            break;
+        }
+    }
+    tx_ant = (1 << sc->sc_scan_last_antenna) << IWM_RATE_MCS_ANT_POS;
+
+    if ((flags & IEEE80211_CHAN_2GHZ) && !no_cck)
+        return htole32(IWM_RATE_1M_PLCP | IWM_RATE_MCS_CCK_MSK |
+                   tx_ant);
+    else
+        return htole32(IWM_RATE_6M_PLCP | tx_ant);
+}
+
+uint8_t itlwm::
+iwm_lmac_scan_fill_channels(struct iwm_softc *sc,
+    struct iwm_scan_channel_cfg_lmac *chan, int n_ssids, int bgscan)
+{
+    struct ieee80211com *ic = &sc->sc_ic;
+    struct ieee80211_channel *c;
+    uint8_t nchan;
+
+    for (nchan = 0, c = &ic->ic_channels[1];
+        c <= &ic->ic_channels[IEEE80211_CHAN_MAX] &&
+        nchan < sc->sc_capa_n_scan_channels;
+        c++) {
+        if (c->ic_flags == 0)
+            continue;
+
+        chan->channel_num = htole16(ieee80211_mhz2ieee(c->ic_freq, 0));
+        chan->iter_count = htole16(1);
+        chan->iter_interval = 0;
+        chan->flags = htole32(IWM_UNIFIED_SCAN_CHANNEL_PARTIAL);
+        if (n_ssids != 0 && !bgscan)
+            chan->flags |= htole32(1 << 1); /* select SSID 0 */
+        chan++;
+        nchan++;
+    }
+
+    return nchan;
+}
+
+uint8_t itlwm::
+iwm_umac_scan_fill_channels(struct iwm_softc *sc,
+    struct iwm_scan_channel_cfg_umac *chan, int n_ssids, int bgscan)
+{
+    struct ieee80211com *ic = &sc->sc_ic;
+    struct ieee80211_channel *c;
+    uint8_t nchan;
+
+    for (nchan = 0, c = &ic->ic_channels[1];
+        c <= &ic->ic_channels[IEEE80211_CHAN_MAX] &&
+        nchan < sc->sc_capa_n_scan_channels;
+        c++) {
+        if (c->ic_flags == 0)
+            continue;
+
+        chan->channel_num = ieee80211_mhz2ieee(c->ic_freq, 0);
+        chan->iter_count = 1;
+        chan->iter_interval = htole16(0);
+        if (n_ssids != 0 && !bgscan)
+            chan->flags = htole32(1 << 0); /* select SSID 0 */
+        chan++;
+        nchan++;
+    }
+
+    return nchan;
+}
+
+int itlwm::
+iwm_fill_probe_req(struct iwm_softc *sc, struct iwm_scan_probe_req *preq)
+{
+    struct ieee80211com *ic = &sc->sc_ic;
+    struct ifnet *ifp = IC2IFP(ic);
+    struct ieee80211_frame *wh = (struct ieee80211_frame *)preq->buf;
+    struct ieee80211_rateset *rs;
+    size_t remain = sizeof(preq->buf);
+    uint8_t *frm, *pos;
+
+    memset(preq, 0, sizeof(*preq));
+
+    if (remain < sizeof(*wh) + 2 + ic->ic_des_esslen)
+        return ENOBUFS;
+
+    /*
+     * Build a probe request frame.  Most of the following code is a
+     * copy & paste of what is done in net80211.
+     */
+    wh->i_fc[0] = IEEE80211_FC0_VERSION_0 | IEEE80211_FC0_TYPE_MGT |
+        IEEE80211_FC0_SUBTYPE_PROBE_REQ;
+    wh->i_fc[1] = IEEE80211_FC1_DIR_NODS;
+//    IEEE80211_ADDR_COPY(ic->ic_myaddr, LLADDR(ifp->if_sadl));
+    IEEE80211_ADDR_COPY(wh->i_addr1, etherbroadcastaddr);
+    IEEE80211_ADDR_COPY(wh->i_addr2, ic->ic_myaddr);
+    IEEE80211_ADDR_COPY(wh->i_addr3, etherbroadcastaddr);
+    *(uint16_t *)&wh->i_dur[0] = 0;    /* filled by HW */
+    *(uint16_t *)&wh->i_seq[0] = 0;    /* filled by HW */
+
+    frm = (uint8_t *)(wh + 1);
+    frm = ieee80211_add_ssid(frm, ic->ic_des_essid, ic->ic_des_esslen);
+
+    /* Tell the firmware where the MAC header is. */
+    preq->mac_header.offset = 0;
+    preq->mac_header.len = htole16(frm - (uint8_t *)wh);
+    remain -= frm - (uint8_t *)wh;
+
+    /* Fill in 2GHz IEs and tell firmware where they are. */
+    rs = &ic->ic_sup_rates[IEEE80211_MODE_11G];
+    if (rs->rs_nrates > IEEE80211_RATE_SIZE) {
+        if (remain < 4 + rs->rs_nrates)
+            return ENOBUFS;
+    } else if (remain < 2 + rs->rs_nrates)
+        return ENOBUFS;
+    preq->band_data[0].offset = htole16(frm - (uint8_t *)wh);
+    pos = frm;
+    frm = ieee80211_add_rates(frm, rs);
+    if (rs->rs_nrates > IEEE80211_RATE_SIZE)
+        frm = ieee80211_add_xrates(frm, rs);
+    preq->band_data[0].len = htole16(frm - pos);
+    remain -= frm - pos;
+
+    if (isset(sc->sc_enabled_capa,
+        IWM_UCODE_TLV_CAPA_DS_PARAM_SET_IE_SUPPORT)) {
+        if (remain < 3)
+            return ENOBUFS;
+        *frm++ = IEEE80211_ELEMID_DSPARMS;
+        *frm++ = 1;
+        *frm++ = 0;
+        remain -= 3;
+    }
+
+    if (sc->sc_nvm.sku_cap_band_52GHz_enable) {
+        /* Fill in 5GHz IEs. */
+        rs = &ic->ic_sup_rates[IEEE80211_MODE_11A];
+        if (rs->rs_nrates > IEEE80211_RATE_SIZE) {
+            if (remain < 4 + rs->rs_nrates)
+                return ENOBUFS;
+        } else if (remain < 2 + rs->rs_nrates)
+            return ENOBUFS;
+        preq->band_data[1].offset = htole16(frm - (uint8_t *)wh);
+        pos = frm;
+        frm = ieee80211_add_rates(frm, rs);
+        if (rs->rs_nrates > IEEE80211_RATE_SIZE)
+            frm = ieee80211_add_xrates(frm, rs);
+        preq->band_data[1].len = htole16(frm - pos);
+        remain -= frm - pos;
+    }
+
+    /* Send 11n IEs on both 2GHz and 5GHz bands. */
+    preq->common_data.offset = htole16(frm - (uint8_t *)wh);
+    pos = frm;
+    if (ic->ic_flags & IEEE80211_F_HTON) {
+        if (remain < 28)
+            return ENOBUFS;
+        frm = ieee80211_add_htcaps(frm, ic);
+        /* XXX add WME info? */
+    }
+    preq->common_data.len = htole16(frm - pos);
+
+    return 0;
+}
+
+int itlwm::
+iwm_lmac_scan(struct iwm_softc *sc, int bgscan)
+{
+    struct ieee80211com *ic = &sc->sc_ic;
+    struct iwm_host_cmd hcmd = {
+        .id = IWM_SCAN_OFFLOAD_REQUEST_CMD,
+        .len = { 0, },
+        .data = { NULL, },
+        .flags = 0,
+    };
+    struct iwm_scan_req_lmac *req;
+    size_t req_len;
+    int err, async = bgscan;
+
+    req_len = sizeof(struct iwm_scan_req_lmac) +
+        (sizeof(struct iwm_scan_channel_cfg_lmac) *
+        sc->sc_capa_n_scan_channels) + sizeof(struct iwm_scan_probe_req);
+    if (req_len > IWM_MAX_CMD_PAYLOAD_SIZE)
+        return ENOMEM;
+    req = (struct iwm_scan_req_lmac*)malloc(req_len, M_DEVBUF, M_NOWAIT);
+    if (req == NULL)
+        return ENOMEM;
+    bzero(req, req_len);
+
+    hcmd.len[0] = (uint16_t)req_len;
+    hcmd.data[0] = (void *)req;
+    hcmd.flags |= async ? IWM_CMD_ASYNC : 0;
+
+    /* These timings correspond to iwlwifi's UNASSOC scan. */
+    req->active_dwell = 10;
+    req->passive_dwell = 110;
+    req->fragmented_dwell = 44;
+    req->extended_dwell = 90;
+    if (bgscan) {
+        req->max_out_time = htole32(120);
+        req->suspend_time = htole32(120);
+    } else {
+        req->max_out_time = htole32(0);
+        req->suspend_time = htole32(0);
+    }
+    req->scan_prio = htole32(IWM_SCAN_PRIORITY_HIGH);
+    req->rx_chain_select = iwm_scan_rx_chain(sc);
+    req->iter_num = htole32(1);
+    req->delay = 0;
+
+    req->scan_flags = htole32(IWM_LMAC_SCAN_FLAG_PASS_ALL |
+        IWM_LMAC_SCAN_FLAG_ITER_COMPLETE |
+        IWM_LMAC_SCAN_FLAG_EXTENDED_DWELL);
+    if (ic->ic_des_esslen == 0)
+        req->scan_flags |= htole32(IWM_LMAC_SCAN_FLAG_PASSIVE);
+    else
+        req->scan_flags |=
+            htole32(IWM_LMAC_SCAN_FLAG_PRE_CONNECTION);
+    if (isset(sc->sc_enabled_capa,
+        IWM_UCODE_TLV_CAPA_DS_PARAM_SET_IE_SUPPORT))
+        req->scan_flags |= htole32(IWM_LMAC_SCAN_FLAGS_RRM_ENABLED);
+
+    req->flags = htole32(IWM_PHY_BAND_24);
+    if (sc->sc_nvm.sku_cap_band_52GHz_enable)
+        req->flags |= htole32(IWM_PHY_BAND_5);
+    req->filter_flags =
+        htole32(IWM_MAC_FILTER_ACCEPT_GRP | IWM_MAC_FILTER_IN_BEACON);
+
+    /* Tx flags 2 GHz. */
+    req->tx_cmd[0].tx_flags = htole32(IWM_TX_CMD_FLG_SEQ_CTL |
+        IWM_TX_CMD_FLG_BT_DIS);
+    req->tx_cmd[0].rate_n_flags =
+        iwm_scan_rate_n_flags(sc, IEEE80211_CHAN_2GHZ, 1/*XXX*/);
+    req->tx_cmd[0].sta_id = IWM_AUX_STA_ID;
+
+    /* Tx flags 5 GHz. */
+    req->tx_cmd[1].tx_flags = htole32(IWM_TX_CMD_FLG_SEQ_CTL |
+        IWM_TX_CMD_FLG_BT_DIS);
+    req->tx_cmd[1].rate_n_flags =
+        iwm_scan_rate_n_flags(sc, IEEE80211_CHAN_5GHZ, 1/*XXX*/);
+    req->tx_cmd[1].sta_id = IWM_AUX_STA_ID;
+
+    /* Check if we're doing an active directed scan. */
+    if (ic->ic_des_esslen != 0) {
+        req->direct_scan[0].id = IEEE80211_ELEMID_SSID;
+        req->direct_scan[0].len = ic->ic_des_esslen;
+        memcpy(req->direct_scan[0].ssid, ic->ic_des_essid,
+            ic->ic_des_esslen);
+    }
+
+    req->n_channels = iwm_lmac_scan_fill_channels(sc,
+        (struct iwm_scan_channel_cfg_lmac *)req->data,
+        ic->ic_des_esslen != 0, bgscan);
+
+    err = iwm_fill_probe_req(sc,
+                (struct iwm_scan_probe_req *)(req->data +
+                (sizeof(struct iwm_scan_channel_cfg_lmac) *
+                sc->sc_capa_n_scan_channels)));
+    if (err) {
+        free(req, M_DEVBUF, req_len);
+        return err;
+    }
+
+    /* Specify the scan plan: We'll do one iteration. */
+    req->schedule[0].iterations = 1;
+    req->schedule[0].full_scan_mul = 1;
+
+    /* Disable EBS. */
+    req->channel_opt[0].non_ebs_ratio = 1;
+    req->channel_opt[1].non_ebs_ratio = 1;
+
+    err = iwm_send_cmd(sc, &hcmd);
+    free(req, M_DEVBUF, req_len);
+    return err;
+}
+
+int itlwm::
+iwm_config_umac_scan(struct iwm_softc *sc)
+{
+    struct ieee80211com *ic = &sc->sc_ic;
+    struct iwm_scan_config *scan_config;
+    int err, nchan;
+    size_t cmd_size;
+    struct ieee80211_channel *c;
+    struct iwm_host_cmd hcmd = {
+        .id = iwm_cmd_id(IWM_SCAN_CFG_CMD, IWM_ALWAYS_LONG_GROUP, 0),
+        .flags = 0,
+    };
+    static const uint32_t rates = (IWM_SCAN_CONFIG_RATE_1M |
+        IWM_SCAN_CONFIG_RATE_2M | IWM_SCAN_CONFIG_RATE_5M |
+        IWM_SCAN_CONFIG_RATE_11M | IWM_SCAN_CONFIG_RATE_6M |
+        IWM_SCAN_CONFIG_RATE_9M | IWM_SCAN_CONFIG_RATE_12M |
+        IWM_SCAN_CONFIG_RATE_18M | IWM_SCAN_CONFIG_RATE_24M |
+        IWM_SCAN_CONFIG_RATE_36M | IWM_SCAN_CONFIG_RATE_48M |
+        IWM_SCAN_CONFIG_RATE_54M);
+
+    cmd_size = sizeof(*scan_config) + sc->sc_capa_n_scan_channels;
+
+    scan_config = (struct iwm_scan_config*)malloc(cmd_size, M_DEVBUF, M_WAIT);
+    if (scan_config == NULL)
+        return ENOMEM;
+    bzero(scan_config, cmd_size);
+
+    scan_config->tx_chains = htole32(iwm_fw_valid_tx_ant(sc));
+    scan_config->rx_chains = htole32(iwm_fw_valid_rx_ant(sc));
+    scan_config->legacy_rates = htole32(rates |
+        IWM_SCAN_CONFIG_SUPPORTED_RATE(rates));
+
+    /* These timings correspond to iwlwifi's UNASSOC scan. */
+    scan_config->dwell_active = 10;
+    scan_config->dwell_passive = 110;
+    scan_config->dwell_fragmented = 44;
+    scan_config->dwell_extended = 90;
+    scan_config->out_of_channel_time = htole32(0);
+    scan_config->suspend_time = htole32(0);
+
+    IEEE80211_ADDR_COPY(scan_config->mac_addr, sc->sc_ic.ic_myaddr);
+
+    scan_config->bcast_sta_id = IWM_AUX_STA_ID;
+    scan_config->channel_flags = IWM_CHANNEL_FLAG_EBS |
+        IWM_CHANNEL_FLAG_ACCURATE_EBS | IWM_CHANNEL_FLAG_EBS_ADD |
+        IWM_CHANNEL_FLAG_PRE_SCAN_PASSIVE2ACTIVE;
+
+    for (c = &ic->ic_channels[1], nchan = 0;
+        c <= &ic->ic_channels[IEEE80211_CHAN_MAX] &&
+        nchan < sc->sc_capa_n_scan_channels; c++) {
+        if (c->ic_flags == 0)
+            continue;
+        scan_config->channel_array[nchan++] =
+            ieee80211_mhz2ieee(c->ic_freq, 0);
+    }
+
+    scan_config->flags = htole32(IWM_SCAN_CONFIG_FLAG_ACTIVATE |
+        IWM_SCAN_CONFIG_FLAG_ALLOW_CHUB_REQS |
+        IWM_SCAN_CONFIG_FLAG_SET_TX_CHAINS |
+        IWM_SCAN_CONFIG_FLAG_SET_RX_CHAINS |
+        IWM_SCAN_CONFIG_FLAG_SET_AUX_STA_ID |
+        IWM_SCAN_CONFIG_FLAG_SET_ALL_TIMES |
+        IWM_SCAN_CONFIG_FLAG_SET_LEGACY_RATES |
+        IWM_SCAN_CONFIG_FLAG_SET_MAC_ADDR |
+        IWM_SCAN_CONFIG_FLAG_SET_CHANNEL_FLAGS|
+        IWM_SCAN_CONFIG_N_CHANNELS(nchan) |
+        IWM_SCAN_CONFIG_FLAG_CLEAR_FRAGMENTED);
+
+    hcmd.data[0] = scan_config;
+    hcmd.len[0] = cmd_size;
+
+    err = iwm_send_cmd(sc, &hcmd);
+    free(scan_config, M_DEVBUF, cmd_size);
+    return err;
+}
+
+int itlwm::
+iwm_umac_scan(struct iwm_softc *sc, int bgscan)
+{
+    struct ieee80211com *ic = &sc->sc_ic;
+    struct iwm_host_cmd hcmd = {
+        .id = iwm_cmd_id(IWM_SCAN_REQ_UMAC, IWM_ALWAYS_LONG_GROUP, 0),
+        .len = { 0, },
+        .data = { NULL, },
+        .flags =0,
+    };
+    struct iwm_scan_req_umac *req;
+    struct iwm_scan_req_umac_tail *tail;
+    size_t req_len;
+    int err, async = bgscan;
+
+    req_len = sizeof(struct iwm_scan_req_umac) +
+        (sizeof(struct iwm_scan_channel_cfg_umac) *
+        sc->sc_capa_n_scan_channels) +
+        sizeof(struct iwm_scan_req_umac_tail);
+    if (req_len > IWM_MAX_CMD_PAYLOAD_SIZE)
+        return ENOMEM;
+    req = (struct iwm_scan_req_umac*)malloc(req_len, M_DEVBUF, M_NOWAIT);
+    if (req == NULL)
+        return ENOMEM;
+    bzero(req, req_len);
+
+    hcmd.len[0] = (uint16_t)req_len;
+    hcmd.data[0] = (void *)req;
+    hcmd.flags |= async ? IWM_CMD_ASYNC : 0;
+
+    /* These timings correspond to iwlwifi's UNASSOC scan. */
+    req->active_dwell = 10;
+    req->passive_dwell = 110;
+    req->fragmented_dwell = 44;
+    req->extended_dwell = 90;
+    if (bgscan) {
+        req->max_out_time = htole32(120);
+        req->suspend_time = htole32(120);
+    } else {
+        req->max_out_time = htole32(0);
+        req->suspend_time = htole32(0);
+    }
+
+    req->scan_priority = htole32(IWM_SCAN_PRIORITY_HIGH);
+    req->ooc_priority = htole32(IWM_SCAN_PRIORITY_HIGH);
+
+    req->n_channels = iwm_umac_scan_fill_channels(sc,
+        (struct iwm_scan_channel_cfg_umac *)req->data,
+        ic->ic_des_esslen != 0, bgscan);
+
+    req->general_flags = htole32(IWM_UMAC_SCAN_GEN_FLAGS_PASS_ALL |
+        IWM_UMAC_SCAN_GEN_FLAGS_ITER_COMPLETE |
+        IWM_UMAC_SCAN_GEN_FLAGS_EXTENDED_DWELL);
+
+    tail = (struct iwm_scan_req_umac_tail *)&req->data +
+        sizeof(struct iwm_scan_channel_cfg_umac) *
+            sc->sc_capa_n_scan_channels;
+
+    /* Check if we're doing an active directed scan. */
+    if (ic->ic_des_esslen != 0) {
+        tail->direct_scan[0].id = IEEE80211_ELEMID_SSID;
+        tail->direct_scan[0].len = ic->ic_des_esslen;
+        memcpy(tail->direct_scan[0].ssid, ic->ic_des_essid,
+            ic->ic_des_esslen);
+        req->general_flags |=
+            htole32(IWM_UMAC_SCAN_GEN_FLAGS_PRE_CONNECT);
+    } else
+        req->general_flags |= htole32(IWM_UMAC_SCAN_GEN_FLAGS_PASSIVE);
+
+    if (isset(sc->sc_enabled_capa,
+        IWM_UCODE_TLV_CAPA_DS_PARAM_SET_IE_SUPPORT))
+        req->general_flags |=
+            htole32(IWM_UMAC_SCAN_GEN_FLAGS_RRM_ENABLED);
+
+    err = iwm_fill_probe_req(sc, &tail->preq);
+    if (err) {
+        free(req, M_DEVBUF, req_len);
+        return err;
+    }
+
+    /* Specify the scan plan: We'll do one iteration. */
+    tail->schedule[0].interval = 0;
+    tail->schedule[0].iter_count = 1;
+
+    err = iwm_send_cmd(sc, &hcmd);
+    free(req, M_DEVBUF, req_len);
+    return err;
+}
+
+uint8_t itlwm::
+iwm_ridx2rate(struct ieee80211_rateset *rs, int ridx)
+{
+    int i;
+    uint8_t rval;
+
+    for (i = 0; i < rs->rs_nrates; i++) {
+        rval = (rs->rs_rates[i] & IEEE80211_RATE_VAL);
+        if (rval == iwm_rates[ridx].rate)
+            return rs->rs_rates[i];
+    }
+
+    return 0;
+}
+
+int itlwm::
+iwm_rval2ridx(int rval)
+{
+    int ridx;
+
+    for (ridx = 0; ridx < nitems(iwm_rates); ridx++) {
+        if (iwm_rates[ridx].plcp == IWM_RATE_INVM_PLCP)
+            continue;
+        if (rval == iwm_rates[ridx].rate)
+            break;
+    }
+
+       return ridx;
+}
+
+void itlwm::
+iwm_ack_rates(struct iwm_softc *sc, struct iwm_node *in, int *cck_rates,
+    int *ofdm_rates)
+{
+    struct ieee80211_node *ni = &in->in_ni;
+    struct ieee80211_rateset *rs = &ni->ni_rates;
+    int lowest_present_ofdm = -1;
+    int lowest_present_cck = -1;
+    uint8_t cck = 0;
+    uint8_t ofdm = 0;
+    int i;
+
+    if (ni->ni_chan == IEEE80211_CHAN_ANYC ||
+        IEEE80211_IS_CHAN_2GHZ(ni->ni_chan)) {
+        for (i = IWM_FIRST_CCK_RATE; i < IWM_FIRST_OFDM_RATE; i++) {
+            if ((iwm_ridx2rate(rs, i) & IEEE80211_RATE_BASIC) == 0)
+                continue;
+            cck |= (1 << i);
+            if (lowest_present_cck == -1 || lowest_present_cck > i)
+                lowest_present_cck = i;
+        }
+    }
+    for (i = IWM_FIRST_OFDM_RATE; i <= IWM_LAST_NON_HT_RATE; i++) {
+        if ((iwm_ridx2rate(rs, i) & IEEE80211_RATE_BASIC) == 0)
+            continue;
+        ofdm |= (1 << (i - IWM_FIRST_OFDM_RATE));
+        if (lowest_present_ofdm == -1 || lowest_present_ofdm > i)
+            lowest_present_ofdm = i;
+    }
+
+    /*
+     * Now we've got the basic rates as bitmaps in the ofdm and cck
+     * variables. This isn't sufficient though, as there might not
+     * be all the right rates in the bitmap. E.g. if the only basic
+     * rates are 5.5 Mbps and 11 Mbps, we still need to add 1 Mbps
+     * and 6 Mbps because the 802.11-2007 standard says in 9.6:
+     *
+     *    [...] a STA responding to a received frame shall transmit
+     *    its Control Response frame [...] at the highest rate in the
+     *    BSSBasicRateSet parameter that is less than or equal to the
+     *    rate of the immediately previous frame in the frame exchange
+     *    sequence ([...]) and that is of the same modulation class
+     *    ([...]) as the received frame. If no rate contained in the
+     *    BSSBasicRateSet parameter meets these conditions, then the
+     *    control frame sent in response to a received frame shall be
+     *    transmitted at the highest mandatory rate of the PHY that is
+     *    less than or equal to the rate of the received frame, and
+     *    that is of the same modulation class as the received frame.
+     *
+     * As a consequence, we need to add all mandatory rates that are
+     * lower than all of the basic rates to these bitmaps.
+     */
+
+    if (IWM_RATE_24M_INDEX < lowest_present_ofdm)
+        ofdm |= IWM_RATE_BIT_MSK(24) >> IWM_FIRST_OFDM_RATE;
+    if (IWM_RATE_12M_INDEX < lowest_present_ofdm)
+        ofdm |= IWM_RATE_BIT_MSK(12) >> IWM_FIRST_OFDM_RATE;
+    /* 6M already there or needed so always add */
+    ofdm |= IWM_RATE_BIT_MSK(6) >> IWM_FIRST_OFDM_RATE;
+
+    /*
+     * CCK is a bit more complex with DSSS vs. HR/DSSS vs. ERP.
+     * Note, however:
+     *  - if no CCK rates are basic, it must be ERP since there must
+     *    be some basic rates at all, so they're OFDM => ERP PHY
+     *    (or we're in 5 GHz, and the cck bitmap will never be used)
+     *  - if 11M is a basic rate, it must be ERP as well, so add 5.5M
+     *  - if 5.5M is basic, 1M and 2M are mandatory
+     *  - if 2M is basic, 1M is mandatory
+     *  - if 1M is basic, that's the only valid ACK rate.
+     * As a consequence, it's not as complicated as it sounds, just add
+     * any lower rates to the ACK rate bitmap.
+     */
+    if (IWM_RATE_11M_INDEX < lowest_present_cck)
+        cck |= IWM_RATE_BIT_MSK(11) >> IWM_FIRST_CCK_RATE;
+    if (IWM_RATE_5M_INDEX < lowest_present_cck)
+        cck |= IWM_RATE_BIT_MSK(5) >> IWM_FIRST_CCK_RATE;
+    if (IWM_RATE_2M_INDEX < lowest_present_cck)
+        cck |= IWM_RATE_BIT_MSK(2) >> IWM_FIRST_CCK_RATE;
+    /* 1M already there or needed so always add */
+    cck |= IWM_RATE_BIT_MSK(1) >> IWM_FIRST_CCK_RATE;
+
+    *cck_rates = cck;
+    *ofdm_rates = ofdm;
+}
+
+int itlwm::
+iwm_scan(struct iwm_softc *sc)
+{
+    struct ieee80211com *ic = &sc->sc_ic;
+    struct ifnet *ifp = IC2IFP(ic);
+    int err;
+
+    if (sc->sc_flags & IWM_FLAG_BGSCAN) {
+        err = iwm_scan_abort(sc);
+        if (err) {
+            printf("%s: could not abort background scan\n",
+                DEVNAME(sc));
+            return err;
+        }
+    }
+
+    if (isset(sc->sc_enabled_capa, IWM_UCODE_TLV_CAPA_UMAC_SCAN))
+        err = iwm_umac_scan(sc, 0);
+    else
+        err = iwm_lmac_scan(sc, 0);
+    if (err) {
+        printf("%s: could not initiate scan\n", DEVNAME(sc));
+        return err;
+    }
+
+    /*
+     * The current mode might have been fixed during association.
+     * Ensure all channels get scanned.
+     */
+    if (IFM_MODE(ic->ic_media.ifm_cur->ifm_media) == IFM_AUTO)
+        ieee80211_setmode(ic, IEEE80211_MODE_AUTO);
+
+    sc->sc_flags |= IWM_FLAG_SCANNING;
+    if (ifp->if_flags & IFF_DEBUG)
+        printf("%s: %s -> %s\n", ifp->if_xname,
+            ieee80211_state_name[ic->ic_state],
+            ieee80211_state_name[IEEE80211_S_SCAN]);
+    if ((sc->sc_flags & IWM_FLAG_BGSCAN) == 0) {
+        ieee80211_set_link_state(ic, LINK_STATE_DOWN);
+        ieee80211_node_cleanup(ic, ic->ic_bss);
+    }
+    ic->ic_state = IEEE80211_S_SCAN;
+    iwm_led_blink_start(sc);
+    wakeup(&ic->ic_state); /* wake iwm_init() */
+
+    return 0;
+}
+
+int itlwm::
+iwm_bgscan(struct ieee80211com *ic)
+{
+    struct iwm_softc *sc = (struct iwm_softc *)IC2IFP(ic)->if_softc;
+    int err;
+
+    if (sc->sc_flags & IWM_FLAG_SCANNING)
+        return 0;
+
+    if (isset(sc->sc_enabled_capa, IWM_UCODE_TLV_CAPA_UMAC_SCAN))
+        err = iwm_umac_scan(sc, 1);
+    else
+        err = iwm_lmac_scan(sc, 1);
+    if (err) {
+        printf("%s: could not initiate scan\n", DEVNAME(sc));
+        return err;
+    }
+
+    sc->sc_flags |= IWM_FLAG_BGSCAN;
+    return 0;
+}
+
+int itlwm::
+iwm_umac_scan_abort(struct iwm_softc *sc)
+{
+    struct iwm_umac_scan_abort cmd = { 0 };
+
+    return iwm_send_cmd_pdu(sc,
+        IWM_WIDE_ID(IWM_ALWAYS_LONG_GROUP, IWM_SCAN_ABORT_UMAC),
+        0, sizeof(cmd), &cmd);
+}
+
+int itlwm::
+iwm_lmac_scan_abort(struct iwm_softc *sc)
+{
+    struct iwm_host_cmd cmd = {
+        .id = IWM_SCAN_OFFLOAD_ABORT_CMD,
+    };
+    int err, status;
+
+    err = iwm_send_cmd_status(sc, &cmd, (uint32_t*)&status);
+    if (err)
+        return err;
+
+    if (status != IWM_CAN_ABORT_STATUS) {
+        /*
+         * The scan abort will return 1 for success or
+         * 2 for "failure".  A failure condition can be
+         * due to simply not being in an active scan which
+         * can occur if we send the scan abort before the
+         * microcode has notified us that a scan is completed.
+         */
+        return EBUSY;
+    }
+
+    return 0;
+}
+
+int itlwm::
+iwm_scan_abort(struct iwm_softc *sc)
+{
+    int err;
+
+    if (isset(sc->sc_enabled_capa, IWM_UCODE_TLV_CAPA_UMAC_SCAN))
+        err = iwm_umac_scan_abort(sc);
+    else
+        err = iwm_lmac_scan_abort(sc);
+
+    if (err == 0)
+        sc->sc_flags &= ~(IWM_FLAG_SCANNING | IWM_FLAG_BGSCAN);
+    return err;
+}

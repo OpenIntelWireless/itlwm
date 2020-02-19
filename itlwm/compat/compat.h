@@ -34,6 +34,22 @@
 #define BUS_DMA_COHERENT	0
 #define BUS_DMA_READ		0
 
+static __inline uint64_t
+SEC_TO_NSEC(uint64_t seconds)
+{
+    if (seconds > UINT64_MAX / 1000000000ULL)
+        return UINT64_MAX;
+    return seconds * 1000000000ULL;
+}
+
+static __inline uint64_t
+MSEC_TO_NSEC(uint64_t milliseconds)
+{
+    if (milliseconds > UINT64_MAX / 1000000ULL)
+        return UINT64_MAX;
+    return milliseconds * 1000000ULL;
+}
+
 enum {
 	BUS_DMASYNC_PREREAD,
 	BUS_DMASYNC_PREWRITE,
@@ -109,6 +125,7 @@ void		pci_intr_disestablish(pci_chipset_tag_t pc, void *ih);
 
 uint32_t	bus_space_read_4(bus_space_tag_t space, bus_space_handle_t handle, bus_size_t offset);
 void		bus_space_write_4(bus_space_tag_t space, bus_space_handle_t handle, bus_size_t offset, uint32_t value);
+void bus_space_write_1(bus_space_tag_t space, bus_space_handle_t handle, bus_size_t offset, uint8_t value);
 void		bus_space_barrier(bus_space_tag_t space, bus_space_handle_t handle, bus_size_t offset, bus_size_t length, int flags);
 
 int		bus_dmamap_create(bus_dma_tag_t tag, bus_size_t size, int nsegments, bus_size_t maxsegsz, bus_size_t boundary, int flags, bus_dmamap_t *dmamp);

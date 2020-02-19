@@ -123,6 +123,10 @@ uint32_t bus_space_read_4(bus_space_tag_t space, bus_space_handle_t handle, bus_
 	return *((uint32_t*)(handle + offset));
 }
 
+void bus_space_write_1(bus_space_tag_t space, bus_space_handle_t handle, bus_size_t offset, uint8_t value) {
+    *((uint8_t*)(handle + offset)) = value;
+}
+
 void bus_space_write_4(bus_space_tag_t space, bus_space_handle_t handle, bus_size_t offset, uint32_t value) {
 	*((uint32_t*)(handle + offset)) = value;
 }

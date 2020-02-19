@@ -20,16 +20,17 @@
 	<string>1</string>
 	<key>IOKitPersonalities</key>
 	<dict>
-		<key>CFBundleIdentifier</key>
-		<string>com.zxystd.itlwm</string>
-		<key>IOClass</key>
-		<string>itlwm</string>
-		<key>IOPCIPrimaryMatch</key>
-		<string>0x00008086&amp;0x0000ffff</string>
-		<key>IOProviderClass</key>
-		<string>IOPCIDevice</string>
 		<key>itlwm</key>
-		<dict/>
+		<dict>
+			<key>CFBundleIdentifier</key>
+			<string>com.zxystd.itlwm</string>
+			<key>IOClass</key>
+			<string>itlwm</string>
+			<key>IOPCIPrimaryMatch</key>
+			<string>0x00008086&amp;0x0000ffff</string>
+			<key>IOProviderClass</key>
+			<string>IOPCIDevice</string>
+		</dict>
 	</dict>
 	<key>NSHumanReadableCopyright</key>
 	<string>Copyright © 2020 钟先耀. All rights reserved.</string>

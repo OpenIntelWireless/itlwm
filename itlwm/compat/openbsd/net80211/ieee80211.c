@@ -61,8 +61,6 @@
 int	ieee80211_debug = 0;
 #endif
 
-///compat for undefined symbols
-/*
 int _stop(struct kmod_info*, void*) {
     IOLog("_stop(struct kmod_info*, void*) has been invoked\n");
     return 0;
@@ -71,8 +69,6 @@ int _start(struct kmod_info*, void*) {
     IOLog("_start(struct kmod_info*, void*) has been invoked\n");
     return 0;
 };
- */
-///
 
 int ieee80211_cache_size = IEEE80211_CACHE_SIZE;
 
