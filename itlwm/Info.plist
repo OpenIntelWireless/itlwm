@@ -19,10 +19,34 @@
 	<key>CFBundleVersion</key>
 	<string>1</string>
 	<key>IOKitPersonalities</key>
-	<dict/>
+	<dict>
+		<key>CFBundleIdentifier</key>
+		<string>com.zxystd.itlwm</string>
+		<key>IOClass</key>
+		<string>itlwm</string>
+		<key>IOPCIPrimaryMatch</key>
+		<string>0x00008086&amp;0x0000ffff</string>
+		<key>IOProviderClass</key>
+		<string>IOPCIDevice</string>
+		<key>itlwm</key>
+		<dict/>
+	</dict>
 	<key>NSHumanReadableCopyright</key>
 	<string>Copyright © 2020 钟先耀. All rights reserved.</string>
 	<key>OSBundleLibraries</key>
-	<dict/>
+	<dict>
+		<key>com.apple.iokit.IONetworkingFamily</key>
+		<string>3.2</string>
+		<key>com.apple.iokit.IOPCIFamily</key>
+		<string>2.9</string>
+		<key>com.apple.kpi.bsd</key>
+		<string>16.7</string>
+		<key>com.apple.kpi.iokit</key>
+		<string>16.7</string>
+		<key>com.apple.kpi.libkern</key>
+		<string>16.7</string>
+		<key>com.apple.kpi.mach</key>
+		<string>16.7</string>
+	</dict>
 </dict>
 </plist>
