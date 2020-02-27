@@ -61,6 +61,7 @@
 int	ieee80211_debug = 0;
 #endif
 
+///compat for undefined symbols
 int _stop(struct kmod_info*, void*) {
     IOLog("_stop(struct kmod_info*, void*) has been invoked\n");
     return 0;
@@ -69,6 +70,7 @@ int _start(struct kmod_info*, void*) {
     IOLog("_start(struct kmod_info*, void*) has been invoked\n");
     return 0;
 };
+///
 
 int ieee80211_cache_size = IEEE80211_CACHE_SIZE;
 
@@ -164,6 +166,7 @@ ieee80211_channel_init(struct ifnet *ifp)
 void
 ieee80211_ifattach(struct ifnet *ifp)
 {
+    IOLog("ieee80211_ifattach\n");
     struct ieee80211com *ic = (struct ieee80211com *)ifp;
     
     memcpy(((struct arpcom *)ifp)->ac_enaddr, ic->ic_myaddr,
@@ -197,7 +200,7 @@ ieee80211_ifattach(struct ifnet *ifp)
     //	if_addgroup(ifp, "wlan");
     //	ifp->if_priority = IF_WIRELESS_DEFAULT_PRIORITY;
     
-    //	ieee80211_set_link_state(ic, LINK_STATE_DOWN);
+    ieee80211_set_link_state(ic, LINK_STATE_DOWN);
     
     timeout_set(&ic->ic_bgscan_timeout, ieee80211_bgscan_timeout, ifp);
 }
@@ -205,13 +208,14 @@ ieee80211_ifattach(struct ifnet *ifp)
 void
 ieee80211_ifdetach(struct ifnet *ifp)
 {
+    IOLog("ieee80211_ifdetach\n");
     struct ieee80211com *ic = (struct ieee80211com *)ifp;
     
     timeout_del(&ic->ic_bgscan_timeout);
     ieee80211_proto_detach(ifp);
     ieee80211_crypto_detach(ifp);
     ieee80211_node_detach(ifp);
-    //	ifmedia_delete_instance(&ic->ic_media, IFM_INST_ANY);
+    ifmedia_delete_instance(&ic->ic_media, IFM_INST_ANY);
     //	ether_ifdetach(ifp);
 }
 
@@ -342,7 +346,8 @@ ieee80211_media_init(struct ifnet *ifp)
     /*
      * Fill in media characteristics.
      */
-    //	ifmedia_init(&ic->ic_media, 0, media_change, media_stat);
+    ifmedia_init(&ic->ic_media, 0);
+    
     maxrate = 0;
     memset(&allrates, 0, sizeof(allrates));
     for (mode = IEEE80211_MODE_AUTO; mode <= IEEE80211_MODE_11G; mode++) {
@@ -490,7 +495,7 @@ ieee80211_media_init(struct ifnet *ifp)
     }
     
     ieee80211_media_status(ifp, &imr);
-    //	ifmedia_set(&ic->ic_media, imr.ifm_active);
+    ifmedia_set(&ic->ic_media, imr.ifm_active);
     
     //	if (maxrate)
     //		ifp->if_baudrate = IF_Mbps(maxrate);

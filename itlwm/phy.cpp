@@ -137,6 +137,7 @@ iwm_phy_db_send_all_channel_groups(struct iwm_softc *sc, uint16_t type,
 int itlwm::
 iwm_send_phy_db_data(struct iwm_softc *sc)
 {
+    XYLog("%s\n", __func__);
     uint8_t *data = NULL;
     uint16_t size = 0;
     int err;
@@ -334,6 +335,7 @@ iwm_unprotect_session(struct iwm_softc *sc, struct iwm_node *in)
 int itlwm::
 iwm_send_phy_cfg_cmd(struct iwm_softc *sc)
 {
+    XYLog("%s\n", __func__);
     struct iwm_phy_cfg_cmd phy_cfg_cmd;
     enum iwm_ucode_type ucode_type = sc->sc_uc_current;
 
@@ -649,7 +651,7 @@ iwm_cmd_done(struct iwm_softc *sc, int qid, int idx, int code)
     wakeup(&ring->desc[idx]);
 
     if (ring->queued == 0) {
-        XYLog("%s: unexpected firmware response to command 0x%x\n",
+        IOLog("%s: unexpected firmware response to command 0x%x\n",
             DEVNAME(sc), code);
     } else if (--ring->queued == 0) {
         /*

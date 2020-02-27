@@ -116,11 +116,16 @@ struct ifmedia {
     ifm_stat_cb_t    ifm_status;    /* media status driver callback */
 };
 
-//Not needed now, replace by iokit methods.
 //
-///* Initialize an interface's struct if_media field. */
-//void    ifmedia_init(struct ifmedia *, uint64_t, ifm_change_cb_t,
-//         ifm_stat_cb_t);
+/* Initialize an interface's struct if_media field. */
+static inline void ifmedia_init(struct ifmedia *ifm, uint64_t dontcare_mask)
+{
+    TAILQ_INIT(&ifm->ifm_list);
+    ifm->ifm_cur = NULL;
+    ifm->ifm_media = 0;
+    ifm->ifm_mask = dontcare_mask;        /* IF don't-care bits */
+}
+
 //
 ///* Add one supported medium to a struct ifmedia. */
 //void    ifmedia_add(struct ifmedia *, uint64_t, int, void *);
@@ -129,9 +134,7 @@ struct ifmedia {
 //void    ifmedia_list_add(struct ifmedia *, struct ifmedia_entry *,
 //        int);
 //
-///* Set default media type on initialization. */
-//void    ifmedia_set(struct ifmedia *, uint64_t);
-//
+
 ///* Common ioctl function for getting/setting media, called by driver. */
 //int    ifmedia_ioctl(struct ifnet *, struct ifreq *, struct ifmedia *,
 //        u_long);
@@ -139,9 +142,7 @@ struct ifmedia {
 ///* Locate a media entry */
 //struct    ifmedia_entry *ifmedia_match(struct ifmedia *, uint64_t, uint64_t);
 //
-///* Delete all media for a given media instance */
-//void    ifmedia_delete_instance(struct ifmedia *, uint64_t);
-//
+
 ///* Compute baudrate for a given media. */
 //uint64_t    ifmedia_baudrate(uint64_t);
 #endif /*_KERNEL */
@@ -440,8 +441,8 @@ struct ifmedia {
 
 /* List of "status valid" bits, for ifconfig(8). */
 #define    IFM_STATUS_VALID_LIST {                        \
-    IFM_AVALID,                            \
-    0                                \
+IFM_AVALID,                            \
+0                                \
 }
 
 /*
@@ -462,8 +463,8 @@ struct ifmedia {
  * XXX 'operating mode' is not included here?!?
  */
 #define    IFM_MAKEWORD(type, subtype, options, instance)            \
-    ((type) | (subtype) | (options) | \
-    ((uint64_t)(instance) << IFM_ISHIFT))
+((type) | (subtype) | (options) | \
+((uint64_t)(instance) << IFM_ISHIFT))
 
 /*
  * Add a media configuration to the list of supported media
@@ -473,15 +474,15 @@ static inline void
 ifmedia_add(struct ifmedia *ifm, uint64_t mword, int data, void *aux)
 {
     struct ifmedia_entry *entry;
-
+    
     entry = (struct ifmedia_entry *)IOMalloc(sizeof(*entry));
     if (entry == NULL)
         panic("ifmedia_add: can't malloc entry");
-
+    
     entry->ifm_media = mword;
     entry->ifm_data = data;
     entry->ifm_aux = aux;
-
+    
     TAILQ_INSERT_TAIL(&ifm->ifm_list, entry, ifm_list);
 }
 
@@ -504,317 +505,317 @@ ifmedia_add(struct ifmedia *ifm, uint64_t mword, int data, void *aux)
 //};
 
 #define    IFM_TYPE_DESCRIPTIONS {                        \
-    { IFM_ETHER,            "Ethernet" },            \
-    { IFM_ETHER,            "ether" },            \
-    { IFM_FDDI,            "FDDI" },            \
-    { IFM_IEEE80211,        "IEEE802.11" },            \
-    { IFM_TDM,            "TDM" },            \
-    { IFM_CARP,            "CARP" },            \
-    { 0, NULL },                            \
+{ IFM_ETHER,            "Ethernet" },            \
+{ IFM_ETHER,            "ether" },            \
+{ IFM_FDDI,            "FDDI" },            \
+{ IFM_IEEE80211,        "IEEE802.11" },            \
+{ IFM_TDM,            "TDM" },            \
+{ IFM_CARP,            "CARP" },            \
+{ 0, NULL },                            \
 }
 
 #define    IFM_TYPE_MATCH(dt, t)                        \
-    (IFM_TYPE((dt)) == 0 || IFM_TYPE((dt)) == IFM_TYPE((t)))
+(IFM_TYPE((dt)) == 0 || IFM_TYPE((dt)) == IFM_TYPE((t)))
 
 #define    IFM_SUBTYPE_DESCRIPTIONS {                    \
-    { IFM_AUTO,            "autoselect" },            \
-    { IFM_AUTO,            "auto" },            \
-    { IFM_MANUAL,            "manual" },            \
-    { IFM_NONE,            "none" },            \
-                                    \
-    { IFM_ETHER|IFM_10_T,        "10baseT" },            \
-    { IFM_ETHER|IFM_10_T,        "10baseT/UTP" },        \
-    { IFM_ETHER|IFM_10_T,        "UTP" },            \
-    { IFM_ETHER|IFM_10_T,        "10UTP" },            \
-    { IFM_ETHER|IFM_10_2,        "10base2" },            \
-    { IFM_ETHER|IFM_10_2,        "10base2/BNC" },        \
-    { IFM_ETHER|IFM_10_2,        "BNC" },            \
-    { IFM_ETHER|IFM_10_2,        "10BNC" },            \
-    { IFM_ETHER|IFM_10_5,        "10base5" },            \
-    { IFM_ETHER|IFM_10_5,        "10base5/AUI" },        \
-    { IFM_ETHER|IFM_10_5,        "AUI" },            \
-    { IFM_ETHER|IFM_10_5,        "10AUI" },            \
-    { IFM_ETHER|IFM_100_TX,        "100baseTX" },            \
-    { IFM_ETHER|IFM_100_TX,        "100TX" },            \
-    { IFM_ETHER|IFM_100_FX,        "100baseFX" },            \
-    { IFM_ETHER|IFM_100_FX,        "100FX" },            \
-    { IFM_ETHER|IFM_100_T4,        "100baseT4" },            \
-    { IFM_ETHER|IFM_100_T4,        "100T4" },            \
-    { IFM_ETHER|IFM_100_VG,        "100baseVG" },            \
-    { IFM_ETHER|IFM_100_VG,        "100VG" },            \
-    { IFM_ETHER|IFM_100_T2,        "100baseT2" },            \
-    { IFM_ETHER|IFM_100_T2,        "100T2" },            \
-    { IFM_ETHER|IFM_1000_SX,    "1000baseSX" },            \
-    { IFM_ETHER|IFM_1000_SX,    "1000SX" },            \
-    { IFM_ETHER|IFM_10_STP,        "10baseSTP" },            \
-    { IFM_ETHER|IFM_10_STP,        "STP" },            \
-    { IFM_ETHER|IFM_10_STP,        "10STP" },            \
-    { IFM_ETHER|IFM_10_FL,        "10baseFL" },            \
-    { IFM_ETHER|IFM_10_FL,        "FL" },                \
-    { IFM_ETHER|IFM_10_FL,        "10FL" },            \
-    { IFM_ETHER|IFM_1000_LX,    "1000baseLX" },            \
-    { IFM_ETHER|IFM_1000_LX,    "1000LX" },            \
-    { IFM_ETHER|IFM_1000_CX,    "1000baseCX" },            \
-    { IFM_ETHER|IFM_1000_CX,    "1000CX" },            \
-    { IFM_ETHER|IFM_1000_T,        "1000baseT" },            \
-    { IFM_ETHER|IFM_1000_T,        "1000T" },            \
-    { IFM_ETHER|IFM_1000_T,        "1000baseTX" },            \
-    { IFM_ETHER|IFM_1000_T,        "1000TX" },            \
-    { IFM_ETHER|IFM_HPNA_1,        "HomePNA1" },            \
-    { IFM_ETHER|IFM_HPNA_1,        "HPNA1" },            \
-    { IFM_ETHER|IFM_10G_LR,        "10GbaseLR" },            \
-    { IFM_ETHER|IFM_10G_LR,        "10GLR" },            \
-    { IFM_ETHER|IFM_10G_LR,        "10GBASE-LR" },            \
-    { IFM_ETHER|IFM_10G_SR,        "10GbaseSR" },            \
-    { IFM_ETHER|IFM_10G_SR,        "10GSR" },            \
-    { IFM_ETHER|IFM_10G_SR,        "10GBASE-SR" },            \
-    { IFM_ETHER|IFM_10G_CX4,    "10GbaseCX4" },            \
-    { IFM_ETHER|IFM_10G_CX4,    "10GCX4" },            \
-    { IFM_ETHER|IFM_10G_CX4,    "10GBASE-CX4" },        \
-    { IFM_ETHER|IFM_2500_SX,    "2500baseSX" },            \
-    { IFM_ETHER|IFM_2500_SX,    "2500SX" },            \
-    { IFM_ETHER|IFM_10G_T,        "10GbaseT" },            \
-    { IFM_ETHER|IFM_10G_T,        "10GT" },            \
-    { IFM_ETHER|IFM_10G_T,        "10GBASE-T" },            \
-    { IFM_ETHER|IFM_10G_SFP_CU,    "10GSFP+Cu" },            \
-    { IFM_ETHER|IFM_10G_SFP_CU,    "10GCu" },            \
-    { IFM_ETHER|IFM_10G_LRM,    "10GbaseLRM" },            \
-    { IFM_ETHER|IFM_10G_LRM,    "10GBASE-LRM" },        \
-    { IFM_ETHER|IFM_40G_CR4,    "40GbaseCR4" },            \
-    { IFM_ETHER|IFM_40G_CR4,    "40GBASE-CR4" },        \
-    { IFM_ETHER|IFM_40G_SR4,    "40GbaseSR4" },            \
-    { IFM_ETHER|IFM_40G_SR4,    "40GBASE-SR4" },        \
-    { IFM_ETHER|IFM_40G_LR4,    "40GbaseLR4" },            \
-    { IFM_ETHER|IFM_40G_LR4,    "40GBASE-LR4" },        \
-    { IFM_ETHER|IFM_1000_KX,    "1000base-KX" },        \
-    { IFM_ETHER|IFM_1000_KX,    "1000BASE-KX" },        \
-    { IFM_ETHER|IFM_10G_KX4,    "10GbaseKX4" },            \
-    { IFM_ETHER|IFM_10G_KX4,    "10GBASE-KX4" },        \
-    { IFM_ETHER|IFM_10G_KR,        "10GbaseKR" },            \
-    { IFM_ETHER|IFM_10G_KR,        "10GBASE-KR" },            \
-    { IFM_ETHER|IFM_10G_CR1,    "10GbaseCR1" },            \
-    { IFM_ETHER|IFM_10G_CR1,    "10GBASE-CR1" },        \
-    { IFM_ETHER|IFM_10G_AOC,    "10G-AOC" },            \
-    { IFM_ETHER|IFM_20G_KR2,    "20GbaseKR2" },            \
-    { IFM_ETHER|IFM_20G_KR2,    "20GBASE-KR2" },        \
-    { IFM_ETHER|IFM_2500_KX,    "2500baseKX" },            \
-    { IFM_ETHER|IFM_2500_KX,    "2500BASE-KX" },        \
-    { IFM_ETHER|IFM_2500_T,        "2500baseT" },            \
-    { IFM_ETHER|IFM_2500_T,        "2500BASE-T" },            \
-    { IFM_ETHER|IFM_5000_T,        "5000baseT" },            \
-    { IFM_ETHER|IFM_5000_T,        "5000BASE-T" },            \
-    { IFM_ETHER|IFM_1000_SGMII,    "1000base-SGMII" },        \
-    { IFM_ETHER|IFM_1000_SGMII,    "1000BASE-SGMII" },        \
-    { IFM_ETHER|IFM_10G_SFI,    "10GbaseSFI" },            \
-    { IFM_ETHER|IFM_10G_SFI,    "10GBASE-SFI" },        \
-    { IFM_ETHER|IFM_40G_XLPPI,    "40GbaseXLPPI" },        \
-    { IFM_ETHER|IFM_40G_XLPPI,    "40GBASE-XLPPI" },        \
-    { IFM_ETHER|IFM_1000_CX_SGMII,    "1000baseCX-SGMII" },        \
-    { IFM_ETHER|IFM_1000_CX_SGMII,    "1000BASE-CX-SGMII" },        \
-    { IFM_ETHER|IFM_40G_KR4,    "40GbaseKR4" },            \
-    { IFM_ETHER|IFM_40G_KR4,    "40GBASE-KR4" },        \
-    { IFM_ETHER|IFM_40G_AOC,    "40G-AOC" },            \
-    { IFM_ETHER|IFM_10G_ER,        "10GbaseER" },            \
-    { IFM_ETHER|IFM_10G_ER,        "10GBASE-ER" },            \
-    { IFM_ETHER|IFM_100G_CR4,    "100GbaseCR4" },        \
-    { IFM_ETHER|IFM_100G_CR4,    "100GBASE-CR4" },        \
-    { IFM_ETHER|IFM_100G_SR4,    "100GbaseSR4" },        \
-    { IFM_ETHER|IFM_100G_SR4,    "100GBASE-SR4" },        \
-    { IFM_ETHER|IFM_100G_KR4,    "100GbaseKR4" },        \
-    { IFM_ETHER|IFM_100G_KR4,    "100GBASE-KR4" },        \
-    { IFM_ETHER|IFM_100G_LR4,    "100GbaseLR4" },        \
-    { IFM_ETHER|IFM_100G_LR4,    "100GBASE-LR4" },        \
-    { IFM_ETHER|IFM_100G_AOC,    "100G-AOC" },            \
-    { IFM_ETHER|IFM_56G_R4,        "56GbaseR4" },            \
-    { IFM_ETHER|IFM_56G_R4,        "56GBASE-R4" },            \
-    { IFM_ETHER|IFM_25G_CR,        "25GbaseCR" },            \
-    { IFM_ETHER|IFM_25G_CR,        "25GBASE-CR" },            \
-    { IFM_ETHER|IFM_25G_KR,        "25GbaseKR" },            \
-    { IFM_ETHER|IFM_25G_KR,        "25GBASE-KR" },            \
-    { IFM_ETHER|IFM_25G_SR,        "25GbaseSR" },            \
-    { IFM_ETHER|IFM_25G_SR,        "25GBASE-SR" },            \
-    { IFM_ETHER|IFM_25G_LR,        "25GbaseLR" },            \
-    { IFM_ETHER|IFM_25G_LR,        "25GBASE-LR" },            \
-    { IFM_ETHER|IFM_25G_ER,        "25GbaseER" },            \
-    { IFM_ETHER|IFM_25G_ER,        "25GBASE-ER" },            \
-    { IFM_ETHER|IFM_25G_AOC,    "25G-AOC" },            \
-    { IFM_ETHER|IFM_50G_CR2,    "50GbaseCR2" },            \
-    { IFM_ETHER|IFM_50G_CR2,    "50GBASE-CR2" },        \
-    { IFM_ETHER|IFM_50G_KR2,    "50GbaseKR2" },            \
-    { IFM_ETHER|IFM_50G_KR2,    "50GBASE-KR2" },        \
-                                    \
-    { IFM_FDDI|IFM_FDDI_SMF,    "Single-mode" },        \
-    { IFM_FDDI|IFM_FDDI_SMF,    "SMF" },            \
-    { IFM_FDDI|IFM_FDDI_MMF,    "Multi-mode" },            \
-    { IFM_FDDI|IFM_FDDI_MMF,    "MMF" },            \
-    { IFM_FDDI|IFM_FDDI_UTP,    "UTP" },            \
-    { IFM_FDDI|IFM_FDDI_UTP,    "CDDI" },            \
-                                    \
-    { IFM_IEEE80211|IFM_IEEE80211_FH1,    "FH1" },        \
-    { IFM_IEEE80211|IFM_IEEE80211_FH2,    "FH2" },        \
-    { IFM_IEEE80211|IFM_IEEE80211_DS2,    "DS2" },        \
-    { IFM_IEEE80211|IFM_IEEE80211_DS5,    "DS5" },        \
-    { IFM_IEEE80211|IFM_IEEE80211_DS11,    "DS11" },        \
-    { IFM_IEEE80211|IFM_IEEE80211_DS1,    "DS1" },        \
-    { IFM_IEEE80211|IFM_IEEE80211_DS22,    "DS22" },        \
-    { IFM_IEEE80211|IFM_IEEE80211_OFDM6,    "OFDM6" },        \
-    { IFM_IEEE80211|IFM_IEEE80211_OFDM9,    "OFDM9" },        \
-    { IFM_IEEE80211|IFM_IEEE80211_OFDM12,    "OFDM12" },        \
-    { IFM_IEEE80211|IFM_IEEE80211_OFDM18,    "OFDM18" },        \
-    { IFM_IEEE80211|IFM_IEEE80211_OFDM24,    "OFDM24" },        \
-    { IFM_IEEE80211|IFM_IEEE80211_OFDM36,    "OFDM36" },        \
-    { IFM_IEEE80211|IFM_IEEE80211_OFDM48,    "OFDM48" },        \
-    { IFM_IEEE80211|IFM_IEEE80211_OFDM54,    "OFDM54" },        \
-    { IFM_IEEE80211|IFM_IEEE80211_OFDM72,    "OFDM72" },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS0,    "HT-MCS0" },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS1,    "HT-MCS1" },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS2,    "HT-MCS2" },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS3,    "HT-MCS3" },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS4,    "HT-MCS4" },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS5,    "HT-MCS5" },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS6,    "HT-MCS6" },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS7,    "HT-MCS7" },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS8,    "HT-MCS8" },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS9,    "HT-MCS9" },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS10,    "HT-MCS10" },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS11,    "HT-MCS11" },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS12,    "HT-MCS12" },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS13,    "HT-MCS13" },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS14,    "HT-MCS14" },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS15,    "HT-MCS15" },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS16,    "HT-MCS16" },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS17,    "HT-MCS17" },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS18,    "HT-MCS18" },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS19,    "HT-MCS19" },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS20,    "HT-MCS20" },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS21,    "HT-MCS21" },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS22,    "HT-MCS22" },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS23,    "HT-MCS23" },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS24,    "HT-MCS24" },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS25,    "HT-MCS25" },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS26,    "HT-MCS26" },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS27,    "HT-MCS27" },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS28,    "HT-MCS28" },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS29,    "HT-MCS29" },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS30,    "HT-MCS30" },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS31,    "HT-MCS31" },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS32,    "HT-MCS32" },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS33,    "HT-MCS33" },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS34,    "HT-MCS34" },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS35,    "HT-MCS35" },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS36,    "HT-MCS36" },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS37,    "HT-MCS37" },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS38,    "HT-MCS38" },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS39,    "HT-MCS39" },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS40,    "HT-MCS40" },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS41,    "HT-MCS41" },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS42,    "HT-MCS42" },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS43,    "HT-MCS43" },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS44,    "HT-MCS44" },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS45,    "HT-MCS45" },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS46,    "HT-MCS46" },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS47,    "HT-MCS47" },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS48,    "HT-MCS48" },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS49,    "HT-MCS49" },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS50,    "HT-MCS50" },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS51,    "HT-MCS51" },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS52,    "HT-MCS52" },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS53,    "HT-MCS53" },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS54,    "HT-MCS54" },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS55,    "HT-MCS55" },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS56,    "HT-MCS56" },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS57,    "HT-MCS57" },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS58,    "HT-MCS58" },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS59,    "HT-MCS59" },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS60,    "HT-MCS60" },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS61,    "HT-MCS61" },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS62,    "HT-MCS62" },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS63,    "HT-MCS63" },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS64,    "HT-MCS64" },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS65,    "HT-MCS65" },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS66,    "HT-MCS66" },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS67,    "HT-MCS67" },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS68,    "HT-MCS68" },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS69,    "HT-MCS69" },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS70,    "HT-MCS70" },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS71,    "HT-MCS71" },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS72,    "HT-MCS72" },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS73,    "HT-MCS73" },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS74,    "HT-MCS74" },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS75,    "HT-MCS75" },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS76,    "HT-MCS76" },        \
-    { IFM_IEEE80211|IFM_IEEE80211_VHT_MCS0,    "VHT-MCS0" },        \
-    { IFM_IEEE80211|IFM_IEEE80211_VHT_MCS1,    "VHT-MCS1" },        \
-    { IFM_IEEE80211|IFM_IEEE80211_VHT_MCS2,    "VHT-MCS2" },        \
-    { IFM_IEEE80211|IFM_IEEE80211_VHT_MCS3,    "VHT-MCS3" },        \
-    { IFM_IEEE80211|IFM_IEEE80211_VHT_MCS4,    "VHT-MCS4" },        \
-    { IFM_IEEE80211|IFM_IEEE80211_VHT_MCS5,    "VHT-MCS5" },        \
-    { IFM_IEEE80211|IFM_IEEE80211_VHT_MCS6,    "VHT-MCS6" },        \
-    { IFM_IEEE80211|IFM_IEEE80211_VHT_MCS7,    "VHT-MCS7" },        \
-    { IFM_IEEE80211|IFM_IEEE80211_VHT_MCS8,    "VHT-MCS8" },        \
-    { IFM_IEEE80211|IFM_IEEE80211_VHT_MCS9,    "VHT-MCS9" },        \
-                                    \
-    { IFM_TDM|IFM_TDM_T1,        "t1" },                \
-    { IFM_TDM|IFM_TDM_T1_AMI,    "t1-ami" },            \
-    { IFM_TDM|IFM_TDM_E1,        "e1" },                \
-    { IFM_TDM|IFM_TDM_E1_G704,    "e1-g.704" },            \
-    { IFM_TDM|IFM_TDM_E1_AMI,    "e1-ami" },            \
-    { IFM_TDM|IFM_TDM_E1_AMI_G704,    "e1-ami-g.704" },        \
-    { IFM_TDM|IFM_TDM_T3,        "t3" },                \
-    { IFM_TDM|IFM_TDM_T3_M13,    "t3-m13" },            \
-    { IFM_TDM|IFM_TDM_E3,        "e3" },                \
-    { IFM_TDM|IFM_TDM_E3_G751,    "e3-g.751" },            \
-    { IFM_TDM|IFM_TDM_E3_G832,    "e3-g.832" },            \
-    { IFM_TDM|IFM_TDM_E1_G704_CRC4,    "e1-g.704-crc4" },        \
-                                    \
-    { 0, NULL },                            \
+{ IFM_AUTO,            "autoselect" },            \
+{ IFM_AUTO,            "auto" },            \
+{ IFM_MANUAL,            "manual" },            \
+{ IFM_NONE,            "none" },            \
+\
+{ IFM_ETHER|IFM_10_T,        "10baseT" },            \
+{ IFM_ETHER|IFM_10_T,        "10baseT/UTP" },        \
+{ IFM_ETHER|IFM_10_T,        "UTP" },            \
+{ IFM_ETHER|IFM_10_T,        "10UTP" },            \
+{ IFM_ETHER|IFM_10_2,        "10base2" },            \
+{ IFM_ETHER|IFM_10_2,        "10base2/BNC" },        \
+{ IFM_ETHER|IFM_10_2,        "BNC" },            \
+{ IFM_ETHER|IFM_10_2,        "10BNC" },            \
+{ IFM_ETHER|IFM_10_5,        "10base5" },            \
+{ IFM_ETHER|IFM_10_5,        "10base5/AUI" },        \
+{ IFM_ETHER|IFM_10_5,        "AUI" },            \
+{ IFM_ETHER|IFM_10_5,        "10AUI" },            \
+{ IFM_ETHER|IFM_100_TX,        "100baseTX" },            \
+{ IFM_ETHER|IFM_100_TX,        "100TX" },            \
+{ IFM_ETHER|IFM_100_FX,        "100baseFX" },            \
+{ IFM_ETHER|IFM_100_FX,        "100FX" },            \
+{ IFM_ETHER|IFM_100_T4,        "100baseT4" },            \
+{ IFM_ETHER|IFM_100_T4,        "100T4" },            \
+{ IFM_ETHER|IFM_100_VG,        "100baseVG" },            \
+{ IFM_ETHER|IFM_100_VG,        "100VG" },            \
+{ IFM_ETHER|IFM_100_T2,        "100baseT2" },            \
+{ IFM_ETHER|IFM_100_T2,        "100T2" },            \
+{ IFM_ETHER|IFM_1000_SX,    "1000baseSX" },            \
+{ IFM_ETHER|IFM_1000_SX,    "1000SX" },            \
+{ IFM_ETHER|IFM_10_STP,        "10baseSTP" },            \
+{ IFM_ETHER|IFM_10_STP,        "STP" },            \
+{ IFM_ETHER|IFM_10_STP,        "10STP" },            \
+{ IFM_ETHER|IFM_10_FL,        "10baseFL" },            \
+{ IFM_ETHER|IFM_10_FL,        "FL" },                \
+{ IFM_ETHER|IFM_10_FL,        "10FL" },            \
+{ IFM_ETHER|IFM_1000_LX,    "1000baseLX" },            \
+{ IFM_ETHER|IFM_1000_LX,    "1000LX" },            \
+{ IFM_ETHER|IFM_1000_CX,    "1000baseCX" },            \
+{ IFM_ETHER|IFM_1000_CX,    "1000CX" },            \
+{ IFM_ETHER|IFM_1000_T,        "1000baseT" },            \
+{ IFM_ETHER|IFM_1000_T,        "1000T" },            \
+{ IFM_ETHER|IFM_1000_T,        "1000baseTX" },            \
+{ IFM_ETHER|IFM_1000_T,        "1000TX" },            \
+{ IFM_ETHER|IFM_HPNA_1,        "HomePNA1" },            \
+{ IFM_ETHER|IFM_HPNA_1,        "HPNA1" },            \
+{ IFM_ETHER|IFM_10G_LR,        "10GbaseLR" },            \
+{ IFM_ETHER|IFM_10G_LR,        "10GLR" },            \
+{ IFM_ETHER|IFM_10G_LR,        "10GBASE-LR" },            \
+{ IFM_ETHER|IFM_10G_SR,        "10GbaseSR" },            \
+{ IFM_ETHER|IFM_10G_SR,        "10GSR" },            \
+{ IFM_ETHER|IFM_10G_SR,        "10GBASE-SR" },            \
+{ IFM_ETHER|IFM_10G_CX4,    "10GbaseCX4" },            \
+{ IFM_ETHER|IFM_10G_CX4,    "10GCX4" },            \
+{ IFM_ETHER|IFM_10G_CX4,    "10GBASE-CX4" },        \
+{ IFM_ETHER|IFM_2500_SX,    "2500baseSX" },            \
+{ IFM_ETHER|IFM_2500_SX,    "2500SX" },            \
+{ IFM_ETHER|IFM_10G_T,        "10GbaseT" },            \
+{ IFM_ETHER|IFM_10G_T,        "10GT" },            \
+{ IFM_ETHER|IFM_10G_T,        "10GBASE-T" },            \
+{ IFM_ETHER|IFM_10G_SFP_CU,    "10GSFP+Cu" },            \
+{ IFM_ETHER|IFM_10G_SFP_CU,    "10GCu" },            \
+{ IFM_ETHER|IFM_10G_LRM,    "10GbaseLRM" },            \
+{ IFM_ETHER|IFM_10G_LRM,    "10GBASE-LRM" },        \
+{ IFM_ETHER|IFM_40G_CR4,    "40GbaseCR4" },            \
+{ IFM_ETHER|IFM_40G_CR4,    "40GBASE-CR4" },        \
+{ IFM_ETHER|IFM_40G_SR4,    "40GbaseSR4" },            \
+{ IFM_ETHER|IFM_40G_SR4,    "40GBASE-SR4" },        \
+{ IFM_ETHER|IFM_40G_LR4,    "40GbaseLR4" },            \
+{ IFM_ETHER|IFM_40G_LR4,    "40GBASE-LR4" },        \
+{ IFM_ETHER|IFM_1000_KX,    "1000base-KX" },        \
+{ IFM_ETHER|IFM_1000_KX,    "1000BASE-KX" },        \
+{ IFM_ETHER|IFM_10G_KX4,    "10GbaseKX4" },            \
+{ IFM_ETHER|IFM_10G_KX4,    "10GBASE-KX4" },        \
+{ IFM_ETHER|IFM_10G_KR,        "10GbaseKR" },            \
+{ IFM_ETHER|IFM_10G_KR,        "10GBASE-KR" },            \
+{ IFM_ETHER|IFM_10G_CR1,    "10GbaseCR1" },            \
+{ IFM_ETHER|IFM_10G_CR1,    "10GBASE-CR1" },        \
+{ IFM_ETHER|IFM_10G_AOC,    "10G-AOC" },            \
+{ IFM_ETHER|IFM_20G_KR2,    "20GbaseKR2" },            \
+{ IFM_ETHER|IFM_20G_KR2,    "20GBASE-KR2" },        \
+{ IFM_ETHER|IFM_2500_KX,    "2500baseKX" },            \
+{ IFM_ETHER|IFM_2500_KX,    "2500BASE-KX" },        \
+{ IFM_ETHER|IFM_2500_T,        "2500baseT" },            \
+{ IFM_ETHER|IFM_2500_T,        "2500BASE-T" },            \
+{ IFM_ETHER|IFM_5000_T,        "5000baseT" },            \
+{ IFM_ETHER|IFM_5000_T,        "5000BASE-T" },            \
+{ IFM_ETHER|IFM_1000_SGMII,    "1000base-SGMII" },        \
+{ IFM_ETHER|IFM_1000_SGMII,    "1000BASE-SGMII" },        \
+{ IFM_ETHER|IFM_10G_SFI,    "10GbaseSFI" },            \
+{ IFM_ETHER|IFM_10G_SFI,    "10GBASE-SFI" },        \
+{ IFM_ETHER|IFM_40G_XLPPI,    "40GbaseXLPPI" },        \
+{ IFM_ETHER|IFM_40G_XLPPI,    "40GBASE-XLPPI" },        \
+{ IFM_ETHER|IFM_1000_CX_SGMII,    "1000baseCX-SGMII" },        \
+{ IFM_ETHER|IFM_1000_CX_SGMII,    "1000BASE-CX-SGMII" },        \
+{ IFM_ETHER|IFM_40G_KR4,    "40GbaseKR4" },            \
+{ IFM_ETHER|IFM_40G_KR4,    "40GBASE-KR4" },        \
+{ IFM_ETHER|IFM_40G_AOC,    "40G-AOC" },            \
+{ IFM_ETHER|IFM_10G_ER,        "10GbaseER" },            \
+{ IFM_ETHER|IFM_10G_ER,        "10GBASE-ER" },            \
+{ IFM_ETHER|IFM_100G_CR4,    "100GbaseCR4" },        \
+{ IFM_ETHER|IFM_100G_CR4,    "100GBASE-CR4" },        \
+{ IFM_ETHER|IFM_100G_SR4,    "100GbaseSR4" },        \
+{ IFM_ETHER|IFM_100G_SR4,    "100GBASE-SR4" },        \
+{ IFM_ETHER|IFM_100G_KR4,    "100GbaseKR4" },        \
+{ IFM_ETHER|IFM_100G_KR4,    "100GBASE-KR4" },        \
+{ IFM_ETHER|IFM_100G_LR4,    "100GbaseLR4" },        \
+{ IFM_ETHER|IFM_100G_LR4,    "100GBASE-LR4" },        \
+{ IFM_ETHER|IFM_100G_AOC,    "100G-AOC" },            \
+{ IFM_ETHER|IFM_56G_R4,        "56GbaseR4" },            \
+{ IFM_ETHER|IFM_56G_R4,        "56GBASE-R4" },            \
+{ IFM_ETHER|IFM_25G_CR,        "25GbaseCR" },            \
+{ IFM_ETHER|IFM_25G_CR,        "25GBASE-CR" },            \
+{ IFM_ETHER|IFM_25G_KR,        "25GbaseKR" },            \
+{ IFM_ETHER|IFM_25G_KR,        "25GBASE-KR" },            \
+{ IFM_ETHER|IFM_25G_SR,        "25GbaseSR" },            \
+{ IFM_ETHER|IFM_25G_SR,        "25GBASE-SR" },            \
+{ IFM_ETHER|IFM_25G_LR,        "25GbaseLR" },            \
+{ IFM_ETHER|IFM_25G_LR,        "25GBASE-LR" },            \
+{ IFM_ETHER|IFM_25G_ER,        "25GbaseER" },            \
+{ IFM_ETHER|IFM_25G_ER,        "25GBASE-ER" },            \
+{ IFM_ETHER|IFM_25G_AOC,    "25G-AOC" },            \
+{ IFM_ETHER|IFM_50G_CR2,    "50GbaseCR2" },            \
+{ IFM_ETHER|IFM_50G_CR2,    "50GBASE-CR2" },        \
+{ IFM_ETHER|IFM_50G_KR2,    "50GbaseKR2" },            \
+{ IFM_ETHER|IFM_50G_KR2,    "50GBASE-KR2" },        \
+\
+{ IFM_FDDI|IFM_FDDI_SMF,    "Single-mode" },        \
+{ IFM_FDDI|IFM_FDDI_SMF,    "SMF" },            \
+{ IFM_FDDI|IFM_FDDI_MMF,    "Multi-mode" },            \
+{ IFM_FDDI|IFM_FDDI_MMF,    "MMF" },            \
+{ IFM_FDDI|IFM_FDDI_UTP,    "UTP" },            \
+{ IFM_FDDI|IFM_FDDI_UTP,    "CDDI" },            \
+\
+{ IFM_IEEE80211|IFM_IEEE80211_FH1,    "FH1" },        \
+{ IFM_IEEE80211|IFM_IEEE80211_FH2,    "FH2" },        \
+{ IFM_IEEE80211|IFM_IEEE80211_DS2,    "DS2" },        \
+{ IFM_IEEE80211|IFM_IEEE80211_DS5,    "DS5" },        \
+{ IFM_IEEE80211|IFM_IEEE80211_DS11,    "DS11" },        \
+{ IFM_IEEE80211|IFM_IEEE80211_DS1,    "DS1" },        \
+{ IFM_IEEE80211|IFM_IEEE80211_DS22,    "DS22" },        \
+{ IFM_IEEE80211|IFM_IEEE80211_OFDM6,    "OFDM6" },        \
+{ IFM_IEEE80211|IFM_IEEE80211_OFDM9,    "OFDM9" },        \
+{ IFM_IEEE80211|IFM_IEEE80211_OFDM12,    "OFDM12" },        \
+{ IFM_IEEE80211|IFM_IEEE80211_OFDM18,    "OFDM18" },        \
+{ IFM_IEEE80211|IFM_IEEE80211_OFDM24,    "OFDM24" },        \
+{ IFM_IEEE80211|IFM_IEEE80211_OFDM36,    "OFDM36" },        \
+{ IFM_IEEE80211|IFM_IEEE80211_OFDM48,    "OFDM48" },        \
+{ IFM_IEEE80211|IFM_IEEE80211_OFDM54,    "OFDM54" },        \
+{ IFM_IEEE80211|IFM_IEEE80211_OFDM72,    "OFDM72" },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS0,    "HT-MCS0" },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS1,    "HT-MCS1" },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS2,    "HT-MCS2" },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS3,    "HT-MCS3" },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS4,    "HT-MCS4" },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS5,    "HT-MCS5" },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS6,    "HT-MCS6" },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS7,    "HT-MCS7" },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS8,    "HT-MCS8" },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS9,    "HT-MCS9" },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS10,    "HT-MCS10" },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS11,    "HT-MCS11" },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS12,    "HT-MCS12" },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS13,    "HT-MCS13" },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS14,    "HT-MCS14" },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS15,    "HT-MCS15" },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS16,    "HT-MCS16" },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS17,    "HT-MCS17" },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS18,    "HT-MCS18" },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS19,    "HT-MCS19" },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS20,    "HT-MCS20" },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS21,    "HT-MCS21" },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS22,    "HT-MCS22" },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS23,    "HT-MCS23" },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS24,    "HT-MCS24" },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS25,    "HT-MCS25" },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS26,    "HT-MCS26" },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS27,    "HT-MCS27" },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS28,    "HT-MCS28" },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS29,    "HT-MCS29" },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS30,    "HT-MCS30" },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS31,    "HT-MCS31" },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS32,    "HT-MCS32" },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS33,    "HT-MCS33" },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS34,    "HT-MCS34" },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS35,    "HT-MCS35" },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS36,    "HT-MCS36" },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS37,    "HT-MCS37" },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS38,    "HT-MCS38" },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS39,    "HT-MCS39" },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS40,    "HT-MCS40" },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS41,    "HT-MCS41" },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS42,    "HT-MCS42" },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS43,    "HT-MCS43" },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS44,    "HT-MCS44" },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS45,    "HT-MCS45" },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS46,    "HT-MCS46" },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS47,    "HT-MCS47" },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS48,    "HT-MCS48" },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS49,    "HT-MCS49" },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS50,    "HT-MCS50" },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS51,    "HT-MCS51" },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS52,    "HT-MCS52" },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS53,    "HT-MCS53" },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS54,    "HT-MCS54" },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS55,    "HT-MCS55" },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS56,    "HT-MCS56" },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS57,    "HT-MCS57" },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS58,    "HT-MCS58" },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS59,    "HT-MCS59" },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS60,    "HT-MCS60" },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS61,    "HT-MCS61" },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS62,    "HT-MCS62" },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS63,    "HT-MCS63" },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS64,    "HT-MCS64" },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS65,    "HT-MCS65" },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS66,    "HT-MCS66" },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS67,    "HT-MCS67" },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS68,    "HT-MCS68" },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS69,    "HT-MCS69" },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS70,    "HT-MCS70" },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS71,    "HT-MCS71" },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS72,    "HT-MCS72" },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS73,    "HT-MCS73" },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS74,    "HT-MCS74" },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS75,    "HT-MCS75" },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS76,    "HT-MCS76" },        \
+{ IFM_IEEE80211|IFM_IEEE80211_VHT_MCS0,    "VHT-MCS0" },        \
+{ IFM_IEEE80211|IFM_IEEE80211_VHT_MCS1,    "VHT-MCS1" },        \
+{ IFM_IEEE80211|IFM_IEEE80211_VHT_MCS2,    "VHT-MCS2" },        \
+{ IFM_IEEE80211|IFM_IEEE80211_VHT_MCS3,    "VHT-MCS3" },        \
+{ IFM_IEEE80211|IFM_IEEE80211_VHT_MCS4,    "VHT-MCS4" },        \
+{ IFM_IEEE80211|IFM_IEEE80211_VHT_MCS5,    "VHT-MCS5" },        \
+{ IFM_IEEE80211|IFM_IEEE80211_VHT_MCS6,    "VHT-MCS6" },        \
+{ IFM_IEEE80211|IFM_IEEE80211_VHT_MCS7,    "VHT-MCS7" },        \
+{ IFM_IEEE80211|IFM_IEEE80211_VHT_MCS8,    "VHT-MCS8" },        \
+{ IFM_IEEE80211|IFM_IEEE80211_VHT_MCS9,    "VHT-MCS9" },        \
+\
+{ IFM_TDM|IFM_TDM_T1,        "t1" },                \
+{ IFM_TDM|IFM_TDM_T1_AMI,    "t1-ami" },            \
+{ IFM_TDM|IFM_TDM_E1,        "e1" },                \
+{ IFM_TDM|IFM_TDM_E1_G704,    "e1-g.704" },            \
+{ IFM_TDM|IFM_TDM_E1_AMI,    "e1-ami" },            \
+{ IFM_TDM|IFM_TDM_E1_AMI_G704,    "e1-ami-g.704" },        \
+{ IFM_TDM|IFM_TDM_T3,        "t3" },                \
+{ IFM_TDM|IFM_TDM_T3_M13,    "t3-m13" },            \
+{ IFM_TDM|IFM_TDM_E3,        "e3" },                \
+{ IFM_TDM|IFM_TDM_E3_G751,    "e3-g.751" },            \
+{ IFM_TDM|IFM_TDM_E3_G832,    "e3-g.832" },            \
+{ IFM_TDM|IFM_TDM_E1_G704_CRC4,    "e1-g.704-crc4" },        \
+\
+{ 0, NULL },                            \
 }
 
 #define IFM_MODE_DESCRIPTIONS {                        \
-    { IFM_AUTO,                "autoselect" },        \
-    { IFM_AUTO,                "auto" },        \
-    { IFM_IEEE80211|IFM_IEEE80211_11A,    "11a" },        \
-    { IFM_IEEE80211|IFM_IEEE80211_11B,    "11b" },        \
-    { IFM_IEEE80211|IFM_IEEE80211_11G,    "11g" },        \
-    { IFM_IEEE80211|IFM_IEEE80211_FH,    "fh" },            \
-    { IFM_IEEE80211|IFM_IEEE80211_11N,    "11n" },        \
-    { IFM_IEEE80211|IFM_IEEE80211_11AC,    "11ac" },        \
-    { IFM_TDM|IFM_TDM_MASTER,        "master" },        \
-    { 0, NULL },                            \
+{ IFM_AUTO,                "autoselect" },        \
+{ IFM_AUTO,                "auto" },        \
+{ IFM_IEEE80211|IFM_IEEE80211_11A,    "11a" },        \
+{ IFM_IEEE80211|IFM_IEEE80211_11B,    "11b" },        \
+{ IFM_IEEE80211|IFM_IEEE80211_11G,    "11g" },        \
+{ IFM_IEEE80211|IFM_IEEE80211_FH,    "fh" },            \
+{ IFM_IEEE80211|IFM_IEEE80211_11N,    "11n" },        \
+{ IFM_IEEE80211|IFM_IEEE80211_11AC,    "11ac" },        \
+{ IFM_TDM|IFM_TDM_MASTER,        "master" },        \
+{ 0, NULL },                            \
 }
 
 #define    IFM_OPTION_DESCRIPTIONS {                    \
-    { IFM_FDX,            "full-duplex" },        \
-    { IFM_FDX,            "fdx" },            \
-    { IFM_HDX,            "half-duplex" },        \
-    { IFM_HDX,            "hdx" },            \
-    { IFM_FLAG0,            "flag0" },            \
-    { IFM_FLAG1,            "flag1" },            \
-    { IFM_FLAG2,            "flag2" },            \
-    { IFM_LOOP,            "loopback" },            \
-    { IFM_LOOP,            "hw-loopback"},            \
-    { IFM_LOOP,            "loop" },            \
-                                    \
-    { IFM_ETHER|IFM_ETH_MASTER,    "master" },            \
-    { IFM_ETHER|IFM_ETH_RXPAUSE,    "rxpause" },            \
-    { IFM_ETHER|IFM_ETH_TXPAUSE,    "txpause" },            \
-                                    \
-    { IFM_FDDI|IFM_FDDI_DA,        "dual-attach" },        \
-    { IFM_FDDI|IFM_FDDI_DA,        "das" },            \
-                                    \
-    { IFM_IEEE80211|IFM_IEEE80211_ADHOC,    "adhoc" },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HOSTAP,    "hostap" },        \
-    { IFM_IEEE80211|IFM_IEEE80211_IBSS,    "ibss" },        \
-    { IFM_IEEE80211|IFM_IEEE80211_IBSSMASTER, "ibss-master" },    \
-    { IFM_IEEE80211|IFM_IEEE80211_MONITOR,    "monitor" },        \
-                                    \
-    { IFM_TDM|IFM_TDM_HDLC_CRC16,    "hdlc-crc16" },            \
-    { IFM_TDM|IFM_TDM_PPP,        "ppp" },            \
-    { IFM_TDM|IFM_TDM_FR_ANSI,    "framerelay-ansi" },        \
-    { IFM_TDM|IFM_TDM_FR_CISCO,    "framerelay-cisco" },        \
-    { IFM_TDM|IFM_TDM_FR_ANSI,    "framerelay-itu" },        \
-                                    \
-    { 0, NULL },                            \
+{ IFM_FDX,            "full-duplex" },        \
+{ IFM_FDX,            "fdx" },            \
+{ IFM_HDX,            "half-duplex" },        \
+{ IFM_HDX,            "hdx" },            \
+{ IFM_FLAG0,            "flag0" },            \
+{ IFM_FLAG1,            "flag1" },            \
+{ IFM_FLAG2,            "flag2" },            \
+{ IFM_LOOP,            "loopback" },            \
+{ IFM_LOOP,            "hw-loopback"},            \
+{ IFM_LOOP,            "loop" },            \
+\
+{ IFM_ETHER|IFM_ETH_MASTER,    "master" },            \
+{ IFM_ETHER|IFM_ETH_RXPAUSE,    "rxpause" },            \
+{ IFM_ETHER|IFM_ETH_TXPAUSE,    "txpause" },            \
+\
+{ IFM_FDDI|IFM_FDDI_DA,        "dual-attach" },        \
+{ IFM_FDDI|IFM_FDDI_DA,        "das" },            \
+\
+{ IFM_IEEE80211|IFM_IEEE80211_ADHOC,    "adhoc" },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HOSTAP,    "hostap" },        \
+{ IFM_IEEE80211|IFM_IEEE80211_IBSS,    "ibss" },        \
+{ IFM_IEEE80211|IFM_IEEE80211_IBSSMASTER, "ibss-master" },    \
+{ IFM_IEEE80211|IFM_IEEE80211_MONITOR,    "monitor" },        \
+\
+{ IFM_TDM|IFM_TDM_HDLC_CRC16,    "hdlc-crc16" },            \
+{ IFM_TDM|IFM_TDM_PPP,        "ppp" },            \
+{ IFM_TDM|IFM_TDM_FR_ANSI,    "framerelay-ansi" },        \
+{ IFM_TDM|IFM_TDM_FR_CISCO,    "framerelay-cisco" },        \
+{ IFM_TDM|IFM_TDM_FR_ANSI,    "framerelay-itu" },        \
+\
+{ 0, NULL },                            \
 }
 
 /*
@@ -826,152 +827,152 @@ struct ifmedia_baudrate {
 };
 
 #define    IFM_BAUDRATE_DESCRIPTIONS {                    \
-    { IFM_ETHER|IFM_10_T,        IF_Mbps(10) },            \
-    { IFM_ETHER|IFM_10_2,        IF_Mbps(10) },            \
-    { IFM_ETHER|IFM_10_5,        IF_Mbps(10) },            \
-    { IFM_ETHER|IFM_100_TX,        IF_Mbps(100) },            \
-    { IFM_ETHER|IFM_100_FX,        IF_Mbps(100) },            \
-    { IFM_ETHER|IFM_100_T4,        IF_Mbps(100) },            \
-    { IFM_ETHER|IFM_100_VG,        IF_Mbps(100) },            \
-    { IFM_ETHER|IFM_100_T2,        IF_Mbps(100) },            \
-    { IFM_ETHER|IFM_1000_SX,    IF_Mbps(1000) },        \
-    { IFM_ETHER|IFM_10_STP,        IF_Mbps(10) },            \
-    { IFM_ETHER|IFM_10_FL,        IF_Mbps(10) },            \
-    { IFM_ETHER|IFM_1000_LX,    IF_Mbps(1000) },        \
-    { IFM_ETHER|IFM_1000_CX,    IF_Mbps(1000) },        \
-    { IFM_ETHER|IFM_1000_T,        IF_Mbps(1000) },        \
-    { IFM_ETHER|IFM_HPNA_1,        IF_Mbps(1) },            \
-    { IFM_ETHER|IFM_10G_LR,        IF_Gbps(10) },            \
-    { IFM_ETHER|IFM_10G_SR,        IF_Gbps(10) },            \
-    { IFM_ETHER|IFM_10G_CX4,    IF_Gbps(10) },            \
-    { IFM_ETHER|IFM_2500_SX,    IF_Mbps(2500) },        \
-    { IFM_ETHER|IFM_10G_T,        IF_Gbps(10) },            \
-    { IFM_ETHER|IFM_10G_SFP_CU,    IF_Gbps(10) },            \
-                                    \
-    { IFM_FDDI|IFM_FDDI_SMF,    IF_Mbps(100) },            \
-    { IFM_FDDI|IFM_FDDI_MMF,    IF_Mbps(100) },            \
-    { IFM_FDDI|IFM_FDDI_UTP,    IF_Mbps(100) },            \
-                                    \
-    { IFM_IEEE80211|IFM_IEEE80211_FH1, IF_Mbps(1) },        \
-    { IFM_IEEE80211|IFM_IEEE80211_FH2, IF_Mbps(2) },        \
-    { IFM_IEEE80211|IFM_IEEE80211_DS1, IF_Mbps(1) },        \
-    { IFM_IEEE80211|IFM_IEEE80211_DS2, IF_Mbps(2) },        \
-    { IFM_IEEE80211|IFM_IEEE80211_DS5, IF_Mbps(5) },        \
-    { IFM_IEEE80211|IFM_IEEE80211_DS11, IF_Mbps(11) },        \
-    { IFM_IEEE80211|IFM_IEEE80211_DS22, IF_Mbps(22) },        \
-    { IFM_IEEE80211|IFM_IEEE80211_OFDM6, IF_Mbps(6) },        \
-    { IFM_IEEE80211|IFM_IEEE80211_OFDM9, IF_Mbps(9) },        \
-    { IFM_IEEE80211|IFM_IEEE80211_OFDM12, IF_Mbps(12) },        \
-    { IFM_IEEE80211|IFM_IEEE80211_OFDM18, IF_Mbps(18) },        \
-    { IFM_IEEE80211|IFM_IEEE80211_OFDM24, IF_Mbps(24) },        \
-    { IFM_IEEE80211|IFM_IEEE80211_OFDM36, IF_Mbps(36) },        \
-    { IFM_IEEE80211|IFM_IEEE80211_OFDM48, IF_Mbps(48) },        \
-    { IFM_IEEE80211|IFM_IEEE80211_OFDM54, IF_Mbps(54) },        \
-    { IFM_IEEE80211|IFM_IEEE80211_OFDM72, IF_Mbps(72) },        \
-    /* These HT rates correspond to 20 MHz channel with no SGI. */    \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS0, IF_Kbps(6500) },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS1, IF_Mbps(13) },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS2, IF_Kbps(19500) },    \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS3, IF_Mbps(26) },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS4, IF_Mbps(39) },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS5, IF_Mbps(52) },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS6, IF_Kbps(58500) },    \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS7, IF_Mbps(65) },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS8, IF_Mbps(13) },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS9, IF_Mbps(26) },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS10, IF_Mbps(39) },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS11, IF_Mbps(52) },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS12, IF_Mbps(78) },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS13, IF_Mbps(104) },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS14, IF_Mbps(117) },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS15, IF_Mbps(130) },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS16, IF_Kbps(19500) },    \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS17, IF_Mbps(39) },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS18, IF_Kbps(58500) },    \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS19, IF_Mbps(78) },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS20, IF_Mbps(117) },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS21, IF_Mbps(156) },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS22, IF_Kbps(175500) },    \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS23, IF_Mbps(195) },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS24, IF_Mbps(26) },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS25, IF_Mbps(52) },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS26, IF_Mbps(78) },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS27, IF_Mbps(104) },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS28, IF_Mbps(156) },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS29, IF_Mbps(208) },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS30, IF_Mbps(234) },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS31, IF_Mbps(260) },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS32, IF_Mbps(0) },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS33, IF_Mbps(39) },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS34, IF_Mbps(52) },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS35, IF_Mbps(65) },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS36, IF_Kbps(58500) },    \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS37, IF_Mbps(78) },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS38, IF_Kbps(97500) },    \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS39, IF_Mbps(52) },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS40, IF_Mbps(65) },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS41, IF_Mbps(65) },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS42, IF_Mbps(78) },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS43, IF_Mbps(91) },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS44, IF_Mbps(91) },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS45, IF_Mbps(104) },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS46, IF_Mbps(78) },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS47, IF_Kbps(97500) },    \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS48, IF_Kbps(97500) },    \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS49, IF_Mbps(117) },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS50, IF_Kbps(136500) },    \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS51, IF_Kbps(136500) },    \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS52, IF_Mbps(156) },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS53, IF_Mbps(65) },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS54, IF_Mbps(78) },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS55, IF_Mbps(91) },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS56, IF_Mbps(78) },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS57, IF_Mbps(91) },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS58, IF_Mbps(104) },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS59, IF_Mbps(117) },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS60, IF_Mbps(104) },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS61, IF_Mbps(117) },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS62, IF_Mbps(130) },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS63, IF_Mbps(130) },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS64, IF_Mbps(143) },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS65, IF_Kbps(97500) },    \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS66, IF_Mbps(117) },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS67, IF_Kbps(136500) },    \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS68, IF_Mbps(117) },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS69, IF_Kbps(136500) },    \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS70, IF_Mbps(156) },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS71, IF_Kbps(175500) },    \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS72, IF_Mbps(156) },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS73, IF_Kbps(175500) },    \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS74, IF_Mbps(195) },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS75, IF_Mbps(195) },        \
-    { IFM_IEEE80211|IFM_IEEE80211_HT_MCS76, IF_Kbps(214500) },    \
-    /* These VHT rates correspond to 1 SS, no SGI, 40 MHz channel.*/\
-    { IFM_IEEE80211|IFM_IEEE80211_VHT_MCS0, IF_Kbps(13500) },    \
-    { IFM_IEEE80211|IFM_IEEE80211_VHT_MCS1, IF_Mbps(27) },        \
-    { IFM_IEEE80211|IFM_IEEE80211_VHT_MCS2, IF_Kbps(40500) },    \
-    { IFM_IEEE80211|IFM_IEEE80211_VHT_MCS3, IF_Mbps(54) },        \
-    { IFM_IEEE80211|IFM_IEEE80211_VHT_MCS4, IF_Mbps(81) },        \
-    { IFM_IEEE80211|IFM_IEEE80211_VHT_MCS5, IF_Mbps(108) },        \
-    { IFM_IEEE80211|IFM_IEEE80211_VHT_MCS6, IF_Kbps(121500) },    \
-    { IFM_IEEE80211|IFM_IEEE80211_VHT_MCS7, IF_Mbps(135) },        \
-    { IFM_IEEE80211|IFM_IEEE80211_VHT_MCS8, IF_Mbps(162) },        \
-    { IFM_IEEE80211|IFM_IEEE80211_VHT_MCS9, IF_Mbps(180) },        \
-                                    \
-    { IFM_TDM|IFM_TDM_T1,        IF_Kbps(1536) },        \
-    { IFM_TDM|IFM_TDM_T1_AMI,    IF_Kbps(1536) },        \
-    { IFM_TDM|IFM_TDM_E1,        IF_Kbps(2048) },        \
-    { IFM_TDM|IFM_TDM_E1_G704,    IF_Kbps(2048) },        \
-    { IFM_TDM|IFM_TDM_E1_AMI,    IF_Kbps(2048) },        \
-    { IFM_TDM|IFM_TDM_E1_AMI_G704,    IF_Kbps(2048) },        \
-    { IFM_TDM|IFM_TDM_T3,        IF_Kbps(44736) },        \
-    { IFM_TDM|IFM_TDM_T3_M13,    IF_Kbps(44736) },        \
-    { IFM_TDM|IFM_TDM_E3,        IF_Kbps(34368) },        \
-    { IFM_TDM|IFM_TDM_E3_G751,    IF_Kbps(34368) },        \
-    { IFM_TDM|IFM_TDM_E3_G832,    IF_Kbps(34368) },        \
-    { IFM_TDM|IFM_TDM_E1_G704_CRC4,    IF_Kbps(2048) },        \
-                                    \
-    { 0, 0 },                            \
+{ IFM_ETHER|IFM_10_T,        IF_Mbps(10) },            \
+{ IFM_ETHER|IFM_10_2,        IF_Mbps(10) },            \
+{ IFM_ETHER|IFM_10_5,        IF_Mbps(10) },            \
+{ IFM_ETHER|IFM_100_TX,        IF_Mbps(100) },            \
+{ IFM_ETHER|IFM_100_FX,        IF_Mbps(100) },            \
+{ IFM_ETHER|IFM_100_T4,        IF_Mbps(100) },            \
+{ IFM_ETHER|IFM_100_VG,        IF_Mbps(100) },            \
+{ IFM_ETHER|IFM_100_T2,        IF_Mbps(100) },            \
+{ IFM_ETHER|IFM_1000_SX,    IF_Mbps(1000) },        \
+{ IFM_ETHER|IFM_10_STP,        IF_Mbps(10) },            \
+{ IFM_ETHER|IFM_10_FL,        IF_Mbps(10) },            \
+{ IFM_ETHER|IFM_1000_LX,    IF_Mbps(1000) },        \
+{ IFM_ETHER|IFM_1000_CX,    IF_Mbps(1000) },        \
+{ IFM_ETHER|IFM_1000_T,        IF_Mbps(1000) },        \
+{ IFM_ETHER|IFM_HPNA_1,        IF_Mbps(1) },            \
+{ IFM_ETHER|IFM_10G_LR,        IF_Gbps(10) },            \
+{ IFM_ETHER|IFM_10G_SR,        IF_Gbps(10) },            \
+{ IFM_ETHER|IFM_10G_CX4,    IF_Gbps(10) },            \
+{ IFM_ETHER|IFM_2500_SX,    IF_Mbps(2500) },        \
+{ IFM_ETHER|IFM_10G_T,        IF_Gbps(10) },            \
+{ IFM_ETHER|IFM_10G_SFP_CU,    IF_Gbps(10) },            \
+\
+{ IFM_FDDI|IFM_FDDI_SMF,    IF_Mbps(100) },            \
+{ IFM_FDDI|IFM_FDDI_MMF,    IF_Mbps(100) },            \
+{ IFM_FDDI|IFM_FDDI_UTP,    IF_Mbps(100) },            \
+\
+{ IFM_IEEE80211|IFM_IEEE80211_FH1, IF_Mbps(1) },        \
+{ IFM_IEEE80211|IFM_IEEE80211_FH2, IF_Mbps(2) },        \
+{ IFM_IEEE80211|IFM_IEEE80211_DS1, IF_Mbps(1) },        \
+{ IFM_IEEE80211|IFM_IEEE80211_DS2, IF_Mbps(2) },        \
+{ IFM_IEEE80211|IFM_IEEE80211_DS5, IF_Mbps(5) },        \
+{ IFM_IEEE80211|IFM_IEEE80211_DS11, IF_Mbps(11) },        \
+{ IFM_IEEE80211|IFM_IEEE80211_DS22, IF_Mbps(22) },        \
+{ IFM_IEEE80211|IFM_IEEE80211_OFDM6, IF_Mbps(6) },        \
+{ IFM_IEEE80211|IFM_IEEE80211_OFDM9, IF_Mbps(9) },        \
+{ IFM_IEEE80211|IFM_IEEE80211_OFDM12, IF_Mbps(12) },        \
+{ IFM_IEEE80211|IFM_IEEE80211_OFDM18, IF_Mbps(18) },        \
+{ IFM_IEEE80211|IFM_IEEE80211_OFDM24, IF_Mbps(24) },        \
+{ IFM_IEEE80211|IFM_IEEE80211_OFDM36, IF_Mbps(36) },        \
+{ IFM_IEEE80211|IFM_IEEE80211_OFDM48, IF_Mbps(48) },        \
+{ IFM_IEEE80211|IFM_IEEE80211_OFDM54, IF_Mbps(54) },        \
+{ IFM_IEEE80211|IFM_IEEE80211_OFDM72, IF_Mbps(72) },        \
+/* These HT rates correspond to 20 MHz channel with no SGI. */    \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS0, IF_Kbps(6500) },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS1, IF_Mbps(13) },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS2, IF_Kbps(19500) },    \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS3, IF_Mbps(26) },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS4, IF_Mbps(39) },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS5, IF_Mbps(52) },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS6, IF_Kbps(58500) },    \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS7, IF_Mbps(65) },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS8, IF_Mbps(13) },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS9, IF_Mbps(26) },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS10, IF_Mbps(39) },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS11, IF_Mbps(52) },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS12, IF_Mbps(78) },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS13, IF_Mbps(104) },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS14, IF_Mbps(117) },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS15, IF_Mbps(130) },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS16, IF_Kbps(19500) },    \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS17, IF_Mbps(39) },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS18, IF_Kbps(58500) },    \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS19, IF_Mbps(78) },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS20, IF_Mbps(117) },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS21, IF_Mbps(156) },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS22, IF_Kbps(175500) },    \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS23, IF_Mbps(195) },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS24, IF_Mbps(26) },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS25, IF_Mbps(52) },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS26, IF_Mbps(78) },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS27, IF_Mbps(104) },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS28, IF_Mbps(156) },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS29, IF_Mbps(208) },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS30, IF_Mbps(234) },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS31, IF_Mbps(260) },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS32, IF_Mbps(0) },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS33, IF_Mbps(39) },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS34, IF_Mbps(52) },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS35, IF_Mbps(65) },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS36, IF_Kbps(58500) },    \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS37, IF_Mbps(78) },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS38, IF_Kbps(97500) },    \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS39, IF_Mbps(52) },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS40, IF_Mbps(65) },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS41, IF_Mbps(65) },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS42, IF_Mbps(78) },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS43, IF_Mbps(91) },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS44, IF_Mbps(91) },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS45, IF_Mbps(104) },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS46, IF_Mbps(78) },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS47, IF_Kbps(97500) },    \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS48, IF_Kbps(97500) },    \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS49, IF_Mbps(117) },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS50, IF_Kbps(136500) },    \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS51, IF_Kbps(136500) },    \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS52, IF_Mbps(156) },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS53, IF_Mbps(65) },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS54, IF_Mbps(78) },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS55, IF_Mbps(91) },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS56, IF_Mbps(78) },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS57, IF_Mbps(91) },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS58, IF_Mbps(104) },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS59, IF_Mbps(117) },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS60, IF_Mbps(104) },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS61, IF_Mbps(117) },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS62, IF_Mbps(130) },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS63, IF_Mbps(130) },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS64, IF_Mbps(143) },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS65, IF_Kbps(97500) },    \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS66, IF_Mbps(117) },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS67, IF_Kbps(136500) },    \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS68, IF_Mbps(117) },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS69, IF_Kbps(136500) },    \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS70, IF_Mbps(156) },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS71, IF_Kbps(175500) },    \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS72, IF_Mbps(156) },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS73, IF_Kbps(175500) },    \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS74, IF_Mbps(195) },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS75, IF_Mbps(195) },        \
+{ IFM_IEEE80211|IFM_IEEE80211_HT_MCS76, IF_Kbps(214500) },    \
+/* These VHT rates correspond to 1 SS, no SGI, 40 MHz channel.*/\
+{ IFM_IEEE80211|IFM_IEEE80211_VHT_MCS0, IF_Kbps(13500) },    \
+{ IFM_IEEE80211|IFM_IEEE80211_VHT_MCS1, IF_Mbps(27) },        \
+{ IFM_IEEE80211|IFM_IEEE80211_VHT_MCS2, IF_Kbps(40500) },    \
+{ IFM_IEEE80211|IFM_IEEE80211_VHT_MCS3, IF_Mbps(54) },        \
+{ IFM_IEEE80211|IFM_IEEE80211_VHT_MCS4, IF_Mbps(81) },        \
+{ IFM_IEEE80211|IFM_IEEE80211_VHT_MCS5, IF_Mbps(108) },        \
+{ IFM_IEEE80211|IFM_IEEE80211_VHT_MCS6, IF_Kbps(121500) },    \
+{ IFM_IEEE80211|IFM_IEEE80211_VHT_MCS7, IF_Mbps(135) },        \
+{ IFM_IEEE80211|IFM_IEEE80211_VHT_MCS8, IF_Mbps(162) },        \
+{ IFM_IEEE80211|IFM_IEEE80211_VHT_MCS9, IF_Mbps(180) },        \
+\
+{ IFM_TDM|IFM_TDM_T1,        IF_Kbps(1536) },        \
+{ IFM_TDM|IFM_TDM_T1_AMI,    IF_Kbps(1536) },        \
+{ IFM_TDM|IFM_TDM_E1,        IF_Kbps(2048) },        \
+{ IFM_TDM|IFM_TDM_E1_G704,    IF_Kbps(2048) },        \
+{ IFM_TDM|IFM_TDM_E1_AMI,    IF_Kbps(2048) },        \
+{ IFM_TDM|IFM_TDM_E1_AMI_G704,    IF_Kbps(2048) },        \
+{ IFM_TDM|IFM_TDM_T3,        IF_Kbps(44736) },        \
+{ IFM_TDM|IFM_TDM_T3_M13,    IF_Kbps(44736) },        \
+{ IFM_TDM|IFM_TDM_E3,        IF_Kbps(34368) },        \
+{ IFM_TDM|IFM_TDM_E3_G751,    IF_Kbps(34368) },        \
+{ IFM_TDM|IFM_TDM_E3_G832,    IF_Kbps(34368) },        \
+{ IFM_TDM|IFM_TDM_E1_G704_CRC4,    IF_Kbps(2048) },        \
+\
+{ 0, 0 },                            \
 }
 
 /*
@@ -985,20 +986,99 @@ struct ifmedia_status_description {
 };
 
 #define    IFM_STATUS_DESC(ifms, bit)                    \
-    (ifms)->ifms_string[((ifms)->ifms_bit & (bit)) ? 1 : 0]
+(ifms)->ifms_string[((ifms)->ifms_bit & (bit)) ? 1 : 0]
 
 #define    IFM_STATUS_DESCRIPTIONS {                    \
-    { IFM_ETHER,        IFM_AVALID,    IFM_ACTIVE,        \
-        { "no carrier", "active" } },                \
-    { IFM_FDDI,        IFM_AVALID,    IFM_ACTIVE,        \
-        { "no ring", "inserted" } },                \
-    { IFM_IEEE80211,    IFM_AVALID,    IFM_ACTIVE,        \
-        { "no network", "active" } },                \
-    { IFM_TDM,        IFM_AVALID,    IFM_ACTIVE,        \
-        { "no carrier", "active" } },                \
-    { IFM_CARP,        IFM_AVALID,    IFM_ACTIVE,        \
-        { "backup", "master" } },                    \
-    { 0,            0,        0,            \
-        { NULL, NULL } }                        \
+{ IFM_ETHER,        IFM_AVALID,    IFM_ACTIVE,        \
+{ "no carrier", "active" } },                \
+{ IFM_FDDI,        IFM_AVALID,    IFM_ACTIVE,        \
+{ "no ring", "inserted" } },                \
+{ IFM_IEEE80211,    IFM_AVALID,    IFM_ACTIVE,        \
+{ "no network", "active" } },                \
+{ IFM_TDM,        IFM_AVALID,    IFM_ACTIVE,        \
+{ "no carrier", "active" } },                \
+{ IFM_CARP,        IFM_AVALID,    IFM_ACTIVE,        \
+{ "backup", "master" } },                    \
+{ 0,            0,        0,            \
+{ NULL, NULL } }                        \
 }
+
+/* Delete all media for a given media instance */
+static inline void ifmedia_delete_instance(struct ifmedia *ifm, uint64_t inst)
+{
+    struct ifmedia_entry *ife, *nife;
+    
+    TAILQ_FOREACH_SAFE(ife, &ifm->ifm_list, ifm_list, nife) {
+        if (inst == IFM_INST_ANY ||
+            inst == IFM_INST(ife->ifm_media)) {
+            TAILQ_REMOVE(&ifm->ifm_list, ife, ifm_list);
+            IOFree(ife, sizeof *ife);
+        }
+    }
+}
+
+/*
+ * Find media entry matching a given ifm word.
+ */
+static inline struct ifmedia_entry *
+ifmedia_match(struct ifmedia *ifm, uint64_t target, uint64_t mask)
+{
+    struct ifmedia_entry *match, *next;
+    
+    match = NULL;
+    mask = ~mask;
+    
+    TAILQ_FOREACH(next, &ifm->ifm_list, ifm_list) {
+        if ((next->ifm_media & mask) == (target & mask)) {
+            if (match) {
+#if defined(IFMEDIA_DEBUG) || defined(DIAGNOSTIC)
+                printf("ifmedia_match: multiple match for "
+                       "0x%llx/0x%llx, selected instance %lld\n",
+                       target, mask, IFM_INST(match->ifm_media));
+#endif
+                break;
+            }
+            match = next;
+        }
+    }
+    
+    return (match);
+}
+
+/* Set default media type on initialization. */
+static inline void ifmedia_set(struct ifmedia *ifm, uint64_t target)
+{
+    struct ifmedia_entry *match;
+    
+    match = ifmedia_match(ifm, target, ifm->ifm_mask);
+    
+    /*
+     * If we didn't find the requested media, then we try to fall
+     * back to target-type (IFM_ETHER, e.g.) | IFM_NONE.  If that's
+     * not on the list, then we add it and set the media to it.
+     *
+     * Since ifmedia_set is almost always called with IFM_AUTO or
+     * with a known-good media, this really should only occur if we:
+     *
+     * a) didn't find any PHYs, or
+     * b) didn't find an autoselect option on the PHY when the
+     *    parent ethernet driver expected to.
+     *
+     * In either case, it makes sense to select no media.
+     */
+    if (match == NULL) {
+        printf("ifmedia_set: no match for 0x%llx/0x%llx\n",
+               target, ~ifm->ifm_mask);
+        target = (target & IFM_NMASK) | IFM_NONE;
+        match = ifmedia_match(ifm, target, ifm->ifm_mask);
+        if (match == NULL) {
+            ifmedia_add(ifm, target, 0, NULL);
+            match = ifmedia_match(ifm, target, ifm->ifm_mask);
+            if (match == NULL)
+                panic("ifmedia_set failed");
+        }
+    }
+    ifm->ifm_cur = match;
+}
+
 #endif    /* _NET_IF_MEDIA_H_ */

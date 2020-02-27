@@ -171,7 +171,7 @@ IOBufferMemoryDescriptor* allocDmaMemory
     uint64_t    phymask;
     int        i;
     
-    IOLog("Asked to allocate %u bytes with align=%u\n", size, alignment);
+    XYLog("Asked to allocate %u bytes with align=%u\n", size, alignment);
     
     if (alignment <= PAGE_SIZE) {
         reqsize = size;
@@ -192,7 +192,7 @@ IOBufferMemoryDescriptor* allocDmaMemory
     *paddr = mem->getPhysicalAddress();
     *vaddr = mem->getBytesNoCopy();
     
-    IOLog("Got allocated at paddr=0x%x, vaddr=0x%x\n", *paddr, *vaddr);
+    XYLog("Got allocated at paddr=0x%x, vaddr=0x%x\n", *paddr, *vaddr);
     
     /*
      * Check the alignment and increment by 4096 until we get the
@@ -207,13 +207,13 @@ IOBufferMemoryDescriptor* allocDmaMemory
             *vaddr = ((uint8_t*) *vaddr) + 4096;
         }
         if (i == alignment / 4096) {
-            IOLog("Memory alloc alignment requirement %d was not satisfied\n", alignment);
+            XYLog("Memory alloc alignment requirement %d was not satisfied\n", alignment);
             mem->complete();
             mem->release();
             return 0;
         }
     }
-    IOLog("Re-aligned DMA memory to paddr=0x%x, vaddr=0x%x\n", *paddr, *vaddr);
+    XYLog("Re-aligned DMA memory to paddr=0x%x, vaddr=0x%x\n", *paddr, *vaddr);
     return mem;
 }
 

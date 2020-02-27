@@ -291,6 +291,7 @@ iwm_apm_stop(struct iwm_softc *sc)
 int itlwm::
 iwm_start_hw(struct iwm_softc *sc)
 {
+    XYLog("%s\n", __func__);
     int err;
 
     err = iwm_prepare_card_hw(sc);
@@ -315,6 +316,7 @@ iwm_start_hw(struct iwm_softc *sc)
 void itlwm::
 iwm_stop_device(struct iwm_softc *sc)
 {
+    XYLog("%s\n", __func__);
     int chnl, ntries;
     int qid;
 

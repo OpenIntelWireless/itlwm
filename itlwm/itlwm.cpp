@@ -13,7 +13,7 @@ OSDefineMetaClassAndStructors(CTimeout, OSObject)
 
 bool itlwm::init(OSDictionary *properties)
 {
-    XYLog("Init\n");
+    XYLog("%s\n", __func__);
     super::init(properties);
     fwLoadLock = IOLockAlloc();
     return true;
@@ -21,6 +21,7 @@ bool itlwm::init(OSDictionary *properties)
 
 IOService* itlwm::probe(IOService *provider, SInt32 *score)
 {
+    XYLog("%s\n", __func__);
     IOPCIDevice* device = OSDynamicCast(IOPCIDevice, provider);
     if (!device) {
         return NULL;
@@ -30,6 +31,7 @@ IOService* itlwm::probe(IOService *provider, SInt32 *score)
 
 bool itlwm::start(IOService *provider)
 {
+    XYLog("%s\n", __func__);
     if (!super::start(provider)) {
         return false;
     }
@@ -48,34 +50,39 @@ bool itlwm::start(IOService *provider)
     initTimeout(fWorkloop);
     fCommandGate = IOCommandGate::commandGate(this, (IOCommandGate::Action)tsleepHandler);
     if (fCommandGate == 0) {
-        IOLog("No command gate!!\n");
+        XYLog("No command gate!!\n");
         return false;
     }
     fWorkloop->addEventSource(fCommandGate);
     pci.workloop = fWorkloop;
     pci.pa_tag = device;
     iwm_attach(&com, &pci);
+    iwm_init(&com.sc_ic.ic_ac.ac_if);
     registerService();
     return true;
 }
 
 void itlwm::stop(IOService *provider)
 {
+    XYLog("%s\n", __func__);
     super::stop(provider);
 }
 
 IOReturn itlwm::setPromiscuousMode(bool active)
 {
+    XYLog("%s\n", __func__);
     return kIOReturnSuccess;
 }
 
 IOReturn itlwm::setMulticastMode(bool active)
 {
+    XYLog("%s\n", __func__);
     return kIOReturnSuccess;
 }
 
 void itlwm::wakeupOn(void *ident)
 {
+    XYLog("%s\n", __func__);
     if (fCommandGate == 0)
         return;
     else
@@ -84,6 +91,7 @@ void itlwm::wakeupOn(void *ident)
 
 int itlwm::tsleep_nsec(void *ident, int priority, const char *wmesg, int timo)
 {
+    XYLog("%s\n", __func__);
     if (fCommandGate == 0) {
         IOSleep(timo);
         return 0;
@@ -103,6 +111,7 @@ int itlwm::tsleep_nsec(void *ident, int priority, const char *wmesg, int timo)
 
 IOReturn itlwm::tsleepHandler(OSObject* owner, void* arg0, void* arg1, void* arg2, void* arg3)
 {
+    XYLog("%s\n", __func__);
     itlwm* dev = OSDynamicCast(itlwm, owner);
     if (dev == 0)
         return kIOReturnError;
@@ -124,9 +133,14 @@ IOReturn itlwm::tsleepHandler(OSObject* owner, void* arg0, void* arg1, void* arg
 
 void itlwm::free()
 {
+    XYLog("%s\n", __func__);
     IOLockFree(fwLoadLock);
     fwLoadLock = NULL;
     releaseTimeout();
+    if (com.ih) {
+        com.ih->release();
+        com.ih = NULL;
+    }
     if (fWorkloop) {
         fWorkloop->release();
         fWorkloop = NULL;
@@ -136,15 +150,18 @@ void itlwm::free()
 
 IOReturn itlwm::enable(IONetworkInterface *netif)
 {
+    XYLog("%s\n", __func__);
     return super::enable(netif);
 }
 
 IOReturn itlwm::disable(IONetworkInterface *netif)
 {
+    XYLog("%s\n", __func__);
     return super::disable(netif);
 }
 
 IOReturn itlwm::getHardwareAddress(IOEthernetAddress *addrP) {
+    XYLog("%s\n", __func__);
     addrP->bytes[0] = 0x29;
     addrP->bytes[1] = 0xC2;
     addrP->bytes[2] = 0xdd;
@@ -156,6 +173,7 @@ IOReturn itlwm::getHardwareAddress(IOEthernetAddress *addrP) {
 
 IOOutputQueue *itlwm::createOutputQueue()
 {
+    XYLog("%s\n", __func__);
     if (fOutputQueue == 0) {
         fOutputQueue = IOGatedOutputQueue::withTarget(this, getWorkLoop());
     }
@@ -164,12 +182,14 @@ IOOutputQueue *itlwm::createOutputQueue()
 
 UInt32 itlwm::outputPacket(mbuf_t m, void *param)
 {
+    XYLog("%s\n", __func__);
     freePacket(m);
     return kIOReturnOutputDropped;
 }
 
 int itlwm::iwm_media_change(struct ifnet *ifp)
 {
+    XYLog("%s\n", __func__);
     struct iwm_softc *sc = (struct iwm_softc*)ifp->if_softc;
     struct ieee80211com *ic = &sc->sc_ic;
     uint8_t rate, ridx;
@@ -202,6 +222,7 @@ int itlwm::iwm_media_change(struct ifnet *ifp)
 void itlwm::
 iwm_newstate_task(void *psc)
 {
+    XYLog("%s\n", __func__);
     struct iwm_softc *sc = (struct iwm_softc *)psc;
     struct ieee80211com *ic = &sc->sc_ic;
     enum ieee80211_state nstate = sc->ns_nstate;
@@ -306,6 +327,7 @@ out:
 int itlwm::
 iwm_newstate(struct ieee80211com *ic, enum ieee80211_state nstate, int arg)
 {
+    XYLog("%s\n", __func__);
     struct ifnet *ifp = IC2IFP(ic);
     struct iwm_softc *sc = (struct iwm_softc*)ifp->if_softc;
     struct iwm_node *in = (struct iwm_node *)ic->ic_bss;
@@ -328,6 +350,7 @@ iwm_newstate(struct ieee80211com *ic, enum ieee80211_state nstate, int arg)
 void itlwm::
 iwm_endscan(struct iwm_softc *sc)
 {
+    XYLog("%s\n", __func__);
     struct ieee80211com *ic = &sc->sc_ic;
     
     if ((sc->sc_flags & (IWM_FLAG_SCANNING | IWM_FLAG_BGSCAN)) == 0)
@@ -469,6 +492,7 @@ iwm_sf_config(struct iwm_softc *sc, int new_state)
 int itlwm::
 iwm_init_hw(struct iwm_softc *sc)
 {
+    XYLog("%s\n", __func__);
     struct ieee80211com *ic = &sc->sc_ic;
     int err, i, ac;
     
@@ -610,6 +634,7 @@ err:
 int itlwm::
 iwm_init(struct ifnet *ifp)
 {
+    XYLog("%s\n", __func__);
     struct iwm_softc *sc = (struct iwm_softc*)ifp->if_softc;
     struct ieee80211com *ic = &sc->sc_ic;
     int err, generation;
@@ -649,6 +674,7 @@ iwm_init(struct ifnet *ifp)
 void itlwm::
 iwm_start(struct ifnet *ifp)
 {
+    XYLog("%s\n", __func__);
     struct iwm_softc *sc = (struct iwm_softc*)ifp->if_softc;
     struct ieee80211com *ic = &sc->sc_ic;
     struct ieee80211_node *ni;
@@ -717,6 +743,7 @@ iwm_start(struct ifnet *ifp)
 void itlwm::
 iwm_stop(struct ifnet *ifp)
 {
+    XYLog("%s\n", __func__);
     struct iwm_softc *sc = (struct iwm_softc*)ifp->if_softc;
     struct ieee80211com *ic = &sc->sc_ic;
     struct iwm_node *in = (struct iwm_node *)ic->ic_bss;
@@ -795,6 +822,7 @@ iwm_watchdog(struct ifnet *ifp)
 int itlwm::
 iwm_ioctl(struct ifnet *ifp, u_long cmd, caddr_t data)
 {
+    XYLog("%s\n", __func__);
     struct iwm_softc *sc = (struct iwm_softc *)ifp->if_softc;
     int s, err = 0, generation = sc->sc_generation;
     
@@ -1110,6 +1138,7 @@ _ptr_ = (void *)((_pkt_)+1);                    \
 void itlwm::
 iwm_notif_intr(struct iwm_softc *sc)
 {
+    XYLog("%s\n", __func__);
     struct mbuf_list ml = MBUF_LIST_INITIALIZER();
     uint16_t hw;
     
@@ -1581,6 +1610,7 @@ static const struct pci_matchid iwm_devices[] = {
 int itlwm::
 iwm_match(struct IOPCIDevice *device)
 {
+    XYLog("%s\n", __func__);
     int devId = device->configRead16(kIOPCIConfigDeviceID);
     return pci_matchbyid(PCI_VENDOR_INTEL, devId, iwm_devices,
                          nitems(iwm_devices));
@@ -1589,6 +1619,7 @@ iwm_match(struct IOPCIDevice *device)
 int itlwm::
 iwm_preinit(struct iwm_softc *sc)
 {
+    XYLog("%s\n", __func__);
     struct ieee80211com *ic = &sc->sc_ic;
     struct ifnet *ifp = IC2IFP(ic);
     int err;
@@ -1649,6 +1680,7 @@ iwm_preinit(struct iwm_softc *sc)
 void itlwm::
 iwm_attach_hook(struct device *self)
 {
+    XYLog("%s\n", __func__);
     struct iwm_softc *sc = (struct iwm_softc *)self;
     
     _KASSERT(!cold);
@@ -1656,10 +1688,17 @@ iwm_attach_hook(struct device *self)
     iwm_preinit(sc);
 }
 
+bool itlwm::
+intrFilter(OSObject *object, IOFilterInterruptEventSource *src)
+{
+    XYLog("interrupt filter ran\n");
+    return true;
+}
+
 void itlwm::
 iwm_attach(struct iwm_softc *sc, struct pci_attach_args *pa)
 {
-    pci_intr_handle_t ih;
+    XYLog("%s\n", __func__);
     pcireg_t reg, memtype;
     struct ieee80211com *ic = &sc->sc_ic;
     struct ifnet *ifp = &ic->ic_if;
@@ -1702,12 +1741,28 @@ iwm_attach(struct iwm_softc *sc, struct pci_attach_args *pa)
         return;
     }
     
-    if (pci_intr_map_msi(pa, &ih) && pci_intr_map(pa, &ih)) {
+    if (pci_intr_map_msi(pa, &sc->ih) && pci_intr_map(pa, &sc->ih)) {
         XYLog("%s: can't map interrupt\n", DEVNAME(sc));
         return;
     }
     
-    sc->sc_ih =  IOInterruptEventSource::interruptEventSource(this, OSMemberFunctionCast(IOInterruptEventSource::Action, this, &itlwm::iwm_intr));
+    int msiIntrIndex = 0;
+    for (int index = 0; ; index++)
+    {
+        int interruptType;
+        int ret = pa->pa_tag->getInterruptType(index, &interruptType);
+        if (ret != kIOReturnSuccess)
+            break;
+        if (interruptType & kIOInterruptTypePCIMessaged)
+        {
+            msiIntrIndex = index;
+            break;
+        }
+    }
+    
+    sc->sc_ih =
+    IOFilterInterruptEventSource::filterInterruptEventSource(this, OSMemberFunctionCast(IOInterruptEventSource::Action,this, &itlwm::iwm_intr), OSMemberFunctionCast(IOFilterInterruptAction, this, &itlwm::intrFilter)
+                                                             ,pa->pa_tag, msiIntrIndex);
     if (sc->sc_ih == NULL || getWorkLoop()->addEventSource(sc->sc_ih) != kIOReturnSuccess) {
         XYLog("\n");
         XYLog("%s: can't establish interrupt", DEVNAME(sc));
@@ -1825,6 +1880,8 @@ iwm_attach(struct iwm_softc *sc, struct pci_attach_args *pa)
         }
     }
     
+    XYLog("alloc contig\n");
+    
     /*
      * Allocate DMA memory for firmware transfers.
      * Must be aligned on a 16-byte boundary.
@@ -1861,6 +1918,8 @@ iwm_attach(struct iwm_softc *sc, struct pci_attach_args *pa)
         goto fail3;
     }
     
+    XYLog("allocate TX ring\n");
+    
     for (txq_i = 0; txq_i < nitems(sc->txq); txq_i++) {
         err = iwm_alloc_tx_ring(sc, &sc->txq[txq_i], txq_i);
         if (err) {
@@ -1870,6 +1929,8 @@ iwm_attach(struct iwm_softc *sc, struct pci_attach_args *pa)
         }
     }
     
+    XYLog("iwm_alloc_rx_ring\n");
+    
     err = iwm_alloc_rx_ring(sc, &sc->rxq);
     if (err) {
         XYLog("%s: could not allocate RX ring\n", DEVNAME(sc));
@@ -1877,8 +1938,10 @@ iwm_attach(struct iwm_softc *sc, struct pci_attach_args *pa)
     }
     
     //    sc->sc_nswq = taskq_create("iwmns", 1, IPL_NET, 0);
-    if (sc->sc_nswq == NULL)
-        goto fail4;
+    //    if (sc->sc_nswq == NULL)
+    //        goto fail4;
+    
+    XYLog("config ieee80211\n");
     
     /* Clear pending interrupts. */
     IWM_WRITE(sc, IWM_CSR_INT, 0xffffffff);
@@ -1982,6 +2045,7 @@ fail1:    iwm_dma_contig_free(&sc->fw_dma);
 void itlwm::
 iwm_radiotap_attach(struct iwm_softc *sc)
 {
+    XYLog("%s\n", __func__);
     bpfattach(&sc->sc_drvbpf, &sc->sc_ic.ic_if, DLT_IEEE802_11_RADIO,
               sizeof (struct ieee80211_frame) + IEEE80211_RADIOTAP_HDRLEN);
     

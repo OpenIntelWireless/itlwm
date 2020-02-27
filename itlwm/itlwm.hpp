@@ -10,6 +10,8 @@
 #include <IOKit/pci/IOPCIDevice.h>
 #include <IOKit/IOLib.h>
 #include <libkern/OSKextLib.h>
+#include <libkern/c++/OSMetaClass.h>
+#include <IOKit/IOFilterInterruptEventSource.h>
 
 class itlwm : public IOEthernetController {
     OSDeclareDefaultStructors(itlwm)
@@ -43,7 +45,7 @@ public:
     static IOReturn tsleepHandler(OSObject* owner, void* arg0 = 0, void* arg1 = 0, void* arg2 = 0, void* arg3 = 0);
     int tsleep_nsec(void *ident, int priority, const char *wmesg, int timo);
     void wakeupOn(void* ident);
-    
+    bool intrFilter(OSObject *object, IOFilterInterruptEventSource *src);
     
     //utils
     static void *malloc(vm_size_t len, int type, int how);

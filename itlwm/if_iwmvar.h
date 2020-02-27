@@ -365,6 +365,7 @@ struct iwm_softc {
 	struct ieee80211_amrr sc_amrr;
 	CTimeout *sc_calib_to;
 	CTimeout *sc_led_blink_to;
+    pci_intr_handle_t ih;
 
 //	struct task		init_task; /* NB: not reference-counted */
 //	struct refcnt		task_refs;

@@ -128,6 +128,7 @@ fail:
 int itlwm::
 iwm_enable_txq(struct iwm_softc *sc, int sta_id, int qid, int fifo)
 {
+    XYLog("%s\n", __func__);
     iwm_nic_assert_locked(sc);
 
     IWM_WRITE(sc, IWM_HBUS_TARG_WRPTR, qid << 8 | 0);

@@ -94,6 +94,7 @@ iwm_power_mac_update_mode(struct iwm_softc *sc, struct iwm_node *in)
 int itlwm::
 iwm_power_update_device(struct iwm_softc *sc)
 {
+    XYLog("%s\n", __func__);
     struct iwm_device_power_cmd cmd = {
         .flags = htole16(IWM_DEVICE_POWER_FLAGS_POWER_SAVE_ENA_MSK),
     };
@@ -126,6 +127,7 @@ iwm_enable_beacon_filter(struct iwm_softc *sc, struct iwm_node *in)
 int itlwm::
 iwm_disable_beacon_filter(struct iwm_softc *sc)
 {
+    XYLog("%s\n", __func__);
     struct iwm_beacon_filter_cmd cmd;
     int err;
 

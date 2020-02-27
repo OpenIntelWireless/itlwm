@@ -147,9 +147,7 @@ ml_purge(struct mbuf_list *ml)
 static inline void
 mq_init(struct mbuf_queue *mq, u_int maxlen, int ipl)
 {
-    if (!mq->mq_mtx) {
-        mq->mq_mtx = IOLockAlloc();
-    }
+    mq->mq_mtx = IOLockAlloc();
     ml_init(&mq->mq_list);
     mq->mq_maxlen = maxlen;
 }
@@ -235,7 +233,7 @@ static inline unsigned int
 mq_purge(struct mbuf_queue *mq)
 {
     struct mbuf_list ml;
-
+    
     mq_delist(mq, &ml);
 
     return (ml_purge(&ml));

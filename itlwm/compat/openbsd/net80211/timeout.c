@@ -75,14 +75,19 @@ int timeout_add_usec(CTimeout **to, int usecs)
 
 int timeout_del(CTimeout **to)
 {
-    if (!((CTimeout*)*to) || !((CTimeout*)*to)->tm) {
+    IOLog("timeout_del\n");
+    if (!((CTimeout*)*to)) {
+        IOLog("timeout_del timeout NULL\n");
         return 0;
     }
-    ((CTimeout*)*to)->tm->cancelTimeout();
-    if (_fWorkloop) {
-        _fWorkloop->removeEventSource(((CTimeout*)*to)->tm);
+    if (((CTimeout*)*to)->tm) {
+        ((CTimeout*)*to)->tm->cancelTimeout();
+        if (_fWorkloop) {
+            _fWorkloop->removeEventSource(((CTimeout*)*to)->tm);
+        }
+        OSSafeReleaseNULL(((CTimeout*)*to)->tm);
     }
-    OSSafeReleaseNULL(((CTimeout*)*to)->tm);
+    OSSafeReleaseNULL(*to);
     return 1;
 }
 

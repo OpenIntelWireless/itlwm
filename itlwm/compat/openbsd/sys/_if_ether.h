@@ -114,7 +114,7 @@ struct ether_multi {
 struct ifnet {                /* and the entries */
     IOEthernetInterface *iface;
     IOOutputQueue* output_queue;
-    void *if_softc;//pointer to ieee80211com
+    void *if_softc;
 //    struct    refcnt if_refcnt;
     int if_hdrlen;
     TAILQ_ENTRY(ifnet) if_list;    /* [k] all struct ifnets are chained */

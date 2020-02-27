@@ -1058,8 +1058,8 @@ justcleanup:
 			timeout_del(&ic->ic_bgscan_timeout);
 			ic->ic_bgscan_fail = 0;
 			ic->ic_mgt_timer = 0;
-//			mq_purge(&ic->ic_mgtq);
-//			mq_purge(&ic->ic_pwrsaveq);
+			mq_purge(&ic->ic_mgtq);
+			mq_purge(&ic->ic_pwrsaveq);
 			ieee80211_free_allnodes(ic, 1);
 			break;
 		}

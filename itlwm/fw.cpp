@@ -762,6 +762,7 @@ iwm_start_fw(struct iwm_softc *sc, enum iwm_ucode_type ucode_type)
 int itlwm::
 iwm_send_tx_ant_cfg(struct iwm_softc *sc, uint8_t valid_tx_ant)
 {
+    XYLog("%s\n", __func__);
     struct iwm_tx_ant_cfg_cmd tx_ant_cmd = {
         .valid = htole32(valid_tx_ant),
     };
@@ -774,6 +775,7 @@ int itlwm::
 iwm_load_ucode_wait_alive(struct iwm_softc *sc,
     enum iwm_ucode_type ucode_type)
 {
+    XYLog("%s\n", __func__);
     enum iwm_ucode_type old_type = sc->sc_uc_current;
     int err;
 
