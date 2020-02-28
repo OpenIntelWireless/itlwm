@@ -288,11 +288,11 @@ public:
     void    iwm_nic_umac_error(struct iwm_softc *);
     #endif
     void    iwm_notif_intr(struct iwm_softc *);
-    int    iwm_intr(void *);
+    int    iwm_intr(OSObject *object, IOInterruptEventSource* sender, int count);
     int    iwm_match(IOPCIDevice *);
     int    iwm_preinit(struct iwm_softc *);
     void    iwm_attach_hook(struct device *);
-    void    iwm_attach(struct iwm_softc *, struct pci_attach_args *);
+    bool    iwm_attach(struct iwm_softc *, struct pci_attach_args *);
     void    iwm_init_task(void *);
     int    iwm_activate(struct device *, int);
     int    iwm_resume(struct iwm_softc *);

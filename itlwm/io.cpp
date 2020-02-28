@@ -110,7 +110,7 @@ iwm_nic_lock(struct iwm_softc *sc)
         return 1;
     }
 
-    printf("%s: acquiring device failed\n", DEVNAME(sc));
+    XYLog("%s: acquiring device failed\n", DEVNAME(sc));
     return 0;
 }
 
@@ -134,7 +134,7 @@ iwm_nic_unlock(struct iwm_softc *sc)
             IWM_CLRBITS(sc, IWM_CSR_GP_CNTRL,
                 IWM_CSR_GP_CNTRL_REG_FLAG_MAC_ACCESS_REQ);
     } else
-        printf("%s: NIC already unlocked\n", DEVNAME(sc));
+        XYLog("%s: NIC already unlocked\n", DEVNAME(sc));
 }
 
 void itlwm::

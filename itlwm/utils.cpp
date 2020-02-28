@@ -28,7 +28,7 @@ free(void* addr)
 void itlwm::
 free(void *addr, int type, vm_size_t len)
 {
-    free(addr);
+    IOFree(addr, len);
 }
 
 int itlwm::

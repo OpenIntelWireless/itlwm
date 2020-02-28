@@ -287,7 +287,7 @@ iwm_lmac_scan(struct iwm_softc *sc, int bgscan)
                 (sizeof(struct iwm_scan_channel_cfg_lmac) *
                 sc->sc_capa_n_scan_channels)));
     if (err) {
-        free(req, M_DEVBUF, req_len);
+        free(req);
         return err;
     }
 
@@ -300,7 +300,7 @@ iwm_lmac_scan(struct iwm_softc *sc, int bgscan)
     req->channel_opt[1].non_ebs_ratio = 1;
 
     err = iwm_send_cmd(sc, &hcmd);
-    free(req, M_DEVBUF, req_len);
+    free(req);
     return err;
 }
 
@@ -376,7 +376,7 @@ iwm_config_umac_scan(struct iwm_softc *sc)
     hcmd.len[0] = cmd_size;
 
     err = iwm_send_cmd(sc, &hcmd);
-    free(scan_config, M_DEVBUF, cmd_size);
+    free(scan_config);
     return err;
 }
 
@@ -456,7 +456,7 @@ iwm_umac_scan(struct iwm_softc *sc, int bgscan)
 
     err = iwm_fill_probe_req(sc, &tail->preq);
     if (err) {
-        free(req, M_DEVBUF, req_len);
+        free(req);
         return err;
     }
 
@@ -465,7 +465,7 @@ iwm_umac_scan(struct iwm_softc *sc, int bgscan)
     tail->schedule[0].iter_count = 1;
 
     err = iwm_send_cmd(sc, &hcmd);
-    free(req, M_DEVBUF, req_len);
+    free(req);
     return err;
 }
 
@@ -595,7 +595,7 @@ iwm_scan(struct iwm_softc *sc)
     if (sc->sc_flags & IWM_FLAG_BGSCAN) {
         err = iwm_scan_abort(sc);
         if (err) {
-            printf("%s: could not abort background scan\n",
+            XYLog("%s: could not abort background scan\n",
                 DEVNAME(sc));
             return err;
         }
@@ -606,7 +606,7 @@ iwm_scan(struct iwm_softc *sc)
     else
         err = iwm_lmac_scan(sc, 0);
     if (err) {
-        printf("%s: could not initiate scan\n", DEVNAME(sc));
+        XYLog("%s: could not initiate scan\n", DEVNAME(sc));
         return err;
     }
 
@@ -619,7 +619,7 @@ iwm_scan(struct iwm_softc *sc)
 
     sc->sc_flags |= IWM_FLAG_SCANNING;
     if (ifp->if_flags & IFF_DEBUG)
-        printf("%s: %s -> %s\n", ifp->if_xname,
+        XYLog("%s: %s -> %s\n", ifp->if_xname,
             ieee80211_state_name[ic->ic_state],
             ieee80211_state_name[IEEE80211_S_SCAN]);
     if ((sc->sc_flags & IWM_FLAG_BGSCAN) == 0) {
@@ -628,7 +628,7 @@ iwm_scan(struct iwm_softc *sc)
     }
     ic->ic_state = IEEE80211_S_SCAN;
     iwm_led_blink_start(sc);
-    wakeup(&ic->ic_state); /* wake iwm_init() */
+    wakeupOn(&ic->ic_state); /* wake iwm_init() */
 
     return 0;
 }
@@ -647,7 +647,7 @@ iwm_bgscan(struct ieee80211com *ic)
     else
         err = iwm_lmac_scan(sc, 1);
     if (err) {
-        printf("%s: could not initiate scan\n", DEVNAME(sc));
+        XYLog("%s: could not initiate scan\n", DEVNAME(sc));
         return err;
     }
 

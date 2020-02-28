@@ -225,7 +225,7 @@ ieee80211_mgmt_output(struct ifnet *ifp, struct ieee80211_node *ni,
 #endif
 		    (type & IEEE80211_FC0_SUBTYPE_MASK) !=
 		    IEEE80211_FC0_SUBTYPE_PROBE_RESP)
-			printf("%s: sending %s to %s on channel %u mode %s\n",
+			XYLog("%s: sending %s to %s on channel %u mode %s\n",
 			    ifp->if_xname,
 			    ieee80211_mgt_subtype_name[
 			    (type & IEEE80211_FC0_SUBTYPE_MASK)
@@ -531,7 +531,7 @@ ieee80211_encap(struct ifnet *ifp, mbuf_t m, struct ieee80211_node **pni)
 		if (ni == NULL)
 			ni = ieee80211_ref_node(ic->ic_bss);
 		if (ni == NULL) {
-			printf("%s: no node for dst %s, "
+			XYLog("%s: no node for dst %s, "
 			    "discard raw tx frame\n", ifp->if_xname,
 			    ether_sprintf(addr));
 			ic->ic_stats.is_tx_nonode++;
@@ -1819,7 +1819,7 @@ ieee80211_send_mgmt(struct ieee80211com *ic, struct ieee80211_node *ni,
 		if ((ifp->if_flags & IFF_DEBUG) &&
 		    (ic->ic_opmode == IEEE80211_M_HOSTAP ||
 		    ic->ic_opmode == IEEE80211_M_IBSS))
-			printf("%s: station %s deauthenticate (reason %d)\n",
+			XYLog("%s: station %s deauthenticate (reason %d)\n",
 			    ifp->if_xname, ether_sprintf(ni->ni_macaddr),
 			    arg1);
 #endif
@@ -1846,7 +1846,7 @@ ieee80211_send_mgmt(struct ieee80211com *ic, struct ieee80211_node *ni,
 		if ((ifp->if_flags & IFF_DEBUG) &&
 		    (ic->ic_opmode == IEEE80211_M_HOSTAP ||
 		    ic->ic_opmode == IEEE80211_M_IBSS))
-			printf("%s: station %s disassociate (reason %d)\n",
+			XYLog("%s: station %s disassociate (reason %d)\n",
 			    ifp->if_xname, ether_sprintf(ni->ni_macaddr),
 			    arg1);
 #endif

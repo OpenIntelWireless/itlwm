@@ -254,7 +254,7 @@
  *         Indicates MAC is entering a power-saving sleep power-down.
  *         Not a good time to access device-internal resources.
  *     3:  MAC_ACCESS_REQ
- *         Host sets this to request and maintain MAC wakeup, to allow host
+ *         Host sets this to request and maintain MAC wakeupOn, to allow host
  *         access to device-internal resources.  Host must wait for
  *         MAC_CLOCK_READY (and !GOING_TO_SLEEP) before accessing non-CSR
  *         device registers.

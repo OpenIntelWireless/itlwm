@@ -249,7 +249,7 @@ iwm_set_hw_address_8000(struct iwm_softc *sc, struct iwm_nvm_data *data,
         return;
     }
 out:
-    printf("%s: mac address not found\n", DEVNAME(sc));
+    XYLog("%s: mac address not found\n", DEVNAME(sc));
     memset(data->hw_addr, 0, sizeof(data->hw_addr));
 }
 
@@ -835,7 +835,7 @@ iwm_tx(struct iwm_softc *sc, mbuf_t m, struct ieee80211_node *ni, int ac)
 
     err = bus_dmamap_load_mbuf(data->map, m);
     if (err && err != EFBIG) {
-        printf("%s: can't map mbuf (error %d)\n", DEVNAME(sc), err);
+        XYLog("%s: can't map mbuf (error %d)\n", DEVNAME(sc), err);
         mbuf_freem(m);
         return err;
     }
@@ -848,7 +848,7 @@ iwm_tx(struct iwm_softc *sc, mbuf_t m, struct ieee80211_node *ni, int ac)
 //        }
         err = bus_dmamap_load_mbuf(data->map, m);
         if (err) {
-            printf("%s: can't map mbuf (error %d)\n", DEVNAME(sc),
+            XYLog("%s: can't map mbuf (error %d)\n", DEVNAME(sc),
                 err);
             mbuf_freem(m);
             return err;
@@ -915,7 +915,7 @@ iwm_flush_tx_path(struct iwm_softc *sc, int tfd_msk)
     err = iwm_send_cmd_pdu(sc, IWM_TXPATH_FLUSH, 0,
         sizeof(flush_cmd), &flush_cmd);
     if (err)
-                printf("%s: Flushing tx queue failed: %d\n", DEVNAME(sc), err);
+                XYLog("%s: Flushing tx queue failed: %d\n", DEVNAME(sc), err);
     return err;
 }
 
@@ -1128,7 +1128,7 @@ iwm_auth(struct iwm_softc *sc)
     err = iwm_phy_ctxt_cmd(sc, &sc->sc_phyctxt[0], 1, 1,
         IWM_FW_CTXT_ACTION_MODIFY, 0);
     if (err) {
-        printf("%s: could not update PHY context (error %d)\n",
+        XYLog("%s: could not update PHY context (error %d)\n",
             DEVNAME(sc), err);
         return err;
     }
@@ -1136,7 +1136,7 @@ iwm_auth(struct iwm_softc *sc)
 
     err = iwm_mac_ctxt_cmd(sc, in, IWM_FW_CTXT_ACTION_ADD, 0);
     if (err) {
-        printf("%s: could not add MAC context (error %d)\n",
+        XYLog("%s: could not add MAC context (error %d)\n",
             DEVNAME(sc), err);
         return err;
      }
@@ -1144,7 +1144,7 @@ iwm_auth(struct iwm_softc *sc)
 
     err = iwm_binding_cmd(sc, in, IWM_FW_CTXT_ACTION_ADD);
     if (err) {
-        printf("%s: could not add binding (error %d)\n",
+        XYLog("%s: could not add binding (error %d)\n",
             DEVNAME(sc), err);
         goto rm_mac_ctxt;
     }
@@ -1152,7 +1152,7 @@ iwm_auth(struct iwm_softc *sc)
 
     err = iwm_add_sta_cmd(sc, in, 0);
     if (err) {
-        printf("%s: could not add sta (error %d)\n",
+        XYLog("%s: could not add sta (error %d)\n",
             DEVNAME(sc), err);
         goto rm_binding;
     }
@@ -1197,7 +1197,7 @@ iwm_deauth(struct iwm_softc *sc)
     if (sc->sc_flags & IWM_FLAG_STA_ACTIVE) {
         err = iwm_rm_sta_cmd(sc, in);
         if (err) {
-            printf("%s: could not remove STA (error %d)\n",
+            XYLog("%s: could not remove STA (error %d)\n",
                 DEVNAME(sc), err);
             return err;
         }
@@ -1209,7 +1209,7 @@ iwm_deauth(struct iwm_softc *sc)
         tfd_msk |= htole32(1 << iwm_ac_to_tx_fifo[ac]);
     err = iwm_flush_tx_path(sc, tfd_msk);
     if (err) {
-        printf("%s: could not flush Tx path (error %d)\n",
+        XYLog("%s: could not flush Tx path (error %d)\n",
             DEVNAME(sc), err);
         return err;
     }
@@ -1217,7 +1217,7 @@ iwm_deauth(struct iwm_softc *sc)
     if (sc->sc_flags & IWM_FLAG_BINDING_ACTIVE) {
         err = iwm_binding_cmd(sc, in, IWM_FW_CTXT_ACTION_REMOVE);
         if (err) {
-            printf("%s: could not remove binding (error %d)\n",
+            XYLog("%s: could not remove binding (error %d)\n",
                 DEVNAME(sc), err);
             return err;
         }
@@ -1227,7 +1227,7 @@ iwm_deauth(struct iwm_softc *sc)
     if (sc->sc_flags & IWM_FLAG_MAC_ACTIVE) {
         err = iwm_mac_ctxt_cmd(sc, in, IWM_FW_CTXT_ACTION_REMOVE, 0);
         if (err) {
-            printf("%s: could not remove MAC context (error %d)\n",
+            XYLog("%s: could not remove MAC context (error %d)\n",
                 DEVNAME(sc), err);
             return err;
         }
@@ -1249,7 +1249,7 @@ iwm_assoc(struct iwm_softc *sc)
 
     err = iwm_add_sta_cmd(sc, in, update_sta);
     if (err) {
-        printf("%s: could not %s STA (error %d)\n",
+        XYLog("%s: could not %s STA (error %d)\n",
             DEVNAME(sc), update_sta ? "update" : "add", err);
         return err;
     }
@@ -1269,7 +1269,7 @@ iwm_disassoc(struct iwm_softc *sc)
     if (sc->sc_flags & IWM_FLAG_STA_ACTIVE) {
         err = iwm_rm_sta_cmd(sc, in);
         if (err) {
-            printf("%s: could not remove STA (error %d)\n",
+            XYLog("%s: could not remove STA (error %d)\n",
                 DEVNAME(sc), err);
             return err;
         }
@@ -1294,7 +1294,7 @@ iwm_run(struct iwm_softc *sc)
         err = iwm_phy_ctxt_cmd(sc, &sc->sc_phyctxt[0],
             2, 2, IWM_FW_CTXT_ACTION_MODIFY, 0);
         if (err) {
-            printf("%s: failed to update PHY\n",
+            XYLog("%s: failed to update PHY\n",
                 DEVNAME(sc));
             return err;
         }
@@ -1303,27 +1303,27 @@ iwm_run(struct iwm_softc *sc)
     /* We have now been assigned an associd by the AP. */
     err = iwm_mac_ctxt_cmd(sc, in, IWM_FW_CTXT_ACTION_MODIFY, 1);
     if (err) {
-        printf("%s: failed to update MAC\n", DEVNAME(sc));
+        XYLog("%s: failed to update MAC\n", DEVNAME(sc));
         return err;
     }
 
     err = iwm_sf_config(sc, IWM_SF_FULL_ON);
     if (err) {
-        printf("%s: could not set sf full on (error %d)\n",
+        XYLog("%s: could not set sf full on (error %d)\n",
             DEVNAME(sc), err);
         return err;
     }
 
     err = iwm_allow_mcast(sc);
     if (err) {
-        printf("%s: could not allow mcast (error %d)\n",
+        XYLog("%s: could not allow mcast (error %d)\n",
             DEVNAME(sc), err);
         return err;
     }
 
     err = iwm_power_update_device(sc);
     if (err) {
-        printf("%s: could not send power command (error %d)\n",
+        XYLog("%s: could not send power command (error %d)\n",
             DEVNAME(sc), err);
         return err;
     }
@@ -1335,21 +1335,21 @@ iwm_run(struct iwm_softc *sc)
      */
     err = iwm_enable_beacon_filter(sc, in);
     if (err) {
-        printf("%s: could not enable beacon filter\n",
+        XYLog("%s: could not enable beacon filter\n",
             DEVNAME(sc));
         return err;
     }
 #endif
     err = iwm_power_mac_update_mode(sc, in);
     if (err) {
-        printf("%s: could not update MAC power (error %d)\n",
+        XYLog("%s: could not update MAC power (error %d)\n",
             DEVNAME(sc), err);
         return err;
     }
 
     err = iwm_update_quotas(sc, in, 1);
     if (err) {
-        printf("%s: could not update quotas (error %d)\n",
+        XYLog("%s: could not update quotas (error %d)\n",
             DEVNAME(sc), err);
         return err;
     }
@@ -1384,14 +1384,14 @@ iwm_run_stop(struct iwm_softc *sc)
 
     err = iwm_update_quotas(sc, in, 0);
     if (err) {
-        printf("%s: could not update quotas (error %d)\n",
+        XYLog("%s: could not update quotas (error %d)\n",
             DEVNAME(sc), err);
         return err;
     }
 
     err = iwm_mac_ctxt_cmd(sc, in, IWM_FW_CTXT_ACTION_MODIFY, 0);
     if (err) {
-        printf("%s: failed to update MAC\n", DEVNAME(sc));
+        XYLog("%s: failed to update MAC\n", DEVNAME(sc));
         return err;
     }
 
@@ -1401,7 +1401,7 @@ iwm_run_stop(struct iwm_softc *sc)
         err = iwm_phy_ctxt_cmd(sc, &sc->sc_phyctxt[0], 1, 1,
             IWM_FW_CTXT_ACTION_MODIFY, 0);
         if (err) {
-            printf("%s: failed to update PHY\n", DEVNAME(sc));
+            XYLog("%s: failed to update PHY\n", DEVNAME(sc));
             return err;
         }
     }
@@ -1470,7 +1470,7 @@ iwm_allow_mcast(struct iwm_softc *sc)
 
     err = iwm_send_cmd_pdu(sc, IWM_MCAST_FILTER_CMD,
         0, size, cmd);
-    free(cmd, M_DEVBUF, size);
+    free(cmd);
     return err;
 }
 

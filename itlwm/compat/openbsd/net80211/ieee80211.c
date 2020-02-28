@@ -99,7 +99,7 @@ ieee80211_begin_bgscan(struct ifnet *ifp)
         
         ic->ic_flags |= IEEE80211_F_BGSCAN;
         if (ifp->if_flags & IFF_DEBUG)
-            printf("%s: begin background scan\n", ifp->if_xname);
+            XYLog("%s: begin background scan\n", ifp->if_xname);
         
         /* Driver calls ieee80211_end_scan() when done. */
     }
@@ -134,7 +134,7 @@ ieee80211_channel_init(struct ifnet *ifp)
              * Verify driver passed us valid data.
              */
             if (i != ieee80211_chan2ieee(ic, c)) {
-                printf("%s: bad channel ignored; "
+                XYLog("%s: bad channel ignored; "
                        "freq %u flags %x number %u\n",
                        ifp->if_xname, c->ic_freq, c->ic_flags,
                        i);

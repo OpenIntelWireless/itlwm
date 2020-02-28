@@ -72,7 +72,7 @@ iwm_alloc_rx_ring(struct iwm_softc *sc, struct iwm_rx_ring *ring)
     size = IWM_RX_RING_COUNT * sizeof(uint32_t);
     err = iwm_dma_contig_alloc(sc->sc_dmat, &ring->desc_dma, (void**)&ring->desc, size, 256);
     if (err) {
-        printf("%s: could not allocate RX ring DMA memory\n",
+        XYLog("%s: could not allocate RX ring DMA memory\n",
             DEVNAME(sc));
         goto fail;
     }
@@ -81,7 +81,7 @@ iwm_alloc_rx_ring(struct iwm_softc *sc, struct iwm_rx_ring *ring)
     err = iwm_dma_contig_alloc(sc->sc_dmat, &ring->stat_dma, (void**)&ring->stat,
         sizeof(struct iwm_rb_status), 16);
     if (err) {
-        printf("%s: could not allocate RX status DMA memory\n",
+        XYLog("%s: could not allocate RX status DMA memory\n",
             DEVNAME(sc));
         goto fail;
     }
@@ -95,7 +95,7 @@ iwm_alloc_rx_ring(struct iwm_softc *sc, struct iwm_rx_ring *ring)
             IWM_RBUF_SIZE, 0, BUS_DMA_NOWAIT,
             &data->map);
         if (err) {
-            printf("%s: could not create RX buf DMA map\n",
+            XYLog("%s: could not create RX buf DMA map\n",
                 DEVNAME(sc));
             goto fail;
         }
@@ -113,46 +113,49 @@ fail:    iwm_free_rx_ring(sc, ring);
 int itlwm::
 iwm_rx_addbuf(struct iwm_softc *sc, int size, int idx)
 {
-//    struct iwm_rx_ring *ring = &sc->rxq;
-//    struct iwm_rx_data *data = &ring->data[idx];
-//    mbuf_t m;
-//    int err;
-//    int fatal = 0;
-//
+    struct iwm_rx_ring *ring = &sc->rxq;
+    struct iwm_rx_data *data = &ring->data[idx];
+    mbuf_t m;
+    int err;
+    int fatal = 0;
+
+    m = allocatePacket(IWM_RBUF_SIZE);
+    
 //    mbuf_gethdr(MBUF_DONTWAIT, MT_DATA, &m);
 //    if (m == NULL)
 //        return ENOBUFS;
 //
 //    if (size <= MCLBYTES) {
-//        MCLGET(m, M_DONTWAIT);
+//        mbuf_mclget(MBUF_DONTWAIT, MT_DATA, &m);
 //    } else {
-//        MCLGETI(m, M_DONTWAIT, NULL, IWM_RBUF_SIZE);
+//        mbuf_getcluster(MBUF_DONTWAIT, MT_DATA, IWM_RBUF_SIZE, &m);
 //    }
-//    if ((mbuf_flags(m) & M_EXT) == 0) {
+//    if ((mbuf_flags(m) & MBUF_EXT) == 0) {
 //        mbuf_freem(m);
 //        return ENOBUFS;
 //    }
 //
 //    if (data->m != NULL) {
-//        bus_dmamap_unload(sc->sc_dmat, data->map);
+////        bus_dmamap_unload(sc->sc_dmat, data->map);
 //        fatal = 1;
 //    }
 //
+//    mbuf_setlen(m, mbuf_maxlen(m));
+//    mbuf_pkthdr_setlen(m, mbuf_maxlen(m));
 //    m->m_len = m->m_pkthdr.len = m->m_ext.ext_size;
-//    err = bus_dmamap_load_mbuf(sc->sc_dmat, data->map, m,
-//        BUS_DMA_READ|BUS_DMA_NOWAIT);
-//    if (err) {
-//        /* XXX */
-//        if (fatal)
-//            panic("iwm: could not load RX mbuf");
-//        mbuf_freem(m);
-//        return err;
-//    }
-//    data->m = m;
-//    bus_dmamap_sync(sc->sc_dmat, data->map, 0, size, BUS_DMASYNC_PREREAD);
-//
-//    /* Update RX descriptor. */
-//    ring->desc[idx] = htole32(data->map->dm_segs[0].location >> 8);
+    err = bus_dmamap_load_mbuf(data->map, m);
+    if (err) {
+        /* XXX */
+        if (fatal)
+            panic("iwm: could not load RX mbuf");
+        mbuf_freem(m);
+        return err;
+    }
+    data->m = m;
+    bus_dmamap_sync(sc->sc_dmat, data->map, 0, size, BUS_DMASYNC_PREREAD);
+
+    /* Update RX descriptor. */
+    ring->desc[idx] = htole32(data->map->dm_segs[0].location >> 8);
 //    bus_dmamap_sync(sc->sc_dmat, ring->desc_dma.map,
 //        idx * sizeof(uint32_t), sizeof(uint32_t), BUS_DMASYNC_PREWRITE);
 

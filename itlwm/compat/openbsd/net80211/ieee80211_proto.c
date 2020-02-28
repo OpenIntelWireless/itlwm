@@ -127,14 +127,14 @@ ieee80211_print_essid(const u_int8_t *essid, int len)
 			break;
 	}
 	if (i == len) {
-		printf("\"");
+		XYLog("\"");
 		for (i = 0, p = essid; i < len; i++, p++)
-			printf("%c", *p);
-		printf("\"");
+			XYLog("%c", *p);
+		XYLog("\"");
 	} else {
-		printf("0x");
+		XYLog("0x");
 		for (i = 0, p = essid; i < len; i++, p++)
-			printf("%02x", *p);
+			XYLog("%02x", *p);
 	}
 }
 
@@ -148,54 +148,54 @@ ieee80211_dump_pkt(const u_int8_t *buf, int len, int rate, int rssi)
 	wh = (struct ieee80211_frame *)buf;
 	switch (wh->i_fc[1] & IEEE80211_FC1_DIR_MASK) {
 	case IEEE80211_FC1_DIR_NODS:
-		printf("NODS %s", ether_sprintf(wh->i_addr2));
-		printf("->%s", ether_sprintf(wh->i_addr1));
-		printf("(%s)", ether_sprintf(wh->i_addr3));
+		XYLog("NODS %s", ether_sprintf(wh->i_addr2));
+		XYLog("->%s", ether_sprintf(wh->i_addr1));
+		XYLog("(%s)", ether_sprintf(wh->i_addr3));
 		break;
 	case IEEE80211_FC1_DIR_TODS:
-		printf("TODS %s", ether_sprintf(wh->i_addr2));
-		printf("->%s", ether_sprintf(wh->i_addr3));
-		printf("(%s)", ether_sprintf(wh->i_addr1));
+		XYLog("TODS %s", ether_sprintf(wh->i_addr2));
+		XYLog("->%s", ether_sprintf(wh->i_addr3));
+		XYLog("(%s)", ether_sprintf(wh->i_addr1));
 		break;
 	case IEEE80211_FC1_DIR_FROMDS:
-		printf("FRDS %s", ether_sprintf(wh->i_addr3));
-		printf("->%s", ether_sprintf(wh->i_addr1));
-		printf("(%s)", ether_sprintf(wh->i_addr2));
+		XYLog("FRDS %s", ether_sprintf(wh->i_addr3));
+		XYLog("->%s", ether_sprintf(wh->i_addr1));
+		XYLog("(%s)", ether_sprintf(wh->i_addr2));
 		break;
 	case IEEE80211_FC1_DIR_DSTODS:
-		printf("DSDS %s", ether_sprintf((u_int8_t *)&wh[1]));
-		printf("->%s", ether_sprintf(wh->i_addr3));
-		printf("(%s", ether_sprintf(wh->i_addr2));
-		printf("->%s)", ether_sprintf(wh->i_addr1));
+		XYLog("DSDS %s", ether_sprintf((u_int8_t *)&wh[1]));
+		XYLog("->%s", ether_sprintf(wh->i_addr3));
+		XYLog("(%s", ether_sprintf(wh->i_addr2));
+		XYLog("->%s)", ether_sprintf(wh->i_addr1));
 		break;
 	}
 	switch (wh->i_fc[0] & IEEE80211_FC0_TYPE_MASK) {
 	case IEEE80211_FC0_TYPE_DATA:
-		printf(" data");
+		XYLog(" data");
 		break;
 	case IEEE80211_FC0_TYPE_MGT:
-		printf(" %s", ieee80211_mgt_subtype_name[
+		XYLog(" %s", ieee80211_mgt_subtype_name[
 		    (wh->i_fc[0] & IEEE80211_FC0_SUBTYPE_MASK)
 		    >> IEEE80211_FC0_SUBTYPE_SHIFT]);
 		break;
 	default:
-		printf(" type#%d", wh->i_fc[0] & IEEE80211_FC0_TYPE_MASK);
+		XYLog(" type#%d", wh->i_fc[0] & IEEE80211_FC0_TYPE_MASK);
 		break;
 	}
 	if (wh->i_fc[1] & IEEE80211_FC1_WEP)
-		printf(" WEP");
+		XYLog(" WEP");
 	if (rate >= 0)
-		printf(" %d%sM", rate / 2, (rate & 1) ? ".5" : "");
+		XYLog(" %d%sM", rate / 2, (rate & 1) ? ".5" : "");
 	if (rssi >= 0)
-		printf(" +%d", rssi);
-	printf("\n");
+		XYLog(" +%d", rssi);
+	XYLog("\n");
 	if (len > 0) {
 		for (i = 0; i < len; i++) {
 			if ((i & 1) == 0)
-				printf(" ");
-			printf("%02x", buf[i]);
+				XYLog(" ");
+			XYLog("%02x", buf[i]);
 		}
-		printf("\n");
+		XYLog("\n");
 	}
 }
 #endif
@@ -751,7 +751,7 @@ ieee80211_auth_open_confirm(struct ieee80211com *ic,
 
 	IEEE80211_SEND_MGMT(ic, ni, IEEE80211_FC0_SUBTYPE_AUTH, seq + 1);
 	if (ifp->if_flags & IFF_DEBUG)
-		printf("%s: station %s %s authenticated (open)\n",
+		XYLog("%s: station %s %s authenticated (open)\n",
 		    ifp->if_xname,
 		    ether_sprintf((u_int8_t *)ni->ni_macaddr),
 		    ni->ni_state != IEEE80211_STA_CACHE ?
@@ -793,7 +793,7 @@ ieee80211_try_another_bss(struct ieee80211com *ic)
 		return;
 
 	if (ifp->if_flags & IFF_DEBUG)
-		printf("%s: trying AP %s on channel %d instead\n",
+		XYLog("%s: trying AP %s on channel %d instead\n",
 		    ifp->if_xname, ether_sprintf(selbs->ni_macaddr),
 		    ieee80211_chan2ieee(ic, selbs->ni_chan));
 
@@ -883,7 +883,7 @@ ieee80211_auth_open(struct ieee80211com *ic, const struct ieee80211_frame *wh,
 		}
 		if (status != 0) {
 			if (ifp->if_flags & IFF_DEBUG)
-				printf("%s: open authentication failed "
+				XYLog("%s: open authentication failed "
 				    "(status %d) for %s\n", ifp->if_xname,
 				    status,
 				    ether_sprintf((u_int8_t *)wh->i_addr3));
@@ -918,7 +918,7 @@ ieee80211_set_beacon_miss_threshold(struct ieee80211com *ic)
 		ic->ic_bmissthres = btimeout / ic->ic_bss->ni_intval;
 
 	if (ifp->if_flags & IFF_DEBUG)
-		printf("%s: missed beacon threshold set to %d beacons, "
+		XYLog("%s: missed beacon threshold set to %d beacons, "
 		    "beacon interval is %u TU\n", ifp->if_xname,
 		    ic->ic_bmissthres, ic->ic_bss->ni_intval);
 }
@@ -980,7 +980,7 @@ ieee80211_newstate(struct ieee80211com *ic, enum ieee80211_state nstate,
 
 	ostate = ic->ic_state;
 	if (ifp->if_flags & IFF_DEBUG)
-		printf("%s: %s -> %s\n", ifp->if_xname,
+		XYLog("%s: %s -> %s\n", ifp->if_xname,
 		    ieee80211_state_name[ostate], ieee80211_state_name[nstate]);
 	ic->ic_state = nstate;			/* state transition */
 	ni = ic->ic_bss;			/* NB: no reference held */
@@ -1105,7 +1105,7 @@ justcleanup:
 			/* beacon miss */
 			if (ifp->if_flags & IFF_DEBUG) {
 				/* XXX bssid clobbered above */
-				printf("%s: no recent beacons from %s;"
+				XYLog("%s: no recent beacons from %s;"
 				    " rescanning\n", ifp->if_xname,
 				    ether_sprintf(ic->ic_bss->ni_bssid));
 			}
@@ -1133,7 +1133,7 @@ justcleanup:
 		switch (ostate) {
 		case IEEE80211_S_INIT:
 			if (ifp->if_flags & IFF_DEBUG)
-				printf("%s: invalid transition %s -> %s\n",
+				XYLog("%s: invalid transition %s -> %s\n",
 				    ifp->if_xname, ieee80211_state_name[ostate],
 				    ieee80211_state_name[nstate]);
 			break;
@@ -1182,7 +1182,7 @@ justcleanup:
 		case IEEE80211_S_SCAN:
 		case IEEE80211_S_ASSOC:
 			if (ifp->if_flags & IFF_DEBUG)
-				printf("%s: invalid transition %s -> %s\n",
+				XYLog("%s: invalid transition %s -> %s\n",
 				    ifp->if_xname, ieee80211_state_name[ostate],
 				    ieee80211_state_name[nstate]);
 			break;
@@ -1206,7 +1206,7 @@ justcleanup:
 		case IEEE80211_S_AUTH:
 		case IEEE80211_S_RUN:
 			if (ifp->if_flags & IFF_DEBUG)
-				printf("%s: invalid transition %s -> %s\n",
+				XYLog("%s: invalid transition %s -> %s\n",
 				    ifp->if_xname, ieee80211_state_name[ostate],
 				    ieee80211_state_name[nstate]);
 			break;
@@ -1216,7 +1216,7 @@ justcleanup:
 				panic("%s: bogus xmit rate %u setup",
 				    __func__, ni->ni_txrate);
 			if (ifp->if_flags & IFF_DEBUG) {
-				printf("%s: %s with %s ssid ",
+				XYLog("%s: %s with %s ssid ",
 				    ifp->if_xname,
 				    ic->ic_opmode == IEEE80211_M_STA ?
 				    "associated" : "synchronized",
@@ -1225,14 +1225,14 @@ justcleanup:
 				    ni->ni_esslen);
 				rate = ni->ni_rates.rs_rates[ni->ni_txrate] &
 				    IEEE80211_RATE_VAL;
-				printf(" channel %d",
+				XYLog(" channel %d",
 				    ieee80211_chan2ieee(ic, ni->ni_chan));
 				if (ni->ni_flags & IEEE80211_NODE_HT)
-					printf(" start MCS %u", ni->ni_txmcs);
+					XYLog(" start MCS %u", ni->ni_txmcs);
 				else
-					printf(" start %u%sMb",
+					XYLog(" start %u%sMb",
 					    rate / 2, (rate & 1) ? ".5" : "");
-				printf(" %s preamble %s slot time%s%s\n",
+				XYLog(" %s preamble %s slot time%s%s\n",
 				    (ic->ic_flags & IEEE80211_F_SHPREAMBLE) ?
 					"short" : "long",
 				    (ic->ic_flags & IEEE80211_F_SHSLOT) ?

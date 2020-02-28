@@ -1531,13 +1531,13 @@ ieee80211_recv_probe_resp(struct ieee80211com *ic, mbuf_t m,
 	if (ieee80211_debug > 1 &&
 	    (ni == NULL || ic->ic_state == IEEE80211_S_SCAN ||
 	    (ic->ic_flags & IEEE80211_F_BGSCAN))) {
-		printf("%s: %s%s on chan %u (bss chan %u) ",
+		XYLog("%s: %s%s on chan %u (bss chan %u) ",
 		    __func__, (ni == NULL ? "new " : ""),
 		    isprobe ? "probe response" : "beacon",
 		    chan, bchan);
 		ieee80211_print_essid(ssid + 2, ssid[1]);
-		printf(" from %s\n", ether_sprintf((u_int8_t *)wh->i_addr2));
-		printf("%s: caps 0x%x bintval %u erp 0x%x\n",
+		XYLog(" from %s\n", ether_sprintf((u_int8_t *)wh->i_addr2));
+		XYLog("%s: caps 0x%x bintval %u erp 0x%x\n",
 			__func__, capinfo, bintval, erp);
 	}
 #endif
@@ -2263,7 +2263,7 @@ ieee80211_recv_assoc_resp(struct ieee80211com *ic, mbuf_t m,
 	status =  LE_READ_2(frm); frm += 2;
 	if (status != IEEE80211_STATUS_SUCCESS) {
 		if (ifp->if_flags & IFF_DEBUG)
-			printf("%s: %sassociation failed (status %d)"
+			XYLog("%s: %sassociation failed (status %d)"
 			    " for %s\n", ifp->if_xname,
 			    reassoc ?  "re" : "",
 			    status, ether_sprintf((u_int8_t *)wh->i_addr3));
@@ -2432,7 +2432,7 @@ ieee80211_recv_deauth(struct ieee80211com *ic, mbuf_t m,
 			    (ni->ni_state == IEEE80211_STA_AUTH ||
 			    ni->ni_state == IEEE80211_STA_ASSOC));
 			if (ic->ic_if.if_flags & IFF_DEBUG)
-				printf("%s: station %s deauthenticated "
+				XYLog("%s: station %s deauthenticated "
 				    "by peer (reason %d)\n",
 				    ic->ic_if.if_xname,
 				    ether_sprintf(ni->ni_macaddr),
@@ -2483,7 +2483,7 @@ ieee80211_recv_disassoc(struct ieee80211com *ic, mbuf_t m,
 	case IEEE80211_M_HOSTAP:
 		if (ni != ic->ic_bss) {
 			if (ic->ic_if.if_flags & IFF_DEBUG)
-				printf("%s: station %s disassociated "
+				XYLog("%s: station %s disassociated "
 				    "by peer (reason %d)\n",
 				    ic->ic_if.if_xname,
 				    ether_sprintf(ni->ni_macaddr),

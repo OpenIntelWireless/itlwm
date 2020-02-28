@@ -300,7 +300,7 @@ ieee80211_send_4way_msg1(struct ieee80211com *ic, struct ieee80211_node *ni)
     mbuf_setlen(m, l);
     
     if (ic->ic_if.if_flags & IFF_DEBUG)
-        printf("%s: sending msg %d/%d of the %s handshake to %s\n",
+        XYLog("%s: sending msg %d/%d of the %s handshake to %s\n",
                ic->ic_if.if_xname, 1, 4, "4-way",
                ether_sprintf(ni->ni_macaddr));
     
@@ -357,7 +357,7 @@ ieee80211_send_4way_msg2(struct ieee80211com *ic, struct ieee80211_node *ni,
     mbuf_setlen(m, l);
     
     if (ic->ic_if.if_flags & IFF_DEBUG)
-        printf("%s: sending msg %d/%d of the %s handshake to %s\n",
+        XYLog("%s: sending msg %d/%d of the %s handshake to %s\n",
                ic->ic_if.if_xname, 2, 4, "4-way",
                ether_sprintf(ni->ni_macaddr));
     
@@ -437,7 +437,7 @@ ieee80211_send_4way_msg3(struct ieee80211com *ic, struct ieee80211_node *ni)
     mbuf_setlen(m, l);
     
     if (ic->ic_if.if_flags & IFF_DEBUG)
-        printf("%s: sending msg %d/%d of the %s handshake to %s\n",
+        XYLog("%s: sending msg %d/%d of the %s handshake to %s\n",
                ic->ic_if.if_xname, 3, 4, "4-way",
                ether_sprintf(ni->ni_macaddr));
     
@@ -483,7 +483,7 @@ ieee80211_send_4way_msg4(struct ieee80211com *ic, struct ieee80211_node *ni)
     mbuf_setlen(m, sizeof(*key));
     
     if (ic->ic_if.if_flags & IFF_DEBUG)
-        printf("%s: sending msg %d/%d of the %s handshake to %s\n",
+        XYLog("%s: sending msg %d/%d of the %s handshake to %s\n",
                ic->ic_if.if_xname, 4, 4, "4-way",
                ether_sprintf(ni->ni_macaddr));
     
@@ -564,7 +564,7 @@ ieee80211_send_group_msg1(struct ieee80211com *ic, struct ieee80211_node *ni)
     mbuf_setlen(m, l);
     
     if (ic->ic_if.if_flags & IFF_DEBUG)
-        printf("%s: sending msg %d/%d of the %s handshake to %s\n",
+        XYLog("%s: sending msg %d/%d of the %s handshake to %s\n",
                ic->ic_if.if_xname, 1, 2, "group key",
                ether_sprintf(ni->ni_macaddr));
     
@@ -608,7 +608,7 @@ ieee80211_send_group_msg2(struct ieee80211com *ic, struct ieee80211_node *ni,
     mbuf_setlen(m, sizeof(*key));
     
     if (ic->ic_if.if_flags & IFF_DEBUG)
-        printf("%s: sending msg %d/%d of the %s handshake to %s\n",
+        XYLog("%s: sending msg %d/%d of the %s handshake to %s\n",
                ic->ic_if.if_xname, 2, 2, "group key",
                ether_sprintf(ni->ni_macaddr));
     
@@ -649,7 +649,7 @@ ieee80211_send_eapol_key_req(struct ieee80211com *ic,
     mbuf_setlen(m, sizeof(*key));
     
     if (ic->ic_if.if_flags & IFF_DEBUG)
-        printf("%s: sending EAPOL-Key request to %s\n",
+        XYLog("%s: sending EAPOL-Key request to %s\n",
                ic->ic_if.if_xname, ether_sprintf(ni->ni_macaddr));
     
     return ieee80211_send_eapol_key(ic, m, ni, &ni->ni_ptk);

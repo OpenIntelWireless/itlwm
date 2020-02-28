@@ -56,7 +56,9 @@ bool itlwm::start(IOService *provider)
     fWorkloop->addEventSource(fCommandGate);
     pci.workloop = fWorkloop;
     pci.pa_tag = device;
-    iwm_attach(&com, &pci);
+    if (!iwm_attach(&com, &pci)) {
+        return false;
+    }
     iwm_init(&com.sc_ic.ic_ac.ac_if);
     registerService();
     return true;
@@ -138,8 +140,21 @@ void itlwm::free()
     fwLoadLock = NULL;
     releaseTimeout();
     if (com.ih) {
+        ieee80211_ifdetach(&com.sc_ic.ic_ac.ac_if);
+        if (fWorkloop) {
+            fWorkloop->removeEventSource(com.ih->intr);
+            com.ih->intr->release();
+        }
         com.ih->release();
         com.ih = NULL;
+    }
+    if (fCommandGate) {
+        if (fWorkloop) {
+            fWorkloop->removeEventSource(fCommandGate);
+            fCommandGate->disable();
+        }
+        fCommandGate->release();
+        fCommandGate = NULL;
     }
     if (fWorkloop) {
         fWorkloop->release();
@@ -645,6 +660,7 @@ iwm_init(struct ifnet *ifp)
     
     err = iwm_init_hw(sc);
     if (err) {
+        XYLog("iwm_init_hw fail. err=%d", err);
         if (generation == sc->sc_generation)
             iwm_stop(ifp);
         return err;
@@ -1119,11 +1135,11 @@ iwm_nic_error(struct iwm_softc *sc)
 }
 #endif
 
-#define SYNC_RESP_STRUCT(_var_, _pkt_)                    \
+#define SYNC_RESP_STRUCT(_var_, _pkt_, t)                    \
 do {                                    \
 bus_dmamap_sync(sc->sc_dmat, data->map, sizeof(*(_pkt_)),    \
 sizeof(*(_var_)), BUS_DMASYNC_POSTREAD);            \
-_var_ = (void *)((_pkt_)+1);                    \
+_var_ = (t)((_pkt_)+1);                    \
 } while (/*CONSTCOND*/0)
 
 #define SYNC_RESP_PTR(_ptr_, _len_, _pkt_)                \
@@ -1142,8 +1158,8 @@ iwm_notif_intr(struct iwm_softc *sc)
     struct mbuf_list ml = MBUF_LIST_INITIALIZER();
     uint16_t hw;
     
-    //    bus_dmamap_sync(sc->sc_dmat, sc->rxq.stat_dma.map,
-    //        0, sc->rxq.stat_dma.size, BUS_DMASYNC_POSTREAD);
+    //        bus_dmamap_sync(sc->sc_dmat, sc->rxq.stat_dma.map,
+    //            0, sc->rxq.stat_dma.size, BUS_DMASYNC_POSTREAD);
     
     hw = le16toh(sc->rxq.stat->closed_rb_num) & 0xfff;
     hw &= (IWM_RX_RING_COUNT - 1);
@@ -1171,6 +1187,8 @@ iwm_notif_intr(struct iwm_softc *sc)
             continue;
         }
         
+        XYLog("code=0x%02x\n", code);
+        
         switch (code) {
             case IWM_REPLY_RX_PHY_CMD:
                 iwm_rx_rx_phy_cmd(sc, pkt, data);
@@ -1197,7 +1215,7 @@ iwm_notif_intr(struct iwm_softc *sc)
                 struct iwm_alive_resp_v3 *resp3;
                 
                 if (iwm_rx_packet_payload_len(pkt) == sizeof(*resp1)) {
-                    //                SYNC_RESP_STRUCT(resp1, pkt);
+                    SYNC_RESP_STRUCT(resp1, pkt, struct iwm_alive_resp_v1 *);
                     sc->sc_uc.uc_error_event_table
                     = le32toh(resp1->error_event_table_ptr);
                     sc->sc_uc.uc_log_event_table
@@ -1210,7 +1228,7 @@ iwm_notif_intr(struct iwm_softc *sc)
                 }
                 
                 if (iwm_rx_packet_payload_len(pkt) == sizeof(*resp2)) {
-                    //                SYNC_RESP_STRUCT(resp2, pkt);
+                    SYNC_RESP_STRUCT(resp2, pkt, struct iwm_alive_resp_v2 *);
                     sc->sc_uc.uc_error_event_table
                     = le32toh(resp2->error_event_table_ptr);
                     sc->sc_uc.uc_log_event_table
@@ -1225,7 +1243,7 @@ iwm_notif_intr(struct iwm_softc *sc)
                 }
                 
                 if (iwm_rx_packet_payload_len(pkt) == sizeof(*resp3)) {
-                    //                SYNC_RESP_STRUCT(resp3, pkt);
+                    SYNC_RESP_STRUCT(resp3, pkt, struct iwm_alive_resp_v3 *);
                     sc->sc_uc.uc_error_event_table
                     = le32toh(resp3->error_event_table_ptr);
                     sc->sc_uc.uc_log_event_table
@@ -1240,22 +1258,22 @@ iwm_notif_intr(struct iwm_softc *sc)
                 }
                 
                 sc->sc_uc.uc_intr = 1;
-                wakeup(&sc->sc_uc);
+                wakeupOn(&sc->sc_uc);
                 break;
             }
                 
             case IWM_CALIB_RES_NOTIF_PHY_DB: {
                 struct iwm_calib_res_notif_phy_db *phy_db_notif;
-                //            SYNC_RESP_STRUCT(phy_db_notif, pkt);
+                SYNC_RESP_STRUCT(phy_db_notif, pkt, struct iwm_calib_res_notif_phy_db *);
                 iwm_phy_db_set_section(sc, phy_db_notif);
                 sc->sc_init_complete |= IWM_CALIB_COMPLETE;
-                wakeup(&sc->sc_init_complete);
+                wakeupOn(&sc->sc_init_complete);
                 break;
             }
                 
             case IWM_STATISTICS_NOTIFICATION: {
                 struct iwm_notif_statistics *stats;
-                //            SYNC_RESP_STRUCT(stats, pkt);
+                SYNC_RESP_STRUCT(stats, pkt, struct iwm_notif_statistics *);
                 memcpy(&sc->sc_stats, stats, sizeof(sc->sc_stats));
                 sc->sc_noise = iwm_get_noise(&stats->rx.general);
                 break;
@@ -1263,7 +1281,7 @@ iwm_notif_intr(struct iwm_softc *sc)
                 
             case IWM_MCC_CHUB_UPDATE_CMD: {
                 struct iwm_mcc_chub_notif *notif;
-                //            SYNC_RESP_STRUCT(notif, pkt);
+                SYNC_RESP_STRUCT(notif, pkt, struct iwm_mcc_chub_notif *);
                 
                 sc->sc_fw_mcc[0] = (notif->mcc & 0xff00) >> 8;
                 sc->sc_fw_mcc[1] = notif->mcc & 0xff;
@@ -1329,39 +1347,39 @@ iwm_notif_intr(struct iwm_softc *sc)
                 
             case IWM_INIT_COMPLETE_NOTIF:
                 sc->sc_init_complete |= IWM_INIT_COMPLETE;
-                wakeup(&sc->sc_init_complete);
+                wakeupOn(&sc->sc_init_complete);
                 break;
                 
             case IWM_SCAN_OFFLOAD_COMPLETE: {
                 struct iwm_periodic_scan_complete *notif;
-                //            SYNC_RESP_STRUCT(notif, pkt);
+                SYNC_RESP_STRUCT(notif, pkt, struct iwm_periodic_scan_complete *);
                 break;
             }
                 
             case IWM_SCAN_ITERATION_COMPLETE: {
                 struct iwm_lmac_scan_complete_notif *notif;
-                //            SYNC_RESP_STRUCT(notif, pkt);
+                SYNC_RESP_STRUCT(notif, pkt, struct iwm_lmac_scan_complete_notif *);
                 iwm_endscan(sc);
                 break;
             }
                 
             case IWM_SCAN_COMPLETE_UMAC: {
                 struct iwm_umac_scan_complete *notif;
-                //            SYNC_RESP_STRUCT(notif, pkt);
+                SYNC_RESP_STRUCT(notif, pkt, struct iwm_umac_scan_complete *);
                 iwm_endscan(sc);
                 break;
             }
                 
             case IWM_SCAN_ITERATION_COMPLETE_UMAC: {
                 struct iwm_umac_scan_iter_complete_notif *notif;
-                //            SYNC_RESP_STRUCT(notif, pkt);
+                SYNC_RESP_STRUCT(notif, pkt, struct iwm_umac_scan_iter_complete_notif *);
                 iwm_endscan(sc);
                 break;
             }
                 
             case IWM_REPLY_ERROR: {
                 struct iwm_error_resp *resp;
-                //            SYNC_RESP_STRUCT(resp, pkt);
+                SYNC_RESP_STRUCT(resp, pkt, struct iwm_error_resp *);
                 XYLog("%s: firmware error 0x%x, cmd 0x%x\n",
                       DEVNAME(sc), le32toh(resp->error_type),
                       resp->cmd_id);
@@ -1371,7 +1389,7 @@ iwm_notif_intr(struct iwm_softc *sc)
             case IWM_TIME_EVENT_NOTIFICATION: {
                 struct iwm_time_event_notif *notif;
                 uint32_t action;
-                //            SYNC_RESP_STRUCT(notif, pkt);
+                SYNC_RESP_STRUCT(notif, pkt, struct iwm_time_event_notif *);
                 
                 if (sc->sc_time_event_uid != le32toh(notif->unique_id))
                     break;
@@ -1397,7 +1415,7 @@ iwm_notif_intr(struct iwm_softc *sc)
                 
             case IWM_SCD_QUEUE_CFG: {
                 struct iwm_scd_txq_cfg_rsp *rsp;
-                //            SYNC_RESP_STRUCT(rsp, pkt);
+                SYNC_RESP_STRUCT(rsp, pkt, struct iwm_scd_txq_cfg_rsp *);
                 
                 break;
             }
@@ -1435,10 +1453,10 @@ iwm_notif_intr(struct iwm_softc *sc)
 }
 
 int itlwm::
-iwm_intr(void *arg)
+iwm_intr(OSObject *arg, IOInterruptEventSource* sender, int count)
 {
     XYLog("Interrupt!!!\n");
-    struct iwm_softc *sc = (struct iwm_softc*)arg;
+    struct iwm_softc *sc = &com;
     int handled = 0;
     int r1, r2, rv = 0;
     int isperiodic = 0;
@@ -1540,7 +1558,7 @@ iwm_intr(void *arg)
         handled |= IWM_CSR_INT_BIT_FH_TX;
         
         sc->sc_fw_chunk_done = 1;
-        wakeup(&sc->sc_fw);
+        wakeupOn(&sc->sc_fw);
     }
     
     if (r1 & IWM_CSR_INT_BIT_RX_PERIODIC) {
@@ -1695,7 +1713,7 @@ intrFilter(OSObject *object, IOFilterInterruptEventSource *src)
     return true;
 }
 
-void itlwm::
+bool itlwm::
 iwm_attach(struct iwm_softc *sc, struct pci_attach_args *pa)
 {
     XYLog("%s\n", __func__);
@@ -1717,7 +1735,7 @@ iwm_attach(struct iwm_softc *sc, struct pci_attach_args *pa)
     if (err == 0) {
         XYLog("%s: PCIe capability structure not found!\n",
               DEVNAME(sc));
-        return;
+        return false;
     }
     
     /* Clear device-specific "PCI retry timeout" register (41h). */
@@ -1738,12 +1756,12 @@ iwm_attach(struct iwm_softc *sc, struct pci_attach_args *pa)
                          &sc->sc_st, &sc->sc_sh, NULL, &sc->sc_sz, 0);
     if (err) {
         XYLog("%s: can't map mem space\n", DEVNAME(sc));
-        return;
+        return false;
     }
     
     if (pci_intr_map_msi(pa, &sc->ih) && pci_intr_map(pa, &sc->ih)) {
         XYLog("%s: can't map interrupt\n", DEVNAME(sc));
-        return;
+        return false;
     }
     
     int msiIntrIndex = 0;
@@ -1769,7 +1787,7 @@ iwm_attach(struct iwm_softc *sc, struct pci_attach_args *pa)
         if (intrstr != NULL)
             XYLog(" at %s", intrstr);
         XYLog("\n");
-        return;
+        return false;
     }
     sc->sc_ih->enable();
     XYLog(", %s\n", intrstr);
@@ -1826,7 +1844,7 @@ iwm_attach(struct iwm_softc *sc, struct pci_attach_args *pa)
             break;
         default:
             XYLog("%s: unknown adapter type\n", DEVNAME(sc));
-            return;
+            return false;
     }
     
     /*
@@ -1841,7 +1859,7 @@ iwm_attach(struct iwm_softc *sc, struct pci_attach_args *pa)
     
     if (iwm_prepare_card_hw(sc) != 0) {
         XYLog("%s: could not initialize hardware\n", DEVNAME(sc));
-        return;
+        return false;
     }
     
     if (sc->sc_device_family == IWM_DEVICE_FAMILY_8000) {
@@ -1861,7 +1879,7 @@ iwm_attach(struct iwm_softc *sc, struct pci_attach_args *pa)
                            25000);
         if (!err) {
             XYLog("%s: Failed to wake up the nic\n", DEVNAME(sc));
-            return;
+            return false;
         }
         
         if (iwm_nic_lock(sc)) {
@@ -1876,7 +1894,7 @@ iwm_attach(struct iwm_softc *sc, struct pci_attach_args *pa)
             iwm_nic_unlock(sc);
         } else {
             XYLog("%s: Failed to lock the nic\n", DEVNAME(sc));
-            return;
+            return false;
         }
     }
     
@@ -1891,7 +1909,7 @@ iwm_attach(struct iwm_softc *sc, struct pci_attach_args *pa)
     if (err) {
         XYLog("%s: could not allocate memory for firmware\n",
               DEVNAME(sc));
-        return;
+        return false;
     }
     
     /* Allocate "Keep Warm" page, used internally by the card. */
@@ -1991,7 +2009,11 @@ iwm_attach(struct iwm_softc *sc, struct pci_attach_args *pa)
     memcpy(ifp->if_xname, DEVNAME(sc), IFNAMSIZ);
     
     attachInterface((IONetworkInterface **)&ifp->iface);
-    
+    if (ifp->iface == NULL) {
+        XYLog("attacht to interface fail\n");
+        goto fail4;
+    }
+    ifp->output_queue = getOutputQueue();
     ieee80211_ifattach(ifp);
     ieee80211_media_init(ifp);
     
@@ -2026,7 +2048,7 @@ iwm_attach(struct iwm_softc *sc, struct pci_attach_args *pa)
     
     XYLog("attach succeed.\n");
     
-    return;
+    return true;
     
 fail4:    while (--txq_i >= 0)
     iwm_free_tx_ring(sc, &sc->txq[txq_i]);
@@ -2038,7 +2060,7 @@ fail3:    if (sc->ict_dma.vaddr != NULL)
 fail2:    iwm_dma_contig_free(&sc->kw_dma);
 fail1:    iwm_dma_contig_free(&sc->fw_dma);
     XYLog("attach failed.\n");
-    return;
+    return false;
 }
 
 #if NBPFILTER > 0

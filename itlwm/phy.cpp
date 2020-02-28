@@ -53,7 +53,7 @@ iwm_phy_db_set_section(struct iwm_softc *sc,
         return EINVAL;
 
     if (entry->data)
-        free(entry->data, M_DEVBUF, entry->size);
+        free(entry->data);
     entry->data = (uint8_t*)malloc(size, M_DEVBUF, M_NOWAIT);
     if (!entry->data) {
         entry->size = 0;
@@ -447,7 +447,7 @@ iwm_send_cmd(struct iwm_softc *sc, struct iwm_host_cmd *hcmd)
         /* Command is too large to fit in pre-allocated space. */
         size_t totlen = hdrlen + paylen;
         if (paylen > IWM_MAX_CMD_PAYLOAD_SIZE) {
-            printf("%s: firmware command too long (%zd bytes)\n",
+            XYLog("%s: firmware command too long (%zd bytes)\n",
                 DEVNAME(sc), totlen);
             err = EINVAL;
             goto out;
@@ -455,7 +455,7 @@ iwm_send_cmd(struct iwm_softc *sc, struct iwm_host_cmd *hcmd)
         mbuf_gethdr(MBUF_DONTWAIT, MT_DATA, &m);
 //        m = MCLGETI(NULL, M_DONTWAIT, NULL, totlen);
         if (m == NULL) {
-            printf("%s: could not get fw cmd mbuf (%zd bytes)\n",
+            XYLog("%s: could not get fw cmd mbuf (%zd bytes)\n",
                 DEVNAME(sc), totlen);
             err = ENOMEM;
             goto out;
@@ -463,7 +463,7 @@ iwm_send_cmd(struct iwm_softc *sc, struct iwm_host_cmd *hcmd)
         cmd = mtod(m, struct iwm_device_cmd *);
         err = bus_dmamap_load(txdata->map, m);
         if (err) {
-            printf("%s: could not load fw cmd mbuf (%zd bytes)\n",
+            XYLog("%s: could not load fw cmd mbuf (%zd bytes)\n",
                 DEVNAME(sc), totlen);
             mbuf_freem(m);
             goto out;
@@ -625,7 +625,7 @@ void itlwm::
 iwm_free_resp(struct iwm_softc *sc, struct iwm_host_cmd *hcmd)
 {
     _KASSERT((hcmd->flags & (IWM_CMD_WANT_RESP)) == IWM_CMD_WANT_RESP);
-    free(hcmd->resp_pkt, M_DEVBUF, hcmd->resp_pkt_len);
+    free(hcmd->resp_pkt);
     hcmd->resp_pkt = NULL;
 }
 
@@ -648,7 +648,7 @@ iwm_cmd_done(struct iwm_softc *sc, int qid, int idx, int code)
         mbuf_freem(data->m);
         data->m = NULL;
     }
-    wakeup(&ring->desc[idx]);
+    wakeupOn(&ring->desc[idx]);
 
     if (ring->queued == 0) {
         IOLog("%s: unexpected firmware response to command 0x%x\n",

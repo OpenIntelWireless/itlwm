@@ -268,7 +268,7 @@ ieee80211_recv_4way_msg1(struct ieee80211com *ic,
 	ni->ni_flags |= IEEE80211_NODE_RSN_NEW_PTK;
 
 	if (ic->ic_if.if_flags & IFF_DEBUG)
-		printf("%s: received msg %d/%d of the %s handshake from %s\n",
+		XYLog("%s: received msg %d/%d of the %s handshake from %s\n",
 		    ic->ic_if.if_xname, 1, 4, "4-way",
 		    ether_sprintf(ni->ni_macaddr));
 
@@ -332,7 +332,7 @@ ieee80211_recv_4way_msg2(struct ieee80211com *ic,
 	}
 
 	if (ic->ic_if.if_flags & IFF_DEBUG)
-		printf("%s: received msg %d/%d of the %s handshake from %s\n",
+		XYLog("%s: received msg %d/%d of the %s handshake from %s\n",
 		    ic->ic_if.if_xname, 2, 4, "4-way",
 		    ether_sprintf(ni->ni_macaddr));
 
@@ -527,7 +527,7 @@ ieee80211_recv_4way_msg3(struct ieee80211com *ic,
 	ni->ni_replaycnt_ok = 1;
 
 	if (ic->ic_if.if_flags & IFF_DEBUG)
-		printf("%s: received msg %d/%d of the %s handshake from %s\n",
+		XYLog("%s: received msg %d/%d of the %s handshake from %s\n",
 		    ic->ic_if.if_xname, 3, 4, "4-way",
 		    ether_sprintf(ni->ni_macaddr));
 
@@ -574,7 +574,7 @@ ieee80211_recv_4way_msg3(struct ieee80211com *ic,
 		ni->ni_flags &= ~IEEE80211_NODE_TXRXPROT;
 		ni->ni_flags |= IEEE80211_NODE_RXPROT;
 	} else if (ni->ni_rsncipher != IEEE80211_CIPHER_USEGROUP)
-		printf("%s: unexpected pairwise key update received from %s\n",
+		XYLog("%s: unexpected pairwise key update received from %s\n",
 		    ic->ic_if.if_xname, ether_sprintf(ni->ni_macaddr));
 
 	if (gtk != NULL) {
@@ -719,7 +719,7 @@ ieee80211_recv_4way_msg4(struct ieee80211com *ic,
 	}
 
 	if (ic->ic_if.if_flags & IFF_DEBUG)
-		printf("%s: received msg %d/%d of the %s handshake from %s\n",
+		XYLog("%s: received msg %d/%d of the %s handshake from %s\n",
 		    ic->ic_if.if_xname, 4, 4, "4-way",
 		    ether_sprintf(ni->ni_macaddr));
 
@@ -924,7 +924,7 @@ ieee80211_recv_rsn_group_msg1(struct ieee80211com *ic,
 	ni->ni_replaycnt = BE_READ_8(key->replaycnt);
 
 	if (ic->ic_if.if_flags & IFF_DEBUG)
-		printf("%s: received msg %d/%d of the %s handshake from %s\n",
+		XYLog("%s: received msg %d/%d of the %s handshake from %s\n",
 		    ic->ic_if.if_xname, 1, 2, "group key",
 		    ether_sprintf(ni->ni_macaddr));
 
@@ -1029,7 +1029,7 @@ ieee80211_recv_wpa_group_msg1(struct ieee80211com *ic,
 	ni->ni_replaycnt = BE_READ_8(key->replaycnt);
 
 	if (ic->ic_if.if_flags & IFF_DEBUG)
-		printf("%s: received msg %d/%d of the %s handshake from %s\n",
+		XYLog("%s: received msg %d/%d of the %s handshake from %s\n",
 		    ic->ic_if.if_xname, 1, 2, "group key",
 		    ether_sprintf(ni->ni_macaddr));
 
@@ -1084,7 +1084,7 @@ ieee80211_recv_group_msg2(struct ieee80211com *ic,
 	ni->ni_rsn_retries = 0;
 
 	if (ic->ic_if.if_flags & IFF_DEBUG)
-		printf("%s: received msg %d/%d of the %s handshake from %s\n",
+		XYLog("%s: received msg %d/%d of the %s handshake from %s\n",
 		    ic->ic_if.if_xname, 2, 2, "group key",
 		    ether_sprintf(ni->ni_macaddr));
 }

@@ -108,12 +108,6 @@
 		F8C2EC6C2408031A007A9422 /* ieee80211_node.c in Sources */ = {isa = PBXBuildFile; fileRef = F8C2EC4C2408031A007A9422 /* ieee80211_node.c */; };
 		F8C2EC6D2408031A007A9422 /* ieee80211_pae_output.c in Sources */ = {isa = PBXBuildFile; fileRef = F8C2EC4D2408031A007A9422 /* ieee80211_pae_output.c */; };
 		F8C2EC6E2408031A007A9422 /* ieee80211_var.h in Headers */ = {isa = PBXBuildFile; fileRef = F8C2EC4E2408031A007A9422 /* ieee80211_var.h */; };
-		F8C2EC7B2408038D007A9422 /* types.h in Headers */ = {isa = PBXBuildFile; fileRef = F8C2EC702408038D007A9422 /* types.h */; };
-		F8C2EC812408038D007A9422 /* kernel.h in Headers */ = {isa = PBXBuildFile; fileRef = F8C2EC762408038D007A9422 /* kernel.h */; };
-		F8C2EC822408038D007A9422 /* skbuff.h in Headers */ = {isa = PBXBuildFile; fileRef = F8C2EC772408038D007A9422 /* skbuff.h */; };
-		F8C2EC832408038D007A9422 /* bitfield.h in Headers */ = {isa = PBXBuildFile; fileRef = F8C2EC782408038D007A9422 /* bitfield.h */; };
-		F8C2EC842408038D007A9422 /* random.h in Headers */ = {isa = PBXBuildFile; fileRef = F8C2EC792408038D007A9422 /* random.h */; };
-		F8C2EC852408038D007A9422 /* netdevice.h in Headers */ = {isa = PBXBuildFile; fileRef = F8C2EC7A2408038D007A9422 /* netdevice.h */; };
 		F8C2EC9124080557007A9422 /* _buf.h in Headers */ = {isa = PBXBuildFile; fileRef = F8C2EC8724080556007A9422 /* _buf.h */; };
 		F8C2EC9224080557007A9422 /* CTimeout.hpp in Headers */ = {isa = PBXBuildFile; fileRef = F8C2EC8824080556007A9422 /* CTimeout.hpp */; };
 		F8C2EC9324080557007A9422 /* _arc4random.h in Headers */ = {isa = PBXBuildFile; fileRef = F8C2EC8924080556007A9422 /* _arc4random.h */; };
@@ -125,6 +119,11 @@
 		F8C2EC9924080557007A9422 /* _null.h in Headers */ = {isa = PBXBuildFile; fileRef = F8C2EC8F24080556007A9422 /* _null.h */; };
 		F8C2EC9A24080557007A9422 /* timeout.h in Headers */ = {isa = PBXBuildFile; fileRef = F8C2EC9024080556007A9422 /* timeout.h */; };
 		F8C2EC9C2408062D007A9422 /* pcireg.h in Headers */ = {isa = PBXBuildFile; fileRef = F8C2EC9B2408062D007A9422 /* pcireg.h */; };
+		F8F9257D240974EF0088B8D5 /* cfg80211.h in Headers */ = {isa = PBXBuildFile; fileRef = F8F92572240974ED0088B8D5 /* cfg80211.h */; };
+		F8F9257E240974EF0088B8D5 /* bitfield.h in Headers */ = {isa = PBXBuildFile; fileRef = F8F92573240974EE0088B8D5 /* bitfield.h */; };
+		F8F9257F240974EF0088B8D5 /* kernel.h in Headers */ = {isa = PBXBuildFile; fileRef = F8F92574240974EE0088B8D5 /* kernel.h */; };
+		F8F92583240974EF0088B8D5 /* random.h in Headers */ = {isa = PBXBuildFile; fileRef = F8F92578240974EE0088B8D5 /* random.h */; };
+		F8F92586240974EF0088B8D5 /* types.h in Headers */ = {isa = PBXBuildFile; fileRef = F8F9257B240974EF0088B8D5 /* types.h */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -232,12 +231,6 @@
 		F8C2EC4C2408031A007A9422 /* ieee80211_node.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = ieee80211_node.c; sourceTree = "<group>"; };
 		F8C2EC4D2408031A007A9422 /* ieee80211_pae_output.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = ieee80211_pae_output.c; sourceTree = "<group>"; };
 		F8C2EC4E2408031A007A9422 /* ieee80211_var.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ieee80211_var.h; sourceTree = "<group>"; };
-		F8C2EC702408038D007A9422 /* types.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = types.h; sourceTree = "<group>"; };
-		F8C2EC762408038D007A9422 /* kernel.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = kernel.h; sourceTree = "<group>"; };
-		F8C2EC772408038D007A9422 /* skbuff.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = skbuff.h; sourceTree = "<group>"; };
-		F8C2EC782408038D007A9422 /* bitfield.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = bitfield.h; sourceTree = "<group>"; };
-		F8C2EC792408038D007A9422 /* random.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = random.h; sourceTree = "<group>"; };
-		F8C2EC7A2408038D007A9422 /* netdevice.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = netdevice.h; sourceTree = "<group>"; };
 		F8C2EC8724080556007A9422 /* _buf.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = _buf.h; sourceTree = "<group>"; };
 		F8C2EC8824080556007A9422 /* CTimeout.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = CTimeout.hpp; sourceTree = "<group>"; };
 		F8C2EC8924080556007A9422 /* _arc4random.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = _arc4random.h; sourceTree = "<group>"; };
@@ -250,6 +243,11 @@
 		F8C2EC9024080556007A9422 /* timeout.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = timeout.h; sourceTree = "<group>"; };
 		F8C2EC9B2408062D007A9422 /* pcireg.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = pcireg.h; sourceTree = "<group>"; };
 		F8C2EC9D24080796007A9422 /* libkmod.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = libkmod.a; sourceTree = "<group>"; };
+		F8F92572240974ED0088B8D5 /* cfg80211.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = cfg80211.h; sourceTree = "<group>"; };
+		F8F92573240974EE0088B8D5 /* bitfield.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = bitfield.h; sourceTree = "<group>"; };
+		F8F92574240974EE0088B8D5 /* kernel.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = kernel.h; sourceTree = "<group>"; };
+		F8F92578240974EE0088B8D5 /* random.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = random.h; sourceTree = "<group>"; };
+		F8F9257B240974EF0088B8D5 /* types.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = types.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -310,7 +308,7 @@
 		024A07B923FCBC6C009FBA6C /* compat */ = {
 			isa = PBXGroup;
 			children = (
-				F8C2EC6F2408038D007A9422 /* linux */,
+				F8F9256D240972EE0088B8D5 /* linux */,
 				024A07C723FCBC6C009FBA6C /* openbsd */,
 				024A07BA23FCBC6C009FBA6C /* compat.cpp */,
 				024A082123FCBC6C009FBA6C /* compat.h */,
@@ -432,20 +430,6 @@
 			path = net80211;
 			sourceTree = "<group>";
 		};
-		F8C2EC6F2408038D007A9422 /* linux */ = {
-			isa = PBXGroup;
-			children = (
-				F8C2EC702408038D007A9422 /* types.h */,
-				F8C2EC762408038D007A9422 /* kernel.h */,
-				F8C2EC772408038D007A9422 /* skbuff.h */,
-				F8C2EC782408038D007A9422 /* bitfield.h */,
-				F8C2EC792408038D007A9422 /* random.h */,
-				F8C2EC7A2408038D007A9422 /* netdevice.h */,
-			);
-			name = linux;
-			path = ../../../../Documents/AppleIntelWifiAdapter/AppleIntelWifiAdapter/compat/linux;
-			sourceTree = "<group>";
-		};
 		F8C2EC8624080556007A9422 /* sys */ = {
 			isa = PBXGroup;
 			children = (
@@ -464,6 +448,18 @@
 			path = sys;
 			sourceTree = "<group>";
 		};
+		F8F9256D240972EE0088B8D5 /* linux */ = {
+			isa = PBXGroup;
+			children = (
+				F8F92573240974EE0088B8D5 /* bitfield.h */,
+				F8F92572240974ED0088B8D5 /* cfg80211.h */,
+				F8F92574240974EE0088B8D5 /* kernel.h */,
+				F8F92578240974EE0088B8D5 /* random.h */,
+				F8F9257B240974EF0088B8D5 /* types.h */,
+			);
+			path = linux;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXHeadersBuildPhase section */
@@ -471,7 +467,7 @@
 			isa = PBXHeadersBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				F8C2EC812408038D007A9422 /* kernel.h in Headers */,
+				F8F9257F240974EF0088B8D5 /* kernel.h in Headers */,
 				024A084D23FCBC6C009FBA6C /* sha1.h in Headers */,
 				024A084B23FCBC6C009FBA6C /* rijndael.h in Headers */,
 				024A083923FCBC6C009FBA6C /* md5.h in Headers */,
@@ -485,10 +481,12 @@
 				F8C2EC9124080557007A9422 /* _buf.h in Headers */,
 				024A088423FCBC6D009FBA6C /* compat.h in Headers */,
 				024A084123FCBC6C009FBA6C /* idgen.h in Headers */,
+				F8F92586240974EF0088B8D5 /* types.h in Headers */,
 				024A083523FCBC6C009FBA6C /* des_locl.h in Headers */,
 				024A088B23FCBE38009FBA6C /* if_iwmreg.h in Headers */,
 				024A084A23FCBC6C009FBA6C /* cryptodev.h in Headers */,
 				024A083E23FCBC6C009FBA6C /* sk.h in Headers */,
+				F8F9257D240974EF0088B8D5 /* cfg80211.h in Headers */,
 				024A084323FCBC6C009FBA6C /* gmac.h in Headers */,
 				F8C2EC9C2408062D007A9422 /* pcireg.h in Headers */,
 				F8C2EC9624080557007A9422 /* _if_ether.h in Headers */,
@@ -497,9 +495,9 @@
 				F8C2EC9A24080557007A9422 /* timeout.h in Headers */,
 				024A084523FCBC6C009FBA6C /* hmac.h in Headers */,
 				F8C2EC9724080557007A9422 /* tree.h in Headers */,
-				F8C2EC842408038D007A9422 /* random.h in Headers */,
 				F8C2EC512408031A007A9422 /* ieee80211_amrr.h in Headers */,
 				024A083723FCBC6C009FBA6C /* key_wrap.h in Headers */,
+				F8F92583240974EF0088B8D5 /* random.h in Headers */,
 				F8C2EC9324080557007A9422 /* _arc4random.h in Headers */,
 				024A084823FCBC6C009FBA6C /* michael.h in Headers */,
 				024A085423FCBC6C009FBA6C /* podd.h in Headers */,
@@ -516,14 +514,11 @@
 				024A083C23FCBC6C009FBA6C /* chachapoly.h in Headers */,
 				024A084C23FCBC6C009FBA6C /* chacha_private.h in Headers */,
 				024A083B23FCBC6C009FBA6C /* arc4.h in Headers */,
-				F8C2EC832408038D007A9422 /* bitfield.h in Headers */,
-				F8C2EC822408038D007A9422 /* skbuff.h in Headers */,
 				024A084623FCBC6C009FBA6C /* aes.h in Headers */,
 				F8C2EC632408031A007A9422 /* ieee80211.h in Headers */,
 				024A085623FCBC6C009FBA6C /* cmac.h in Headers */,
+				F8F9257E240974EF0088B8D5 /* bitfield.h in Headers */,
 				F8C2EC642408031A007A9422 /* ieee80211_priv.h in Headers */,
-				F8C2EC852408038D007A9422 /* netdevice.h in Headers */,
-				F8C2EC7B2408038D007A9422 /* types.h in Headers */,
 				024A07B023FCBC3C009FBA6C /* itlwm.hpp in Headers */,
 				F8C2EC5A2408031A007A9422 /* ieee80211_crypto.h in Headers */,
 				F8C2EC582408031A007A9422 /* ieee80211_regdomain.h in Headers */,
@@ -778,10 +773,12 @@
 		024A07B723FCBC3C009FBA6C /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CLANG_CXX_LANGUAGE_STANDARD = "compiler-default";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1.0.0d1;
 				DEVELOPMENT_TEAM = YXX7XALBVX;
+				GCC_C_LANGUAGE_STANDARD = c11;
 				GCC_INPUT_FILETYPE = sourcecode.cpp.cpp;
 				INFOPLIST_FILE = itlwm/Info.plist;
 				LIBRARY_SEARCH_PATHS = (
@@ -804,10 +801,12 @@
 		024A07B823FCBC3C009FBA6C /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CLANG_CXX_LANGUAGE_STANDARD = "compiler-default";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1.0.0d1;
 				DEVELOPMENT_TEAM = YXX7XALBVX;
+				GCC_C_LANGUAGE_STANDARD = c11;
 				GCC_INPUT_FILETYPE = sourcecode.cpp.cpp;
 				INFOPLIST_FILE = itlwm/Info.plist;
 				LIBRARY_SEARCH_PATHS = (

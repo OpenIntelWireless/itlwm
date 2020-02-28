@@ -210,7 +210,7 @@ iwm_apm_init(struct iwm_softc *sc)
     if (!iwm_poll_bit(sc, IWM_CSR_GP_CNTRL,
         IWM_CSR_GP_CNTRL_REG_FLAG_MAC_CLOCK_READY,
         IWM_CSR_GP_CNTRL_REG_FLAG_MAC_CLOCK_READY, 25000)) {
-        printf("%s: timeout waiting for clock stabilization\n",
+        XYLog("%s: timeout waiting for clock stabilization\n",
             DEVNAME(sc));
         err = ETIMEDOUT;
         goto out;
@@ -272,7 +272,7 @@ iwm_apm_init(struct iwm_softc *sc)
     }
  out:
     if (err)
-        printf("%s: apm init error %d\n", DEVNAME(sc), err);
+        XYLog("%s: apm init error %d\n", DEVNAME(sc), err);
     return err;
 }
 
@@ -285,7 +285,7 @@ iwm_apm_stop(struct iwm_softc *sc)
     if (!iwm_poll_bit(sc, IWM_CSR_RESET,
         IWM_CSR_RESET_REG_FLAG_MASTER_DISABLED,
         IWM_CSR_RESET_REG_FLAG_MASTER_DISABLED, 100))
-        printf("%s: timeout waiting for master\n", DEVNAME(sc));
+        XYLog("%s: timeout waiting for master\n", DEVNAME(sc));
 }
 
 int itlwm::
@@ -362,7 +362,7 @@ iwm_stop_device(struct iwm_softc *sc)
     IWM_CLRBITS(sc, IWM_CSR_GP_CNTRL,
         IWM_CSR_GP_CNTRL_REG_FLAG_MAC_ACCESS_REQ);
     if (sc->sc_nic_locks > 0)
-        printf("%s: %d active NIC locks forcefully cleared\n",
+        XYLog("%s: %d active NIC locks forcefully cleared\n",
             DEVNAME(sc), sc->sc_nic_locks);
     sc->sc_nic_locks = 0;
 

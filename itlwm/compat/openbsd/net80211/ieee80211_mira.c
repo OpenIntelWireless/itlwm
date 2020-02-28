@@ -104,8 +104,8 @@ void	ieee80211_mira_reset_collision_stats(struct ieee80211_mira_node *);
 	(b == 0 ? (uint64_t)-1 : (((a) << MIRA_FP_SHIFT) / (b)))
 
 #ifdef MIRA_DEBUG
-#define DPRINTF(x)	do { if (mira_debug > 0) printf x; } while (0)
-#define DPRINTFN(n, x)	do { if (mira_debug >= (n)) printf x; } while (0)
+#define DPRINTF(x)	do { if (mira_debug > 0) XYLog x; } while (0)
+#define DPRINTFN(n, x)	do { if (mira_debug >= (n)) XYLog x; } while (0)
 int mira_debug = 0;
 #else
 #define DPRINTF(x)	do { ; } while (0)
@@ -415,7 +415,7 @@ ieee80211_mira_update_stats(struct ieee80211_mira_node *mn,
 	if ((sfer >> MIRA_FP_SHIFT) != 0) { /* bug in wifi driver */
 		if (ic->ic_if.if_flags & IFF_DEBUG) {
 #ifdef DIAGNOSTIC
-			printf("%s: mira sfer overflow\n",
+			XYLog("%s: mira sfer overflow\n",
 			    ether_sprintf(ni->ni_macaddr));
 #endif
 #ifdef MIRA_DEBUG
@@ -430,7 +430,7 @@ ieee80211_mira_update_stats(struct ieee80211_mira_node *mn,
 	if (sfer > MIRA_FP_1) { /* bug in wifi driver */
 		if (ic->ic_if.if_flags & IFF_DEBUG) {
 #ifdef DIAGNOSTIC
-			printf("%s: mira sfer > 1\n",
+			XYLog("%s: mira sfer > 1\n",
 			    ether_sprintf(ni->ni_macaddr));
 #endif
 #ifdef MIRA_DEBUG
