@@ -252,7 +252,7 @@ int itlwm::
 iwm_nvm_init(struct iwm_softc *sc)
 {
     struct iwm_nvm_section nvm_sections[IWM_NVM_NUM_OF_SECTIONS];
-    int i, section, err;
+    int i, section, err = 0;
     uint16_t len;
     uint8_t *buf;
     const size_t bufsz = IWM_MAX_NVM_SECTION_SIZE;

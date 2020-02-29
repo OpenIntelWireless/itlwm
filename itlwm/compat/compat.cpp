@@ -139,7 +139,7 @@ int bus_dmamap_create(bus_dma_tag_t tag, bus_size_t size, int nsegments, bus_siz
 	if (dmamp == 0)
 		return 1;
 	*dmamp = new bus_dmamap;
-	(*dmamp)->cursor = IOMbufLittleMemoryCursor::withSpecification(maxsegsz, nsegments);
+	(*dmamp)->cursor = IOMbufNaturalMemoryCursor::withSpecification(maxsegsz, nsegments);
 	if ((*dmamp)->cursor == 0)
 		return 1;
 	else
@@ -256,7 +256,7 @@ void bus_dmamap_destroy(bus_dma_tag_t tag, bus_dmamap_t dmam) {
 int bus_dmamap_load(bus_dmamap_t map, mbuf_t mb) {
 	if (map == 0 || mb == 0)
 		return 1;
-	map->dm_nsegs = map->cursor->getPhysicalSegmentsWithCoalesce(mb, map->dm_segs);
+	map->dm_nsegs = map->cursor->getPhysicalSegments(mb, map->dm_segs, 1);
 	if (map->dm_nsegs == 0)
 		return 1;
 	else

@@ -52,6 +52,7 @@ iwm_phy_ctxt_cmd(struct iwm_softc *sc, struct iwm_phy_ctxt *ctxt,
     uint8_t chains_static, uint8_t chains_dynamic, uint32_t action,
     uint32_t apply_time)
 {
+    XYLog("%s\n", __func__);
     struct iwm_phy_context_cmd cmd;
 
     iwm_phy_ctxt_cmd_hdr(sc, ctxt, &cmd, action, apply_time);

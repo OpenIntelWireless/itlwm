@@ -847,6 +847,8 @@ iwm_run_init_mvm_ucode(struct iwm_softc *sc, int justnvm)
     if (err)
         return err;
     
+    XYLog("%s wait for sc_init_complete\n", __func__);
+    
     /*
      * Nothing to do but wait for the init complete and phy DB
      * notifications from the firmware.
@@ -857,6 +859,8 @@ iwm_run_init_mvm_ucode(struct iwm_softc *sc, int justnvm)
         if (err)
             break;
     }
+    
+    XYLog("%s done\n", __func__);
     
     return err;
 }

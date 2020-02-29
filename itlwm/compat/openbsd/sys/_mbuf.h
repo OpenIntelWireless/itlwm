@@ -269,6 +269,7 @@ static IOLock *inputLock = IOLockAlloc();
 
 static inline int if_input(struct ifnet *ifq, struct mbuf_list *ml)
 {
+    XYLog("%s\n", __func__);
     mbuf_t m;
     uint64_t packets;
     if (ml_empty(ml))

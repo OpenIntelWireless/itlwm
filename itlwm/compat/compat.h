@@ -94,7 +94,7 @@ struct pci_attach_args {
 };
 
 struct bus_dmamap {
-	IOMbufLittleMemoryCursor*	cursor;
+	IOMbufNaturalMemoryCursor*	cursor;
 	int				dm_nsegs;
 	IOPhysicalSegment		dm_segs[8]; // reserve space for 8 segments
 };

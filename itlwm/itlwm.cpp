@@ -31,6 +31,9 @@ IOService* itlwm::probe(IOService *provider, SInt32 *score)
 
 bool itlwm::start(IOService *provider)
 {
+    ifnet *ifp;
+    IOEthernetInterface *iface;
+    
     XYLog("%s\n", __func__);
     if (!super::start(provider)) {
         return false;
@@ -59,7 +62,14 @@ bool itlwm::start(IOService *provider)
     if (!iwm_attach(&com, &pci)) {
         return false;
     }
-    iwm_init(&com.sc_ic.ic_ac.ac_if);
+    ifp = &com.sc_ic.ic_ac.ac_if;
+    iwm_init(ifp);
+    iface = ifp->iface;
+    attachInterface((IONetworkInterface **)&iface);
+    if (iface == NULL) {
+        XYLog("attach to interface fail\n");
+        return false;
+    }
     registerService();
     return true;
 }
@@ -177,13 +187,12 @@ IOReturn itlwm::disable(IONetworkInterface *netif)
 
 IOReturn itlwm::getHardwareAddress(IOEthernetAddress *addrP) {
     XYLog("%s\n", __func__);
-    addrP->bytes[0] = 0x29;
-    addrP->bytes[1] = 0xC2;
-    addrP->bytes[2] = 0xdd;
-    addrP->bytes[3] = 0x8F;
-    addrP->bytes[4] = 0x93;
-    addrP->bytes[5] = 0x4D;
-    return kIOReturnSuccess;
+    if (IEEE80211_ADDR_EQ(etheranyaddr, com.sc_ic.ic_myaddr)) {
+        return kIOReturnError;
+    } else {
+        IEEE80211_ADDR_COPY(addrP, com.sc_ic.ic_myaddr);
+        return kIOReturnSuccess;
+    }
 }
 
 IOOutputQueue *itlwm::createOutputQueue()
@@ -669,6 +678,8 @@ iwm_init(struct ifnet *ifp)
     //    ifq_clr_oactive(&ifp->if_snd);
     ifp->if_flags |= IFF_RUNNING;
     
+    XYLog("%s ieee80211_begin_scan\n", __func__);
+    
     ieee80211_begin_scan(ifp);
     
     /*
@@ -683,6 +694,8 @@ iwm_init(struct ifnet *ifp)
         if (err)
             return err;
     } while (ic->ic_state != IEEE80211_S_SCAN);
+    
+    XYLog("%s done\n", __func__);
     
     return 0;
 }
@@ -1163,6 +1176,9 @@ iwm_notif_intr(struct iwm_softc *sc)
     
     hw = le16toh(sc->rxq.stat->closed_rb_num) & 0xfff;
     hw &= (IWM_RX_RING_COUNT - 1);
+    if (sc->rxq.cur == hw) {
+        XYLog("sc->rxq.cur == hw, nothing was send by ucode\n");
+    }
     while (sc->rxq.cur != hw) {
         struct iwm_rx_data *data = &sc->rxq.data[sc->rxq.cur];
         struct iwm_rx_packet *pkt;
@@ -1172,10 +1188,17 @@ iwm_notif_intr(struct iwm_softc *sc)
                         BUS_DMASYNC_POSTREAD);
         pkt = mtod(data->m, struct iwm_rx_packet *);
         
+        if (pkt == NULL) {
+            XYLog("%s pkt==NULL!!!!", __func__);
+            break;
+        }
+        
         qid = pkt->hdr.qid;
         idx = pkt->hdr.idx;
         
         code = IWM_WIDE_ID(pkt->hdr.flags, pkt->hdr.code);
+        
+        XYLog("code=0x%02x\n", code);
         
         /*
          * randomly get these from the firmware, no idea why.
@@ -1186,8 +1209,6 @@ iwm_notif_intr(struct iwm_softc *sc)
             ADVANCE_RXQ(sc);
             continue;
         }
-        
-        XYLog("code=0x%02x\n", code);
         
         switch (code) {
             case IWM_REPLY_RX_PHY_CMD:
@@ -1335,8 +1356,8 @@ iwm_notif_intr(struct iwm_softc *sc)
                     break;
                 }
                 
-                bus_dmamap_sync(sc->sc_dmat, data->map, sizeof(*pkt),
-                                pkt_len - sizeof(*pkt), BUS_DMASYNC_POSTREAD);
+//                bus_dmamap_sync(sc->sc_dmat, data->map, sizeof(*pkt),
+//                                pkt_len - sizeof(*pkt), BUS_DMASYNC_POSTREAD);
                 memcpy(sc->sc_cmd_resp_pkt[idx], pkt, pkt_len);
                 break;
             }
@@ -1685,10 +1706,10 @@ iwm_preinit(struct iwm_softc *sc)
     ieee80211_channel_init(ifp);
     
     /* Configure MAC address. */
-    //    err = if_setlladdr(ifp, ic->ic_myaddr);
-    //    if (err)
-    //        XYLog("%s: could not set MAC address (error %d)\n",
-    //            DEVNAME(sc), err);
+    err = if_setlladdr(ifp, ic->ic_myaddr);
+    if (err)
+        XYLog("%s: could not set MAC address (error %d)\n",
+              DEVNAME(sc), err);
     
     ieee80211_media_init(ifp);
     
@@ -1709,7 +1730,6 @@ iwm_attach_hook(struct device *self)
 bool itlwm::
 intrFilter(OSObject *object, IOFilterInterruptEventSource *src)
 {
-    XYLog("interrupt filter ran\n");
     return true;
 }
 
@@ -2007,12 +2027,8 @@ iwm_attach(struct iwm_softc *sc, struct pci_attach_args *pa)
     ifp->if_start = OSMemberFunctionCast(StartAction, this, &itlwm::iwm_start);
     //    ifp->if_watchdog = iwm_watchdog;
     memcpy(ifp->if_xname, DEVNAME(sc), IFNAMSIZ);
+    //    ifp->if_flags &= IFF_DEBUG;
     
-    attachInterface((IONetworkInterface **)&ifp->iface);
-    if (ifp->iface == NULL) {
-        XYLog("attacht to interface fail\n");
-        goto fail4;
-    }
     ifp->output_queue = getOutputQueue();
     ieee80211_ifattach(ifp);
     ieee80211_media_init(ifp);

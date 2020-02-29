@@ -13,6 +13,7 @@
 #include <net/if_var.h>
 #include <sys/queue.h>
 #include <sys/_if_media.h>
+#include <net/if_dl.h>
 
 #include <IOKit/network/IOEthernetInterface.h>
 #include <IOKit/network/IOOutputQueue.h>
@@ -214,5 +215,17 @@ static inline u_int8_t etherbroadcastaddr[ETHER_ADDR_LEN] =
 static inline u_int8_t etheranyaddr[ETHER_ADDR_LEN] =
     { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
 #define senderr(e) { error = (e); goto bad;}
+
+static inline int
+if_setlladdr(struct ifnet *ifp, const uint8_t *lladdr)
+{
+//    if (ifp->if_sadl == NULL)
+//        return (EINVAL);
+
+    memcpy(((struct arpcom *)ifp)->ac_enaddr, lladdr, ETHER_ADDR_LEN);
+//    memcpy(LLADDR(ifp->if_sadl), lladdr, ETHER_ADDR_LEN);
+
+    return (0);
+}
 
 #endif /* _if_ether_h */

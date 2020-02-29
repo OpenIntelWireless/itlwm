@@ -214,6 +214,7 @@ iwm_add_sta_cmd(struct iwm_softc *sc, struct iwm_node *in, int update)
 int itlwm::
 iwm_add_aux_sta(struct iwm_softc *sc)
 {
+    XYLog("%s\n", __func__);
     struct iwm_add_sta_cmd_v7 cmd;
     int err;
     uint32_t status;

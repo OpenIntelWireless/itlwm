@@ -307,6 +307,7 @@ iwm_lmac_scan(struct iwm_softc *sc, int bgscan)
 int itlwm::
 iwm_config_umac_scan(struct iwm_softc *sc)
 {
+    XYLog("%s\n", __func__);
     struct ieee80211com *ic = &sc->sc_ic;
     struct iwm_scan_config *scan_config;
     int err, nchan;
@@ -588,6 +589,7 @@ iwm_ack_rates(struct iwm_softc *sc, struct iwm_node *in, int *cck_rates,
 int itlwm::
 iwm_scan(struct iwm_softc *sc)
 {
+    XYLog("%s\n", __func__);
     struct ieee80211com *ic = &sc->sc_ic;
     struct ifnet *ifp = IC2IFP(ic);
     int err;

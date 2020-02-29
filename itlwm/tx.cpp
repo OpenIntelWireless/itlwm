@@ -187,6 +187,7 @@ iwm_enable_txq(struct iwm_softc *sc, int sta_id, int qid, int fifo)
 int itlwm::
 iwm_send_update_mcc_cmd(struct iwm_softc *sc, const char *alpha2)
 {
+    XYLog("%s\n", __func__);
     struct iwm_mcc_update_cmd mcc_cmd;
     struct iwm_host_cmd hcmd = {
         .id = IWM_MCC_UPDATE_CMD,
@@ -227,6 +228,7 @@ iwm_send_update_mcc_cmd(struct iwm_softc *sc, const char *alpha2)
 void itlwm::
 iwm_tt_tx_backoff(struct iwm_softc *sc, uint32_t backoff)
 {
+    XYLog("%s\n", __func__);
     struct iwm_host_cmd cmd = {
         .id = IWM_REPLY_THERMAL_MNG_BACKOFF,
         .len = { sizeof(uint32_t), },

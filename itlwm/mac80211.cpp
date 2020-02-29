@@ -313,6 +313,7 @@ iwm_get_signal_strength(struct iwm_softc *sc, struct iwm_rx_phy_info *phy_info)
 int itlwm::
 iwm_get_noise(const struct iwm_statistics_rx_non_phy *stats)
 {
+    XYLog("%s\n", __func__);
     int i, total, nbant, noise;
 
     total = nbant = noise = 0;
@@ -332,6 +333,7 @@ void itlwm::
 iwm_rx_rx_mpdu(struct iwm_softc *sc, struct iwm_rx_packet *pkt,
     struct iwm_rx_data *data, struct mbuf_list *ml)
 {
+    XYLog("%s\n", __func__);
 //    struct ieee80211com *ic = &sc->sc_ic;
 //    struct ieee80211_frame *wh;
 //    struct ieee80211_node *ni;
@@ -471,6 +473,7 @@ iwm_rx_rx_mpdu(struct iwm_softc *sc, struct iwm_rx_packet *pkt,
 void itlwm::
 iwm_enable_ht_cck_fallback(struct iwm_softc *sc, struct iwm_node *in)
 {
+    XYLog("%s\n", __func__);
     struct ieee80211com *ic = &sc->sc_ic;
     struct ieee80211_node *ni = &in->in_ni;
     struct ieee80211_rateset *rs = &ni->ni_rates;
@@ -503,6 +506,7 @@ void itlwm::
 iwm_rx_tx_cmd_single(struct iwm_softc *sc, struct iwm_rx_packet *pkt,
     struct iwm_node *in)
 {
+    XYLog("%s\n", __func__);
     struct ieee80211com *ic = &sc->sc_ic;
     struct ieee80211_node *ni = &in->in_ni;
     struct ifnet *ifp = IC2IFP(ic);
@@ -555,6 +559,7 @@ void itlwm::
 iwm_rx_tx_cmd(struct iwm_softc *sc, struct iwm_rx_packet *pkt,
     struct iwm_rx_data *data)
 {
+    XYLog("%s\n", __func__);
     struct ieee80211com *ic = &sc->sc_ic;
     struct ifnet *ifp = IC2IFP(ic);
     struct iwm_cmd_header *cmd_hdr = &pkt->hdr;
@@ -606,6 +611,7 @@ void itlwm::
 iwm_rx_bmiss(struct iwm_softc *sc, struct iwm_rx_packet *pkt,
     struct iwm_rx_data *data)
 {
+    XYLog("%s\n", __func__);
     struct ieee80211com *ic = &sc->sc_ic;
     struct iwm_missed_beacons_notif *mbn = (struct iwm_missed_beacons_notif *)pkt->data;
     uint32_t missed;
@@ -640,6 +646,7 @@ const struct iwm_rate * itlwm::
 iwm_tx_fill_cmd(struct iwm_softc *sc, struct iwm_node *in,
     struct ieee80211_frame *wh, struct iwm_tx_cmd *tx)
 {
+    XYLog("%s\n", __func__);
     struct ieee80211com *ic = &sc->sc_ic;
     struct ieee80211_node *ni = &in->in_ni;
     struct ieee80211_rateset *rs = &ni->ni_rates;
@@ -691,6 +698,7 @@ iwm_tx_fill_cmd(struct iwm_softc *sc, struct iwm_node *in,
 int itlwm::
 iwm_tx(struct iwm_softc *sc, mbuf_t m, struct ieee80211_node *ni, int ac)
 {
+    XYLog("%s\n", __func__);
     struct ieee80211com *ic = &sc->sc_ic;
     struct iwm_node *in = (struct iwm_node *)ni;
     struct iwm_tx_ring *ring;
@@ -906,6 +914,7 @@ iwm_tx(struct iwm_softc *sc, mbuf_t m, struct ieee80211_node *ni, int ac)
 int itlwm::
 iwm_flush_tx_path(struct iwm_softc *sc, int tfd_msk)
 {
+    XYLog("%s\n", __func__);
     struct iwm_tx_path_flush_cmd flush_cmd = {
         .queues_ctl = htole32(tfd_msk),
         .flush_ctl = htole16(IWM_DUMP_TX_FIFO_FLUSH),
@@ -1055,6 +1064,7 @@ iwm_mac_ctxt_cmd(struct iwm_softc *sc, struct iwm_node *in, uint32_t action,
 int itlwm::
 iwm_update_quotas(struct iwm_softc *sc, struct iwm_node *in, int running)
 {
+    XYLog("%s\n", __func__);
     struct iwm_time_quota_cmd cmd;
     int i, idx, num_active_macs, quota, quota_rem;
     int colors[IWM_MAX_BINDINGS] = { -1, -1, -1, -1, };
@@ -1117,6 +1127,7 @@ iwm_update_quotas(struct iwm_softc *sc, struct iwm_node *in, int running)
 int itlwm::
 iwm_auth(struct iwm_softc *sc)
 {
+    XYLog("%s\n", __func__);
     struct ieee80211com *ic = &sc->sc_ic;
     struct iwm_node *in = (struct iwm_node *)ic->ic_bss;
     uint32_t duration;
@@ -1186,6 +1197,7 @@ rm_mac_ctxt:
 int itlwm::
 iwm_deauth(struct iwm_softc *sc)
 {
+    XYLog("%s\n", __func__);
     struct ieee80211com *ic = &sc->sc_ic;
     struct iwm_node *in = (struct iwm_node *)ic->ic_bss;
     int ac, tfd_msk, err;
@@ -1240,6 +1252,7 @@ iwm_deauth(struct iwm_softc *sc)
 int itlwm::
 iwm_assoc(struct iwm_softc *sc)
 {
+    XYLog("%s\n", __func__);
     struct ieee80211com *ic = &sc->sc_ic;
     struct iwm_node *in = (struct iwm_node *)ic->ic_bss;
     int update_sta = (sc->sc_flags & IWM_FLAG_STA_ACTIVE);
@@ -1260,6 +1273,7 @@ iwm_assoc(struct iwm_softc *sc)
 int itlwm::
 iwm_disassoc(struct iwm_softc *sc)
 {
+    XYLog("%s\n", __func__);
     struct ieee80211com *ic = &sc->sc_ic;
     struct iwm_node *in = (struct iwm_node *)ic->ic_bss;
     int err;
@@ -1282,6 +1296,7 @@ iwm_disassoc(struct iwm_softc *sc)
 int itlwm::
 iwm_run(struct iwm_softc *sc)
 {
+    XYLog("%s\n", __func__);
     struct ieee80211com *ic = &sc->sc_ic;
     struct iwm_node *in = (struct iwm_node *)ic->ic_bss;
     int err;

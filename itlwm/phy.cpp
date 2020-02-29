@@ -460,6 +460,13 @@ iwm_send_cmd(struct iwm_softc *sc, struct iwm_host_cmd *hcmd)
             err = ENOMEM;
             goto out;
         }
+        if (totlen > mbuf_get_mhlen()) {
+            mbuf_getcluster(MBUF_DONTWAIT, MT_DATA, MCLBYTES, &m);
+            if (!(mbuf_flags(m) & MBUF_EXT)) {
+                mbuf_freem(m);
+                return ENOMEM;
+            }
+        }
         cmd = mtod(m, struct iwm_device_cmd *);
         err = bus_dmamap_load(txdata->map, m);
         if (err) {
@@ -632,6 +639,7 @@ iwm_free_resp(struct iwm_softc *sc, struct iwm_host_cmd *hcmd)
 void itlwm::
 iwm_cmd_done(struct iwm_softc *sc, int qid, int idx, int code)
 {
+    XYLog("%s\n", __func__);
     struct iwm_tx_ring *ring = &sc->txq[IWM_CMD_QUEUE];
     struct iwm_tx_data *data;
 
