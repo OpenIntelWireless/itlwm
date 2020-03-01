@@ -267,3 +267,44 @@ task_set(struct task *t, void (*fn)(void *), void *arg)
     t->t_arg = arg;
     t->t_flags = 0;
 }
+
+int
+task_add(struct taskq *tq, struct task *w)
+{
+    int rv = 0;
+
+    if (ISSET(w->t_flags, TASK_ONQUEUE))
+        return (0);
+
+    lck_mtx_lock(tq->tq_mtx);
+    if (!ISSET(w->t_flags, TASK_ONQUEUE)) {
+        rv = 1;
+        SET(w->t_flags, TASK_ONQUEUE);
+        TAILQ_INSERT_TAIL(&tq->tq_worklist, w, t_entry);
+    }
+    lck_mtx_unlock(tq->tq_mtx);
+
+    if (rv)
+        wakeup_one((caddr_t)tq);
+
+    return (rv);
+}
+
+int
+task_del(struct taskq *tq, struct task *w)
+{
+    int rv = 0;
+
+    if (!ISSET(w->t_flags, TASK_ONQUEUE))
+        return (0);
+
+    lck_mtx_lock(tq->tq_mtx);
+    if (ISSET(w->t_flags, TASK_ONQUEUE)) {
+        rv = 1;
+        CLR(w->t_flags, TASK_ONQUEUE);
+        TAILQ_REMOVE(&tq->tq_worklist, w, t_entry);
+    }
+    lck_mtx_unlock(tq->tq_mtx);
+
+    return (rv);
+}

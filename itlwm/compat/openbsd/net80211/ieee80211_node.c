@@ -1640,7 +1640,7 @@ ieee80211_setup_node(struct ieee80211com *ic,
 {
 	int i, s;
 
-	DPRINTF(("%s\n", ether_sprintf((u_int8_t *)macaddr)));
+	DPRINTF(("%s %s\n", __func__, ether_sprintf((u_int8_t *)macaddr)));
 	IEEE80211_ADDR_COPY(ni->ni_macaddr, macaddr);
 	ieee80211_node_newstate(ni, IEEE80211_STA_CACHE);
 
@@ -1958,7 +1958,7 @@ ieee80211_free_node(struct ieee80211com *ic, struct ieee80211_node *ni)
 
 	splassert(IPL_NET);
 
-	DPRINTF(("%s\n", ether_sprintf(ni->ni_macaddr)));
+	DPRINTF(("%s, %s\n", __func__, ether_sprintf(ni->ni_macaddr)));
 #ifndef IEEE80211_STA_ONLY
 	timeout_del(&ni->ni_eapol_to);
 	timeout_del(&ni->ni_sa_query_to);
@@ -2109,7 +2109,7 @@ ieee80211_clean_nodes(struct ieee80211com *ic, int cache_timeout)
 			}
 		}
 		if (ifp->if_flags & IFF_DEBUG)
-			XYLog("%s: station %s purged from node cache\n",
+			XYLog("%s, %s: station %s purged from node cache\n", __func__,
 			    ifp->if_xname, ether_sprintf(ni->ni_macaddr));
 #endif
 		/*

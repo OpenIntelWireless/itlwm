@@ -47,6 +47,7 @@ void timeout_set(CTimeout **t, void (*fn)(void *), void *arg)
 
 int timeout_add_msec(CTimeout **to, int msecs)
 {
+    return 1;
     if (*to == NULL) {
         *to = new CTimeout();
     }
@@ -57,6 +58,10 @@ int timeout_add_msec(CTimeout **to, int msecs)
     ((CTimeout*)*to)->tm = IOTimerEventSource::timerEventSource(((CTimeout*)*to), OSMemberFunctionCast(IOTimerEventSource::Action, ((CTimeout*)*to), &CTimeout::timeoutOccurred));
     if (((CTimeout*)*to)->tm == 0)
         return 0;
+    if (_fWorkloop == NULL) {
+        IOLog("itlwm 啊啊啊啊啊啊啊啊啊啊啊啊啊,怎么是空的啊!!!!\n");
+        return 1;
+    }
     _fWorkloop->addEventSource(((CTimeout*)*to)->tm);
     ((CTimeout*)*to)->tm->enable();
     ((CTimeout*)*to)->tm->setTimeoutMS(msecs);

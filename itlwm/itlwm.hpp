@@ -1,6 +1,7 @@
 /* add your code here */
 #include "compat.h"
 #include "itlhdr.h"
+#include "kernel.h"
 
 #include <IOKit/network/IOEthernetController.h>
 #include <IOKit/IOWorkLoop.h>
@@ -17,17 +18,6 @@ class itlwm : public IOEthernetController {
     OSDeclareDefaultStructors(itlwm)
     
 public:
-    
-    typedef void (*TimeoutAction)(void *arg);
-    typedef int (*BgScanAction)(struct ieee80211com *);
-    typedef struct ieee80211_node *(*NodeAllocAction)(struct ieee80211com *);
-    typedef int (*NewStateAction)(struct ieee80211com *, enum ieee80211_state, int);
-    typedef void (*UpdateHtProtectAction)(struct ieee80211com *, struct ieee80211_node *);
-    typedef int (*AmpduRxStartAction)(struct ieee80211com *, struct ieee80211_node *,
-                                     uint8_t);
-    typedef void (*AmpduRxStopAction)(struct ieee80211com *, struct ieee80211_node *,
-                                      uint8_t);
-    typedef void (*StartAction)(struct ifnet *ifp);
     
     //kext
     bool init(OSDictionary *properties) override;
@@ -140,11 +130,11 @@ public:
     void    iwm_init_channel_map(struct iwm_softc *, const uint16_t * const,
             const uint8_t *nvm_channels, size_t nchan);
     void    iwm_setup_ht_rates(struct iwm_softc *);
-    void    iwm_htprot_task(void *);
-    void    iwm_update_htprot(struct ieee80211com *, struct ieee80211_node *);
-    int    iwm_ampdu_rx_start(struct ieee80211com *, struct ieee80211_node *,
+    static void    iwm_htprot_task(void *);
+    static void    iwm_update_htprot(struct ieee80211com *, struct ieee80211_node *);
+    static int    iwm_ampdu_rx_start(struct ieee80211com *, struct ieee80211_node *,
             uint8_t);
-    void    iwm_ampdu_rx_stop(struct ieee80211com *, struct ieee80211_node *,
+    static void    iwm_ampdu_rx_stop(struct ieee80211com *, struct ieee80211_node *,
             uint8_t);
     void    iwm_sta_rx_agg(struct iwm_softc *, struct ieee80211_node *, uint8_t,
             uint16_t, int);
@@ -154,7 +144,7 @@ public:
     void    iwm_ampdu_tx_stop(struct ieee80211com *, struct ieee80211_node *,
             uint8_t);
     #endif
-    void    iwm_ba_task(void *);
+    static void    iwm_ba_task(void *);
 
     int    iwm_parse_nvm_data(struct iwm_softc *, const uint16_t *,
             const uint16_t *, const uint16_t *,
@@ -217,7 +207,7 @@ public:
     void    iwm_led_enable(struct iwm_softc *);
     void    iwm_led_disable(struct iwm_softc *);
     int    iwm_led_is_enabled(struct iwm_softc *);
-    void    iwm_led_blink_timeout(void *);
+    static void    iwm_led_blink_timeout(void *);
     void    iwm_led_blink_start(struct iwm_softc *);
     void    iwm_led_blink_stop(struct iwm_softc *);
     int    iwm_beacon_filter_send_cmd(struct iwm_softc *,
@@ -254,7 +244,7 @@ public:
     void    iwm_add_task(struct iwm_softc *, struct taskq *, struct task *);
     void    iwm_del_task(struct iwm_softc *, struct taskq *, struct task *);
     int    iwm_scan(struct iwm_softc *);
-    int    iwm_bgscan(struct ieee80211com *);
+    static int    iwm_bgscan(struct ieee80211com *);
     int    iwm_umac_scan_abort(struct iwm_softc *);
     int    iwm_lmac_scan_abort(struct iwm_softc *);
     int    iwm_scan_abort(struct iwm_softc *);
@@ -264,10 +254,10 @@ public:
     int    iwm_disassoc(struct iwm_softc *);
     int    iwm_run(struct iwm_softc *);
     int    iwm_run_stop(struct iwm_softc *);
-    struct ieee80211_node *iwm_node_alloc(struct ieee80211com *);
-    void    iwm_calib_timeout(void *);
+    static struct ieee80211_node *iwm_node_alloc(struct ieee80211com *);
+    static void    iwm_calib_timeout(void *);
     int    iwm_media_change(struct ifnet *);
-    void    iwm_newstate_task(void *);
+    static void    iwm_newstate_task(void *);
     static int    iwm_newstate(struct ieee80211com *, enum ieee80211_state, int);
     void    iwm_endscan(struct iwm_softc *);
     void    iwm_fill_sf_command(struct iwm_softc *, struct iwm_sf_cfg_cmd *,
@@ -278,10 +268,10 @@ public:
     void    iwm_tt_tx_backoff(struct iwm_softc *, uint32_t);
     int    iwm_init_hw(struct iwm_softc *);
     int    iwm_init(struct ifnet *);
-    void    iwm_start(struct ifnet *);
+    static void    iwm_start(struct ifnet *);
     void    iwm_stop(struct ifnet *);
-    void    iwm_watchdog(struct ifnet *);
-    int    iwm_ioctl(struct ifnet *, u_long, caddr_t);
+    static void    iwm_watchdog(struct ifnet *);
+    static int    iwm_ioctl(struct ifnet *, u_long, caddr_t);
     #ifdef IWM_DEBUG
     const char *iwm_desc_lookup(uint32_t);
     void    iwm_nic_error(struct iwm_softc *);
@@ -293,7 +283,7 @@ public:
     int    iwm_preinit(struct iwm_softc *);
     void    iwm_attach_hook(struct device *);
     bool    iwm_attach(struct iwm_softc *, struct pci_attach_args *);
-    void    iwm_init_task(void *);
+    static void    iwm_init_task(void *);
     int    iwm_activate(struct device *, int);
     int    iwm_resume(struct iwm_softc *);
     

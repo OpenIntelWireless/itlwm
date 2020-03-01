@@ -148,10 +148,10 @@ void itlwm::free()
     XYLog("%s\n", __func__);
     IOLockFree(fwLoadLock);
     fwLoadLock = NULL;
-    releaseTimeout();
     if (com.ih) {
         ieee80211_ifdetach(&com.sc_ic.ic_ac.ac_if);
         if (fWorkloop) {
+            com.ih->intr->disable();
             fWorkloop->removeEventSource(com.ih->intr);
             com.ih->intr->release();
         }
@@ -248,6 +248,7 @@ iwm_newstate_task(void *psc)
 {
     XYLog("%s\n", __func__);
     struct iwm_softc *sc = (struct iwm_softc *)psc;
+    itlwm *that = container_of(sc, itlwm, com);
     struct ieee80211com *ic = &sc->sc_ic;
     enum ieee80211_state nstate = sc->ns_nstate;
     enum ieee80211_state ostate = ic->ic_state;
@@ -271,26 +272,26 @@ iwm_newstate_task(void *psc)
             /* Firmware is no longer scanning. Do another scan. */
             goto next_scan;
         } else
-            iwm_led_blink_stop(sc);
+            that->iwm_led_blink_stop(sc);
     }
     
     if (nstate <= ostate) {
         switch (ostate) {
             case IEEE80211_S_RUN:
-                err = iwm_run_stop(sc);
+                err = that->iwm_run_stop(sc);
                 if (err)
                     goto out;
                 /* FALLTHROUGH */
             case IEEE80211_S_ASSOC:
                 if (nstate <= IEEE80211_S_ASSOC) {
-                    err = iwm_disassoc(sc);
+                    err = that->iwm_disassoc(sc);
                     if (err)
                         goto out;
                 }
                 /* FALLTHROUGH */
             case IEEE80211_S_AUTH:
                 if (nstate <= IEEE80211_S_AUTH) {
-                    err = iwm_deauth(sc);
+                    err = that->iwm_deauth(sc);
                     if (err)
                         goto out;
                 }
@@ -314,7 +315,7 @@ iwm_newstate_task(void *psc)
             
         case IEEE80211_S_SCAN:
         next_scan:
-            err = iwm_scan(sc);
+            err = that->iwm_scan(sc);
             if (err)
                 break;
             //        refcnt_rele_wake(&sc->task_refs);
@@ -322,24 +323,23 @@ iwm_newstate_task(void *psc)
             return;
             
         case IEEE80211_S_AUTH:
-            err = iwm_auth(sc);
+            err = that->iwm_auth(sc);
             break;
             
         case IEEE80211_S_ASSOC:
-            err = iwm_assoc(sc);
+            err = that->iwm_assoc(sc);
             break;
             
         case IEEE80211_S_RUN:
-            err = iwm_run(sc);
+            err = that->iwm_run(sc);
             break;
     }
     
 out:
     if ((sc->sc_flags & IWM_FLAG_SHUTDOWN) == 0) {
         if (err) {
-            
+            task_add(systq, &sc->init_task);
         }
-        //            task_add(systq, &sc->init_task);
         else {
             sc->sc_newstate(ic, nstate, arg);
         }
@@ -352,9 +352,9 @@ int itlwm::
 iwm_newstate(struct ieee80211com *ic, enum ieee80211_state nstate, int arg)
 {
     XYLog("%s\n", __func__);
-    itlwm *that = container_of(ic, itlwm, com);
     struct ifnet *ifp = IC2IFP(ic);
     struct iwm_softc *sc = (struct iwm_softc*)ifp->if_softc;
+    itlwm *that = container_of(sc, itlwm, com);
     struct iwm_node *in = (struct iwm_node *)ic->ic_bss;
     
     if (ic->ic_state == IEEE80211_S_RUN) {
@@ -706,6 +706,7 @@ iwm_start(struct ifnet *ifp)
 {
     XYLog("%s\n", __func__);
     struct iwm_softc *sc = (struct iwm_softc*)ifp->if_softc;
+    itlwm *that = container_of(sc, itlwm, com);
     struct ieee80211com *ic = &sc->sc_ic;
     struct ieee80211_node *ni;
     struct ether_header *eh;
@@ -755,7 +756,7 @@ iwm_start(struct ifnet *ifp)
         if (ic->ic_rawbpf != NULL)
             bpf_mtap(ic->ic_rawbpf, m, BPF_DIRECTION_OUT);
 #endif
-        if (iwm_tx(sc, m, ni, ac) != 0) {
+        if (that->iwm_tx(sc, m, ni, ac) != 0) {
             ieee80211_release_node(ic, ni);
             ifp->if_oerrors++;
             continue;
@@ -784,11 +785,11 @@ iwm_stop(struct ifnet *ifp)
     sc->sc_flags |= IWM_FLAG_SHUTDOWN; /* Disallow new tasks. */
     
     /* Cancel scheduled tasks and let any stale tasks finish up. */
-    //    task_del(systq, &sc->init_task);
-    //    iwm_del_task(sc, sc->sc_nswq, &sc->newstate_task);
-    //    iwm_del_task(sc, systq, &sc->ba_task);
-    //    iwm_del_task(sc, systq, &sc->htprot_task);
-    //    _KASSERT(sc->task_refs.refs >= 1);
+    task_del(systq, &sc->init_task);
+    iwm_del_task(sc, sc->sc_nswq, &sc->newstate_task);
+    iwm_del_task(sc, systq, &sc->ba_task);
+    iwm_del_task(sc, systq, &sc->htprot_task);
+    _KASSERT(sc->task_refs.refs >= 1);
     //    refcnt_finalize(&sc->task_refs, "iwmstop");
     
     iwm_stop_device(sc);
@@ -829,16 +830,17 @@ void itlwm::
 iwm_watchdog(struct ifnet *ifp)
 {
     struct iwm_softc *sc = (struct iwm_softc *)ifp->if_softc;
+    itlwm *that = container_of(sc, itlwm, com);
     
     ifp->if_timer = 0;
     if (sc->sc_tx_timer > 0) {
         if (--sc->sc_tx_timer == 0) {
             XYLog("%s: device timeout\n", DEVNAME(sc));
 #ifdef IWM_DEBUG
-            iwm_nic_error(sc);
+            that->iwm_nic_error(sc);
 #endif
             if ((sc->sc_flags & IWM_FLAG_SHUTDOWN) == 0) {
-                //                task_add(systq, &sc->init_task);
+                task_add(systq, &sc->init_task);
             }
             ifp->if_oerrors++;
             return;
@@ -854,6 +856,7 @@ iwm_ioctl(struct ifnet *ifp, u_long cmd, caddr_t data)
 {
     XYLog("%s\n", __func__);
     struct iwm_softc *sc = (struct iwm_softc *)ifp->if_softc;
+    itlwm *that = container_of(sc, itlwm, com);
     int s, err = 0, generation = sc->sc_generation;
     
     /*
@@ -876,11 +879,11 @@ iwm_ioctl(struct ifnet *ifp, u_long cmd, caddr_t data)
         case SIOCSIFFLAGS:
             if (ifp->if_flags & IFF_UP) {
                 if (!(ifp->if_flags & IFF_RUNNING)) {
-                    err = iwm_init(ifp);
+                    err = that->iwm_init(ifp);
                 }
             } else {
                 if (ifp->if_flags & IFF_RUNNING)
-                    iwm_stop(ifp);
+                    that->iwm_stop(ifp);
             }
             break;
             
@@ -892,8 +895,8 @@ iwm_ioctl(struct ifnet *ifp, u_long cmd, caddr_t data)
         err = 0;
         if ((ifp->if_flags & (IFF_UP | IFF_RUNNING)) ==
             (IFF_UP | IFF_RUNNING)) {
-            iwm_stop(ifp);
-            err = iwm_init(ifp);
+            that->iwm_stop(ifp);
+            err = that->iwm_init(ifp);
         }
     }
     
@@ -1289,7 +1292,7 @@ iwm_notif_intr(struct iwm_softc *sc)
                 SYNC_RESP_STRUCT(phy_db_notif, pkt, struct iwm_calib_res_notif_phy_db *);
                 iwm_phy_db_set_section(sc, phy_db_notif);
                 sc->sc_init_complete |= IWM_CALIB_COMPLETE;
-                wakeupOn(&sc->sc_init_complete);
+//                wakeupOn(&sc->sc_init_complete);
                 break;
             }
                 
@@ -1530,7 +1533,7 @@ iwm_intr(OSObject *arg, IOInterruptEventSource* sender, int count)
     if (r1 & IWM_CSR_INT_BIT_RF_KILL) {
         handled |= IWM_CSR_INT_BIT_RF_KILL;
         iwm_check_rfkill(sc);
-        //        task_add(systq, &sc->init_task);
+        task_add(systq, &sc->init_task);
         rv = 1;
         goto out_ena;
     }
@@ -1556,7 +1559,7 @@ iwm_intr(OSObject *arg, IOInterruptEventSource* sender, int count)
         
         XYLog("%s: fatal firmware error\n", DEVNAME(sc));
         if ((sc->sc_flags & IWM_FLAG_SHUTDOWN) == 0) {
-            //            task_add(systq, &sc->init_task);
+            task_add(systq, &sc->init_task);
         }
         rv = 1;
         goto out;
@@ -1568,7 +1571,7 @@ iwm_intr(OSObject *arg, IOInterruptEventSource* sender, int count)
         XYLog("%s: hardware error, stopping device \n", DEVNAME(sc));
         if ((sc->sc_flags & IWM_FLAG_SHUTDOWN) == 0) {
             sc->sc_flags |= IWM_FLAG_HW_ERR;
-            //            task_add(systq, &sc->init_task);
+            task_add(systq, &sc->init_task);
         }
         rv = 1;
         goto out;
@@ -2025,9 +2028,9 @@ iwm_attach(struct iwm_softc *sc, struct pci_attach_args *pa)
     
     ifp->if_softc = sc;
     ifp->if_flags = IFF_BROADCAST | IFF_SIMPLEX | IFF_MULTICAST;
-    //    ifp->if_ioctl = iwm_ioctl;
-    ifp->if_start = OSMemberFunctionCast(StartAction, this, &itlwm::iwm_start);
-    //    ifp->if_watchdog = iwm_watchdog;
+    ifp->if_ioctl = iwm_ioctl;
+    ifp->if_start = iwm_start;
+    ifp->if_watchdog = iwm_watchdog;
     memcpy(ifp->if_xname, DEVNAME(sc), IFNAMSIZ);
     //    ifp->if_flags &= IFF_DEBUG;
     
@@ -2038,22 +2041,22 @@ iwm_attach(struct iwm_softc *sc, struct pci_attach_args *pa)
 #if NBPFILTER > 0
     iwm_radiotap_attach(sc);
 #endif
-    timeout_set(&sc->sc_calib_to, OSMemberFunctionCast(TimeoutAction, this, &itlwm::iwm_calib_timeout), sc);
-    timeout_set(&sc->sc_led_blink_to, OSMemberFunctionCast(TimeoutAction, this, &itlwm::iwm_led_blink_timeout), sc);
-    //        task_set(&sc->init_task, iwm_init_task, sc);
-    //        task_set(&sc->newstate_task, iwm_newstate_task, sc);
-    //        task_set(&sc->ba_task, iwm_ba_task, sc);
-    //        task_set(&sc->htprot_task, iwm_htprot_task, sc);
+    timeout_set(&sc->sc_calib_to, iwm_calib_timeout, sc);
+    timeout_set(&sc->sc_led_blink_to, iwm_led_blink_timeout, sc);
+    task_set(&sc->init_task, iwm_init_task, sc);
+    task_set(&sc->newstate_task, iwm_newstate_task, sc);
+    task_set(&sc->ba_task, iwm_ba_task, sc);
+    task_set(&sc->htprot_task, iwm_htprot_task, sc);
     
-    ic->ic_node_alloc = OSMemberFunctionCast(NodeAllocAction, this, &itlwm::iwm_node_alloc);
-    ic->ic_bgscan_start = OSMemberFunctionCast(BgScanAction, this, &itlwm::iwm_bgscan);
+    ic->ic_node_alloc = iwm_node_alloc;
+    ic->ic_bgscan_start = iwm_bgscan;
     
     /* Override 802.11 state transition machine. */
     sc->sc_newstate = ic->ic_newstate;
     ic->ic_newstate = iwm_newstate;
-    ic->ic_update_htprot = OSMemberFunctionCast(UpdateHtProtectAction, this, &itlwm::iwm_update_htprot);
-    ic->ic_ampdu_rx_start = OSMemberFunctionCast(AmpduRxStartAction, this, &itlwm::iwm_ampdu_rx_start);
-    ic->ic_ampdu_rx_stop = OSMemberFunctionCast(AmpduRxStopAction, this, &itlwm::iwm_ampdu_rx_stop);
+    ic->ic_update_htprot = iwm_update_htprot;
+    ic->ic_ampdu_rx_start = iwm_ampdu_rx_start;
+    ic->ic_ampdu_rx_stop = iwm_ampdu_rx_stop;
 #ifdef notyet
     ic->ic_ampdu_tx_start = iwm_ampdu_tx_start;
     ic->ic_ampdu_tx_stop = iwm_ampdu_tx_stop;
@@ -2104,6 +2107,7 @@ iwm_init_task(void *arg1)
 {
     XYLog("%s\n", __func__);
     struct iwm_softc *sc = (struct iwm_softc *)arg1;
+    itlwm *that = container_of(sc, itlwm, com);
     struct ifnet *ifp = &sc->sc_ic.ic_if;
     int s = splnet();
     int generation = sc->sc_generation;
@@ -2117,14 +2121,65 @@ iwm_init_task(void *arg1)
     }
     
     if (ifp->if_flags & IFF_RUNNING)
-        iwm_stop(ifp);
+        that->iwm_stop(ifp);
     else
         sc->sc_flags &= ~IWM_FLAG_HW_ERR;
     
     if (!fatal && (ifp->if_flags & (IFF_UP | IFF_RUNNING)) == IFF_UP)
-        iwm_init(ifp);
+        that->iwm_init(ifp);
     
     //    rw_exit(&sc->ioctl_rwl);
+    splx(s);
+}
+
+void itlwm::
+iwm_htprot_task(void *arg)
+{
+    XYLog("%s\n", __func__);
+    struct iwm_softc *sc = (struct iwm_softc *)arg;
+    itlwm *that = container_of(sc, itlwm, com);
+    struct ieee80211com *ic = &sc->sc_ic;
+    struct iwm_node *in = (struct iwm_node *)ic->ic_bss;
+    int err, s = splnet();
+
+    if (sc->sc_flags & IWM_FLAG_SHUTDOWN) {
+//        refcnt_rele_wake(&sc->task_refs);
+        splx(s);
+        return;
+    }
+
+    /* This call updates HT protection based on in->in_ni.ni_htop1. */
+    err = that->iwm_mac_ctxt_cmd(sc, in, IWM_FW_CTXT_ACTION_MODIFY, 1);
+    if (err)
+        XYLog("%s: could not change HT protection: error %d\n",
+            DEVNAME(sc), err);
+
+//    refcnt_rele_wake(&sc->task_refs);
+    splx(s);
+}
+
+void itlwm::
+iwm_ba_task(void *arg)
+{
+    XYLog("%s\n", __func__);
+    struct iwm_softc *sc = (struct iwm_softc *)arg;
+    itlwm *that = container_of(sc, itlwm, com);
+    struct ieee80211com *ic = &sc->sc_ic;
+    struct ieee80211_node *ni = ic->ic_bss;
+    int s = splnet();
+
+    if (sc->sc_flags & IWM_FLAG_SHUTDOWN) {
+//        refcnt_rele_wake(&sc->task_refs);
+        splx(s);
+        return;
+    }
+    
+    if (sc->ba_start)
+        that->iwm_sta_rx_agg(sc, ni, sc->ba_tid, sc->ba_ssn, 1);
+    else
+        that->iwm_sta_rx_agg(sc, ni, sc->ba_tid, 0, 0);
+
+//    refcnt_rele_wake(&sc->task_refs);
     splx(s);
 }
 
@@ -2149,15 +2204,16 @@ iwm_add_task(struct iwm_softc *sc, struct taskq *taskq, struct task *task)
 {
     XYLog("%s\n", __func__);
     int s = splnet();
-
+    
     if (sc->sc_flags & IWM_FLAG_SHUTDOWN) {
         splx(s);
         return;
     }
-
-//    refcnt_take(&sc->task_refs);
-//    if (!task_add(taskq, task))
-//        refcnt_rele_wake(&sc->task_refs);
+    
+    //    refcnt_take(&sc->task_refs);
+    if (!task_add(taskq, task)) {
+        //        refcnt_rele_wake(&sc->task_refs);
+    }
     splx(s);
 }
 
@@ -2165,37 +2221,38 @@ void itlwm::
 iwm_del_task(struct iwm_softc *sc, struct taskq *taskq, struct task *task)
 {
     XYLog("%s\n", __func__);
-//    if (task_del(taskq, task))
-//        refcnt_rele(&sc->task_refs);
+    if (task_del(taskq, task)) {
+        //        refcnt_rele(&sc->task_refs);
+    }
 }
 
 int itlwm::
 iwm_activate(struct device *self, int act)
 {
-    //    struct iwm_softc *sc = (struct iwm_softc *)self;
-    //    struct ifnet *ifp = &sc->sc_ic.ic_if;
-    //    int err = 0;
-    //
-    //    switch (act) {
-    //    case DVACT_QUIESCE:
-    //        if (ifp->if_flags & IFF_RUNNING) {
-    //            rw_enter_write(&sc->ioctl_rwl);
-    //            iwm_stop(ifp);
-    //            rw_exit(&sc->ioctl_rwl);
-    //        }
-    //        break;
-    //    case DVACT_RESUME:
-    //        err = iwm_resume(sc);
-    //        if (err)
-    //            XYLog("%s: could not initialize hardware\n",
-    //                DEVNAME(sc));
-    //        break;
-    //    case DVACT_WAKEUP:
-    //        /* Hardware should be up at this point. */
-    //        if (iwm_set_hw_ready(sc))
-    //            task_add(systq, &sc->init_task);
-    //        break;
-    //    }
+    struct iwm_softc *sc = (struct iwm_softc *)self;
+    struct ifnet *ifp = &sc->sc_ic.ic_if;
+    int err = 0;
+    
+    switch (act) {
+        case DVACT_QUIESCE:
+            if (ifp->if_flags & IFF_RUNNING) {
+                //                rw_enter_write(&sc->ioctl_rwl);
+                iwm_stop(ifp);
+                //                rw_exit(&sc->ioctl_rwl);
+            }
+            break;
+        case DVACT_RESUME:
+            err = iwm_resume(sc);
+            if (err)
+                XYLog("%s: could not initialize hardware\n",
+                      DEVNAME(sc));
+            break;
+        case DVACT_WAKEUP:
+            /* Hardware should be up at this point. */
+            if (iwm_set_hw_ready(sc))
+                task_add(systq, &sc->init_task);
+            break;
+    }
     
     return 0;
 }

@@ -32,11 +32,12 @@ void itlwm::
 iwm_led_blink_timeout(void *arg)
 {
     struct iwm_softc *sc = (struct iwm_softc *)arg;
+    itlwm *that = container_of(sc, itlwm, com);
 
-    if (iwm_led_is_enabled(sc))
-        iwm_led_disable(sc);
+    if (that->iwm_led_is_enabled(sc))
+        that->iwm_led_disable(sc);
     else
-        iwm_led_enable(sc);
+        that->iwm_led_enable(sc);
 
     timeout_add_msec(&sc->sc_led_blink_to, IWM_LED_BLINK_TIMEOUT_MSEC);
 }

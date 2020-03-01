@@ -639,15 +639,16 @@ int itlwm::
 iwm_bgscan(struct ieee80211com *ic)
 {
     struct iwm_softc *sc = (struct iwm_softc *)IC2IFP(ic)->if_softc;
+    itlwm *that = container_of(sc, itlwm, com);
     int err;
 
     if (sc->sc_flags & IWM_FLAG_SCANNING)
         return 0;
 
     if (isset(sc->sc_enabled_capa, IWM_UCODE_TLV_CAPA_UMAC_SCAN))
-        err = iwm_umac_scan(sc, 1);
+        err = that->iwm_umac_scan(sc, 1);
     else
-        err = iwm_lmac_scan(sc, 1);
+        err = that->iwm_lmac_scan(sc, 1);
     if (err) {
         XYLog("%s: could not initiate scan\n", DEVNAME(sc));
         return err;
