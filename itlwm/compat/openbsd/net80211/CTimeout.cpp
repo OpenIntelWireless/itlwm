@@ -10,7 +10,11 @@
 
 void CTimeout::timeoutOccurred(OSObject* owner, IOTimerEventSource* timer)
 {
-    CTimeout *tm = (CTimeout*)owner;
+    IOLog("itlwm %s\n", __func__);
+    CTimeout *tm = OSDynamicCast(CTimeout, owner);
+    if (tm == NULL) {
+        IOLog("itlwm tm == NULL!!!\n");
+    }
     //callback
-    tm->to_func(tm->to_arg);
+//    tm->to_func(tm->to_arg);
 }

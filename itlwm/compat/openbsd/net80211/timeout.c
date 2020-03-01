@@ -11,7 +11,7 @@
 
 #include <sys/timeout.h>
 
-static IOWorkLoop *_fWorkloop = NULL;
+extern IOWorkLoop *_fWorkloop;
 
 void initTimeout(IOWorkLoop *workloop)
 {
@@ -47,7 +47,6 @@ void timeout_set(CTimeout **t, void (*fn)(void *), void *arg)
 
 int timeout_add_msec(CTimeout **to, int msecs)
 {
-    return 1;
     if (*to == NULL) {
         *to = new CTimeout();
     }
@@ -60,11 +59,12 @@ int timeout_add_msec(CTimeout **to, int msecs)
         return 0;
     if (_fWorkloop == NULL) {
         IOLog("itlwm 啊啊啊啊啊啊啊啊啊啊啊啊啊,怎么是空的啊!!!!\n");
-        return 1;
+        return 0;
     }
     _fWorkloop->addEventSource(((CTimeout*)*to)->tm);
     ((CTimeout*)*to)->tm->enable();
     ((CTimeout*)*to)->tm->setTimeoutMS(msecs);
+    IOLog("itlwm %s\n", __func__);
     return 1;
 }
 
@@ -81,7 +81,7 @@ int timeout_add_usec(CTimeout **to, int usecs)
 int timeout_del(CTimeout **to)
 {
     IOLog("timeout_del\n");
-    if (!((CTimeout*)*to)) {
+    if (((CTimeout*)*to) == NULL) {
         IOLog("timeout_del timeout NULL\n");
         return 0;
     }

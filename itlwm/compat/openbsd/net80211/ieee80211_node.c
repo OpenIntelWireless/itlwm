@@ -1640,7 +1640,7 @@ ieee80211_setup_node(struct ieee80211com *ic,
 {
 	int i, s;
 
-	DPRINTF(("%s %s\n", __func__, ether_sprintf((u_int8_t *)macaddr)));
+	DPRINTF(("%s\n", ether_sprintf((u_int8_t *)macaddr)));
 	IEEE80211_ADDR_COPY(ni->ni_macaddr, macaddr);
 	ieee80211_node_newstate(ni, IEEE80211_STA_CACHE);
 

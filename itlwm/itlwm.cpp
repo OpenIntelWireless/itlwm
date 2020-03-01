@@ -12,6 +12,8 @@
 OSDefineMetaClassAndStructors(itlwm, IOEthernetController)
 OSDefineMetaClassAndStructors(CTimeout, OSObject)
 
+IOWorkLoop *_fWorkloop;
+
 bool itlwm::init(OSDictionary *properties)
 {
     XYLog("%s\n", __func__);
@@ -51,14 +53,14 @@ bool itlwm::start(IOService *provider)
     if (!fWorkloop) {
         return false;
     }
-    initTimeout(fWorkloop);
+    _fWorkloop = fWorkloop;
     fCommandGate = IOCommandGate::commandGate(this, (IOCommandGate::Action)tsleepHandler);
     if (fCommandGate == 0) {
         XYLog("No command gate!!\n");
         return false;
     }
     fWorkloop->addEventSource(fCommandGate);
-    pci.workloop = fWorkloop;
+    pci.workloop = _fWorkloop;
     pci.pa_tag = device;
     if (!iwm_attach(&com, &pci)) {
         return false;

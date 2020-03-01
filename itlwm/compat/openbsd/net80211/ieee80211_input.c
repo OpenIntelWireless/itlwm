@@ -1703,6 +1703,7 @@ ieee80211_recv_probe_resp(struct ieee80211com *ic, mbuf_t m,
 		memset(ni->ni_essid, 0, sizeof(ni->ni_essid));
 		/* we know that ssid[1] <= IEEE80211_NWID_LEN */
 		memcpy(ni->ni_essid, &ssid[2], ssid[1]);
+        XYLog("%s ssid=%s\n", __func__, ni->ni_essid);
 	}
 	IEEE80211_ADDR_COPY(ni->ni_bssid, wh->i_addr3);
 	/* XXX validate channel # */
