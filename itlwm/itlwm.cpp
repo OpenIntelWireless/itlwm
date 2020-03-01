@@ -1,6 +1,7 @@
 /* add your code here */
 #include "itlwm.hpp"
 #include "types.h"
+#include "kernel.h"
 
 #include <IOKit/IOInterruptController.h>
 #include <IOKit/IOCommandGate.h>
@@ -103,12 +104,11 @@ void itlwm::wakeupOn(void *ident)
 
 int itlwm::tsleep_nsec(void *ident, int priority, const char *wmesg, int timo)
 {
-    XYLog("%s\n", __func__);
+    XYLog("%s %s\n", __func__, wmesg);
     if (fCommandGate == 0) {
         IOSleep(timo);
         return 0;
     }
-    XYLog("%s\n", wmesg);
     IOReturn ret;
     if (timo == 0) {
         ret = fCommandGate->runCommand(ident);
@@ -352,6 +352,7 @@ int itlwm::
 iwm_newstate(struct ieee80211com *ic, enum ieee80211_state nstate, int arg)
 {
     XYLog("%s\n", __func__);
+    itlwm *that = container_of(ic, itlwm, com);
     struct ifnet *ifp = IC2IFP(ic);
     struct iwm_softc *sc = (struct iwm_softc*)ifp->if_softc;
     struct iwm_node *in = (struct iwm_node *)ic->ic_bss;
@@ -359,14 +360,14 @@ iwm_newstate(struct ieee80211com *ic, enum ieee80211_state nstate, int arg)
     if (ic->ic_state == IEEE80211_S_RUN) {
         timeout_del(&sc->sc_calib_to);
         ieee80211_mira_cancel_timeouts(&in->in_mn);
-        //        iwm_del_task(sc, systq, &sc->ba_task);
-        //        iwm_del_task(sc, systq, &sc->htprot_task);
+        that->iwm_del_task(sc, systq, &sc->ba_task);
+        that->iwm_del_task(sc, systq, &sc->htprot_task);
     }
     
     sc->ns_nstate = nstate;
     sc->ns_arg = arg;
     
-    //    iwm_add_task(sc, sc->sc_nswq, &sc->newstate_task);
+    that->iwm_add_task(sc, sc->sc_nswq, &sc->newstate_task);
     
     return 0;
 }
@@ -1177,7 +1178,7 @@ iwm_notif_intr(struct iwm_softc *sc)
     hw = le16toh(sc->rxq.stat->closed_rb_num) & 0xfff;
     hw &= (IWM_RX_RING_COUNT - 1);
     if (sc->rxq.cur == hw) {
-        XYLog("sc->rxq.cur == hw, nothing was send by ucode\n");
+        XYLog("sc->rxq.cur == hw, nothing was sent by ucode\n");
     }
     while (sc->rxq.cur != hw) {
         struct iwm_rx_data *data = &sc->rxq.data[sc->rxq.cur];
@@ -1356,8 +1357,8 @@ iwm_notif_intr(struct iwm_softc *sc)
                     break;
                 }
                 
-//                bus_dmamap_sync(sc->sc_dmat, data->map, sizeof(*pkt),
-//                                pkt_len - sizeof(*pkt), BUS_DMASYNC_POSTREAD);
+                //                bus_dmamap_sync(sc->sc_dmat, data->map, sizeof(*pkt),
+                //                                pkt_len - sizeof(*pkt), BUS_DMASYNC_POSTREAD);
                 memcpy(sc->sc_cmd_resp_pkt[idx], pkt, pkt_len);
                 break;
             }
@@ -1975,9 +1976,10 @@ iwm_attach(struct iwm_softc *sc, struct pci_attach_args *pa)
         goto fail4;
     }
     
-    //    sc->sc_nswq = taskq_create("iwmns", 1, IPL_NET, 0);
-    //    if (sc->sc_nswq == NULL)
-    //        goto fail4;
+    taskq_init();
+    sc->sc_nswq = taskq_create("iwmns", 1, IPL_NET, 0);
+    if (sc->sc_nswq == NULL)
+        goto fail4;
     
     XYLog("config ieee80211\n");
     
@@ -2038,17 +2040,17 @@ iwm_attach(struct iwm_softc *sc, struct pci_attach_args *pa)
 #endif
     timeout_set(&sc->sc_calib_to, OSMemberFunctionCast(TimeoutAction, this, &itlwm::iwm_calib_timeout), sc);
     timeout_set(&sc->sc_led_blink_to, OSMemberFunctionCast(TimeoutAction, this, &itlwm::iwm_led_blink_timeout), sc);
-    //    task_set(&sc->init_task, iwm_init_task, sc);
-    //    task_set(&sc->newstate_task, iwm_newstate_task, sc);
-    //    task_set(&sc->ba_task, iwm_ba_task, sc);
-    //    task_set(&sc->htprot_task, iwm_htprot_task, sc);
+    //        task_set(&sc->init_task, iwm_init_task, sc);
+    //        task_set(&sc->newstate_task, iwm_newstate_task, sc);
+    //        task_set(&sc->ba_task, iwm_ba_task, sc);
+    //        task_set(&sc->htprot_task, iwm_htprot_task, sc);
     
     ic->ic_node_alloc = OSMemberFunctionCast(NodeAllocAction, this, &itlwm::iwm_node_alloc);
     ic->ic_bgscan_start = OSMemberFunctionCast(BgScanAction, this, &itlwm::iwm_bgscan);
     
     /* Override 802.11 state transition machine. */
     sc->sc_newstate = ic->ic_newstate;
-    ic->ic_newstate = OSMemberFunctionCast(NewStateAction, this, &itlwm::iwm_newstate);
+    ic->ic_newstate = iwm_newstate;
     ic->ic_update_htprot = OSMemberFunctionCast(UpdateHtProtectAction, this, &itlwm::iwm_update_htprot);
     ic->ic_ampdu_rx_start = OSMemberFunctionCast(AmpduRxStartAction, this, &itlwm::iwm_ampdu_rx_start);
     ic->ic_ampdu_rx_stop = OSMemberFunctionCast(AmpduRxStopAction, this, &itlwm::iwm_ampdu_rx_stop);
@@ -2100,6 +2102,7 @@ iwm_radiotap_attach(struct iwm_softc *sc)
 void itlwm::
 iwm_init_task(void *arg1)
 {
+    XYLog("%s\n", __func__);
     struct iwm_softc *sc = (struct iwm_softc *)arg1;
     struct ifnet *ifp = &sc->sc_ic.ic_if;
     int s = splnet();
@@ -2128,6 +2131,7 @@ iwm_init_task(void *arg1)
 int itlwm::
 iwm_resume(struct iwm_softc *sc)
 {
+    XYLog("%s\n", __func__);
     pcireg_t reg;
     
     /* Clear device-specific "PCI retry timeout" register (41h). */
@@ -2138,6 +2142,31 @@ iwm_resume(struct iwm_softc *sc)
     iwm_check_rfkill(sc);
     
     return iwm_prepare_card_hw(sc);
+}
+
+void itlwm::
+iwm_add_task(struct iwm_softc *sc, struct taskq *taskq, struct task *task)
+{
+    XYLog("%s\n", __func__);
+    int s = splnet();
+
+    if (sc->sc_flags & IWM_FLAG_SHUTDOWN) {
+        splx(s);
+        return;
+    }
+
+//    refcnt_take(&sc->task_refs);
+//    if (!task_add(taskq, task))
+//        refcnt_rele_wake(&sc->task_refs);
+    splx(s);
+}
+
+void itlwm::
+iwm_del_task(struct iwm_softc *sc, struct taskq *taskq, struct task *task)
+{
+    XYLog("%s\n", __func__);
+//    if (task_del(taskq, task))
+//        refcnt_rele(&sc->task_refs);
 }
 
 int itlwm::

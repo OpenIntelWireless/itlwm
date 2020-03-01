@@ -417,6 +417,10 @@ iwm_send_cmd(struct iwm_softc *sc, struct iwm_host_cmd *hcmd)
         _KASSERT(!async);
         _KASSERT(hcmd->resp_pkt_len >= sizeof(struct iwm_rx_packet));
         _KASSERT(hcmd->resp_pkt_len <= IWM_CMD_RESP_MAX);
+        if (idx >= IWM_TX_RING_COUNT) {
+            XYLog("%s Error!! idx >= IWM_TX_RING_COUNT\n", __func__);
+            return ENOSPC;
+        }
         if (sc->sc_cmd_resp_pkt[idx] != NULL)
             return ENOSPC;
         resp_buf = (uint8_t *)malloc(hcmd->resp_pkt_len, M_DEVBUF,
@@ -452,27 +456,28 @@ iwm_send_cmd(struct iwm_softc *sc, struct iwm_host_cmd *hcmd)
             err = EINVAL;
             goto out;
         }
-        mbuf_gethdr(MBUF_DONTWAIT, MT_DATA, &m);
-//        m = MCLGETI(NULL, M_DONTWAIT, NULL, totlen);
-        if (m == NULL) {
-            XYLog("%s: could not get fw cmd mbuf (%zd bytes)\n",
-                DEVNAME(sc), totlen);
-            err = ENOMEM;
-            goto out;
-        }
-        if (totlen > mbuf_get_mhlen()) {
-            mbuf_getcluster(MBUF_DONTWAIT, MT_DATA, MCLBYTES, &m);
-            if (!(mbuf_flags(m) & MBUF_EXT)) {
-                mbuf_freem(m);
-                return ENOMEM;
-            }
-        }
+        m = allocatePacket(totlen);
+//        mbuf_gethdr(MBUF_DONTWAIT, MT_DATA, &m);
+////        m = MCLGETI(NULL, M_DONTWAIT, NULL, totlen);
+//        if (m == NULL) {
+//            XYLog("%s: could not get fw cmd mbuf (%zd bytes)\n",
+//                DEVNAME(sc), totlen);
+//            err = ENOMEM;
+//            goto out;
+//        }
+//        if (totlen > mbuf_get_mhlen()) {
+//            mbuf_getcluster(MBUF_DONTWAIT, MT_DATA, MCLBYTES, &m);
+//            if (!(mbuf_flags(m) & MBUF_EXT)) {
+//                mbuf_freem(m);
+//                return ENOMEM;
+//            }
+//        }
         cmd = mtod(m, struct iwm_device_cmd *);
         err = bus_dmamap_load(txdata->map, m);
         if (err) {
             XYLog("%s: could not load fw cmd mbuf (%zd bytes)\n",
                 DEVNAME(sc), totlen);
-            mbuf_freem(m);
+            freePacket(m);
             goto out;
         }
         txdata->m = m; /* mbuf will be freed in iwm_cmd_done() */
@@ -653,13 +658,13 @@ iwm_cmd_done(struct iwm_softc *sc, int qid, int idx, int code)
 //        bus_dmamap_sync(sc->sc_dmat, data->map, 0,
 //            data->map->dm_mapsize, BUS_DMASYNC_POSTWRITE);
 //        bus_dmamap_unload(sc->sc_dmat, data->map);
-        mbuf_freem(data->m);
+        freePacket(data->m);
         data->m = NULL;
     }
     wakeupOn(&ring->desc[idx]);
 
     if (ring->queued == 0) {
-        IOLog("%s: unexpected firmware response to command 0x%x\n",
+        XYLog("%s: unexpected firmware response to command 0x%x\n",
             DEVNAME(sc), code);
     } else if (--ring->queued == 0) {
         /*

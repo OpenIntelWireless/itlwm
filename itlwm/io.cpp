@@ -185,7 +185,7 @@ IOBufferMemoryDescriptor* allocDmaMemory
     mem = IOBufferMemoryDescriptor::inTaskWithPhysicalMask(kernel_task, kIOMemoryPhysicallyContiguous | kIODirectionInOut,
                                    reqsize, phymask);
     if (!mem) {
-        IOLog("Could not allocate DMA memory\n");
+        XYLog("Could not allocate DMA memory\n");
         return 0;
     }
     mem->prepare();

@@ -124,6 +124,7 @@
 		F8F9257F240974EF0088B8D5 /* kernel.h in Headers */ = {isa = PBXBuildFile; fileRef = F8F92574240974EE0088B8D5 /* kernel.h */; };
 		F8F92583240974EF0088B8D5 /* random.h in Headers */ = {isa = PBXBuildFile; fileRef = F8F92578240974EE0088B8D5 /* random.h */; };
 		F8F92586240974EF0088B8D5 /* types.h in Headers */ = {isa = PBXBuildFile; fileRef = F8F9257B240974EF0088B8D5 /* types.h */; };
+		F8F9EDE1240B7415009CB8E7 /* _task.cpp in Sources */ = {isa = PBXBuildFile; fileRef = F8F9EDE0240B7415009CB8E7 /* _task.cpp */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -199,6 +200,7 @@
 		0250B32323FD76DF00FF8CEA /* iwlwifi-7260-16.ucode */ = {isa = PBXFileReference; lastKnownFileType = file; path = "iwlwifi-7260-16.ucode"; sourceTree = "<group>"; };
 		0250B32523FD76F900FF8CEA /* iwlwifi-8000C-34.ucode */ = {isa = PBXFileReference; lastKnownFileType = file; path = "iwlwifi-8000C-34.ucode"; sourceTree = "<group>"; };
 		0250B32723FD770900FF8CEA /* iwlwifi-8265-34.ucode */ = {isa = PBXFileReference; lastKnownFileType = file; path = "iwlwifi-8265-34.ucode"; sourceTree = "<group>"; };
+		F8B783AF240B9F87004C9777 /* _ifq.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = _ifq.h; sourceTree = "<group>"; };
 		F8C2EC2F24080319007A9422 /* ieee80211_proto.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = ieee80211_proto.c; sourceTree = "<group>"; };
 		F8C2EC3024080319007A9422 /* _string.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = _string.c; sourceTree = "<group>"; };
 		F8C2EC3124080319007A9422 /* ieee80211_amrr.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ieee80211_amrr.h; sourceTree = "<group>"; };
@@ -248,6 +250,8 @@
 		F8F92574240974EE0088B8D5 /* kernel.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = kernel.h; sourceTree = "<group>"; };
 		F8F92578240974EE0088B8D5 /* random.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = random.h; sourceTree = "<group>"; };
 		F8F9257B240974EF0088B8D5 /* types.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = types.h; sourceTree = "<group>"; };
+		F8F9EDDF240B4741009CB8E7 /* _task.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = _task.h; sourceTree = "<group>"; };
+		F8F9EDE0240B7415009CB8E7 /* _task.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = _task.cpp; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -444,6 +448,9 @@
 				F8C2EC8E24080556007A9422 /* _if_media.h */,
 				F8C2EC8F24080556007A9422 /* _null.h */,
 				F8C2EC9024080556007A9422 /* timeout.h */,
+				F8F9EDDF240B4741009CB8E7 /* _task.h */,
+				F8F9EDE0240B7415009CB8E7 /* _task.cpp */,
+				F8B783AF240B9F87004C9777 /* _ifq.h */,
 			);
 			path = sys;
 			sourceTree = "<group>";
@@ -636,6 +643,7 @@
 				024A084223FCBC6C009FBA6C /* cmac.c in Sources */,
 				F8C2EC532408031A007A9422 /* ieee80211.c in Sources */,
 				024A084E23FCBC6C009FBA6C /* chachapoly.c in Sources */,
+				F8F9EDE1240B7415009CB8E7 /* _task.cpp in Sources */,
 				024A085523FCBC6C009FBA6C /* key_wrap.c in Sources */,
 				F8C2EC6D2408031A007A9422 /* ieee80211_pae_output.c in Sources */,
 				F8C2EC5E2408031A007A9422 /* ieee80211_pae_input.c in Sources */,
@@ -777,6 +785,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1.0.0d1;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = YXX7XALBVX;
 				GCC_C_LANGUAGE_STANDARD = c11;
 				GCC_INPUT_FILETYPE = sourcecode.cpp.cpp;
@@ -789,7 +798,7 @@
 				MODULE_VERSION = 1.0.0d1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.zxystd.itlwm;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = macosx;
+				SDKROOT = macosx10.14;
 				SYSTEM_HEADER_SEARCH_PATHS = (
 					itlwm/compat/openbsd,
 					itlwm/compat/linux,
@@ -817,7 +826,7 @@
 				MODULE_VERSION = 1.0.0d1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.zxystd.itlwm;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = macosx;
+				SDKROOT = macosx10.14;
 				SYSTEM_HEADER_SEARCH_PATHS = (
 					itlwm/compat/openbsd,
 					itlwm/compat/linux,

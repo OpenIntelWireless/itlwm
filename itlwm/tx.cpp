@@ -72,7 +72,7 @@ iwm_alloc_tx_ring(iwm_softc *sc, struct iwm_tx_ring *ring, int qid)
     size = IWM_TX_RING_COUNT * sizeof (struct iwm_tfd);
     err = iwm_dma_contig_alloc(sc->sc_dmat, &ring->desc_dma, (void **)&ring->desc, size, 256);
     if (err) {
-        IOLog("%s: could not allocate TX ring DMA memory\n",
+        XYLog("%s: could not allocate TX ring DMA memory\n",
             "AppleIntel");
         goto fail;
     }
@@ -88,7 +88,7 @@ iwm_alloc_tx_ring(iwm_softc *sc, struct iwm_tx_ring *ring, int qid)
     size = IWM_TX_RING_COUNT * sizeof(struct iwm_device_cmd);
     err = iwm_dma_contig_alloc(sc->sc_dmat, &ring->cmd_dma, (void **)&ring->cmd, size, 4);
     if (err) {
-        IOLog("%s: could not allocate cmd DMA memory\n", "AppleIntel");
+        XYLog("%s: could not allocate cmd DMA memory\n", "AppleIntel");
         goto fail;
     }
     ring->cmd = (struct iwm_device_cmd*)ring->cmd_dma.vaddr;
@@ -113,7 +113,7 @@ iwm_alloc_tx_ring(iwm_softc *sc, struct iwm_tx_ring *ring, int qid)
             IWM_NUM_OF_TBS - 2, mapsize, 0, BUS_DMA_NOWAIT,
             &data->map);
         if (err) {
-            IOLog("%s: could not create TX buf DMA map\n",
+            XYLog("%s: could not create TX buf DMA map\n",
                 "AppleIntel");
             goto fail;
         }

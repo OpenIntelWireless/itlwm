@@ -268,7 +268,7 @@ public:
     void    iwm_calib_timeout(void *);
     int    iwm_media_change(struct ifnet *);
     void    iwm_newstate_task(void *);
-    int    iwm_newstate(struct ieee80211com *, enum ieee80211_state, int);
+    static int    iwm_newstate(struct ieee80211com *, enum ieee80211_state, int);
     void    iwm_endscan(struct iwm_softc *);
     void    iwm_fill_sf_command(struct iwm_softc *, struct iwm_sf_cfg_cmd *,
             struct ieee80211_node *);

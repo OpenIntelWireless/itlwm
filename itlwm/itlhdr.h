@@ -25,7 +25,7 @@
 #include "if_iwmvar.h"
 #include <sys/pcireg.h>
 
-#define DEVNAME(_s)    ("itliwm")
+#define DEVNAME(_s)    ("itlwm")
 #define IWM_DEBUG
 
 #define M_DEVBUF 2

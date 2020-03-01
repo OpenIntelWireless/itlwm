@@ -367,20 +367,20 @@ struct iwm_softc {
 	CTimeout *sc_led_blink_to;
     pci_intr_handle_t ih;
 
-//	struct task		init_task; /* NB: not reference-counted */
+	struct task		init_task; /* NB: not reference-counted */
 //	struct refcnt		task_refs;
-//	struct task		newstate_task;
+	struct task		newstate_task;
 	enum ieee80211_state	ns_nstate;
 	int			ns_arg;
 
 	/* Task for firmware BlockAck setup/teardown and its arguments. */
-//	struct task		ba_task;
+	struct task		ba_task;
 	int			ba_start;
 	int			ba_tid;
 	uint16_t		ba_ssn;
 
 	/* Task for HT protection updates. */
-//	struct task		htprot_task;
+	struct task		htprot_task;
 
 	bus_space_tag_t sc_st;
 	bus_space_handle_t sc_sh;
