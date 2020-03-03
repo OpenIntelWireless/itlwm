@@ -563,6 +563,7 @@ ieee80211_match_ess(struct ieee80211_ess *ess, struct ieee80211_node *ni)
 void
 ieee80211_switch_ess(struct ieee80211com *ic)
 {
+    XYLog("%s\n", __func__);
 	struct ifnet		*ifp = &ic->ic_if;
 	struct ieee80211_ess	*ess, *seless = NULL;
 	struct ieee80211_node	*ni, *selni = NULL;
@@ -780,6 +781,7 @@ ieee80211_node_detach(struct ifnet *ifp)
 void
 ieee80211_reset_scan(struct ifnet *ifp)
 {
+    XYLog("%s\n", __func__);
 	struct ieee80211com *ic = (struct ieee80211com *)ifp;
 
 	memcpy(ic->ic_chan_scan, ic->ic_chan_active,
@@ -889,6 +891,7 @@ ieee80211_next_scan(struct ifnet *ifp)
 void
 ieee80211_create_ibss(struct ieee80211com* ic, struct ieee80211_channel *chan)
 {
+    XYLog("%s\n", __func__);
 	struct ieee80211_node *ni;
 	struct ifnet *ifp = &ic->ic_if;
 
@@ -1179,6 +1182,7 @@ ieee80211_node_switch_bss(struct ieee80211com *ic, struct ieee80211_node *ni)
 void
 ieee80211_node_join_bss(struct ieee80211com *ic, struct ieee80211_node *selbs)
 {
+    XYLog("%s\n", __func__);
 	enum ieee80211_phymode mode;
 	struct ieee80211_node *ni;
 	uint32_t assoc_fail = 0;
@@ -1258,6 +1262,7 @@ struct ieee80211_node *
 ieee80211_node_choose_bss(struct ieee80211com *ic, int bgscan,
     struct ieee80211_node **curbs)
 {
+    XYLog("%s\n", __func__);
 	struct ieee80211_node *ni, *nextbs, *selbs = NULL, 
 	    *selbs2 = NULL, *selbs5 = NULL;
 	uint8_t min_5ghz_rssi;
@@ -1265,6 +1270,7 @@ ieee80211_node_choose_bss(struct ieee80211com *ic, int bgscan,
 	ni = RB_MIN(ieee80211_tree, &ic->ic_tree);
 
 	for (; ni != NULL; ni = nextbs) {
+        XYLog("%s nextbs\n", __func__);
 		nextbs = RB_NEXT(ieee80211_tree, &ic->ic_tree, ni);
 		if (ni->ni_fails) {
 			/*
@@ -1274,14 +1280,18 @@ ieee80211_node_choose_bss(struct ieee80211com *ic, int bgscan,
 			 */
 			if (ni->ni_fails++ > 2)
 				ieee80211_free_node(ic, ni);
+            XYLog("%s ni->ni_fails==TRUE\n", __func__);
 			continue;
 		}
 
 		if (curbs && ieee80211_node_cmp(ic->ic_bss, ni) == 0)
 			*curbs = ni;
 
-		if (ieee80211_match_bss(ic, ni, bgscan) != 0)
+        int fail = ieee80211_match_bss(ic, ni, bgscan);
+        if (fail != 0) {
+            XYLog("%s ieee80211_match_bss==FALSE, ssid=%s, bssid=%s, %d\n", __func__, ni->ni_essid, ether_sprintf(ni->ni_bssid), fail);
 			continue;
+        }
 
 		if (ic->ic_caps & IEEE80211_C_SCANALLBAND) {
 			if (IEEE80211_IS_CHAN_2GHZ(ni->ni_chan) &&
@@ -1322,6 +1332,7 @@ ieee80211_node_choose_bss(struct ieee80211com *ic, int bgscan,
 void
 ieee80211_end_scan(struct ifnet *ifp)
 {
+    XYLog("%s\n", __func__);
 	struct ieee80211com *ic = (struct ieee80211com *)ifp;
 	struct ieee80211_node *ni, *selbs = NULL, *curbs = NULL;
 	int bgscan = ((ic->ic_flags & IEEE80211_F_BGSCAN) &&
@@ -1640,7 +1651,7 @@ ieee80211_setup_node(struct ieee80211com *ic,
 {
 	int i, s;
 
-	DPRINTF(("%s\n", ether_sprintf((u_int8_t *)macaddr)));
+	XYLog("%s %s\n", __func__, ether_sprintf((u_int8_t *)macaddr));
 	IEEE80211_ADDR_COPY(ni->ni_macaddr, macaddr);
 	ieee80211_node_newstate(ni, IEEE80211_STA_CACHE);
 
@@ -1953,6 +1964,7 @@ ieee80211_ba_del(struct ieee80211_node *ni)
 void
 ieee80211_free_node(struct ieee80211com *ic, struct ieee80211_node *ni)
 {
+    XYLog("%s\n", __func__);
 	if (ni == ic->ic_bss)
 		panic("freeing bss node");
 
@@ -2179,6 +2191,7 @@ ieee80211_clean_nodes(struct ieee80211com *ic, int cache_timeout)
 void
 ieee80211_clean_inactive_nodes(struct ieee80211com *ic, int inact_max)
 {
+    XYLog("%s\n", __func__);
 	struct ieee80211_node *ni, *next_ni;
 	u_int gen = ic->ic_scangen++;	/* NB: ok 'cuz single-threaded*/
 	int s;
@@ -2919,7 +2932,7 @@ ieee80211_notify_dtim(struct ieee80211com *ic)
 			wh = mtod(m, struct ieee80211_frame *);
 			wh->i_fc[1] |= IEEE80211_FC1_MORE_DATA;
 		}
-        ifp->output_queue->enqueue(m, NULL);
+        ifp->output_queue->enqueue(m, &TX_TYPE_MGMT);
 //		mq_enqueue(&ic->ic_pwrsaveq, m);
 //		if_start(ifp);
         ifp->output_queue->service();

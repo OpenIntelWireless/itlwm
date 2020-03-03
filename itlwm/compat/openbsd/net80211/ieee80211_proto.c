@@ -126,16 +126,16 @@ ieee80211_print_essid(const u_int8_t *essid, int len)
 		if (*p < ' ' || *p > 0x7e)
 			break;
 	}
-	if (i == len) {
-		XYLog("\"");
-		for (i = 0, p = essid; i < len; i++, p++)
-			XYLog("%c", *p);
-		XYLog("\"");
-	} else {
-		XYLog("0x");
-		for (i = 0, p = essid; i < len; i++, p++)
-			XYLog("%02x", *p);
-	}
+//	if (i == len) {
+//		XYLog("\"");
+//		for (i = 0, p = essid; i < len; i++, p++)
+//			XYLog("%c", *p);
+//		XYLog("\"");
+//	} else {
+//		XYLog("0x");
+//		for (i = 0, p = essid; i < len; i++, p++)
+//			XYLog("%02x", *p);
+//	}
 }
 
 #ifdef IEEE80211_DEBUG
@@ -358,6 +358,7 @@ ieee80211_set_shortslottime(struct ieee80211com *ic, int on)
 int
 ieee80211_keyrun(struct ieee80211com *ic, u_int8_t *macaddr)
 {
+    XYLog("%s\n", __func__);
 	struct ieee80211_node *ni = ic->ic_bss;
 #ifndef IEEE80211_STA_ONLY
 	struct ieee80211_pmk *pmk;
@@ -763,6 +764,7 @@ ieee80211_auth_open_confirm(struct ieee80211com *ic,
 void
 ieee80211_try_another_bss(struct ieee80211com *ic)
 {
+    XYLog("%s\n", __func__);
 	struct ieee80211_node *curbs, *selbs;
 	struct ifnet *ifp = &ic->ic_if;
 
@@ -806,6 +808,7 @@ ieee80211_auth_open(struct ieee80211com *ic, const struct ieee80211_frame *wh,
     struct ieee80211_node *ni, struct ieee80211_rxinfo *rxi, u_int16_t seq,
     u_int16_t status)
 {
+    XYLog("%s\n", __func__);
 	struct ifnet *ifp = &ic->ic_if;
 	switch (ic->ic_opmode) {
 #ifndef IEEE80211_STA_ONLY
@@ -970,6 +973,7 @@ int
 ieee80211_newstate(struct ieee80211com *ic, enum ieee80211_state nstate,
     int mgt)
 {
+    XYLog("%s\n nstate=%d", __func__, nstate);
 	struct ifnet *ifp = &ic->ic_if;
 	struct ieee80211_node *ni;
 	enum ieee80211_state ostate;
@@ -1264,6 +1268,7 @@ justcleanup:
 void
 ieee80211_set_link_state(struct ieee80211com *ic, int nstate)
 {
+    XYLog("%s\n nstate=%d", __func__, nstate);
 	struct ifnet *ifp = &ic->ic_if;
 
 	switch (ic->ic_opmode) {

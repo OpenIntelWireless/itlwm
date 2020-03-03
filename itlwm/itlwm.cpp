@@ -150,23 +150,29 @@ void itlwm::free()
     XYLog("%s\n", __func__);
     IOLockFree(fwLoadLock);
     fwLoadLock = NULL;
+    if (fCommandGate) {
+//        fCommandGate->disable();
+//        if (fWorkloop) {
+//            fWorkloop->removeEventSource(fCommandGate);
+//        }
+//        fCommandGate->release();
+//        fCommandGate = NULL;
+    }
     if (com.ih) {
+//        iwm_stop(&com.sc_ic.ic_ac.ac_if);
         ieee80211_ifdetach(&com.sc_ic.ic_ac.ac_if);
-        if (fWorkloop) {
-            com.ih->intr->disable();
-            fWorkloop->removeEventSource(com.ih->intr);
-            com.ih->intr->release();
-        }
-        com.ih->release();
+//        if (fWorkloop && com.ih->intr) {
+//            com.ih->intr->disable();
+//            fWorkloop->removeEventSource(com.ih->intr);
+//            com.ih->intr->release();
+//        }
+//        com.ih->release();
         com.ih = NULL;
     }
-    if (fCommandGate) {
-        if (fWorkloop) {
-            fWorkloop->removeEventSource(fCommandGate);
-            fCommandGate->disable();
-        }
-        fCommandGate->release();
-        fCommandGate = NULL;
+    if (fOutputQueue) {
+        fOutputQueue->flush();
+        fOutputQueue->release();
+        fOutputQueue = NULL;
     }
     if (fWorkloop) {
         fWorkloop->release();
@@ -209,8 +215,58 @@ IOOutputQueue *itlwm::createOutputQueue()
 UInt32 itlwm::outputPacket(mbuf_t m, void *param)
 {
     XYLog("%s\n", __func__);
-    freePacket(m);
-    return kIOReturnOutputDropped;
+    ifnet *ifp = &com.sc_ic.ic_ac.ac_if;
+    struct iwm_softc *sc = &com;
+    struct ieee80211com *ic = &sc->sc_ic;
+    struct ieee80211_node *ni;
+    struct ether_header *eh;
+    
+    int ac = EDCA_AC_BE; /* XXX */
+    if (!(ifp->if_flags & IFF_RUNNING) /*|| ifq_is_oactive(&ifp->if_snd)*/)
+        return kIOReturnOutputDropped;
+    //    /* why isn't this done per-queue? */
+    //    if (sc->qfullmsk != 0) {
+    //        //            ifq_set_oactive(&ifp->if_snd);
+    //        break;
+    //    }
+    if (param == &TX_TYPE_MGMT) {
+        ni = (struct ieee80211_node *)mbuf_pkthdr_rcvif(m);
+        goto sendit;
+    } else {
+        if (ic->ic_state != IEEE80211_S_RUN ||
+            (ic->ic_xflags & IEEE80211_F_TX_MGMT_ONLY))
+            return kIOReturnOutputDropped;
+        if (!m)
+            return kIOReturnOutputDropped;
+        if (mbuf_len(m) < sizeof (*eh) &&
+            mbuf_pullup(&m, sizeof (*eh)) != 0) {
+            ifp->if_oerrors++;
+            return kIOReturnOutputDropped;
+        }
+#if NBPFILTER > 0
+        if (ifp->if_bpf != NULL)
+            bpf_mtap(ifp->if_bpf, m, BPF_DIRECTION_OUT);
+#endif
+        if ((m = ieee80211_encap(ifp, m, &ni)) == NULL) {
+            ifp->if_oerrors++;
+            return kIOReturnOutputDropped;
+        }
+    }
+    if (iwm_tx(sc, m, ni, ac) != 0) {
+        ieee80211_release_node(ic, ni);
+        ifp->if_oerrors++;
+        return kIOReturnOutputDropped;
+    }
+sendit:
+#if NBPFILTER > 0
+    if (ifp->if_bpf != NULL)
+        bpf_mtap(ifp->if_bpf, m, BPF_DIRECTION_OUT);
+#endif
+    if (ifp->if_flags & IFF_UP) {
+        sc->sc_tx_timer = 15;
+        ifp->if_timer = 1;
+    }
+    return kIOReturnOutputSuccess;
 }
 
 int itlwm::iwm_media_change(struct ifnet *ifp)
@@ -378,7 +434,56 @@ void itlwm::
 iwm_endscan(struct iwm_softc *sc)
 {
     XYLog("%s\n", __func__);
+    int error;
+    ieee80211_wpaparams wpa;
+    ieee80211_nwkey nwkey;
+    ieee80211_join join;
+    struct ieee80211_node *ni, *nextbs;
     struct ieee80211com *ic = &sc->sc_ic;
+    
+    wpa.i_enabled = 1;
+    wpa.i_ciphers = IEEE80211_WPA_CIPHER_TKIP;
+    wpa.i_protos = IEEE80211_WPA_PROTO_WPA2;
+    wpa.i_akms = IEEE80211_WPA_AKM_SHA256_PSK;
+//    wpa.i_groupcipher = IEEE80211_WPA_CIPHER_TKIP;
+//    error = ieee80211_ioctl_setwpaparms(ic, &wpa);
+//    if (error) {
+//        XYLog("%s ieee80211_ioctl_setwpaparms error=%d\n", __func__, error);
+//    }
+    nwkey.i_key[0].i_keydat = (uint8_t*)"zxyssdt112233";
+    nwkey.i_key[0].i_keylen = strlen("zxyssdt112233");
+    nwkey.i_wepon = 1;
+    nwkey.i_defkid = 1;
+//    error = ieee80211_ioctl_setnwkeys(ic, &nwkey);
+//    if (error) {
+//        XYLog("%s ieee80211_ioctl_setnwkeys error=%d\n", __func__, error);
+//    }
+//    memset(ic->ic_des_essid, 0, IEEE80211_NWID_LEN);
+//    ic->ic_des_esslen = strlen("ssdt");
+//    memcpy(ic->ic_des_essid, "ssdt", strlen("ssdt"));
+//    if (ic->ic_des_esslen > 0) {
+//        /* 'nwid' disables auto-join magic */
+//        ic->ic_flags &= ~IEEE80211_F_AUTO_JOIN;
+//    } else if (!TAILQ_EMPTY(&ic->ic_ess)) {
+//        /* '-nwid' re-enables auto-join */
+//        ic->ic_flags |= IEEE80211_F_AUTO_JOIN;
+//    }
+//    /* disable WPA/WEP */
+//    ieee80211_disable_rsn(ic);
+//    ieee80211_disable_wep(ic);
+    join.i_nwkey = nwkey;
+    join.i_wpaparams = wpa;
+    memcpy(&join.i_nwid, "ssdt", strlen("ssdt"));
+    join.i_len = strlen("ssdt");
+    join.i_flags = IEEE80211_JOIN_WPAPSK | IEEE80211_JOIN_ANY | IEEE80211_JOIN_NWKEY;
+    if (ieee80211_add_ess(ic, &join) == 0)
+        ic->ic_flags |= IEEE80211_F_AUTO_JOIN;
+    
+    ni = RB_MIN(ieee80211_tree, &ic->ic_tree);
+    for (; ni != NULL; ni = nextbs) {
+        nextbs = RB_NEXT(ieee80211_tree, &ic->ic_tree, ni);
+        XYLog("%s ssid=%s, bssid=%s\n", __func__, ni->ni_essid, ether_sprintf(ni->ni_bssid));
+    }
     
     if ((sc->sc_flags & (IWM_FLAG_SCANNING | IWM_FLAG_BGSCAN)) == 0)
         return;
@@ -1294,7 +1399,7 @@ iwm_notif_intr(struct iwm_softc *sc)
                 SYNC_RESP_STRUCT(phy_db_notif, pkt, struct iwm_calib_res_notif_phy_db *);
                 iwm_phy_db_set_section(sc, phy_db_notif);
                 sc->sc_init_complete |= IWM_CALIB_COMPLETE;
-//                wakeupOn(&sc->sc_init_complete);
+                //                wakeupOn(&sc->sc_init_complete);
                 break;
             }
                 
@@ -2034,7 +2139,7 @@ iwm_attach(struct iwm_softc *sc, struct pci_attach_args *pa)
     ifp->if_start = iwm_start;
     ifp->if_watchdog = iwm_watchdog;
     memcpy(ifp->if_xname, DEVNAME(sc), IFNAMSIZ);
-    //    ifp->if_flags &= IFF_DEBUG;
+    ifp->if_flags = IFF_DEBUG;
     
     ifp->output_queue = getOutputQueue();
     ieee80211_ifattach(ifp);
@@ -2143,20 +2248,20 @@ iwm_htprot_task(void *arg)
     struct ieee80211com *ic = &sc->sc_ic;
     struct iwm_node *in = (struct iwm_node *)ic->ic_bss;
     int err, s = splnet();
-
+    
     if (sc->sc_flags & IWM_FLAG_SHUTDOWN) {
-//        refcnt_rele_wake(&sc->task_refs);
+        //        refcnt_rele_wake(&sc->task_refs);
         splx(s);
         return;
     }
-
+    
     /* This call updates HT protection based on in->in_ni.ni_htop1. */
     err = that->iwm_mac_ctxt_cmd(sc, in, IWM_FW_CTXT_ACTION_MODIFY, 1);
     if (err)
         XYLog("%s: could not change HT protection: error %d\n",
-            DEVNAME(sc), err);
-
-//    refcnt_rele_wake(&sc->task_refs);
+              DEVNAME(sc), err);
+    
+    //    refcnt_rele_wake(&sc->task_refs);
     splx(s);
 }
 
@@ -2169,9 +2274,9 @@ iwm_ba_task(void *arg)
     struct ieee80211com *ic = &sc->sc_ic;
     struct ieee80211_node *ni = ic->ic_bss;
     int s = splnet();
-
+    
     if (sc->sc_flags & IWM_FLAG_SHUTDOWN) {
-//        refcnt_rele_wake(&sc->task_refs);
+        //        refcnt_rele_wake(&sc->task_refs);
         splx(s);
         return;
     }
@@ -2180,8 +2285,8 @@ iwm_ba_task(void *arg)
         that->iwm_sta_rx_agg(sc, ni, sc->ba_tid, sc->ba_ssn, 1);
     else
         that->iwm_sta_rx_agg(sc, ni, sc->ba_tid, 0, 0);
-
-//    refcnt_rele_wake(&sc->task_refs);
+    
+    //    refcnt_rele_wake(&sc->task_refs);
     splx(s);
 }
 

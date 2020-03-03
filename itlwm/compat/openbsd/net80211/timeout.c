@@ -50,20 +50,21 @@ int timeout_add_msec(CTimeout **to, int msecs)
     if (*to == NULL) {
         *to = new CTimeout();
     }
-    if (((CTimeout*)*to)->tm) {
-        _fWorkloop->removeEventSource(((CTimeout*)*to)->tm);
-        OSSafeReleaseNULL(((CTimeout*)*to)->tm);
+    CTimeout *cto = *to;
+    if (cto->tm) {
+        _fWorkloop->removeEventSource(cto->tm);
+        OSSafeReleaseNULL(cto->tm);
     }
-    ((CTimeout*)*to)->tm = IOTimerEventSource::timerEventSource(((CTimeout*)*to), OSMemberFunctionCast(IOTimerEventSource::Action, ((CTimeout*)*to), &CTimeout::timeoutOccurred));
-    if (((CTimeout*)*to)->tm == 0)
+    cto->tm = IOTimerEventSource::timerEventSource(cto, OSMemberFunctionCast(IOTimerEventSource::Action, cto, &CTimeout::timeoutOccurred));
+    if (cto->tm == NULL)
         return 0;
     if (_fWorkloop == NULL) {
         IOLog("itlwm 啊啊啊啊啊啊啊啊啊啊啊啊啊,怎么是空的啊!!!!\n");
         return 0;
     }
-    _fWorkloop->addEventSource(((CTimeout*)*to)->tm);
-    ((CTimeout*)*to)->tm->enable();
-    ((CTimeout*)*to)->tm->setTimeoutMS(msecs);
+    _fWorkloop->addEventSource(cto->tm);
+    cto->tm->enable();
+    cto->tm->setTimeoutMS(msecs);
     IOLog("itlwm %s\n", __func__);
     return 1;
 }

@@ -286,7 +286,7 @@ ieee80211_inputm(struct ifnet *ifp, mbuf_t m, struct ieee80211_node *ni,
 			/* dequeue buffered unicast frames */
 			while ((m = mq_dequeue(&ni->ni_savedq)) != NULL) {
 //				mq_enqueue(&ic->ic_pwrsaveq, m);
-                ifp->output_queue->enqueue(m, NULL);
+                ifp->output_queue->enqueue(m, &TX_TYPE_FRAME);
 //				if_start(ifp);
                 ifp->output_queue->service();
 			}
@@ -1347,6 +1347,7 @@ void
 ieee80211_recv_probe_resp(struct ieee80211com *ic, mbuf_t m,
     struct ieee80211_node *rni, struct ieee80211_rxinfo *rxi, int isprobe)
 {
+    XYLog("%s\n", __func__);
 	struct ieee80211_node *ni;
 	const struct ieee80211_frame *wh;
 	const u_int8_t *frm, *efrm;
@@ -1850,6 +1851,7 @@ void
 ieee80211_recv_auth(struct ieee80211com *ic, mbuf_t m,
     struct ieee80211_node *ni, struct ieee80211_rxinfo *rxi)
 {
+    XYLog("%s\n", __func__);
 	const struct ieee80211_frame *wh;
 	const u_int8_t *frm;
 	u_int16_t algo, seq, status;
@@ -1903,6 +1905,7 @@ void
 ieee80211_recv_assoc_req(struct ieee80211com *ic, mbuf_t m,
     struct ieee80211_node *ni, struct ieee80211_rxinfo *rxi, int reassoc)
 {
+    XYLog("%s reassoc=%d\n", __func__, reassoc);
 	const struct ieee80211_frame *wh;
 	const u_int8_t *frm, *efrm;
 	const u_int8_t *ssid, *rates, *xrates, *rsnie, *wpaie, *wmeie, *htcaps;
@@ -2238,6 +2241,7 @@ void
 ieee80211_recv_assoc_resp(struct ieee80211com *ic, mbuf_t m,
     struct ieee80211_node *ni, int reassoc)
 {
+    XYLog("%s reassoc=%d\n", __func__, reassoc);
 	struct ifnet *ifp = &ic->ic_if;
 	const struct ieee80211_frame *wh;
 	const u_int8_t *frm, *efrm;
@@ -2399,6 +2403,7 @@ void
 ieee80211_recv_deauth(struct ieee80211com *ic, mbuf_t m,
     struct ieee80211_node *ni)
 {
+    XYLog("%s\n", __func__);
 	const struct ieee80211_frame *wh;
 	const u_int8_t *frm;
 	u_int16_t reason;
@@ -2456,6 +2461,7 @@ void
 ieee80211_recv_disassoc(struct ieee80211com *ic, mbuf_t m,
     struct ieee80211_node *ni)
 {
+    XYLog("%s\n", __func__);
 	const struct ieee80211_frame *wh;
 	const u_int8_t *frm;
 	u_int16_t reason;
@@ -2511,6 +2517,7 @@ void
 ieee80211_recv_addba_req(struct ieee80211com *ic, mbuf_t m,
     struct ieee80211_node *ni)
 {
+    XYLog("%s\n", __func__);
 	const struct ieee80211_frame *wh;
 	const u_int8_t *frm;
 	struct ieee80211_rx_ba *ba;
@@ -2677,6 +2684,7 @@ void
 ieee80211_recv_addba_resp(struct ieee80211com *ic, mbuf_t m,
     struct ieee80211_node *ni)
 {
+    XYLog("%s\n", __func__);
 	const struct ieee80211_frame *wh;
 	const u_int8_t *frm;
 	struct ieee80211_tx_ba *ba;
@@ -2789,6 +2797,7 @@ void
 ieee80211_recv_delba(struct ieee80211com *ic, mbuf_t m,
     struct ieee80211_node *ni)
 {
+    XYLog("%s\n", __func__);
 	const struct ieee80211_frame *wh;
 	const u_int8_t *frm;
 	u_int16_t params, reason;
@@ -2863,6 +2872,7 @@ void
 ieee80211_recv_sa_query_req(struct ieee80211com *ic, mbuf_t m,
     struct ieee80211_node *ni)
 {
+    XYLog("%s\n", __func__);
 	const struct ieee80211_frame *wh;
 	const u_int8_t *frm;
 
@@ -2900,6 +2910,7 @@ void
 ieee80211_recv_sa_query_resp(struct ieee80211com *ic, mbuf_t m,
     struct ieee80211_node *ni)
 {
+    XYLog("%s\n", __func__);
 	const struct ieee80211_frame *wh;
 	const u_int8_t *frm;
 
@@ -2936,6 +2947,7 @@ void
 ieee80211_recv_action(struct ieee80211com *ic, mbuf_t m,
     struct ieee80211_node *ni)
 {
+    XYLog("%s\n", __func__);
 	const struct ieee80211_frame *wh;
 	const u_int8_t *frm;
 
@@ -2982,6 +2994,7 @@ void
 ieee80211_recv_mgmt(struct ieee80211com *ic, mbuf_t m,
     struct ieee80211_node *ni, struct ieee80211_rxinfo *rxi, int subtype)
 {
+    XYLog("%s\n", __func__);
 	switch (subtype) {
 	case IEEE80211_FC0_SUBTYPE_BEACON:
 		ieee80211_recv_probe_resp(ic, m, ni, rxi, 0);
@@ -3036,6 +3049,7 @@ void
 ieee80211_recv_pspoll(struct ieee80211com *ic, mbuf_t m,
     struct ieee80211_node *ni)
 {
+    XYLog("%s\n", __func__);
 	struct ifnet *ifp = &ic->ic_if;
 	struct ieee80211_frame_pspoll *psp;
 	struct ieee80211_frame *wh;
@@ -3077,7 +3091,7 @@ ieee80211_recv_pspoll(struct ieee80211com *ic, mbuf_t m,
 		wh = mtod(m, struct ieee80211_frame *);
 		wh->i_fc[1] |= IEEE80211_FC1_MORE_DATA;
 	}
-    ifp->output_queue->enqueue(m, NULL);
+    ifp->output_queue->enqueue(m, &TX_TYPE_FRAME);
 //	mq_enqueue(&ic->ic_pwrsaveq, m);
 //	if_start(ifp);
     ifp->output_queue->service();

@@ -850,10 +850,10 @@ iwm_tx(struct iwm_softc *sc, mbuf_t m, struct ieee80211_node *ni, int ac)
     if (err) {
         /* Too many DMA segments, linearize mbuf. */
         XYLog("%s: Too many DMA segments, linearize mbuf. but do noting.\n");
-        //        if (m_defrag(m, M_DONTWAIT)) {
-        //            mbuf_freem(m);
-        //            return ENOBUFS;
-        //        }
+        if (m_defrag(m, MBUF_DONTWAIT)) {
+            mbuf_freem(m);
+            return ENOBUFS;
+        }
         err = bus_dmamap_load_mbuf(data->map, m);
         if (err) {
             XYLog("%s: can't map mbuf (error %d)\n", DEVNAME(sc),

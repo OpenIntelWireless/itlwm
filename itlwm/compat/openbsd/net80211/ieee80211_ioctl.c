@@ -205,10 +205,11 @@ ieee80211_disable_rsn(struct ieee80211com *ic)
 }
 
 /* Keep in sync with ieee80211_node.c:ieee80211_ess_setnwkeys() */
-static int
+int
 ieee80211_ioctl_setnwkeys(struct ieee80211com *ic,
     const struct ieee80211_nwkey *nwkey)
 {
+    XYLog("%s\n", __func__);
 	struct ieee80211_key *k;
 	int error, i;
 
@@ -280,7 +281,7 @@ ieee80211_ioctl_getnwkeys(struct ieee80211com *ic,
 }
 
 /* Keep in sync with ieee80211_node.c:ieee80211_ess_setwpaparms() */
-static int
+int
 ieee80211_ioctl_setwpaparms(struct ieee80211com *ic,
     const struct ieee80211_wpaparams *wpa)
 {
@@ -395,7 +396,7 @@ ieee80211_ioctl_getwpaparms(struct ieee80211com *ic,
 	return 0;
 }
 
-static void
+void
 ieee80211_ess_getwpaparms(struct ieee80211_ess *ess,
     struct ieee80211_wpaparams *wpa)
 {

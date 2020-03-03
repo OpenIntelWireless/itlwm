@@ -125,7 +125,7 @@ ieee80211_send_eapol_key(struct ieee80211com *ic, mbuf_t m,
         timeout_add_msec(&ni->ni_eapol_to, 100);
 #endif
     
-    ifp->output_queue->enqueue(m, NULL);
+    ifp->output_queue->enqueue(m, &TX_TYPE_MGMT);
 //    IFQ_ENQUEUE(&ifp->if_snd, m, error);
 //    if (error)
 //        return (error);

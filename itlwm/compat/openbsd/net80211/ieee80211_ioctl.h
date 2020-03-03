@@ -428,4 +428,16 @@ struct ieee80211_flags {
 #define SIOCG80211FLAGS		_IOWR('i', 216, struct ifreq)
 #define SIOCS80211FLAGS		 _IOW('i', 217, struct ifreq)
 
+int
+ieee80211_ioctl_setnwkeys(struct ieee80211com *ic,
+                          const struct ieee80211_nwkey *nwkey);
+
+int
+ieee80211_ioctl_setwpaparms(struct ieee80211com *ic,
+                            const struct ieee80211_wpaparams *wpa);
+
+void
+ieee80211_ess_getwpaparms(struct ieee80211_ess *ess,
+                          struct ieee80211_wpaparams *wpa);
+
 #endif /* _NET80211_IEEE80211_IOCTL_H_ */
