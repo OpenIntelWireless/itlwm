@@ -240,11 +240,12 @@ ieee80211_mgmt_output(struct ifnet *ifp, struct ieee80211_node *ni,
 	    ieee80211_pwrsave(ic, m, ni) != 0)
 		return 0;
 #endif
-    ifp->output_queue->enqueue(m, &TX_TYPE_MGMT);
-//	mq_enqueue(&ic->ic_mgtq, m);
+//    ifp->output_queue->enqueue(m, &TX_TYPE_MGMT);
+	mq_enqueue(&ic->ic_mgtq, m);
 	ifp->if_timer = 1;
-//	if_start(ifp);
-    ifp->output_queue->service();
+    ifp->if_start(ifp);
+    XYLog("%s Enqueue MGMT data\n", __func__);
+//    ifp->output_queue->start();
 	return 0;
 }
 
@@ -476,11 +477,13 @@ ieee80211_tx_compressed_bar(struct ieee80211com *ic, struct ieee80211_node *ni,
 		return;
 
 	ieee80211_ref_node(ni);
-	if (ifp->output_queue->enqueue(m, &TX_TYPE_MGMT))
+//	if (ifp->output_queue->enqueue(m, &TX_TYPE_MGMT))
 //		if_start(ifp);
-        ifp->output_queue->service();
-	else
-		ieee80211_release_node(ic, ni);
+    //TODO always return 0;
+    ifp->output_queue->enqueue(m, &TX_TYPE_MGMT);
+    ifp->output_queue->start();
+//	else
+//		ieee80211_release_node(ic, ni);
 }
 
 /*

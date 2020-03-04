@@ -75,6 +75,7 @@ const char * const ieee80211_phymode_name[] = {
 	"11b",		/* IEEE80211_MODE_11B */
 	"11g",		/* IEEE80211_MODE_11G */
 	"11n",		/* IEEE80211_MODE_11N */
+    "11ac",     /* IEEE80211_MODE_11AC */
 };
 
 void ieee80211_set_beacon_miss_threshold(struct ieee80211com *);
@@ -1257,7 +1258,7 @@ justcleanup:
 			ic->ic_mgt_timer = 0;
 			ieee80211_set_beacon_miss_threshold(ic);
 //			if_start(ifp);
-            ifp->output_queue->service();
+            ifp->output_queue->start();
 			break;
 		}
 		break;

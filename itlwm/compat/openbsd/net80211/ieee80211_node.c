@@ -2935,7 +2935,7 @@ ieee80211_notify_dtim(struct ieee80211com *ic)
         ifp->output_queue->enqueue(m, &TX_TYPE_MGMT);
 //		mq_enqueue(&ic->ic_pwrsaveq, m);
 //		if_start(ifp);
-        ifp->output_queue->service();
+        ifp->output_queue->start();
 	}
 	/* XXX assumes everything has been sent */
 	ic->ic_tim_mcast_pending = 0;

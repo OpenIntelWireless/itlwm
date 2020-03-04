@@ -124,6 +124,7 @@ void
 ieee80211_inputm(struct ifnet *ifp, mbuf_t m, struct ieee80211_node *ni,
     struct ieee80211_rxinfo *rxi, struct mbuf_list *ml)
 {
+    XYLog("%s\n", __func__);
 	struct ieee80211com *ic = (struct ieee80211com *)ifp;
 	struct ieee80211_frame *wh;
 	u_int16_t *orxseq, nrxseq, qos;
@@ -288,7 +289,7 @@ ieee80211_inputm(struct ifnet *ifp, mbuf_t m, struct ieee80211_node *ni,
 //				mq_enqueue(&ic->ic_pwrsaveq, m);
                 ifp->output_queue->enqueue(m, &TX_TYPE_FRAME);
 //				if_start(ifp);
-                ifp->output_queue->service();
+                ifp->output_queue->start();
 			}
 		}
 	}
@@ -839,6 +840,7 @@ void
 ieee80211_enqueue_data(struct ieee80211com *ic, mbuf_t m,
     struct ieee80211_node *ni, int mcast, struct mbuf_list *ml)
 {
+    XYLog("%s\n", __func__);
 	struct ifnet *ifp = &ic->ic_if;
 	struct ether_header *eh;
 	mbuf_t m1;
@@ -980,6 +982,7 @@ void
 ieee80211_amsdu_decap(struct ieee80211com *ic, mbuf_t m,
     struct ieee80211_node *ni, int hdrlen, struct mbuf_list *ml)
 {
+    XYLog("%s\n", __func__);
 	mbuf_t n;
 	struct ether_header *eh;
 	struct llc *llc;
@@ -3094,7 +3097,7 @@ ieee80211_recv_pspoll(struct ieee80211com *ic, mbuf_t m,
     ifp->output_queue->enqueue(m, &TX_TYPE_FRAME);
 //	mq_enqueue(&ic->ic_pwrsaveq, m);
 //	if_start(ifp);
-    ifp->output_queue->service();
+    ifp->output_queue->start();
 }
 #endif	/* IEEE80211_STA_ONLY */
 

@@ -17,7 +17,7 @@ class CTimeout : public OSObject {
     OSDeclareDefaultStructors(CTimeout)
     
 public:
-    void timeoutOccurred(OSObject* owner, IOTimerEventSource* timer);
+    static void timeoutOccurred(OSObject* owner, IOTimerEventSource* timer);
     
 public:
     IOTimerEventSource* tm;

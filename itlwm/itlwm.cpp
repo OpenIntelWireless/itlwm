@@ -14,6 +14,55 @@ OSDefineMetaClassAndStructors(CTimeout, OSObject)
 
 IOWorkLoop *_fWorkloop;
 
+enum
+{
+    MEDIUM_INDEX_AUTO = 0,
+    MEDIUM_INDEX_10HD,
+    MEDIUM_INDEX_10FD,
+    MEDIUM_INDEX_100HD,
+    MEDIUM_INDEX_100FD,
+    MEDIUM_INDEX_100FDFC,
+    MEDIUM_INDEX_1000FD,
+    MEDIUM_INDEX_1000FDFC,
+    MEDIUM_INDEX_1000FDEEE,
+    MEDIUM_INDEX_1000FDFCEEE,
+    MEDIUM_INDEX_100FDEEE,
+    MEDIUM_INDEX_100FDFCEEE,
+    MEDIUM_INDEX_COUNT
+};
+
+#define MBit 1000000
+
+static IOMediumType mediumTypeArray[MEDIUM_INDEX_COUNT] = {
+    kIOMediumEthernetAuto,
+    (kIOMediumEthernet10BaseT | kIOMediumOptionHalfDuplex),
+    (kIOMediumEthernet10BaseT | kIOMediumOptionFullDuplex),
+    (kIOMediumEthernet100BaseTX | kIOMediumOptionHalfDuplex),
+    (kIOMediumEthernet100BaseTX | kIOMediumOptionFullDuplex),
+    (kIOMediumEthernet100BaseTX | kIOMediumOptionFullDuplex | kIOMediumOptionFlowControl),
+    (kIOMediumEthernet1000BaseT | kIOMediumOptionFullDuplex),
+    (kIOMediumEthernet1000BaseT | kIOMediumOptionFullDuplex | kIOMediumOptionFlowControl),
+    (kIOMediumEthernet1000BaseT | kIOMediumOptionFullDuplex | kIOMediumOptionEEE),
+    (kIOMediumEthernet1000BaseT | kIOMediumOptionFullDuplex | kIOMediumOptionFlowControl | kIOMediumOptionEEE),
+    (kIOMediumEthernet100BaseTX | kIOMediumOptionFullDuplex | kIOMediumOptionEEE),
+    (kIOMediumEthernet100BaseTX | kIOMediumOptionFullDuplex | kIOMediumOptionFlowControl | kIOMediumOptionEEE)
+};
+
+static UInt32 mediumSpeedArray[MEDIUM_INDEX_COUNT] = {
+    0,
+    10 * MBit,
+    10 * MBit,
+    100 * MBit,
+    100 * MBit,
+    100 * MBit,
+    1000 * MBit,
+    1000 * MBit,
+    1000 * MBit,
+    1000 * MBit,
+    100 * MBit,
+    100 * MBit
+};
+
 bool itlwm::init(OSDictionary *properties)
 {
     XYLog("%s\n", __func__);
@@ -35,7 +84,6 @@ IOService* itlwm::probe(IOService *provider, SInt32 *score)
 bool itlwm::start(IOService *provider)
 {
     ifnet *ifp;
-    IOEthernetInterface *iface;
     
     XYLog("%s\n", __func__);
     if (!super::start(provider)) {
@@ -59,7 +107,40 @@ bool itlwm::start(IOService *provider)
         XYLog("No command gate!!\n");
         return false;
     }
+    fCommandGate->retain();
     fWorkloop->addEventSource(fCommandGate);
+    IONetworkMedium *medium;
+    IONetworkMedium *autoMedium;
+    OSDictionary *mediumDict = OSDictionary::withCapacity(MEDIUM_INDEX_COUNT + 1);
+    if (!mediumDict) {
+        XYLog("start fail, can not create mediumdict\n");
+        return false;
+    }
+    bool result;
+    for (int i = MEDIUM_INDEX_AUTO; i < MEDIUM_INDEX_COUNT; i++) {
+        medium = IONetworkMedium::medium(mediumTypeArray[i], mediumSpeedArray[i], 0, i);
+        if (!medium) {
+            XYLog("start fail, can not create mediumdict\n");
+            return false;
+        }
+        result = IONetworkMedium::addMedium(mediumDict, medium);
+        medium->release();
+        if (!result) {
+            XYLog("start fail, can not addMedium\n");
+            return false;
+        }
+        if (i == MEDIUM_INDEX_AUTO) {
+            autoMedium = medium;
+        }
+    }
+    if (!publishMediumDictionary(mediumDict)) {
+        XYLog("start fail, can not publish mediumdict\n");
+        return false;
+    }
+    if (!setSelectedMedium(autoMedium)){
+        XYLog("start fail, can not set current medium\n");
+        return false;
+    }
     pci.workloop = _fWorkloop;
     pci.pa_tag = device;
     if (!iwm_attach(&com, &pci)) {
@@ -67,9 +148,7 @@ bool itlwm::start(IOService *provider)
     }
     ifp = &com.sc_ic.ic_ac.ac_if;
     iwm_init(ifp);
-    iface = ifp->iface;
-    attachInterface((IONetworkInterface **)&iface);
-    if (iface == NULL) {
+    if (!attachInterface((IONetworkInterface **)&com.sc_ic.ic_ac.ac_if.iface)) {
         XYLog("attach to interface fail\n");
         return false;
     }
@@ -80,6 +159,18 @@ bool itlwm::start(IOService *provider)
 void itlwm::stop(IOService *provider)
 {
     XYLog("%s\n", __func__);
+    iwm_stop(&com.sc_ic.ic_ac.ac_if);
+    ieee80211_ifdetach(&com.sc_ic.ic_ac.ac_if);
+    if (fWorkloop) {
+        if (com.sc_ih) {
+            fWorkloop->removeEventSource(com.sc_ih);
+            OSSafeReleaseNULL(com.sc_ih);
+        }
+        fWorkloop->release();
+        fWorkloop = NULL;
+    }
+    OSSafeReleaseNULL(com.ih);
+    OSSafeReleaseNULL(fCommandGate);
     super::stop(provider);
 }
 
@@ -150,46 +241,33 @@ void itlwm::free()
     XYLog("%s\n", __func__);
     IOLockFree(fwLoadLock);
     fwLoadLock = NULL;
-    if (fCommandGate) {
-//        fCommandGate->disable();
-//        if (fWorkloop) {
-//            fWorkloop->removeEventSource(fCommandGate);
-//        }
-//        fCommandGate->release();
-//        fCommandGate = NULL;
-    }
-    if (com.ih) {
-//        iwm_stop(&com.sc_ic.ic_ac.ac_if);
-        ieee80211_ifdetach(&com.sc_ic.ic_ac.ac_if);
-//        if (fWorkloop && com.ih->intr) {
-//            com.ih->intr->disable();
-//            fWorkloop->removeEventSource(com.ih->intr);
-//            com.ih->intr->release();
-//        }
-//        com.ih->release();
-        com.ih = NULL;
-    }
-    if (fOutputQueue) {
-        fOutputQueue->flush();
-        fOutputQueue->release();
-        fOutputQueue = NULL;
-    }
     if (fWorkloop) {
+        if (com.sc_ih) {
+            fWorkloop->removeEventSource(com.sc_ih);
+            OSSafeReleaseNULL(com.sc_ih);
+        }
         fWorkloop->release();
         fWorkloop = NULL;
     }
+    OSSafeReleaseNULL(fCommandGate);
     super::free();
 }
 
 IOReturn itlwm::enable(IONetworkInterface *netif)
 {
     XYLog("%s\n", __func__);
+    setLinkStatus(kIONetworkLinkValid | kIONetworkLinkActive);
+    fOutputQueue->start();
     return super::enable(netif);
 }
 
 IOReturn itlwm::disable(IONetworkInterface *netif)
 {
     XYLog("%s\n", __func__);
+    if (fOutputQueue) {
+        fOutputQueue->stop();
+        fOutputQueue->flush();
+    }
     return super::disable(netif);
 }
 
@@ -206,7 +284,7 @@ IOReturn itlwm::getHardwareAddress(IOEthernetAddress *addrP) {
 IOOutputQueue *itlwm::createOutputQueue()
 {
     XYLog("%s\n", __func__);
-    if (fOutputQueue == 0) {
+    if (fOutputQueue == NULL) {
         fOutputQueue = IOGatedOutputQueue::withTarget(this, getWorkLoop());
     }
     return fOutputQueue;
@@ -430,37 +508,46 @@ iwm_newstate(struct ieee80211com *ic, enum ieee80211_state nstate, int arg)
     return 0;
 }
 
+ieee80211_wpaparams wpa;
+ieee80211_nwkey nwkey;
+ieee80211_join join;
+
+
 void itlwm::
 iwm_endscan(struct iwm_softc *sc)
 {
     XYLog("%s\n", __func__);
     int error;
-    ieee80211_wpaparams wpa;
-    ieee80211_nwkey nwkey;
-    ieee80211_join join;
+    
+    static const char *ssid_name = "Redmi";
+    static const char *ssid_pwd = "zxyssdt112233";
+    
     struct ieee80211_node *ni, *nextbs;
     struct ieee80211com *ic = &sc->sc_ic;
     
-    wpa.i_enabled = 1;
+//    wpa.i_enabled = 0;
+//    nwkey.i_wepon = IEEE80211_NWKEY_OPEN;
+    
+    wpa.i_enabled = 0;
     wpa.i_ciphers = IEEE80211_WPA_CIPHER_TKIP;
-    wpa.i_protos = IEEE80211_WPA_PROTO_WPA2;
-    wpa.i_akms = IEEE80211_WPA_AKM_SHA256_PSK;
-//    wpa.i_groupcipher = IEEE80211_WPA_CIPHER_TKIP;
+    wpa.i_protos = IEEE80211_WPA_PROTO_WPA1;
+    wpa.i_akms = IEEE80211_WPA_AKM_PSK;
+    wpa.i_groupcipher = IEEE80211_WPA_CIPHER_TKIP;
 //    error = ieee80211_ioctl_setwpaparms(ic, &wpa);
 //    if (error) {
 //        XYLog("%s ieee80211_ioctl_setwpaparms error=%d\n", __func__, error);
 //    }
-    nwkey.i_key[0].i_keydat = (uint8_t*)"zxyssdt112233";
-    nwkey.i_key[0].i_keylen = strlen("zxyssdt112233");
-    nwkey.i_wepon = 1;
+    nwkey.i_key[0].i_keydat = (uint8_t*)ssid_pwd;
+    nwkey.i_key[0].i_keylen = strlen(ssid_pwd);
+    nwkey.i_wepon = IEEE80211_NWKEY_OPEN;
     nwkey.i_defkid = 1;
 //    error = ieee80211_ioctl_setnwkeys(ic, &nwkey);
 //    if (error) {
 //        XYLog("%s ieee80211_ioctl_setnwkeys error=%d\n", __func__, error);
 //    }
 //    memset(ic->ic_des_essid, 0, IEEE80211_NWID_LEN);
-//    ic->ic_des_esslen = strlen("ssdt");
-//    memcpy(ic->ic_des_essid, "ssdt", strlen("ssdt"));
+//    ic->ic_des_esslen = strlen(ssid_name);
+//    memcpy(ic->ic_des_essid, ssid_name, strlen(ssid_name));
 //    if (ic->ic_des_esslen > 0) {
 //        /* 'nwid' disables auto-join magic */
 //        ic->ic_flags &= ~IEEE80211_F_AUTO_JOIN;
@@ -473,8 +560,8 @@ iwm_endscan(struct iwm_softc *sc)
 //    ieee80211_disable_wep(ic);
     join.i_nwkey = nwkey;
     join.i_wpaparams = wpa;
-    memcpy(&join.i_nwid, "ssdt", strlen("ssdt"));
-    join.i_len = strlen("ssdt");
+    memcpy(&join.i_nwid, ssid_name, strlen(ssid_name));
+    join.i_len = strlen(ssid_name);
     join.i_flags = IEEE80211_JOIN_WPAPSK | IEEE80211_JOIN_ANY | IEEE80211_JOIN_NWKEY;
     if (ieee80211_add_ess(ic, &join) == 0)
         ic->ic_flags |= IEEE80211_F_AUTO_JOIN;

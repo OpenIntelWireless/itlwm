@@ -55,7 +55,7 @@ int timeout_add_msec(CTimeout **to, int msecs)
         _fWorkloop->removeEventSource(cto->tm);
         OSSafeReleaseNULL(cto->tm);
     }
-    cto->tm = IOTimerEventSource::timerEventSource(cto, OSMemberFunctionCast(IOTimerEventSource::Action, cto, &CTimeout::timeoutOccurred));
+    cto->tm = IOTimerEventSource::timerEventSource(cto, &CTimeout::timeoutOccurred);
     if (cto->tm == NULL)
         return 0;
     if (_fWorkloop == NULL) {

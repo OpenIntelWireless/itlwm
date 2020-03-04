@@ -333,11 +333,19 @@ static inline int if_input(struct ifnet *ifq, struct mbuf_list *ml)
     uint64_t packets;
     if (ml_empty(ml))
         return (0);
-    IOLockLock(inputLock);
+//    IOLockLock(inputLock);
     MBUF_LIST_FOREACH(ml, m) {
+        if (ifq->iface == NULL) {
+            XYLog("%s ifq->iface == NULL!!!\n", __func__);
+            break;
+        }
+        if (m == NULL) {
+            XYLog("%s m == NULL!!!\n", __func__);
+            continue;
+        }
         ifq->iface->inputPacket(m);
     }
-    IOLockUnlock(inputLock);
+//    IOLockUnlock(inputLock);
     return 0;
 }
 
