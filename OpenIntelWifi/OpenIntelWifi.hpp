@@ -1,9 +1,21 @@
 /* add your code here */
+
+#include "apple80211/IO80211Controller.h"
+#include "apple80211/IO80211WorkLoop.h"
+#include "apple80211/IO80211Interface.h"
+
+#include "debug.h"
 #include "compat.h"
 #include "itlhdr.h"
 #include "kernel.h"
-
-#include <IOKit/network/IOEthernetController.h>
+#include <libkern/OSTypes.h>
+#include <IOKit/IOService.h>
+#include <IOKit/pci/IOPCIDevice.h>
+#include <IOKit/network/IOEthernetInterface.h>
+#include <IOKit/IOWorkLoop.h>
+#include <IOKit/network/IOGatedOutputQueue.h>
+#include <IOKit/IOTimerEventSource.h>
+#include <IOKit/IOLocks.h>
 #include <IOKit/IOWorkLoop.h>
 #include "IOKit/network/IOGatedOutputQueue.h"
 #include <libkern/c++/OSString.h>
@@ -14,24 +26,50 @@
 #include <libkern/c++/OSMetaClass.h>
 #include <IOKit/IOFilterInterruptEventSource.h>
 
-class itlwm : public IOEthernetController {
+typedef enum {
+    MEDIUM_TYPE_NONE = 0,
+    MEDIUM_TYPE_AUTO,
+    MEDIUM_TYPE_1MBIT,
+    MEDIUM_TYPE_2MBIT,
+    MEDIUM_TYPE_5MBIT,
+    MEDIUM_TYPE_11MBIT,
+    MEDIUM_TYPE_54MBIT,
+    MEDIUM_TYPE_INVALID
+} mediumType_t;
+
+#define RELEASE(x) if(x){(x)->release();(x)=NULL;}
+
+class itlwm : public IO80211Controller {
     OSDeclareDefaultStructors(itlwm)
     
 public:
     
-    //kext
-    bool init(OSDictionary *properties) override;
-    void free() override;
+    bool init(OSDictionary* parameters) APPLE_KEXT_OVERRIDE;
+    void free() APPLE_KEXT_OVERRIDE;
+    bool start(IOService* provider) APPLE_KEXT_OVERRIDE;
+    void stop(IOService* provider) APPLE_KEXT_OVERRIDE;
     IOService* probe(IOService* provider, SInt32* score) override;
-    bool start(IOService *provider) override;
-    void stop(IOService *provider) override;
-    IOReturn getHardwareAddress(IOEthernetAddress* addrP) override;
+    
+    SInt32 apple80211Request(unsigned int request_type, int request_number, IO80211Interface* interface, void* data) override;
+    UInt32 outputPacket (mbuf_t m, void* param) override;
+    IOReturn getMaxPacketSize(UInt32* maxSize) const;
+    const OSString* newVendorString() const;
+    const OSString* newModelString() const;
+    const OSString* newRevisionString() const;
     IOReturn enable(IONetworkInterface *netif) override;
     IOReturn disable(IONetworkInterface *netif) override;
-    IOReturn setPromiscuousMode(bool active) override;
-    IOReturn setMulticastMode(bool active) override;
-    IOOutputQueue * createOutputQueue() override;
-    UInt32 outputPacket(mbuf_t, void * param) override;
+    bool configureInterface(IONetworkInterface *netif) override;
+    IO80211Interface* getNetworkInterface() override;
+    IOReturn getHardwareAddressForInterface(IO80211Interface* netif, IOEthernetAddress* addr) override;
+    IOReturn getHardwareAddress(IOEthernetAddress* addr) override;
+    IOReturn setPromiscuousMode(IOEnetPromiscuousMode mode) override;
+    IOReturn setMulticastMode(IOEnetMulticastMode mode) override;
+    IOReturn setMulticastList(IOEthernetAddress* addr, UInt32 len) override;
+    SInt32 monitorModeSetEnabled(IO80211Interface* interface, bool enabled, UInt32 dlt) override;
+    
+    bool createWorkLoop() override;
+    IOWorkLoop* getWorkLoop() const override;
+    
     static IOReturn tsleepHandler(OSObject* owner, void* arg0 = 0, void* arg1 = 0, void* arg2 = 0, void* arg3 = 0);
     int tsleep_nsec(void *ident, int priority, const char *wmesg, int timo);
     void wakeupOn(void* ident);
@@ -287,22 +325,91 @@ public:
     int    iwm_activate(struct device *, int);
     int    iwm_resume(struct iwm_softc *);
     
-    
+protected:
+    IO80211Interface* getInterface();
     
 private:
-    IOGatedOutputQueue*    fOutputQueue;
+    // 1 - SSID
+    IOReturn getSSID(IO80211Interface* interface, struct apple80211_ssid_data* sd);
+    IOReturn setSSID(IO80211Interface* interface, struct apple80211_ssid_data* sd);
+    // 2 - AUTH_TYPE
+    IOReturn getAUTH_TYPE(IO80211Interface* interface, struct apple80211_authtype_data* ad);
+    // 4 - CHANNEL
+    IOReturn getCHANNEL(IO80211Interface* interface, struct apple80211_channel_data* cd);
+    // 7 - TXPOWER
+    IOReturn getTXPOWER(IO80211Interface* interface, struct apple80211_txpower_data* txd);
+    // 8 - RATE
+    IOReturn getRATE(IO80211Interface* interface, struct apple80211_rate_data* rd);
+    // 9 - BSSID
+    IOReturn getBSSID(IO80211Interface* interface, struct apple80211_bssid_data* bd);
+    // 10 - SCAN_REQ
+    IOReturn setSCAN_REQ(IO80211Interface* interface, struct apple80211_scan_data* sd);
+    // 11 - SCAN_RESULT
+    IOReturn getSCAN_RESULT(IO80211Interface* interface, apple80211_scan_result* *sr);
+    // 12 - CARD_CAPABILITIES
+    IOReturn getCARD_CAPABILITIES(IO80211Interface* interface, struct apple80211_capability_data* cd);
+    // 13 - STATE
+    IOReturn getSTATE(IO80211Interface* interface, struct apple80211_state_data* sd);
+    IOReturn setSTATE(IO80211Interface* interface, struct apple80211_state_data* sd);
+    // 14 - PHY_MODE
+    IOReturn getPHY_MODE(IO80211Interface* interface, struct apple80211_phymode_data* pd);
+    // 15 - OP_MODE
+    IOReturn getOP_MODE(IO80211Interface* interface, struct apple80211_opmode_data* od);
+    // 16 - RSSI
+    IOReturn getRSSI(IO80211Interface* interface, struct apple80211_rssi_data* rd);
+    // 17 - NOISE
+    IOReturn getNOISE(IO80211Interface* interface,struct apple80211_noise_data* nd);
+    // 18 - INT_MIT
+    IOReturn getINT_MIT(IO80211Interface* interface, struct apple80211_intmit_data* imd);
+    // 19 - POWER
+    IOReturn getPOWER(IO80211Interface* interface, struct apple80211_power_data* pd);
+    IOReturn setPOWER(IO80211Interface* interface, struct apple80211_power_data* pd);
+    // 20 - ASSOCIATE
+    IOReturn setASSOCIATE(IO80211Interface* interface,struct apple80211_assoc_data* ad);
+    // 27 - SUPPORTED_CHANNELS
+    IOReturn getSUPPORTED_CHANNELS(IO80211Interface* interface, struct apple80211_sup_channel_data* ad);
+    // 28 - LOCALE
+    IOReturn getLOCALE(IO80211Interface* interface, struct apple80211_locale_data* ld);
+    // 37 - TX_ANTENNA
+    IOReturn getTX_ANTENNA(IO80211Interface* interface, apple80211_antenna_data* ad);
+    // 39 - ANTENNA_DIVERSITY
+    IOReturn getANTENNA_DIVERSITY(IO80211Interface* interface, apple80211_antenna_data* ad);
+    // 43 - DRIVER_VERSION
+    IOReturn getDRIVER_VERSION(IO80211Interface* interface, struct apple80211_version_data* hv);
+    // 44 - HARDWARE_VERSION
+    IOReturn getHARDWARE_VERSION(IO80211Interface* interface, struct apple80211_version_data* hv);
+    // 51 - COUNTRY_CODE
+    IOReturn getCOUNTRY_CODE(IO80211Interface* interface, struct apple80211_country_code_data* cd);
+    // 57 - MCS
+    IOReturn getMCS(IO80211Interface* interface, struct apple80211_mcs_data* md);
+    IOReturn getROAM_THRESH(IO80211Interface* interface, struct apple80211_roam_threshold_data* md);
+    IOReturn getRADIO_INFO(IO80211Interface* interface, struct apple80211_radio_info_data* md);
+    
+    
+    inline void ReleaseAll() {
+        RELEASE(fOutputQueue);
+        RELEASE(fCommandGate);
+        RELEASE(fWorkloop);
+        RELEASE(mediumDict);
+        RELEASE(fWorkloop);
+        RELEASE(fPciDevice);
+    }
+    
+    bool addMediumType(UInt32 type, UInt32 speed, UInt32 code, char* name = 0);
+    
+    IO80211WorkLoop* fWorkloop;
+    IO80211Interface* fInterface;
+    IOGatedOutputQueue* fOutputQueue;
+    IOCommandGate* fCommandGate;
+    IOPCIDevice* fPciDevice;
+    
+    OSDictionary* mediumDict;
+    IONetworkMedium* mediumTable[MEDIUM_TYPE_INVALID];
+    
+private:
     IOInterruptEventSource* fInterrupt;
-    IOWorkLoop *fWorkloop;
-    IOCommandGate*        fCommandGate;
     struct pci_attach_args pci;
     struct iwm_softc com;
-    IONetworkMedium *autoMedium;
     
     IOLock *fwLoadLock;
-};
-
-struct ResourceCallbackContext
-{
-    itlwm* context;
-    OSData* resource;
 };

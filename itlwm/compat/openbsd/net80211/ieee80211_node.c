@@ -1685,6 +1685,7 @@ ieee80211_alloc_node(struct ieee80211com *ic, const u_int8_t *macaddr)
 struct ieee80211_node *
 ieee80211_dup_bss(struct ieee80211com *ic, const u_int8_t *macaddr)
 {
+    XYLog("%s %d\n", __func__, __LINE__);
 	struct ieee80211_node *ni = ieee80211_alloc_node_helper(ic);
 	if (ni != NULL) {
 		ieee80211_setup_node(ic, ni, macaddr);
@@ -2932,10 +2933,10 @@ ieee80211_notify_dtim(struct ieee80211com *ic)
 			wh = mtod(m, struct ieee80211_frame *);
 			wh->i_fc[1] |= IEEE80211_FC1_MORE_DATA;
 		}
-        ifp->output_queue->enqueue(m, &TX_TYPE_MGMT);
-//		mq_enqueue(&ic->ic_pwrsaveq, m);
-//		if_start(ifp);
-        ifp->output_queue->start();
+//        ifp->output_queue->enqueue(m, &TX_TYPE_MGMT);
+		mq_enqueue(&ic->ic_pwrsaveq, m);
+		ifp->if_start(ifp);
+//        ifp->output_queue->start();
 	}
 	/* XXX assumes everything has been sent */
 	ic->ic_tim_mcast_pending = 0;

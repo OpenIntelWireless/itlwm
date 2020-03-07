@@ -125,12 +125,17 @@ ieee80211_send_eapol_key(struct ieee80211com *ic, mbuf_t m,
         timeout_add_msec(&ni->ni_eapol_to, 100);
 #endif
     
-    ifp->output_queue->enqueue(m, &TX_TYPE_MGMT);
+//    ifp->output_queue->enqueue(m, &TX_TYPE_MGMT);
+    XYLog("%s 啊啊啊啊 enqueue!!\n", __func__);
+    if (!ifp->if_snd->enqueue(m)) {
+        XYLog("%s 啊啊啊啊 enqueue fail!!\n", __func__);
+        return -1;
+    }
 //    IFQ_ENQUEUE(&ifp->if_snd, m, error);
 //    if (error)
 //        return (error);
-//    if_start(ifp);
-    ifp->output_queue->start();
+    ifp->if_start(ifp);
+//    ifp->output_queue->start();
     return 0;
 }
 

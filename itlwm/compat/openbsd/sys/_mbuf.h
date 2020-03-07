@@ -333,7 +333,7 @@ static inline int if_input(struct ifnet *ifq, struct mbuf_list *ml)
     uint64_t packets;
     if (ml_empty(ml))
         return (0);
-//    IOLockLock(inputLock);
+    IOLockLock(inputLock);
     MBUF_LIST_FOREACH(ml, m) {
         if (ifq->iface == NULL) {
             XYLog("%s ifq->iface == NULL!!!\n", __func__);
@@ -343,9 +343,10 @@ static inline int if_input(struct ifnet *ifq, struct mbuf_list *ml)
             XYLog("%s m == NULL!!!\n", __func__);
             continue;
         }
-        ifq->iface->inputPacket(m);
+        XYLog("%s %d 啊啊啊啊 ifq->iface->inputPacket(m)\n", __func__, __LINE__);
+        ifq->iface->inputPacket(m, 0, 0, 0);
     }
-//    IOLockUnlock(inputLock);
+    IOLockUnlock(inputLock);
     return 0;
 }
 
@@ -354,7 +355,9 @@ extern int TX_TYPE_FRAME;
 
 static inline int if_enqueue(struct ifnet *ifq, mbuf_t m)
 {
-    ifq->output_queue->enqueue(m, &TX_TYPE_FRAME);
+//    ifq->output_queue->enqueue(m, &TX_TYPE_FRAME);
+    XYLog("%s 啊啊啊啊 if_enqueue!!\n", __func__);
+    ifq->if_snd->enqueue(m);
     return 0;
 }
 

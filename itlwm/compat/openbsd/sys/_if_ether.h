@@ -15,6 +15,7 @@
 #include <sys/_if_media.h>
 #include <net/if_dl.h>
 
+#include <IOKit/network/IOPacketQueue.h>
 #include <IOKit/network/IOEthernetInterface.h>
 #include <IOKit/network/IOOutputQueue.h>
 
@@ -179,7 +180,7 @@ struct ifnet {                /* and the entries */
     int    (*if_wol)(struct ifnet *, int);    /* WoL routine **/
 
     /* queues */
-    struct    ifqueue if_snd;        /* transmit queue */
+    IOPacketQueue *if_snd;        /* transmit queue */
     struct    ifqueue **if_ifqs;    /* [I] pointer to an array of sndqs */
     void    (*if_qstart)(struct ifqueue *);
     unsigned int if_nifqs;        /* [I] number of output queues */

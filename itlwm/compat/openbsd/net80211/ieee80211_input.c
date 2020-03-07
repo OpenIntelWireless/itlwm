@@ -287,9 +287,11 @@ ieee80211_inputm(struct ifnet *ifp, mbuf_t m, struct ieee80211_node *ni,
 			/* dequeue buffered unicast frames */
 			while ((m = mq_dequeue(&ni->ni_savedq)) != NULL) {
 //				mq_enqueue(&ic->ic_pwrsaveq, m);
-                ifp->output_queue->enqueue(m, &TX_TYPE_FRAME);
+//                ifp->output_queue->enqueue(m, &TX_TYPE_FRAME);
 //				if_start(ifp);
-                ifp->output_queue->start();
+//                ifp->output_queue->start();
+                mq_enqueue(&ic->ic_pwrsaveq, m);
+                ifp->if_start(ifp);
 			}
 		}
 	}
@@ -427,7 +429,7 @@ ieee80211_inputm(struct ifnet *ifp, mbuf_t m, struct ieee80211_node *ni,
 		if (ic->ic_rawbpf)
 			bpf_mtap(ic->ic_rawbpf, m, BPF_DIRECTION_IN);
 #endif
-
+        XYLog("%s %d\n", __FUNCTION__, __LINE__);
 		if ((ni->ni_flags & IEEE80211_NODE_HT) &&
 		    hasqos && (qos & IEEE80211_QOS_AMSDU))
 			ieee80211_amsdu_decap(ic, m, ni, hdrlen, ml);
@@ -869,6 +871,7 @@ ieee80211_enqueue_data(struct ieee80211com *ic, mbuf_t m,
 		struct ieee80211_node *ni1;
 
 		if (ETHER_IS_MULTICAST(eh->ether_dhost)) {
+            XYLog("%s %d\n", __FUNCTION__, __LINE__);
             mbuf_dup(m, MBUF_DONTWAIT, &m1);
             if (m1) {
                 mbuf_adj(m1, ETHER_ALIGN);
@@ -878,6 +881,7 @@ ieee80211_enqueue_data(struct ieee80211com *ic, mbuf_t m,
 			else
                 mbuf_setflags(m1, mbuf_flags(m1) | MBUF_MCAST);
 		} else if (!mcast) {
+            XYLog("%s %d\n", __FUNCTION__, __LINE__);
 			ni1 = ieee80211_find_node(ic, eh->ether_dhost);
 			if (ni1 != NULL &&
 			    ni1->ni_state == IEEE80211_STA_ASSOC) {
@@ -885,6 +889,7 @@ ieee80211_enqueue_data(struct ieee80211com *ic, mbuf_t m,
 				m = NULL;
 			}
 		}
+        XYLog("%s %d 啊啊啊啊\n", __FUNCTION__, __LINE__);
 		if (m1 != NULL) {
 			if (if_enqueue(ifp, m1))
 				 ifp->if_oerrors++;
@@ -905,6 +910,7 @@ ieee80211_enqueue_data(struct ieee80211com *ic, mbuf_t m,
 #endif
 			ieee80211_eapol_key_input(ic, m, ni);
 		} else {
+            XYLog("%s %d 啊啊啊啊 ml_enqueue\n", __FUNCTION__, __LINE__);
 			ml_enqueue(ml, m);
 		}
 	}
@@ -914,6 +920,7 @@ void
 ieee80211_decap(struct ieee80211com *ic, mbuf_t m,
     struct ieee80211_node *ni, int hdrlen, struct mbuf_list *ml)
 {
+    XYLog("%s\n", __FUNCTION__);
 	struct ether_header eh;
 	struct ieee80211_frame *wh;
 	struct llc *llc;
@@ -921,6 +928,7 @@ ieee80211_decap(struct ieee80211com *ic, mbuf_t m,
 
 	if (mbuf_len(m) < hdrlen + LLC_SNAPFRAMELEN &&
         mbuf_pullup(&m, hdrlen + LLC_SNAPFRAMELEN)) {
+        XYLog("%s %d\n", __FUNCTION__, __LINE__);
 		ic->ic_stats.is_rx_decap++;
 		return;
 	}
@@ -952,26 +960,33 @@ ieee80211_decap(struct ieee80211com *ic, mbuf_t m,
 	    llc->llc_snap.org_code[0] == 0 &&
 	    llc->llc_snap.org_code[1] == 0 &&
 	    llc->llc_snap.org_code[2] == 0) {
+        XYLog("%s %d\n", __FUNCTION__, __LINE__);
 		eh.ether_type = llc->llc_snap.ether_type;
 		mbuf_adj(m, hdrlen + LLC_SNAPFRAMELEN - ETHER_HDR_LEN);
 	} else {
+        XYLog("%s %d\n", __FUNCTION__, __LINE__);
 		eh.ether_type = htons(mbuf_pkthdr_len(m) - hdrlen);
 		mbuf_adj(m, hdrlen - ETHER_HDR_LEN);
 	}
 	memcpy(mtod(m, caddr_t), &eh, ETHER_HDR_LEN);
+    XYLog("%s %d\n", __FUNCTION__, __LINE__);
 	if (!ALIGNED_POINTER((mtod(m, caddr_t) + ETHER_HDR_LEN), u_int32_t)) {
+        XYLog("%s %d\n", __FUNCTION__, __LINE__);
 		mbuf_t m0 = m;
         mbuf_dup(m0, M_NOWAIT, &m);
         if (m) {
+            XYLog("%s %d\n", __FUNCTION__, __LINE__);
             mbuf_adj(m, ETHER_ALIGN);
         }
 //		m = m_dup_pkt(m0, ETHER_ALIGN, M_NOWAIT); //TODO 可能会有问题
+        XYLog("%s %d\n", __FUNCTION__, __LINE__);
 		mbuf_freem(m0);
 		if (m == NULL) {
 			ic->ic_stats.is_rx_decap++;
 			return;
 		}
 	}
+    XYLog("%s begin ieee80211_enqueue_data\n", __FUNCTION__);
 	ieee80211_enqueue_data(ic, m, ni, mcast, ml);
 }
 
@@ -3094,10 +3109,12 @@ ieee80211_recv_pspoll(struct ieee80211com *ic, mbuf_t m,
 		wh = mtod(m, struct ieee80211_frame *);
 		wh->i_fc[1] |= IEEE80211_FC1_MORE_DATA;
 	}
-    ifp->output_queue->enqueue(m, &TX_TYPE_FRAME);
+//    ifp->output_queue->enqueue(m, &TX_TYPE_FRAME);
+    mq_enqueue(&ic->ic_pwrsaveq, m);
+    ifp->if_start(ifp);
 //	mq_enqueue(&ic->ic_pwrsaveq, m);
 //	if_start(ifp);
-    ifp->output_queue->start();
+//    ifp->output_queue->start();
 }
 #endif	/* IEEE80211_STA_ONLY */
 

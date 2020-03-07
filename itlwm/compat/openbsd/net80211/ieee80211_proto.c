@@ -1257,8 +1257,8 @@ justcleanup:
 			}
 			ic->ic_mgt_timer = 0;
 			ieee80211_set_beacon_miss_threshold(ic);
-//			if_start(ifp);
-            ifp->output_queue->start();
+			ifp->if_start(ifp);
+//            ifp->output_queue->start();
 			break;
 		}
 		break;
