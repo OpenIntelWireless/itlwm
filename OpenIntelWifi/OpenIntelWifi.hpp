@@ -65,7 +65,7 @@ public:
     IOReturn setPromiscuousMode(IOEnetPromiscuousMode mode) override;
     IOReturn setMulticastMode(IOEnetMulticastMode mode) override;
     IOReturn setMulticastList(IOEthernetAddress* addr, UInt32 len) override;
-    SInt32 monitorModeSetEnabled(IO80211Interface* interface, bool enabled, UInt32 dlt) override;
+    SInt32 monitorModeSetEnabled(IO80211Interface* interface, bool enabled, UInt32 dlt);
     
     bool createWorkLoop() override;
     IOWorkLoop* getWorkLoop() const override;
@@ -393,6 +393,10 @@ private:
         RELEASE(mediumDict);
         RELEASE(fWorkloop);
         RELEASE(fPciDevice);
+        if (fwLoadLock) {
+            IOLockFree(fwLoadLock);
+            fwLoadLock = NULL;
+        }
     }
     
     bool addMediumType(UInt32 type, UInt32 speed, UInt32 code, char* name = 0);

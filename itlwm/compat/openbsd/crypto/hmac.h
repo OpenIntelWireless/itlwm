@@ -19,6 +19,9 @@
 #ifndef _HMAC_H_
 #define _HMAC_H_
 
+#include "sha2.h"
+#include "md5.h"
+
 typedef struct _HMAC_MD5_CTX {
 	MD5_CTX		ctx;
 	u_int8_t	key[MD5_BLOCK_LENGTH];

@@ -31,6 +31,8 @@ enum
     MEDIUM_INDEX_COUNT
 };
 
+IONetworkMedium *mediumTable[MEDIUM_INDEX_COUNT];
+
 #define MBit 1000000
 
 static IOMediumType mediumTypeArray[MEDIUM_INDEX_COUNT] = {
@@ -124,10 +126,12 @@ bool itlwm::start(IOService *provider)
             return false;
         }
         result = IONetworkMedium::addMedium(mediumDict, medium);
+        medium->release();
         if (!result) {
             XYLog("start fail, can not addMedium\n");
             return false;
         }
+        mediumTable[i] = medium;
         if (i == MEDIUM_INDEX_AUTO) {
             autoMedium = medium;
         }
@@ -189,6 +193,12 @@ IOReturn itlwm::setMulticastMode(bool active)
     return kIOReturnSuccess;
 }
 
+IOReturn itlwm::setMulticastList(IOEthernetAddress *addrs, UInt32 count)
+{
+    XYLog("%s\n", __func__);
+    return kIOReturnSuccess;
+}
+
 void itlwm::free()
 {
     XYLog("%s\n", __func__);
@@ -210,18 +220,13 @@ void itlwm::free()
 IOReturn itlwm::enable(IONetworkInterface *netif)
 {
     XYLog("%s\n", __func__);
-    setLinkStatus(kIONetworkLinkValid | kIONetworkLinkActive);
-    getOutputQueue()->start();
+    setLinkStatus(kIONetworkLinkValid | kIONetworkLinkActive, mediumTable[MEDIUM_INDEX_1000FDFCEEE]);
     return super::enable(netif);
 }
 
 IOReturn itlwm::disable(IONetworkInterface *netif)
 {
     XYLog("%s\n", __func__);
-    if (fOutputQueue) {
-        fOutputQueue->stop();
-        fOutputQueue->flush();
-    }
     return super::disable(netif);
 }
 
@@ -235,68 +240,14 @@ IOReturn itlwm::getHardwareAddress(IOEthernetAddress *addrP) {
     }
 }
 
-IOOutputQueue *itlwm::createOutputQueue()
-{
-    XYLog("%s\n", __func__);
-    if (fOutputQueue == NULL) {
-        fOutputQueue = IOGatedOutputQueue::withTarget(this, getWorkLoop());
-    }
-    return fOutputQueue;
-}
-
 UInt32 itlwm::outputPacket(mbuf_t m, void *param)
 {
     XYLog("%s\n", __func__);
     ifnet *ifp = &com.sc_ic.ic_ac.ac_if;
     struct iwm_softc *sc = &com;
-    struct ieee80211com *ic = &sc->sc_ic;
-    struct ieee80211_node *ni;
-    struct ether_header *eh;
     
-    int ac = EDCA_AC_BE; /* XXX */
-    if (!(ifp->if_flags & IFF_RUNNING) /*|| ifq_is_oactive(&ifp->if_snd)*/)
-        return kIOReturnOutputDropped;
-    //    /* why isn't this done per-queue? */
-    //    if (sc->qfullmsk != 0) {
-    //        //            ifq_set_oactive(&ifp->if_snd);
-    //        break;
-    //    }
-    if (param == &TX_TYPE_MGMT) {
-        ni = (struct ieee80211_node *)mbuf_pkthdr_rcvif(m);
-        goto sendit;
-    } else {
-        if (ic->ic_state != IEEE80211_S_RUN ||
-            (ic->ic_xflags & IEEE80211_F_TX_MGMT_ONLY))
-            return kIOReturnOutputDropped;
-        if (!m)
-            return kIOReturnOutputDropped;
-        if (mbuf_len(m) < sizeof (*eh) &&
-            mbuf_pullup(&m, sizeof (*eh)) != 0) {
-            ifp->if_oerrors++;
-            return kIOReturnOutputDropped;
-        }
-#if NBPFILTER > 0
-        if (ifp->if_bpf != NULL)
-            bpf_mtap(ifp->if_bpf, m, BPF_DIRECTION_OUT);
-#endif
-        if ((m = ieee80211_encap(ifp, m, &ni)) == NULL) {
-            ifp->if_oerrors++;
-            return kIOReturnOutputDropped;
-        }
-    }
-    if (iwm_tx(sc, m, ni, ac) != 0) {
-        ieee80211_release_node(ic, ni);
-        ifp->if_oerrors++;
-        return kIOReturnOutputDropped;
-    }
-sendit:
-#if NBPFILTER > 0
-    if (ifp->if_bpf != NULL)
-        bpf_mtap(ifp->if_bpf, m, BPF_DIRECTION_OUT);
-#endif
-    if (ifp->if_flags & IFF_UP) {
-        sc->sc_tx_timer = 15;
-        ifp->if_timer = 1;
-    }
+    ifp->if_snd->lockEnqueue(m);
+    ifp->if_start(ifp);
+    
     return kIOReturnOutputSuccess;
 }

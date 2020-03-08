@@ -30,7 +30,7 @@ public:
     IOReturn disable(IONetworkInterface *netif) override;
     IOReturn setPromiscuousMode(bool active) override;
     IOReturn setMulticastMode(bool active) override;
-    IOOutputQueue * createOutputQueue() override;
+    IOReturn setMulticastList(IOEthernetAddress *addrs, UInt32 count) override;
     UInt32 outputPacket(mbuf_t, void * param) override;
     static IOReturn tsleepHandler(OSObject* owner, void* arg0 = 0, void* arg1 = 0, void* arg2 = 0, void* arg3 = 0);
     int tsleep_nsec(void *ident, int priority, const char *wmesg, int timo);
@@ -290,7 +290,6 @@ public:
     
     
 private:
-    IOGatedOutputQueue*    fOutputQueue;
     IOInterruptEventSource* fInterrupt;
     IOWorkLoop *fWorkloop;
     IOCommandGate*        fCommandGate;

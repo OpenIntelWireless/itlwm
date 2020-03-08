@@ -42,7 +42,7 @@ struct mbuf_list {
 };
 
 struct mbuf_queue {
-    IOLock*        mq_mtx;
+    IORecursiveLock*        mq_mtx;
     struct mbuf_list    mq_list;
     u_int            mq_maxlen;
     u_int            mq_drops;
@@ -147,7 +147,7 @@ ml_purge(struct mbuf_list *ml)
 static inline void
 mq_init(struct mbuf_queue *mq, u_int maxlen, int ipl)
 {
-    mq->mq_mtx = IOLockAlloc();
+    mq->mq_mtx = IORecursiveLockAlloc();
     ml_init(&mq->mq_list);
     mq->mq_maxlen = maxlen;
 }
@@ -157,7 +157,7 @@ mq_enqueue(struct mbuf_queue *mq, mbuf_t m)
 {
     int dropped = 0;
 
-    IOLockLock(mq->mq_mtx);
+    IORecursiveLockLock(mq->mq_mtx);
     
     if (mq_len(mq) < mq->mq_maxlen)
         ml_enqueue(&mq->mq_list, m);
@@ -165,7 +165,7 @@ mq_enqueue(struct mbuf_queue *mq, mbuf_t m)
         mq->mq_drops++;
         dropped = 1;
     }
-    IOLockUnlock(mq->mq_mtx);
+    IORecursiveLockUnlock(mq->mq_mtx);
 
     if (dropped)
         mbuf_freem(m);
@@ -178,9 +178,9 @@ mq_dequeue(struct mbuf_queue *mq)
 {
     mbuf_t m;
 
-    IOLockLock(mq->mq_mtx);
+    IORecursiveLockLock(mq->mq_mtx);
     m = ml_dequeue(&mq->mq_list);
-    IOLockUnlock(mq->mq_mtx);
+    IORecursiveLockUnlock(mq->mq_mtx);
 
     return (m);
 }
@@ -191,14 +191,14 @@ mq_enlist(struct mbuf_queue *mq, struct mbuf_list *ml)
     mbuf_t m;
     int dropped = 0;
 
-    IOLockLock(mq->mq_mtx);
+    IORecursiveLockLock(mq->mq_mtx);
     if (mq_len(mq) < mq->mq_maxlen)
         ml_enlist(&mq->mq_list, ml);
     else {
         dropped = ml_len(ml);
         mq->mq_drops += dropped;
     }
-    IOLockUnlock(mq->mq_mtx);
+    IORecursiveLockUnlock(mq->mq_mtx);
 
     if (dropped) {
         while ((m = ml_dequeue(ml)) != NULL)
@@ -211,10 +211,10 @@ mq_enlist(struct mbuf_queue *mq, struct mbuf_list *ml)
 static inline void
 mq_delist(struct mbuf_queue *mq, struct mbuf_list *ml)
 {
-    IOLockLock(mq->mq_mtx);
+    IORecursiveLockLock(mq->mq_mtx);
     *ml = mq->mq_list;
     ml_init(&mq->mq_list);
-    IOLockUnlock(mq->mq_mtx);
+    IORecursiveLockUnlock(mq->mq_mtx);
 }
 
 static inline mbuf_t
@@ -222,9 +222,9 @@ mq_dechain(struct mbuf_queue *mq)
 {
     mbuf_t m0;
 
-    IOLockLock(mq->mq_mtx);
+    IORecursiveLockLock(mq->mq_mtx);
     m0 = ml_dechain(&mq->mq_list);
-    IOLockUnlock(mq->mq_mtx);
+    IORecursiveLockUnlock(mq->mq_mtx);
 
     return (m0);
 }
@@ -357,7 +357,7 @@ static inline int if_enqueue(struct ifnet *ifq, mbuf_t m)
 {
 //    ifq->output_queue->enqueue(m, &TX_TYPE_FRAME);
     XYLog("%s 啊啊啊啊 if_enqueue!!\n", __func__);
-    ifq->if_snd->enqueue(m);
+    ifq->if_snd->lockEnqueue(m);
     return 0;
 }
 

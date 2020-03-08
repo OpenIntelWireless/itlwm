@@ -45,6 +45,7 @@ bool itlwm::init(OSDictionary* parameters) {
         IOLog("Failed to call IO80211Controller::init!");
         return false;
     }
+    fwLoadLock = IOLockAlloc();
     return true;
 }
 
@@ -158,13 +159,13 @@ bool itlwm::start(IOService* provider) {
     }
     pci.workloop = _fWorkloop;
     pci.pa_tag = device;
-    if (!iwm_attach(&com, &pci)) {
-        return false;
-    }
+//    if (!iwm_attach(&com, &pci)) {
+//        return false;
+//    }
     ifp = &com.sc_ic.ic_ac.ac_if;
     ifp->iface = fInterface;
-    iwm_init(ifp);
-    if (!attachInterface((IONetworkInterface **)&com.sc_ic.ic_ac.ac_if.iface)) {
+//    iwm_init(ifp);
+    if (!attachInterface((IONetworkInterface **)&com.sc_ic.ic_ac.ac_if.iface, true)) {
         XYLog("attach to interface fail\n");
         ReleaseAll();
         return false;
@@ -173,7 +174,6 @@ bool itlwm::start(IOService* provider) {
     fInterface->registerService();
     registerService();
 
-    
     return true;
 }
 
