@@ -5,8 +5,11 @@
 //  Created by 钟先耀 on 2020/2/19.
 //  Copyright © 2020 钟先耀. All rights reserved.
 //
-
+#ifndef CUSTOM_HEADER
 #include "itlwm.hpp"
+#else
+#include "OpenWifi.hpp"
+#endif
 
 int itlwm::
 iwm_is_mimo_ht_plcp(uint8_t ht_plcp)

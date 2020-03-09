@@ -6,7 +6,11 @@
 //  Copyright © 2020 钟先耀. All rights reserved.
 //
 
+#ifndef CUSTOM_HEADER
 #include "itlwm.hpp"
+#else
+#include "OpenWifi.hpp"
+#endif
 
 void itlwm::
 iwm_led_enable(struct iwm_softc *sc)

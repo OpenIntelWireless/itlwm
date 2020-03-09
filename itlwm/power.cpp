@@ -6,7 +6,11 @@
 //  Copyright © 2020 钟先耀. All rights reserved.
 //
 
+#ifndef CUSTOM_HEADER
 #include "itlwm.hpp"
+#else
+#include "OpenWifi.hpp"
+#endif
 
 #define IWM_POWER_KEEP_ALIVE_PERIOD_SEC    25
 

@@ -6,7 +6,11 @@
 //  Copyright © 2020 钟先耀. All rights reserved.
 //
 
+#ifndef CUSTOM_HEADER
 #include "itlwm.hpp"
+#else
+#include "OpenWifi.hpp"
+#endif
 
 void itlwm::
 iwm_free_tx_ring(iwm_softc *sc, struct iwm_tx_ring *ring)

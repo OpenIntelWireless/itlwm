@@ -6,7 +6,11 @@
 //  Copyright © 2020 钟先耀. All rights reserved.
 //
 
+#ifndef CUSTOM_HEADER
 #include "itlwm.hpp"
+#else
+#include "OpenWifi.hpp"
+#endif
 
 void itlwm::
 iwm_phy_ctxt_cmd_hdr(struct iwm_softc *sc, struct iwm_phy_ctxt *ctxt,

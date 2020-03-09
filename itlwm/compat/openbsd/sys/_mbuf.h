@@ -266,6 +266,7 @@ m_cat(mbuf_t m, mbuf_t n)
 }
 
 #define M_EXTWR        0x0008    /* external storage is writable */
+#define    MAXMCLBYTES    (64 * 1024)        /* largest cluster from the stack */
 
 /*
  * mbuf chain defragmenter. This function uses some evil tricks to defragment
@@ -322,6 +323,79 @@ m_defrag(mbuf_t m, int how)
     mbuf_free(m0);
 
     return (0);
+}
+
+/*
+ * Duplicate mbuf pkthdr from from to to.
+ * from must have M_PKTHDR set, and to must be empty.
+ */
+static inline int
+m_dup_pkthdr(mbuf_t to, mbuf_t from, int wait)
+{
+    int error;
+
+    mbuf_setflags(to, mbuf_flags(to) & (MBUF_EXT | M_EXTWR));
+//    to->m_flags = (to->m_flags & (M_EXT | M_EXTWR));
+    mbuf_setflags(to, mbuf_flags(to) | (mbuf_flags(from)));
+//    to->m_flags |= (from->m_flags & M_COPYFLAGS);
+    mbuf_pkthdr_setheader(to, mbuf_pkthdr_header(from));
+//    to->m_pkthdr = from->m_pkthdr;
+
+//#if NPF > 0
+//    to->m_pkthdr.pf.statekey = NULL;
+//    pf_mbuf_link_state_key(to, from->m_pkthdr.pf.statekey);
+//    to->m_pkthdr.pf.inp = NULL;
+//    pf_mbuf_link_inpcb(to, from->m_pkthdr.pf.inp);
+//#endif    /* NPF > 0 */
+
+//    SLIST_INIT(&to->m_pkthdr.ph_tags);
+
+//    if ((error = m_tag_copy_chain(to, from, wait)) != 0)
+//        return (error);
+
+    if ((mbuf_flags(to) & MBUF_EXT) == 0)
+        mbuf_setdata(to, mbuf_pkthdr_header(to) , mbuf_pkthdr_len(to));
+
+    return (0);
+}
+
+static inline mbuf_t
+m_dup_pkt(mbuf_t m0, unsigned int adj, int wait)
+{
+    mbuf_t m;
+    int len;
+
+    len = mbuf_pkthdr_len(m0) + adj;
+    
+    if (len > MAXMCLBYTES) /* XXX */
+        return (NULL);
+
+    mbuf_get((mbuf_how_t)wait, mbuf_type(m0), &m);
+    if (m == NULL)
+        return (NULL);
+
+    if (m_dup_pkthdr(m, m0, wait) != 0)
+        goto fail;
+
+    if (len > mbuf_get_mhlen()) {
+//        MCLGETI(m, wait, NULL, len);
+        mbuf_mclget(wait, MBUF_TYPE_DATA, &m);
+        if (!ISSET(mbuf_flags(m), MBUF_EXT))
+            goto fail;
+    }
+
+    mbuf_setlen(m, len);
+    mbuf_pkthdr_setlen(m, len);
+//    m->m_len = m->m_pkthdr.len = len;
+    mbuf_adj(m, adj);
+    mbuf_copydata(m0, 0, mbuf_pkthdr_len(m0), mtod(m, caddr_t));
+
+    return (m);
+
+fail:
+    IOLog("itlwm: m_dup_pkt fail!!!!\n");
+    mbuf_freem(m);
+    return (NULL);
 }
 
 static IOLock *inputLock = IOLockAlloc();

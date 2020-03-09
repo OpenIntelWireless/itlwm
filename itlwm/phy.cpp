@@ -6,7 +6,11 @@
 //  Copyright © 2020 钟先耀. All rights reserved.
 //
 
+#ifndef CUSTOM_HEADER
 #include "itlwm.hpp"
+#else
+#include "OpenWifi.hpp"
+#endif
 
 struct iwm_phy_db_entry * itlwm::
 iwm_phy_db_get_section(struct iwm_softc *sc, uint16_t type, uint16_t chg_id)

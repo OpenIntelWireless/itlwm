@@ -252,10 +252,6 @@ enum ieee80211_protmode {
 struct ieee80211_channel {
 	u_int16_t	ic_freq;	/* setting in MHz */
 	u_int16_t	ic_flags;	/* see below */
-    //aditional by zxy
-    uint16_t hw_value;
-    int max_power;
-    int ic_band;
 };
 
 /*

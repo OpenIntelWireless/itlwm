@@ -872,10 +872,11 @@ ieee80211_enqueue_data(struct ieee80211com *ic, mbuf_t m,
 
 		if (ETHER_IS_MULTICAST(eh->ether_dhost)) {
             XYLog("%s %d\n", __FUNCTION__, __LINE__);
-            mbuf_dup(m, MBUF_DONTWAIT, &m1);
-            if (m1) {
-                mbuf_adj(m1, ETHER_ALIGN);
-            }
+//            mbuf_dup(m, MBUF_DONTWAIT, &m1);
+//            if (m1) {
+//                mbuf_adj(m1, ETHER_ALIGN);
+//            }
+            m1 = m_dup_pkt(m, ETHER_ALIGN, MBUF_DONTWAIT);
 			if (m1 == NULL)
 				ifp->if_oerrors++;
 			else
@@ -973,12 +974,12 @@ ieee80211_decap(struct ieee80211com *ic, mbuf_t m,
 	if (!ALIGNED_POINTER((mtod(m, caddr_t) + ETHER_HDR_LEN), u_int32_t)) {
         XYLog("%s %d\n", __FUNCTION__, __LINE__);
 		mbuf_t m0 = m;
-        mbuf_dup(m0, M_NOWAIT, &m);
-        if (m) {
-            XYLog("%s %d\n", __FUNCTION__, __LINE__);
-            mbuf_adj(m, ETHER_ALIGN);
-        }
-//		m = m_dup_pkt(m0, ETHER_ALIGN, M_NOWAIT); //TODO 可能会有问题
+//        mbuf_dup(m0, M_NOWAIT, &m);
+//        if (m) {
+//            XYLog("%s %d\n", __FUNCTION__, __LINE__);
+//            mbuf_adj(m, ETHER_ALIGN);
+//        }
+		m = m_dup_pkt(m0, ETHER_ALIGN, M_NOWAIT);
         XYLog("%s %d\n", __FUNCTION__, __LINE__);
 		mbuf_freem(m0);
 		if (m == NULL) {

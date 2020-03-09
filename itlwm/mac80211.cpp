@@ -6,7 +6,11 @@
 //  Copyright © 2020 钟先耀. All rights reserved.
 //
 
+#ifndef CUSTOM_HEADER
 #include "itlwm.hpp"
+#else
+#include "OpenWifi.hpp"
+#endif
 #include <net/ethernet.h>
 
 int itlwm::
@@ -119,8 +123,8 @@ iwm_init_channel_map(struct iwm_softc *sc, const uint16_t * const nvm_ch_flags,
         if (!(ch_flags & IWM_NVM_CHANNEL_ACTIVE))
             channel->ic_flags |= IEEE80211_CHAN_PASSIVE;
         
-//        channel->ic_flags |= IEEE80211_CHAN_HT;
-//        channel->ic_flags |= IEEE80211_CHAN_VHT;
+        channel->ic_flags |= IEEE80211_CHAN_HT;
+        channel->ic_flags |= IEEE80211_CHAN_VHT;
     }
 }
 
@@ -1719,8 +1723,8 @@ iwm_endscan(struct iwm_softc *sc)
     XYLog("%s\n", __func__);
     int error;
     
-    static const char *ssid_name = "ssdt 信号桥";
-    static const char *ssid_pwd = "ee786b804f59";
+    static const char *ssid_name = "Redmi";
+    static const char *ssid_pwd = "zxyssdt112233";
     
     struct ieee80211_node *ni, *nextbs;
     struct ieee80211com *ic = &sc->sc_ic;
