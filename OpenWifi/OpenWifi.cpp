@@ -174,7 +174,7 @@ bool itlwm::start(IOService* provider) {
     com.sc_ic.ic_ac.ac_if.iface = fInterface;
     fInterface->registerService();
     registerService();
-
+    
     return true;
 }
 
@@ -245,20 +245,20 @@ IOReturn itlwm::getHardwareAddress(IOEthernetAddress* addrP) {
 }
 
 IOReturn itlwm::getHardwareAddressForInterface(IO80211Interface* netif,
-                                                           IOEthernetAddress* addr) {
+                                               IOEthernetAddress* addr) {
     return getHardwareAddress(addr);
 }
 
 SInt32 itlwm::apple80211Request(unsigned int request_type,
-                                            int request_number,
-                                            IO80211Interface* interface,
-                                            void* data) {
+                                int request_number,
+                                IO80211Interface* interface,
+                                void* data) {
     if (request_type != SIOCGA80211 && request_type != SIOCSA80211) {
         XYLog("Invalid IOCTL request type: %u", request_type);
         XYLog("Expected either %lu or %lu", SIOCGA80211, SIOCSA80211);
         return kIOReturnError;
     }
-
+    
     IOReturn ret = 0;
     
     bool isGet = (request_type == SIOCGA80211);
@@ -272,11 +272,11 @@ ret = set##REQ(interface, (struct DATA_TYPE* )data); \
     
 #define IOCTL_GET(REQ_TYPE, REQ, DATA_TYPE) \
 if (REQ_TYPE == SIOCGA80211) { \
-    ret = get##REQ(interface, (struct DATA_TYPE* )data); \
+ret = get##REQ(interface, (struct DATA_TYPE* )data); \
 }
 #define IOCTL_SET(REQ_TYPE, REQ, DATA_TYPE) \
 if (REQ_TYPE == SIOCSA80211) { \
-    ret = set##REQ(interface, (struct DATA_TYPE* )data); \
+ret = set##REQ(interface, (struct DATA_TYPE* )data); \
 }
     
     XYLog("IOCTL %s(%d) %s",
@@ -386,7 +386,7 @@ bool itlwm::configureInterface(IONetworkInterface *netif) {
     if (!super::configureInterface(netif)) {
         return false;
     }
-
+    
     return true;
 }
 
@@ -423,8 +423,8 @@ IOReturn itlwm::setMulticastList(IOEthernetAddress* addr, UInt32 len) {
 }
 
 SInt32 itlwm::monitorModeSetEnabled(IO80211Interface* interface,
-                                                bool enabled,
-                                                UInt32 dlt) {
+                                    bool enabled,
+                                    UInt32 dlt) {
     return kIOReturnSuccess;
 }
 
@@ -445,18 +445,18 @@ const OSString* itlwm::newRevisionString() const {
 //
 
 IOReturn itlwm::getSSID(IO80211Interface *interface,
-                                    struct apple80211_ssid_data *sd) {
+                        struct apple80211_ssid_data *sd) {
     
     bzero(sd, sizeof(*sd));
     sd->version = APPLE80211_VERSION;
     strncpy((char*)sd->ssid_bytes, fake_ssid, sizeof(sd->ssid_bytes));
     sd->ssid_len = (uint32_t)strlen(fake_ssid);
-
+    
     return kIOReturnSuccess;
 }
 
 IOReturn itlwm::setSSID(IO80211Interface *interface,
-                                    struct apple80211_ssid_data *sd) {
+                        struct apple80211_ssid_data *sd) {
     
     fInterface->postMessage(APPLE80211_M_SSID_CHANGED);
     return kIOReturnSuccess;
@@ -467,7 +467,7 @@ IOReturn itlwm::setSSID(IO80211Interface *interface,
 //
 
 IOReturn itlwm::getAUTH_TYPE(IO80211Interface *interface,
-                                         struct apple80211_authtype_data *ad) {
+                             struct apple80211_authtype_data *ad) {
     ad->version = APPLE80211_VERSION;
     ad->authtype_lower = APPLE80211_AUTHTYPE_OPEN;
     ad->authtype_upper = APPLE80211_AUTHTYPE_NONE;
@@ -479,7 +479,7 @@ IOReturn itlwm::getAUTH_TYPE(IO80211Interface *interface,
 //
 
 IOReturn itlwm::getCHANNEL(IO80211Interface *interface,
-                                       struct apple80211_channel_data *cd) {
+                           struct apple80211_channel_data *cd) {
     //return kIOReturnError;
     
     memset(cd, 0, sizeof(apple80211_channel_data));
@@ -495,8 +495,8 @@ IOReturn itlwm::getCHANNEL(IO80211Interface *interface,
 //
 
 IOReturn itlwm::getTXPOWER(IO80211Interface *interface,
-                                       struct apple80211_txpower_data *txd) {
-
+                           struct apple80211_txpower_data *txd) {
+    
     txd->version = APPLE80211_VERSION;
     txd->txpower = 100;
     txd->txpower_unit = APPLE80211_UNIT_PERCENT;
@@ -519,7 +519,7 @@ IOReturn itlwm::getRATE(IO80211Interface *interface, struct apple80211_rate_data
 //
 
 IOReturn itlwm::getBSSID(IO80211Interface *interface,
-                                     struct apple80211_bssid_data *bd) {
+                         struct apple80211_bssid_data *bd) {
     
     bzero(bd, sizeof(*bd));
     
@@ -539,12 +539,12 @@ static IOReturn scanAction(OSObject *target, void *arg0, void *arg1, void *arg2,
 // MARK: 10 - SCAN_REQ
 //
 IOReturn itlwm::setSCAN_REQ(IO80211Interface *interface,
-                                        struct apple80211_scan_data *sd) {
+                            struct apple80211_scan_data *sd) {
     if (getCurrentState() == APPLE80211_S_SCAN) {
         return kIOReturnBusy;
     }
     setCurrentState(APPLE80211_S_SCAN);
-    XYLog("Black80211. Scan requested. Type: %u\n"
+    XYLog("Scan requested. Type: %u\n"
           "BSS Type: %u\n"
           "PHY Mode: %u\n"
           "Dwell time: %u\n"
@@ -558,7 +558,7 @@ IOReturn itlwm::setSCAN_REQ(IO80211Interface *interface,
           sd->num_channels);
     
     if (interface) {
-//        dev->setPublished(false);
+        //        dev->setPublished(false);
         fCommandGate->runAction(scanAction, interface);
     }
     
@@ -581,11 +581,11 @@ apple80211_scan_result scanResult;
 // MARK: 11 - SCAN_RESULT
 //
 IOReturn itlwm::getSCAN_RESULT(IO80211Interface *interface,
-                                           struct apple80211_scan_result **sr) {
-//    if (dev->published()) {
-//        dev->setState(APPLE80211_S_INIT);
-//        return 0xe0820446;
-//    }
+                               struct apple80211_scan_result **sr) {
+    //    if (dev->published()) {
+    //        dev->setState(APPLE80211_S_INIT);
+    //        return 0xe0820446;
+    //    }
     
     struct ieee80211_node* ni = fNextNodeToSend;
     ieee80211com *ic = &com.sc_ic;
@@ -593,27 +593,25 @@ IOReturn itlwm::getSCAN_RESULT(IO80211Interface *interface,
     if (ni == 0) { // start at beginning if we're not in the middle
         if (fScanResultWrapping) {
             fScanResultWrapping = false;
-            return -1; // XXX no more results
+            return 5; // XXX no more results
         } else {
             ni = RB_MIN(ieee80211_tree, &ic->ic_tree);
         }
     }
-    XYLog("%s %s %s\n", __FUNCTION__, ni->ni_bssid, ether_sprintf(ni->ni_essid));
+    XYLog("%s %s %s\n", __FUNCTION__, ether_sprintf(ni->ni_bssid), ni->ni_essid);
     apple80211_scan_result** ret = (apple80211_scan_result**) sr;
-    apple80211_scan_result* oneResult = (struct apple80211_scan_result*)IOMalloc(sizeof(struct apple80211_scan_result));
-    bzero(oneResult, sizeof(apple80211_scan_result));
+    apple80211_scan_result* oneResult = new apple80211_scan_result;
     oneResult->version = APPLE80211_VERSION;
     oneResult->asr_ssid_len = ni->ni_esslen;
-    bcopy(ni->ni_essid, oneResult->asr_ssid, ni->ni_esslen);
-    bcopy(ni->ni_bssid, oneResult->asr_bssid, IEEE80211_ADDR_LEN);
+    memcpy(oneResult->asr_bssid, ni->ni_bssid, IEEE80211_ADDR_LEN);
+    strncpy((uint8_t*)oneResult->asr_ssid, ni->ni_essid, strlen(ni->ni_essid));
     oneResult->asr_rssi = ni->ni_rssi;
-    oneResult->asr_noise = -101;
-    oneResult->asr_rssi = -73;
+    oneResult->asr_noise = -60;
     oneResult->asr_age = 0;
     oneResult->asr_cap = ni->ni_capinfo;
     oneResult->asr_snr = ni->ni_rsncipher;
     oneResult->asr_beacon_int = ni->ni_intval;
-    oneResult->asr_channel.version = 1;
+    oneResult->asr_channel.version = APPLE80211_VERSION;
     oneResult->asr_channel.channel = ieee80211_chan2ieee(ic, ni->ni_chan);
     oneResult->asr_channel.flags = ieeeChanFlag2apple(ni->ni_chan->ic_flags);
     oneResult->asr_ie_len = ni->ni_rsnie[1];
@@ -631,7 +629,7 @@ IOReturn itlwm::getSCAN_RESULT(IO80211Interface *interface,
     return kIOReturnSuccess;
     
     struct apple80211_scan_result* result =
-        (struct apple80211_scan_result*)IOMalloc(sizeof(struct apple80211_scan_result));
+    (struct apple80211_scan_result*)IOMalloc(sizeof(struct apple80211_scan_result));
     
     
     
@@ -641,7 +639,7 @@ IOReturn itlwm::getSCAN_RESULT(IO80211Interface *interface,
     result->asr_channel = fake_channel;
     
     result->asr_noise = -101;
-//    result->asr_snr = 60;
+    //    result->asr_snr = 60;
     result->asr_rssi = -73;
     result->asr_beacon_int = 100;
     
@@ -660,10 +658,10 @@ IOReturn itlwm::getSCAN_RESULT(IO80211Interface *interface,
     result->asr_ie_len = 246;
     result->asr_ie_data = IOMalloc(result->asr_ie_len);
     memcpy(result->asr_ie_data, beacon_ie, result->asr_ie_len);
-
+    
     *sr = result;
     
-//    dev->setPublished(true);
+    //    dev->setPublished(true);
     
     return kIOReturnSuccess;
 }
@@ -673,7 +671,7 @@ IOReturn itlwm::getSCAN_RESULT(IO80211Interface *interface,
 //
 
 IOReturn itlwm::getCARD_CAPABILITIES(IO80211Interface *interface,
-                                                 struct apple80211_capability_data *cd) {
+                                     struct apple80211_capability_data *cd) {
     cd->version = APPLE80211_VERSION;
     cd->capabilities[0] = 0xab;
     cd->capabilities[1] = 0x7e;
@@ -685,14 +683,14 @@ IOReturn itlwm::getCARD_CAPABILITIES(IO80211Interface *interface,
 //
 
 IOReturn itlwm::getSTATE(IO80211Interface *interface,
-                                     struct apple80211_state_data *sd) {
+                         struct apple80211_state_data *sd) {
     sd->version = APPLE80211_VERSION;
     sd->state = getCurrentState();
     return kIOReturnSuccess;
 }
 
 IOReturn itlwm::setSTATE(IO80211Interface *interface,
-                                     struct apple80211_state_data *sd) {
+                         struct apple80211_state_data *sd) {
     XYLog("Setting state: %u", sd->state);
     setCurrentState((enum apple80211_state)sd->state);
     return kIOReturnSuccess;
@@ -703,12 +701,13 @@ IOReturn itlwm::setSTATE(IO80211Interface *interface,
 //
 
 IOReturn itlwm::getPHY_MODE(IO80211Interface *interface,
-                                        struct apple80211_phymode_data *pd) {
+                            struct apple80211_phymode_data *pd) {
     pd->version = APPLE80211_VERSION;
     pd->phy_mode = APPLE80211_MODE_11A
-                 | APPLE80211_MODE_11B
-                 | APPLE80211_MODE_11G
-    | 0x10 | 0x20;
+    | APPLE80211_MODE_11B
+    | APPLE80211_MODE_11G
+    | APPLE80211_MODE_11N
+    | APPLE80211_MODE_11AC;
     pd->active_phy_mode = APPLE80211_MODE_AUTO;
     return kIOReturnSuccess;
 }
@@ -718,7 +717,7 @@ IOReturn itlwm::getPHY_MODE(IO80211Interface *interface,
 //
 
 IOReturn itlwm::getOP_MODE(IO80211Interface *interface,
-                                       struct apple80211_opmode_data *od) {
+                           struct apple80211_opmode_data *od) {
     od->version = APPLE80211_VERSION;
     od->op_mode = APPLE80211_M_STA;
     return kIOReturnSuccess;
@@ -729,7 +728,7 @@ IOReturn itlwm::getOP_MODE(IO80211Interface *interface,
 //
 
 IOReturn itlwm::getRSSI(IO80211Interface *interface,
-                                    struct apple80211_rssi_data *rd) {
+                        struct apple80211_rssi_data *rd) {
     
     bzero(rd, sizeof(*rd));
     rd->version = APPLE80211_VERSION;
@@ -745,7 +744,7 @@ IOReturn itlwm::getRSSI(IO80211Interface *interface,
 //
 
 IOReturn itlwm::getNOISE(IO80211Interface *interface,
-                                     struct apple80211_noise_data *nd) {
+                         struct apple80211_noise_data *nd) {
     
     bzero(nd, sizeof(*nd));
     nd->version = APPLE80211_VERSION;
@@ -760,7 +759,7 @@ IOReturn itlwm::getNOISE(IO80211Interface *interface,
 // MARK: 18 - INT_MIT
 //
 IOReturn itlwm::getINT_MIT(IO80211Interface* interface,
-                                       struct apple80211_intmit_data* imd) {
+                           struct apple80211_intmit_data* imd) {
     imd->version = APPLE80211_VERSION;
     imd->int_mit = APPLE80211_INT_MIT_AUTO;
     return kIOReturnSuccess;
@@ -772,7 +771,7 @@ IOReturn itlwm::getINT_MIT(IO80211Interface* interface,
 //
 
 IOReturn itlwm::getPOWER(IO80211Interface *interface,
-                                     struct apple80211_power_data *pd) {
+                         struct apple80211_power_data *pd) {
     pd->version = APPLE80211_VERSION;
     pd->num_radios = 1;
     pd->power_state[0] = power_state;
@@ -781,7 +780,7 @@ IOReturn itlwm::getPOWER(IO80211Interface *interface,
 }
 
 IOReturn itlwm::setPOWER(IO80211Interface *interface,
-                                     struct apple80211_power_data *pd) {
+                         struct apple80211_power_data *pd) {
     if (pd->num_radios > 0) {
         power_state = (pd->power_state[0]);
     }
@@ -795,9 +794,9 @@ IOReturn itlwm::setPOWER(IO80211Interface *interface,
 //
 
 IOReturn itlwm::setASSOCIATE(IO80211Interface *interface,
-                                         struct apple80211_assoc_data *ad) {
+                             struct apple80211_assoc_data *ad) {
     XYLog("setAssociate %s", ad->ad_ssid);
-    fInterface->setLinkState(IO80211LinkState::kIO80211NetworkLinkUp, 0);
+//    fInterface->setLinkState(IO80211LinkState::kIO80211NetworkLinkUp, 0);
     return kIOReturnSuccess;
 }
 
@@ -806,7 +805,7 @@ IOReturn itlwm::setASSOCIATE(IO80211Interface *interface,
 //
 
 IOReturn itlwm::getSUPPORTED_CHANNELS(IO80211Interface *interface,
-                                                  struct apple80211_sup_channel_data *ad) {
+                                      struct apple80211_sup_channel_data *ad) {
     ad->version = APPLE80211_VERSION;
     ad->num_channels = 1;
     ad->supported_channels[0] = fake_channel;
@@ -818,7 +817,7 @@ IOReturn itlwm::getSUPPORTED_CHANNELS(IO80211Interface *interface,
 //
 
 IOReturn itlwm::getLOCALE(IO80211Interface *interface,
-                                      struct apple80211_locale_data *ld) {
+                          struct apple80211_locale_data *ld) {
     ld->version = APPLE80211_VERSION;
     ld->locale  = APPLE80211_LOCALE_FCC;
     
@@ -829,7 +828,7 @@ IOReturn itlwm::getLOCALE(IO80211Interface *interface,
 // MARK: 37 - TX_ANTENNA
 //
 IOReturn itlwm::getTX_ANTENNA(IO80211Interface *interface,
-                                          apple80211_antenna_data *ad) {
+                              apple80211_antenna_data *ad) {
     ad->version = APPLE80211_VERSION;
     ad->num_radios = 1;
     ad->antenna_index[0] = 1;
@@ -841,7 +840,7 @@ IOReturn itlwm::getTX_ANTENNA(IO80211Interface *interface,
 //
 
 IOReturn itlwm::getANTENNA_DIVERSITY(IO80211Interface *interface,
-                                                 apple80211_antenna_data *ad) {
+                                     apple80211_antenna_data *ad) {
     ad->version = APPLE80211_VERSION;
     ad->num_radios = 1;
     ad->antenna_index[0] = 1;
@@ -853,7 +852,7 @@ IOReturn itlwm::getANTENNA_DIVERSITY(IO80211Interface *interface,
 //
 
 IOReturn itlwm::getDRIVER_VERSION(IO80211Interface *interface,
-                                              struct apple80211_version_data *hv) {
+                                  struct apple80211_version_data *hv) {
     hv->version = APPLE80211_VERSION;
     strncpy(hv->string, fake_drv_version, sizeof(hv->string));
     hv->string_len = strlen(fake_drv_version);
@@ -865,7 +864,7 @@ IOReturn itlwm::getDRIVER_VERSION(IO80211Interface *interface,
 //
 
 IOReturn itlwm::getHARDWARE_VERSION(IO80211Interface *interface,
-                                                struct apple80211_version_data *hv) {
+                                    struct apple80211_version_data *hv) {
     hv->version = APPLE80211_VERSION;
     strncpy(hv->string, fake_hw_version, sizeof(hv->string));
     hv->string_len = strlen(fake_hw_version);
@@ -877,7 +876,7 @@ IOReturn itlwm::getHARDWARE_VERSION(IO80211Interface *interface,
 //
 
 IOReturn itlwm::getCOUNTRY_CODE(IO80211Interface *interface,
-                                            struct apple80211_country_code_data *cd) {
+                                struct apple80211_country_code_data *cd) {
     cd->version = APPLE80211_VERSION;
     strncpy((char*)cd->cc, fake_country_code, sizeof(cd->cc));
     return kIOReturnSuccess;

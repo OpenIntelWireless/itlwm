@@ -122,9 +122,9 @@ iwm_init_channel_map(struct iwm_softc *sc, const uint16_t * const nvm_ch_flags,
         
         if (!(ch_flags & IWM_NVM_CHANNEL_ACTIVE))
             channel->ic_flags |= IEEE80211_CHAN_PASSIVE;
-        
-        channel->ic_flags |= IEEE80211_CHAN_HT;
-        channel->ic_flags |= IEEE80211_CHAN_VHT;
+        if (data->sku_cap_11n_enable) {
+            channel->ic_flags |= IEEE80211_CHAN_HT;
+        }
     }
 }
 
@@ -3515,7 +3515,6 @@ iwm_attach(struct iwm_softc *sc, struct pci_attach_args *pa)
     memcpy(ifp->if_xname, DEVNAME(sc), IFNAMSIZ);
     ifp->if_flags = IFF_DEBUG;
     
-    ifp->output_queue = getOutputQueue();
     ieee80211_ifattach(ifp);
     ieee80211_media_init(ifp);
     

@@ -50,12 +50,13 @@
 enum apple80211_phymode {
     APPLE80211_MODE_UNKNOWN            = 0,
     APPLE80211_MODE_AUTO            = 0x1,        // autoselect
-    APPLE80211_MODE_11A                = 0x2,        // 5GHz, OFDM
-    APPLE80211_MODE_11B                = 0x4,        // 2GHz, CCK
-    APPLE80211_MODE_11G                = 0x8,        // 2GHz, OFDM
-    APPLE80211_MODE_11N                = 0x10,        // 2GHz/5GHz, OFDM
-    APPLE80211_MODE_TURBO_A            = 0x20,        // 5GHz, OFDM, 2x clock
-    APPLE80211_MODE_TURBO_G            = 0x40,        // 2GHz, OFDM, 2x clock
+    APPLE80211_MODE_11A                = 2 << (1 - 1),        // 5GHz, OFDM
+    APPLE80211_MODE_11B                = 2 << (2 - 1),        // 2GHz, CCK
+    APPLE80211_MODE_11G                = 2 << (3 - 1),        // 2GHz, OFDM
+    APPLE80211_MODE_11N                = 2 << (4 - 1),        // 2GHz/5GHz, OFDM
+    APPLE80211_MODE_TURBO_A            = 2 << (5 - 1),        // 5GHz, OFDM, 2x clock
+    APPLE80211_MODE_TURBO_G            = 2 << (6 - 1),        // 2GHz, OFDM, 2x clock
+    APPLE80211_MODE_11AC               = 2 << (7 - 1),
 };
 
 enum apple80211_physubmode {
