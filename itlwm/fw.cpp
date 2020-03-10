@@ -10,6 +10,7 @@
 #else
 #include "OpenWifi.hpp"
 #endif
+#include "FwData.h"
 
 int itlwm::
 iwm_is_mimo_ht_plcp(uint8_t ht_plcp)
@@ -130,6 +131,7 @@ iwm_read_firmware(struct iwm_softc *sc, enum iwm_ucode_type ucode_type)
     uint8_t *data;
     int err;
     size_t len;
+    OSData *fwData = NULL;
     
     if (fw->fw_status == IWM_FW_STATUS_DONE &&
         ucode_type != IWM_UCODE_TYPE_INIT)
@@ -160,6 +162,13 @@ iwm_read_firmware(struct iwm_softc *sc, enum iwm_ucode_type ucode_type)
     }
     fw->fw_rawdata = (u_char*)context.resource->getBytesNoCopy();
     fw->fw_rawsize = context.resource->getLength();
+//    fwData = getFWDescByName(sc->sc_fwname);
+//    if (fwData == NULL) {
+//        XYLog("%s resource load fail.\n", sc->sc_fwname);
+//        goto out;
+//    }
+//    fw->fw_rawdata = (u_char*)fwData->getBytesNoCopy();
+//    fw->fw_rawsize = fwData->getLength();
     XYLog("load firmware done\n");
     sc->sc_capaflags = 0;
     sc->sc_capa_n_scan_channels = IWM_DEFAULT_SCAN_CHANNELS;

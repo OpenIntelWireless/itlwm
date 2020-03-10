@@ -344,6 +344,8 @@
 		F8DA2265241547CD0029EF13 /* apple80211.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = apple80211.h; sourceTree = "<group>"; };
 		F8DA22712415485D0029EF13 /* IONetworkController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = IONetworkController.h; sourceTree = "<group>"; };
 		F8DA22732415486E0029EF13 /* IONetworkInterface.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = IONetworkInterface.h; sourceTree = "<group>"; };
+		F8EE4D1924177FEE002FA666 /* fw_gen.sh */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; path = fw_gen.sh; sourceTree = "<group>"; };
+		F8EE4D1A241786B0002FA666 /* FwData.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = FwData.h; sourceTree = "<group>"; };
 		F8F92572240974ED0088B8D5 /* cfg80211.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = cfg80211.h; sourceTree = "<group>"; };
 		F8F92573240974EE0088B8D5 /* bitfield.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = bitfield.h; sourceTree = "<group>"; };
 		F8F92574240974EE0088B8D5 /* kernel.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = kernel.h; sourceTree = "<group>"; };
@@ -374,6 +376,7 @@
 		024A07A223FCBC3C009FBA6C = {
 			isa = PBXGroup;
 			children = (
+				F8EE4D1924177FEE002FA666 /* fw_gen.sh */,
 				024A07AE23FCBC3C009FBA6C /* itlwm */,
 				F8DA2240241547950029EF13 /* OpenWifi */,
 				024A07AD23FCBC3C009FBA6C /* Products */,
@@ -413,6 +416,7 @@
 				024A08D123FCF395009FBA6C /* led.cpp */,
 				024A08D323FCF3E6009FBA6C /* power.cpp */,
 				024A08D523FCF4D7009FBA6C /* scan.cpp */,
+				F8EE4D1A241786B0002FA666 /* FwData.h */,
 			);
 			path = itlwm;
 			sourceTree = "<group>";
@@ -707,6 +711,23 @@
 		};
 /* End PBXHeadersBuildPhase section */
 
+/* Begin PBXLegacyTarget section */
+		F8EE4D1B24178BF0002FA666 /* fwgen */ = {
+			isa = PBXLegacyTarget;
+			buildArgumentsString = "$(ACTION)";
+			buildConfigurationList = F8EE4D1C24178BF0002FA666 /* Build configuration list for PBXLegacyTarget "fwgen" */;
+			buildPhases = (
+			);
+			buildToolPath = "$(PROJECT_DIR)/fw_gen.sh";
+			buildWorkingDirectory = "";
+			dependencies = (
+			);
+			name = fwgen;
+			passBuildSettingsInEnvironment = 1;
+			productName = fwgen;
+		};
+/* End PBXLegacyTarget section */
+
 /* Begin PBXNativeTarget section */
 		024A07AB23FCBC3C009FBA6C /* itlwm */ = {
 			isa = PBXNativeTarget;
@@ -761,6 +782,10 @@
 						CreatedOnToolsVersion = 11.1;
 						ProvisioningStyle = Automatic;
 					};
+					F8EE4D1B24178BF0002FA666 = {
+						CreatedOnToolsVersion = 11.3.1;
+						ProvisioningStyle = Automatic;
+					};
 				};
 			};
 			buildConfigurationList = 024A07A623FCBC3C009FBA6C /* Build configuration list for PBXProject "itlwm" */;
@@ -776,6 +801,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
+				F8EE4D1B24178BF0002FA666 /* fwgen */,
 				024A07AB23FCBC3C009FBA6C /* itlwm */,
 				F8DA223E241547950029EF13 /* OpenWifi */,
 			);
@@ -1109,7 +1135,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1.0.0d1;
-				DEVELOPMENT_TEAM = YXX7XALBVX;
+				DEVELOPMENT_TEAM = "";
 				GCC_INPUT_FILETYPE = sourcecode.cpp.cpp;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"DEBUG=1",
@@ -1134,7 +1160,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1.0.0d1;
-				DEVELOPMENT_TEAM = YXX7XALBVX;
+				DEVELOPMENT_TEAM = "";
 				GCC_INPUT_FILETYPE = sourcecode.cpp.cpp;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"__PRIVATE_SPI__=1",
@@ -1148,6 +1174,31 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SYSTEM_HEADER_SEARCH_PATHS = "itlwm/compat/openbsd itlwm/compat/linux itlwm/compat itlwm";
 				WRAPPER_EXTENSION = kext;
+			};
+			name = Release;
+		};
+		F8EE4D1D24178BF0002FA666 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				DEBUGGING_SYMBOLS = YES;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				OTHER_CFLAGS = "";
+				OTHER_LDFLAGS = "";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Debug;
+		};
+		F8EE4D1E24178BF0002FA666 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				OTHER_CFLAGS = "";
+				OTHER_LDFLAGS = "";
+				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Release;
 		};
@@ -1177,6 +1228,15 @@
 			buildConfigurations = (
 				F8DA2247241547950029EF13 /* Debug */,
 				F8DA2248241547950029EF13 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		F8EE4D1C24178BF0002FA666 /* Build configuration list for PBXLegacyTarget "fwgen" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				F8EE4D1D24178BF0002FA666 /* Debug */,
+				F8EE4D1E24178BF0002FA666 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

@@ -604,7 +604,7 @@ IOReturn itlwm::getSCAN_RESULT(IO80211Interface *interface,
     oneResult->version = APPLE80211_VERSION;
     oneResult->asr_ssid_len = ni->ni_esslen;
     memcpy(oneResult->asr_bssid, ni->ni_bssid, IEEE80211_ADDR_LEN);
-    strncpy((uint8_t*)oneResult->asr_ssid, ni->ni_essid, strlen(ni->ni_essid));
+    strncpy((char*)oneResult->asr_ssid, (char *)ni->ni_essid, strlen((char*)ni->ni_essid));
     oneResult->asr_rssi = ni->ni_rssi;
     oneResult->asr_noise = -60;
     oneResult->asr_age = 0;
