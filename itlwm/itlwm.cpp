@@ -14,25 +14,6 @@ OSDefineMetaClassAndStructors(CTimeout, OSObject)
 
 IOWorkLoop *_fWorkloop;
 
-enum
-{
-    MEDIUM_INDEX_AUTO = 0,
-    MEDIUM_INDEX_10HD,
-    MEDIUM_INDEX_10FD,
-    MEDIUM_INDEX_100HD,
-    MEDIUM_INDEX_100FD,
-    MEDIUM_INDEX_100FDFC,
-    MEDIUM_INDEX_1000FD,
-    MEDIUM_INDEX_1000FDFC,
-    MEDIUM_INDEX_1000FDEEE,
-    MEDIUM_INDEX_1000FDFCEEE,
-    MEDIUM_INDEX_100FDEEE,
-    MEDIUM_INDEX_100FDFCEEE,
-    MEDIUM_INDEX_COUNT
-};
-
-IONetworkMedium *mediumTable[MEDIUM_INDEX_COUNT];
-
 #define MBit 1000000
 
 static IOMediumType mediumTypeArray[MEDIUM_INDEX_COUNT] = {
@@ -84,6 +65,53 @@ IOService* itlwm::probe(IOService *provider, SInt32 *score)
     return iwm_match(device) == 0?NULL:this;
 }
 
+bool itlwm::configureInterface(IONetworkInterface *netif) {
+    IONetworkData *nd;
+    
+    if (super::configureInterface(netif) == false) {
+        XYLog("super failed\n");
+        return false;
+    }
+    
+    nd = netif->getNetworkData(kIONetworkStatsKey);
+    if (!nd || !(fpNetStats = (IONetworkStats *)nd->getBuffer())) {
+        XYLog("network statistics buffer unavailable?\n");
+        return false;
+    }
+    
+    XYLog("fpNetStats: %p", fpNetStats);
+    
+    return true;
+}
+
+bool itlwm::createMediumTables(const IONetworkMedium **primary)
+{
+    IONetworkMedium    *medium;
+    
+    OSDictionary *mediumDict = OSDictionary::withCapacity(1);
+    if (mediumDict == NULL) {
+        XYLog("Cannot allocate OSDictionary\n");
+        return false;
+    }
+    
+    medium = IONetworkMedium::medium(kIOMediumEthernetAuto, 480 * 1000000);
+    IONetworkMedium::addMedium(mediumDict, medium);
+    medium->release();  // 'mediumDict' holds a ref now.
+    if (primary) {
+        *primary = medium;
+    }
+    
+    bool result = publishMediumDictionary(mediumDict);
+    if (!result) {
+        XYLog("Cannot publish medium dictionary!\n");
+    }
+
+    // Per comment for 'publishMediumDictionary' in NetworkController.h, the
+    // medium dictionary is copied and may be safely relseased after the call.
+    mediumDict->release();
+    return result;
+}
+
 bool itlwm::start(IOService *provider)
 {
     ifnet *ifp;
@@ -112,42 +140,47 @@ bool itlwm::start(IOService *provider)
     }
     fCommandGate->retain();
     fWorkloop->addEventSource(fCommandGate);
-    IONetworkMedium *medium;
-    OSDictionary *mediumDict = OSDictionary::withCapacity(MEDIUM_INDEX_COUNT + 1);
-    if (!mediumDict) {
-        XYLog("start fail, can not create mediumdict\n");
+    const IONetworkMedium *primaryMedium;
+    if (!createMediumTables(&primaryMedium) ||
+        !setCurrentMedium(primaryMedium)) {
         return false;
     }
-    bool result;
-    for (int i = MEDIUM_INDEX_AUTO; i < MEDIUM_INDEX_COUNT; i++) {
-        medium = IONetworkMedium::medium(mediumTypeArray[i], mediumSpeedArray[i], 0, i);
-        if (!medium) {
-            XYLog("start fail, can not create mediumdict\n");
-            return false;
-        }
-        result = IONetworkMedium::addMedium(mediumDict, medium);
-        medium->release();
-        if (!result) {
-            XYLog("start fail, can not addMedium\n");
-            return false;
-        }
-        mediumTable[i] = medium;
-        if (i == MEDIUM_INDEX_AUTO) {
-            autoMedium = medium;
-        }
-    }
-    if (!publishMediumDictionary(mediumDict)) {
-        XYLog("start fail, can not publish mediumdict\n");
-        return false;
-    }
+//    IONetworkMedium *medium;
+//    OSDictionary *mediumDict = OSDictionary::withCapacity(MEDIUM_INDEX_COUNT + 1);
+//    if (!mediumDict) {
+//        XYLog("start fail, can not create mediumdict\n");
+//        return false;
+//    }
+//    bool result;
+//    for (int i = MEDIUM_INDEX_AUTO; i < MEDIUM_INDEX_COUNT; i++) {
+//        medium = IONetworkMedium::medium(mediumTypeArray[i], mediumSpeedArray[i], 0, i);
+//        if (!medium) {
+//            XYLog("start fail, can not create mediumdict\n");
+//            return false;
+//        }
+//        result = IONetworkMedium::addMedium(mediumDict, medium);
+//        medium->release();
+//        if (!result) {
+//            XYLog("start fail, can not addMedium\n");
+//            return false;
+//        }
+//        mediumTable[i] = medium;
+//        if (i == MEDIUM_INDEX_AUTO) {
+//            autoMedium = medium;
+//        }
+//    }
+//    if (!publishMediumDictionary(mediumDict)) {
+//        XYLog("start fail, can not publish mediumdict\n");
+//        return false;
+//    }
 //    if (!setCurrentMedium(autoMedium)){
 //        XYLog("start fail, can not set current medium\n");
 //        return false;
 //    }
-    if (!setSelectedMedium(autoMedium)){
-        XYLog("start fail, can not set current medium\n");
-        return false;
-    }
+//    if (!setSelectedMedium(autoMedium)){
+//        XYLog("start fail, can not set current medium\n");
+//        return false;
+//    }
     pci.workloop = _fWorkloop;
     pci.pa_tag = device;
     if (!iwm_attach(&com, &pci)) {
@@ -159,8 +192,47 @@ bool itlwm::start(IOService *provider)
         XYLog("attach to interface fail\n");
         return false;
     }
+    setLinkStatus(kIONetworkLinkValid);
     registerService();
     return true;
+}
+
+IOReturn itlwm::getPacketFilters(const OSSymbol *group, UInt32 *filters) const {
+    IOReturn    rtn = kIOReturnSuccess;
+    
+    if (group == gIOEthernetWakeOnLANFilterGroup) {
+        *filters = 0;
+    } else if (group == gIONetworkFilterGroup) {
+        *filters = kIOPacketFilterUnicast | kIOPacketFilterBroadcast
+            | kIOPacketFilterPromiscuous | kIOPacketFilterMulticast
+            | kIOPacketFilterMulticastAll;
+    } else {
+        rtn = super::getPacketFilters(group, filters);
+    }
+
+    return rtn;
+}
+
+IOOutputQueue *itlwm::createOutputQueue()
+{
+    return IOBasicOutputQueue::withTarget(this);
+}
+
+IOReturn itlwm::getMaxPacketSize(UInt32 *maxSize) const {
+    IOReturn rc = super::getMaxPacketSize(maxSize);
+    if (rc != kIOReturnSuccess) {
+        return rc;
+    }
+    // The max packet size is limited by RNDIS max transfer size:
+    *maxSize = min(*maxSize, 1024);
+    XYLog("returning %d", *maxSize);
+    return kIOReturnSuccess;
+}
+
+IOReturn itlwm::selectMedium(const IONetworkMedium *medium) {
+    setSelectedMedium(medium);
+    
+    return kIOReturnSuccess;
 }
 
 void itlwm::stop(IOService *provider)
@@ -179,24 +251,6 @@ void itlwm::stop(IOService *provider)
     OSSafeReleaseNULL(com.ih);
     OSSafeReleaseNULL(fCommandGate);
     super::stop(provider);
-}
-
-IOReturn itlwm::setPromiscuousMode(bool active)
-{
-    XYLog("%s\n", __func__);
-    return kIOReturnSuccess;
-}
-
-IOReturn itlwm::setMulticastMode(bool active)
-{
-    XYLog("%s\n", __func__);
-    return kIOReturnSuccess;
-}
-
-IOReturn itlwm::setMulticastList(IOEthernetAddress *addrs, UInt32 count)
-{
-    XYLog("%s\n", __func__);
-    return kIOReturnSuccess;
 }
 
 void itlwm::free()
@@ -220,7 +274,9 @@ void itlwm::free()
 IOReturn itlwm::enable(IONetworkInterface *netif)
 {
     XYLog("%s\n", __func__);
-    setLinkStatus(kIONetworkLinkValid | kIONetworkLinkActive, mediumTable[MEDIUM_INDEX_1000FDFCEEE]);
+    setLinkStatus(kIONetworkLinkValid | kIONetworkLinkActive, getCurrentMedium());
+    getOutputQueue()->setCapacity(1024);
+    getOutputQueue()->start();
     return super::enable(netif);
 }
 
@@ -250,4 +306,16 @@ UInt32 itlwm::outputPacket(mbuf_t m, void *param)
     ifp->if_start(ifp);
     
     return kIOReturnOutputSuccess;
+}
+
+IOReturn itlwm::setPromiscuousMode(IOEnetPromiscuousMode mode) {
+    return kIOReturnSuccess;
+}
+
+IOReturn itlwm::setMulticastMode(IOEnetMulticastMode mode) {
+    return kIOReturnSuccess;
+}
+
+IOReturn itlwm::setMulticastList(IOEthernetAddress* addr, UInt32 len) {
+    return kIOReturnSuccess;
 }

@@ -405,8 +405,12 @@ static inline int if_input(struct ifnet *ifq, struct mbuf_list *ml)
     XYLog("%s\n", __func__);
     mbuf_t m;
     uint64_t packets;
-    if (ml_empty(ml))
+    bool isEmpty = false;
+    
+    isEmpty = ml_empty(ml);
+    if (isEmpty) {
         return (0);
+    }
     IOLockLock(inputLock);
     MBUF_LIST_FOREACH(ml, m) {
         if (ifq->iface == NULL) {
@@ -420,8 +424,11 @@ static inline int if_input(struct ifnet *ifq, struct mbuf_list *ml)
         XYLog("%s %d 啊啊啊啊 ifq->iface->inputPacket(m)\n", __func__, __LINE__);
         ifq->iface->inputPacket(m, 0, 0, 0);
     }
+    if (!isEmpty) {
+        ifq->iface->flushInputQueue();
+    }
     IOLockUnlock(inputLock);
-    return 0;
+    return 1;
 }
 
 extern int TX_TYPE_MGMT;

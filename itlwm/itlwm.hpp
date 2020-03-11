@@ -14,6 +14,23 @@
 #include <libkern/c++/OSMetaClass.h>
 #include <IOKit/IOFilterInterruptEventSource.h>
 
+enum
+{
+    MEDIUM_INDEX_AUTO = 0,
+    MEDIUM_INDEX_10HD,
+    MEDIUM_INDEX_10FD,
+    MEDIUM_INDEX_100HD,
+    MEDIUM_INDEX_100FD,
+    MEDIUM_INDEX_100FDFC,
+    MEDIUM_INDEX_1000FD,
+    MEDIUM_INDEX_1000FDFC,
+    MEDIUM_INDEX_1000FDEEE,
+    MEDIUM_INDEX_1000FDFCEEE,
+    MEDIUM_INDEX_100FDEEE,
+    MEDIUM_INDEX_100FDFCEEE,
+    MEDIUM_INDEX_COUNT
+};
+
 class itlwm : public IOEthernetController {
     OSDeclareDefaultStructors(itlwm)
     
@@ -28,14 +45,21 @@ public:
     IOReturn getHardwareAddress(IOEthernetAddress* addrP) override;
     IOReturn enable(IONetworkInterface *netif) override;
     IOReturn disable(IONetworkInterface *netif) override;
-    IOReturn setPromiscuousMode(bool active) override;
-    IOReturn setMulticastMode(bool active) override;
-    IOReturn setMulticastList(IOEthernetAddress *addrs, UInt32 count) override;
     UInt32 outputPacket(mbuf_t, void * param) override;
+    IOReturn setPromiscuousMode(IOEnetPromiscuousMode mode) override;
+    IOReturn setMulticastMode(IOEnetMulticastMode mode) override;
+    IOReturn setMulticastList(IOEthernetAddress* addr, UInt32 len) override;
+    bool configureInterface(IONetworkInterface *netif) override;
     static IOReturn tsleepHandler(OSObject* owner, void* arg0 = 0, void* arg1 = 0, void* arg2 = 0, void* arg3 = 0);
     int tsleep_nsec(void *ident, int priority, const char *wmesg, int timo);
     void wakeupOn(void* ident);
     bool intrFilter(OSObject *object, IOFilterInterruptEventSource *src);
+    
+    bool createMediumTables(const IONetworkMedium **primary);
+    IOOutputQueue *createOutputQueue() override;
+    IOReturn getPacketFilters(const OSSymbol *group, UInt32 *filters) const override;
+    IOReturn getMaxPacketSize(UInt32 *maxSize) const override;
+    IOReturn selectMedium(const IONetworkMedium *medium) override;
     
     //utils
     static void *malloc(vm_size_t len, int type, int how);
@@ -296,6 +320,8 @@ private:
     struct pci_attach_args pci;
     struct iwm_softc com;
     IONetworkMedium *autoMedium;
+    IONetworkMedium *mediumTable[MEDIUM_INDEX_COUNT];
+    IONetworkStats *fpNetStats;
     
     IOLock *fwLoadLock;
 };

@@ -394,6 +394,13 @@ IO80211Interface* itlwm::getNetworkInterface() {
     return fInterface;
 }
 
+IOOutputQueue* itlwm::createOutputQueue() {
+    if (fOutputQueue == 0) {
+        fOutputQueue = IOGatedOutputQueue::withTarget(this, getWorkLoop());
+    }
+    return fOutputQueue;
+}
+
 UInt32 itlwm::outputPacket(mbuf_t m, void* param) {
     XYLog("%s\n", __func__);
     ifnet *ifp = &com.sc_ic.ic_ac.ac_if;
@@ -440,17 +447,29 @@ const OSString* itlwm::newRevisionString() const {
     return OSString::withCString("1.0");
 }
 
+static int ieeeChanFlag2apple(int flags) {
+    int ret = 0;
+    if (flags & IEEE80211_CHAN_2GHZ)    ret |= APPLE80211_C_FLAG_2GHZ;
+    if (flags & IEEE80211_CHAN_5GHZ)    ret |= APPLE80211_C_FLAG_5GHZ;
+    if (!(flags & IEEE80211_CHAN_PASSIVE))    ret |= APPLE80211_C_FLAG_ACTIVE;
+    if (flags & IEEE80211_CHAN_OFDM)    ret |= APPLE80211_C_FLAG_20MHZ; // XXX ??
+    if (flags & IEEE80211_CHAN_CCK)        ret |= APPLE80211_C_FLAG_10MHZ; // XXX ??
+    if (flags & IEEE80211_CHAN_VHT)     ret |= APPLE80211_C_FLAG_5GHZ;
+    return ret;
+}
+
 //
 // MARK: 1 - SSID
 //
 
 IOReturn itlwm::getSSID(IO80211Interface *interface,
                         struct apple80211_ssid_data *sd) {
-    
+    //    return kIOReturnError;
+    ieee80211com *ic = &com.sc_ic;
     bzero(sd, sizeof(*sd));
     sd->version = APPLE80211_VERSION;
-    strncpy((char*)sd->ssid_bytes, fake_ssid, sizeof(sd->ssid_bytes));
-    sd->ssid_len = (uint32_t)strlen(fake_ssid);
+    sd->ssid_len = ic->ic_des_esslen;
+    bcopy(ic->ic_des_essid, sd->ssid_bytes, sd->ssid_len);
     
     return kIOReturnSuccess;
 }
@@ -458,7 +477,7 @@ IOReturn itlwm::getSSID(IO80211Interface *interface,
 IOReturn itlwm::setSSID(IO80211Interface *interface,
                         struct apple80211_ssid_data *sd) {
     
-    fInterface->postMessage(APPLE80211_M_SSID_CHANGED);
+    //    fInterface->postMessage(APPLE80211_M_SSID_CHANGED);
     return kIOReturnSuccess;
 }
 
@@ -468,8 +487,9 @@ IOReturn itlwm::setSSID(IO80211Interface *interface,
 
 IOReturn itlwm::getAUTH_TYPE(IO80211Interface *interface,
                              struct apple80211_authtype_data *ad) {
+    //    return kIOReturnError;
     ad->version = APPLE80211_VERSION;
-    ad->authtype_lower = APPLE80211_AUTHTYPE_OPEN;
+    ad->authtype_lower = APPLE80211_AUTHTYPE_SHARED;
     ad->authtype_upper = APPLE80211_AUTHTYPE_NONE;
     return kIOReturnSuccess;
 }
@@ -480,13 +500,19 @@ IOReturn itlwm::getAUTH_TYPE(IO80211Interface *interface,
 
 IOReturn itlwm::getCHANNEL(IO80211Interface *interface,
                            struct apple80211_channel_data *cd) {
-    //return kIOReturnError;
-    
+    //    return kIOReturnError;
+    ieee80211com *ic = &com.sc_ic;
     memset(cd, 0, sizeof(apple80211_channel_data));
+    if (ic->ic_bss == 0)
+        return kIOReturnError;
+    if (ic->ic_bss->ni_chan == 0)
+        return kIOReturnError;
     //bzero(cd, sizeof(apple80211_channel_data));
     
     cd->version = APPLE80211_VERSION;
-    cd->channel = fake_channel;
+    cd->channel.version = APPLE80211_VERSION;
+    cd->channel.channel = ieee80211_chan2ieee(ic, ic->ic_bss->ni_chan);
+    cd->channel.flags = ieeeChanFlag2apple(ic->ic_bss->ni_chan->ic_flags);
     return kIOReturnSuccess;
 }
 
@@ -496,7 +522,7 @@ IOReturn itlwm::getCHANNEL(IO80211Interface *interface,
 
 IOReturn itlwm::getTXPOWER(IO80211Interface *interface,
                            struct apple80211_txpower_data *txd) {
-    
+    //    return kIOReturnError;
     txd->version = APPLE80211_VERSION;
     txd->txpower = 100;
     txd->txpower_unit = APPLE80211_UNIT_PERCENT;
@@ -508,9 +534,13 @@ IOReturn itlwm::getTXPOWER(IO80211Interface *interface,
 //
 
 IOReturn itlwm::getRATE(IO80211Interface *interface, struct apple80211_rate_data *rd) {
+    //    return kIOReturnError;
+    ieee80211com *ic = &com.sc_ic;
+    if (ic->ic_bss == 0)
+        return kIOReturnError;
     rd->version = APPLE80211_VERSION;
     rd->num_radios = 1;
-    rd->rate[0] = 54;
+    rd->rate[0] = ic->ic_bss->ni_rates.rs_rates[ic->ic_bss->ni_txrate];
     return kIOReturnSuccess;
 }
 
@@ -520,18 +550,20 @@ IOReturn itlwm::getRATE(IO80211Interface *interface, struct apple80211_rate_data
 
 IOReturn itlwm::getBSSID(IO80211Interface *interface,
                          struct apple80211_bssid_data *bd) {
-    
+    //    return kIOReturnError;
     bzero(bd, sizeof(*bd));
-    
+    ieee80211com *ic = &com.sc_ic;
+    if (ic->ic_bss == 0)
+        return kIOReturnError;
     bd->version = APPLE80211_VERSION;
-    memcpy(bd->bssid.octet, fake_bssid, sizeof(fake_bssid));
+    memcpy(bd->bssid.octet, ic->ic_bss->ni_bssid, APPLE80211_ADDR_LEN);
     return kIOReturnSuccess;
 }
 
 static IOReturn scanAction(OSObject *target, void *arg0, void *arg1, void *arg2, void *arg3) {
-    IOSleep(2000);
-    IO80211Interface *iface = (IO80211Interface *)arg0;
-    iface->postMessage(APPLE80211_M_SCAN_DONE);
+    IOSleep(4000);
+    itlwm *iface = (itlwm *)arg0;
+    iface->getNetworkInterface()->postMessage(APPLE80211_M_SCAN_DONE);
     return kIOReturnSuccess;
 }
 
@@ -540,10 +572,10 @@ static IOReturn scanAction(OSObject *target, void *arg0, void *arg1, void *arg2,
 //
 IOReturn itlwm::setSCAN_REQ(IO80211Interface *interface,
                             struct apple80211_scan_data *sd) {
-    if (getCurrentState() == APPLE80211_S_SCAN) {
-        return kIOReturnBusy;
-    }
-    setCurrentState(APPLE80211_S_SCAN);
+    //    if (getCurrentState() == APPLE80211_S_SCAN) {
+    //        return kIOReturnBusy;
+    //    }
+    //    setCurrentState(APPLE80211_S_SCAN);
     XYLog("Scan requested. Type: %u\n"
           "BSS Type: %u\n"
           "PHY Mode: %u\n"
@@ -559,20 +591,10 @@ IOReturn itlwm::setSCAN_REQ(IO80211Interface *interface,
     
     if (interface) {
         //        dev->setPublished(false);
-        fCommandGate->runAction(scanAction, interface);
+        fCommandGate->runAction(scanAction, this);
     }
     
     return kIOReturnSuccess;
-}
-
-static int ieeeChanFlag2apple(int flags) {
-    int ret = 0;
-    if (flags & IEEE80211_CHAN_2GHZ)    ret |= APPLE80211_C_FLAG_2GHZ;
-    if (flags & IEEE80211_CHAN_5GHZ)    ret |= APPLE80211_C_FLAG_5GHZ;
-    if (!(flags & IEEE80211_CHAN_PASSIVE))    ret |= APPLE80211_C_FLAG_ACTIVE;
-    if (flags & IEEE80211_CHAN_OFDM)    ret |= APPLE80211_C_FLAG_20MHZ; // XXX ??
-    if (flags & IEEE80211_CHAN_CCK)        ret |= APPLE80211_C_FLAG_10MHZ; // XXX ??
-    return ret;
 }
 
 apple80211_scan_result scanResult;
@@ -582,55 +604,52 @@ apple80211_scan_result scanResult;
 //
 IOReturn itlwm::getSCAN_RESULT(IO80211Interface *interface,
                                struct apple80211_scan_result **sr) {
-    //    if (dev->published()) {
-    //        dev->setState(APPLE80211_S_INIT);
-    //        return 0xe0820446;
-    //    }
     
-    struct ieee80211_node* ni = fNextNodeToSend;
     ieee80211com *ic = &com.sc_ic;
-    
-    if (ni == 0) { // start at beginning if we're not in the middle
+    XYLog("%s\n", __FUNCTION__);
+    if (fNextNodeToSend == 0) { // start at beginning if we're not in the middle
         if (fScanResultWrapping) {
             fScanResultWrapping = false;
-            return 5; // XXX no more results
+            return -1; // XXX no more results
         } else {
-            ni = RB_MIN(ieee80211_tree, &ic->ic_tree);
+            fNextNodeToSend = RB_MIN(ieee80211_tree, &ic->ic_tree);
+            if (fNextNodeToSend == 0) {
+                return -1;
+            }
         }
     }
-    XYLog("%s %s %s\n", __FUNCTION__, ether_sprintf(ni->ni_bssid), ni->ni_essid);
-    apple80211_scan_result** ret = (apple80211_scan_result**) sr;
-    apple80211_scan_result* oneResult = new apple80211_scan_result;
-    oneResult->version = APPLE80211_VERSION;
-    oneResult->asr_ssid_len = ni->ni_esslen;
-    memcpy(oneResult->asr_bssid, ni->ni_bssid, IEEE80211_ADDR_LEN);
-    strncpy((char*)oneResult->asr_ssid, (char *)ni->ni_essid, strlen((char*)ni->ni_essid));
-    oneResult->asr_rssi = ni->ni_rssi;
-    oneResult->asr_noise = -60;
-    oneResult->asr_age = 0;
-    oneResult->asr_cap = ni->ni_capinfo;
-    oneResult->asr_snr = ni->ni_rsncipher;
-    oneResult->asr_beacon_int = ni->ni_intval;
-    oneResult->asr_channel.version = APPLE80211_VERSION;
-    oneResult->asr_channel.channel = ieee80211_chan2ieee(ic, ni->ni_chan);
-    oneResult->asr_channel.flags = ieeeChanFlag2apple(ni->ni_chan->ic_flags);
-    oneResult->asr_ie_len = ni->ni_rsnie[1];
-    oneResult->asr_ie_data = &ni->ni_rsnie[2];
-    oneResult->asr_nrates = ni->ni_rates.rs_nrates;
-    for (int r = 0; r < oneResult->asr_nrates; r++)
-        oneResult->asr_rates[r] = ni->ni_rates.rs_rates[r];
-    
-    *ret = oneResult;
-    
-    // done sending this one, now move to next for subsequent request
-    fNextNodeToSend = RB_NEXT(ieee80211_tree, &ic->ic_tree, ni);
-    if (fNextNodeToSend == 0) // if there is no next one then wrap next time
-        fScanResultWrapping = true; // XXX next time signal that we got no more
-    return kIOReturnSuccess;
-    
-    struct apple80211_scan_result* result =
-    (struct apple80211_scan_result*)IOMalloc(sizeof(struct apple80211_scan_result));
-    
+    XYLog("%s %s %s\n", __FUNCTION__, ether_sprintf(fNextNodeToSend->ni_bssid), fNextNodeToSend->ni_essid);
+    apple80211_scan_result* result = new apple80211_scan_result;
+//    result->version = 1;
+//    result->asr_channel = fake_channel;
+//    result->asr_noise = 0;
+//    result->asr_snr = fNextNodeToSend->ni_rsnciphers;
+//    result->asr_rssi = fNextNodeToSend->ni_rssi;
+//    result->asr_beacon_int = fNextNodeToSend->ni_intval;
+//    result->asr_cap = fNextNodeToSend->ni_capinfo;
+//    memcpy(result->asr_bssid, fNextNodeToSend->ni_bssid, IEEE80211_ADDR_LEN);
+//    result->asr_nrates = fNextNodeToSend->ni_rates.rs_nrates;
+//    for (int r = 0; r < result->asr_nrates; ++r )
+//        result->asr_rates[r] = fNextNodeToSend->ni_rates.rs_rates[r];
+//    result->asr_ssid_len = fNextNodeToSend->ni_esslen;
+//    memcpy(result->asr_ssid, fNextNodeToSend->ni_essid, fNextNodeToSend->ni_esslen);
+//    result->asr_age = 0;
+//    result->asr_ie_len = 0;
+////    if ( fNextNodeToSend->ni_rsnie )
+////    {
+////        result->asr_ie_len = fNextNodeToSend->ni_rsnie[1];
+////        result->asr_ie_data = fNextNodeToSend->ni_rsnie + 2;
+////    }
+//    memcpy(result->asr_bssid, fake_bssid, sizeof(fake_bssid));
+//
+//
+//    *sr = result;
+//
+//    // done sending this one, now move to next for subsequent request
+//    fNextNodeToSend = RB_NEXT(ieee80211_tree, &ic->ic_tree, fNextNodeToSend);
+//    if (fNextNodeToSend == 0) // if there is no next one then wrap next time
+//        fScanResultWrapping = true; // XXX next time signal that we got no more
+//    return kIOReturnSuccess;
     
     
     bzero(result, sizeof(*result));
@@ -647,23 +666,60 @@ IOReturn itlwm::getSCAN_RESULT(IO80211Interface *interface,
     
     result->asr_age = 0;
     
-    memcpy(result->asr_bssid, fake_bssid, sizeof(fake_bssid));
+    memcpy(result->asr_bssid, fNextNodeToSend->ni_bssid, IEEE80211_ADDR_LEN);
     
     result->asr_nrates = 1;
     result->asr_rates[0] = 54;
     
-    strncpy((char*)result->asr_ssid, fake_ssid, sizeof(result->asr_ssid));
-    result->asr_ssid_len = strlen(fake_ssid);
+    strncpy((char*)result->asr_ssid, (char *)fNextNodeToSend->ni_essid, sizeof(result->asr_ssid));
+    result->asr_ssid_len = fNextNodeToSend->ni_esslen;
     
     result->asr_ie_len = 246;
     result->asr_ie_data = IOMalloc(result->asr_ie_len);
     memcpy(result->asr_ie_data, beacon_ie, result->asr_ie_len);
     
     *sr = result;
-    
-    //    dev->setPublished(true);
-    
+    fNextNodeToSend = RB_NEXT(ieee80211_tree, &ic->ic_tree, fNextNodeToSend);
+    if (fNextNodeToSend == 0) // if there is no next one then wrap next time
+        fScanResultWrapping = true;
     return kIOReturnSuccess;
+    
+    //    struct apple80211_scan_result* result =
+    //    (struct apple80211_scan_result*)IOMalloc(sizeof(struct apple80211_scan_result));
+    //
+    //
+    //
+    //    bzero(result, sizeof(*result));
+    //    result->version = APPLE80211_VERSION;
+    //
+    //    result->asr_channel = fake_channel;
+    //
+    //    result->asr_noise = -101;
+    //    //    result->asr_snr = 60;
+    //    result->asr_rssi = -73;
+    //    result->asr_beacon_int = 100;
+    //
+    //    result->asr_cap = 0x411;
+    //
+    //    result->asr_age = 0;
+    //
+    //    memcpy(result->asr_bssid, fake_bssid, sizeof(fake_bssid));
+    //
+    //    result->asr_nrates = 1;
+    //    result->asr_rates[0] = 54;
+    //
+    //    strncpy((char*)result->asr_ssid, fake_ssid, sizeof(result->asr_ssid));
+    //    result->asr_ssid_len = strlen(fake_ssid);
+    //
+    //    result->asr_ie_len = 246;
+    //    result->asr_ie_data = IOMalloc(result->asr_ie_len);
+    //    memcpy(result->asr_ie_data, beacon_ie, result->asr_ie_len);
+    //
+    //    *sr = result;
+    //
+    //    //    dev->setPublished(true);
+    //
+    //    return kIOReturnSuccess;
 }
 
 //
@@ -685,7 +741,7 @@ IOReturn itlwm::getCARD_CAPABILITIES(IO80211Interface *interface,
 IOReturn itlwm::getSTATE(IO80211Interface *interface,
                          struct apple80211_state_data *sd) {
     sd->version = APPLE80211_VERSION;
-    sd->state = getCurrentState();
+    sd->state = com.sc_ic.ic_state;
     return kIOReturnSuccess;
 }
 
@@ -731,11 +787,15 @@ IOReturn itlwm::getRSSI(IO80211Interface *interface,
                         struct apple80211_rssi_data *rd) {
     
     bzero(rd, sizeof(*rd));
-    rd->version = APPLE80211_VERSION;
+    ieee80211com *ic = &com.sc_ic;
+    if (ic->ic_bss == 0)
+        return kIOReturnError;
     rd->num_radios = 1;
-    rd->rssi[0] = -42;
-    rd->aggregate_rssi = -42;
-    rd->rssi_unit = APPLE80211_UNIT_DBM;
+    rd->rssi_unit    = APPLE80211_UNIT_DBM;
+    rd->rssi[0]    = rd->aggregate_rssi
+    = rd->rssi_ext[0]
+    = rd->aggregate_rssi_ext
+    = ic->ic_bss->ni_rssi;
     return kIOReturnSuccess;
 }
 
@@ -796,7 +856,7 @@ IOReturn itlwm::setPOWER(IO80211Interface *interface,
 IOReturn itlwm::setASSOCIATE(IO80211Interface *interface,
                              struct apple80211_assoc_data *ad) {
     XYLog("setAssociate %s", ad->ad_ssid);
-//    fInterface->setLinkState(IO80211LinkState::kIO80211NetworkLinkUp, 0);
+    fInterface->setLinkState(IO80211LinkState::kIO80211NetworkLinkUp, 0);
     return kIOReturnSuccess;
 }
 
@@ -807,8 +867,14 @@ IOReturn itlwm::setASSOCIATE(IO80211Interface *interface,
 IOReturn itlwm::getSUPPORTED_CHANNELS(IO80211Interface *interface,
                                       struct apple80211_sup_channel_data *ad) {
     ad->version = APPLE80211_VERSION;
-    ad->num_channels = 1;
-    ad->supported_channels[0] = fake_channel;
+    ad->num_channels = 0;
+    ieee80211com *ic = &com.sc_ic;
+    for (int i = 0; i < IEEE80211_CHAN_MAX; i++) {
+        if (ic->ic_channels[i].ic_freq != 0) {
+            ad->supported_channels[ad->num_channels++].channel    = ieee80211_chan2ieee(ic, &ic->ic_channels[i]);
+            ad->supported_channels[ad->num_channels].flags    = ieeeChanFlag2apple(ic->ic_channels[i].ic_flags);
+        }
+    }
     return kIOReturnSuccess;
 }
 
@@ -892,7 +958,7 @@ IOReturn itlwm::getMCS(IO80211Interface* interface, struct apple80211_mcs_data* 
 }
 
 IOReturn itlwm::getROAM_THRESH(IO80211Interface* interface, struct apple80211_roam_threshold_data* md) {
-    md->threshold = 1000;
+    md->threshold = com.sc_ic.ic_fragthreshold;
     md->count = 0;
     return kIOReturnSuccess;
 }

@@ -65,6 +65,7 @@ public:
     IOReturn setMulticastMode(IOEnetMulticastMode mode) override;
     IOReturn setMulticastList(IOEthernetAddress* addr, UInt32 len) override;
     SInt32 monitorModeSetEnabled(IO80211Interface* interface, bool enabled, UInt32 dlt) override;
+    IOOutputQueue*        createOutputQueue    ( ) override;
     
     bool createWorkLoop() override;
     IOWorkLoop* getWorkLoop() const override;
@@ -324,6 +325,14 @@ public:
     int    iwm_activate(struct device *, int);
     int    iwm_resume(struct iwm_softc *);
     
+    void setCurrentState(enum apple80211_state state) {
+        this->state = state;
+    };
+    
+    enum apple80211_state getCurrentState() {
+        return this->state;
+    };
+    
 protected:
     IO80211Interface* getInterface();
     
@@ -383,14 +392,6 @@ private:
     IOReturn getMCS(IO80211Interface* interface, struct apple80211_mcs_data* md);
     IOReturn getROAM_THRESH(IO80211Interface* interface, struct apple80211_roam_threshold_data* md);
     IOReturn getRADIO_INFO(IO80211Interface* interface, struct apple80211_radio_info_data* md);
-    
-    void setCurrentState(enum apple80211_state state) {
-        this->state = state;
-    };
-    
-    enum apple80211_state getCurrentState() {
-        return this->state;
-    };
     
     inline void ReleaseAll() {
         RELEASE(fOutputQueue);
