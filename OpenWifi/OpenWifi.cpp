@@ -13,11 +13,9 @@ IOWorkLoop *_fWorkloop;
 OSDefineMetaClassAndStructors(itlwm, IO80211Controller);
 OSDefineMetaClassAndStructors(CTimeout, OSObject)
 
-const char *fake_ssid = "UPC5424297";
 const uint8_t fake_bssid[] = { 0x64, 0x7C, 0x34, 0x5C, 0x1C, 0x40 };
 const char *fake_hw_version = "Hardware 1.0";
 const char *fake_drv_version = "Driver 1.0";
-const char *fake_country_code = "CZ";
 
 const apple80211_channel fake_channel = {
     .version = APPLE80211_VERSION,
@@ -394,19 +392,11 @@ IO80211Interface* itlwm::getNetworkInterface() {
     return fInterface;
 }
 
-IOOutputQueue* itlwm::createOutputQueue() {
-    if (fOutputQueue == 0) {
-        fOutputQueue = IOGatedOutputQueue::withTarget(this, getWorkLoop());
-    }
-    return fOutputQueue;
-}
-
 UInt32 itlwm::outputPacket(mbuf_t m, void* param) {
     XYLog("%s\n", __func__);
     ifnet *ifp = &com.sc_ic.ic_ac.ac_if;
-    struct iwm_softc *sc = &com;
     
-    ifp->if_snd->lockEnqueue(m);
+    ifp->if_snd->enqueue(m);
     ifp->if_start(ifp);
     
     return kIOReturnOutputSuccess;
@@ -432,7 +422,7 @@ IOReturn itlwm::setMulticastList(IOEthernetAddress* addr, UInt32 len) {
 SInt32 itlwm::monitorModeSetEnabled(IO80211Interface* interface,
                                     bool enabled,
                                     UInt32 dlt) {
-    return kIOReturnSuccess;
+    return kIOReturnUnsupportedMode;
 }
 
 const OSString* itlwm::newVendorString() const {
@@ -477,7 +467,7 @@ IOReturn itlwm::getSSID(IO80211Interface *interface,
 IOReturn itlwm::setSSID(IO80211Interface *interface,
                         struct apple80211_ssid_data *sd) {
     
-    //    fInterface->postMessage(APPLE80211_M_SSID_CHANGED);
+    fInterface->postMessage(APPLE80211_M_SSID_CHANGED);
     return kIOReturnSuccess;
 }
 
@@ -503,9 +493,7 @@ IOReturn itlwm::getCHANNEL(IO80211Interface *interface,
     //    return kIOReturnError;
     ieee80211com *ic = &com.sc_ic;
     memset(cd, 0, sizeof(apple80211_channel_data));
-    if (ic->ic_bss == 0)
-        return kIOReturnError;
-    if (ic->ic_bss->ni_chan == 0)
+    if (ic->ic_state != IEEE80211_S_RUN || ic->ic_bss == 0 || ic->ic_bss->ni_chan == 0)
         return kIOReturnError;
     //bzero(cd, sizeof(apple80211_channel_data));
     
@@ -536,7 +524,7 @@ IOReturn itlwm::getTXPOWER(IO80211Interface *interface,
 IOReturn itlwm::getRATE(IO80211Interface *interface, struct apple80211_rate_data *rd) {
     //    return kIOReturnError;
     ieee80211com *ic = &com.sc_ic;
-    if (ic->ic_bss == 0)
+    if (ic->ic_state != IEEE80211_S_RUN ||  ic->ic_bss == 0)
         return kIOReturnError;
     rd->version = APPLE80211_VERSION;
     rd->num_radios = 1;
@@ -606,7 +594,6 @@ IOReturn itlwm::getSCAN_RESULT(IO80211Interface *interface,
                                struct apple80211_scan_result **sr) {
     
     ieee80211com *ic = &com.sc_ic;
-    XYLog("%s\n", __FUNCTION__);
     if (fNextNodeToSend == 0) { // start at beginning if we're not in the middle
         if (fScanResultWrapping) {
             fScanResultWrapping = false;
@@ -619,7 +606,7 @@ IOReturn itlwm::getSCAN_RESULT(IO80211Interface *interface,
         }
     }
     XYLog("%s %s %s\n", __FUNCTION__, ether_sprintf(fNextNodeToSend->ni_bssid), fNextNodeToSend->ni_essid);
-    apple80211_scan_result* result = new apple80211_scan_result;
+    apple80211_scan_result* result = (apple80211_scan_result*)fNextNodeToSend->verb;
 //    result->version = 1;
 //    result->asr_channel = fake_channel;
 //    result->asr_noise = 0;
@@ -856,7 +843,7 @@ IOReturn itlwm::setPOWER(IO80211Interface *interface,
 IOReturn itlwm::setASSOCIATE(IO80211Interface *interface,
                              struct apple80211_assoc_data *ad) {
     XYLog("setAssociate %s", ad->ad_ssid);
-    fInterface->setLinkState(IO80211LinkState::kIO80211NetworkLinkUp, 0);
+//    fInterface->setLinkState(IO80211LinkState::kIO80211NetworkLinkUp, 0);
     return kIOReturnSuccess;
 }
 
@@ -944,7 +931,7 @@ IOReturn itlwm::getHARDWARE_VERSION(IO80211Interface *interface,
 IOReturn itlwm::getCOUNTRY_CODE(IO80211Interface *interface,
                                 struct apple80211_country_code_data *cd) {
     cd->version = APPLE80211_VERSION;
-    strncpy((char*)cd->cc, fake_country_code, sizeof(cd->cc));
+    strncpy((char*)cd->cc, "CN ", sizeof(cd->cc));
     return kIOReturnSuccess;
 }
 

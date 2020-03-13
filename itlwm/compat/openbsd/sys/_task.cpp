@@ -231,6 +231,9 @@ taskq_create(const char *name, unsigned int nthreads, int ipl,
 void
 taskq_destroy(struct taskq *tq)
 {
+    if (!tq) {
+        return;
+    }
     lck_mtx_lock(tq->tq_mtx);
     switch (tq->tq_state) {
         case TQ_S_CREATED:
@@ -257,7 +260,10 @@ taskq_destroy(struct taskq *tq)
     lck_grp_attr_free(tq->tq_grp_attr);
     lck_attr_free(tq->tq_attr);
     lck_grp_free(tq->tq_grp);
-    IOFree(tq, sizeof(*tq));
+    if (tq != systq && tq != systqmp) {
+        IOFree(tq, sizeof(*tq));
+    }
+    
 }
 
 void

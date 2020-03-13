@@ -65,7 +65,6 @@ public:
     IOReturn setMulticastMode(IOEnetMulticastMode mode) override;
     IOReturn setMulticastList(IOEthernetAddress* addr, UInt32 len) override;
     SInt32 monitorModeSetEnabled(IO80211Interface* interface, bool enabled, UInt32 dlt) override;
-    IOOutputQueue*        createOutputQueue    ( ) override;
     
     bool createWorkLoop() override;
     IOWorkLoop* getWorkLoop() const override;
@@ -394,7 +393,6 @@ private:
     IOReturn getRADIO_INFO(IO80211Interface* interface, struct apple80211_radio_info_data* md);
     
     inline void ReleaseAll() {
-        RELEASE(fOutputQueue);
         RELEASE(fCommandGate);
         RELEASE(fWorkloop);
         RELEASE(mediumDict);
@@ -406,7 +404,6 @@ private:
     
     IO80211WorkLoop* fWorkloop;
     IO80211Interface* fInterface;
-    IOGatedOutputQueue* fOutputQueue;
     IOCommandGate* fCommandGate;
     IOPCIDevice* fPciDevice;
     

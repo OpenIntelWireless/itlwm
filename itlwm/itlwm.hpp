@@ -56,10 +56,9 @@ public:
     bool intrFilter(OSObject *object, IOFilterInterruptEventSource *src);
     
     bool createMediumTables(const IONetworkMedium **primary);
-    IOOutputQueue *createOutputQueue() override;
     IOReturn getPacketFilters(const OSSymbol *group, UInt32 *filters) const override;
-    IOReturn getMaxPacketSize(UInt32 *maxSize) const override;
     IOReturn selectMedium(const IONetworkMedium *medium) override;
+    UInt32 getFeatures() const override;
     
     //utils
     static void *malloc(vm_size_t len, int type, int how);
