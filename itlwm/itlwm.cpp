@@ -13,6 +13,7 @@ OSDefineMetaClassAndStructors(itlwm, IOEthernetController)
 OSDefineMetaClassAndStructors(CTimeout, OSObject)
 
 IOWorkLoop *_fWorkloop;
+IOCommandGate *_fCommandGate;
 
 #define MBit 1000000
 
@@ -134,6 +135,7 @@ bool itlwm::start(IOService *provider)
     }
     _fWorkloop = fWorkloop;
     fCommandGate = IOCommandGate::commandGate(this, (IOCommandGate::Action)tsleepHandler);
+    _fCommandGate = fCommandGate;
     if (fCommandGate == 0) {
         XYLog("No command gate!!\n");
         return false;
@@ -255,8 +257,9 @@ void itlwm::free()
 IOReturn itlwm::enable(IONetworkInterface *netif)
 {
     XYLog("%s\n", __func__);
+    super::enable(netif);
     setLinkStatus(kIONetworkLinkValid | kIONetworkLinkActive, getCurrentMedium());
-    return super::enable(netif);
+    return kIOReturnSuccess;
 }
 
 IOReturn itlwm::disable(IONetworkInterface *netif)

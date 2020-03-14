@@ -589,7 +589,8 @@ iwm_rx_tx_cmd(struct iwm_softc *sc, struct iwm_rx_packet *pkt,
     //    bus_dmamap_sync(sc->sc_dmat, txd->map, 0, txd->map->dm_mapsize,
     //        BUS_DMASYNC_POSTWRITE);
     //    bus_dmamap_unload(sc->sc_dmat, txd->map);
-    mbuf_freem(txd->m);
+//    mbuf_freem(txd->m);
+    freePacket(txd->m);
     
     _KASSERT(txd->done == 0);
     txd->done = 1;
@@ -2762,7 +2763,7 @@ iwm_notif_intr(struct iwm_softc *sc)
                 SYNC_RESP_STRUCT(phy_db_notif, pkt, struct iwm_calib_res_notif_phy_db *);
                 iwm_phy_db_set_section(sc, phy_db_notif);
                 sc->sc_init_complete |= IWM_CALIB_COMPLETE;
-                //                wakeupOn(&sc->sc_init_complete);
+                wakeupOn(&sc->sc_init_complete);
                 break;
             }
                 

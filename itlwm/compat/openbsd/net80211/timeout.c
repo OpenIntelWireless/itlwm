@@ -10,18 +10,10 @@
 #define timeout_cpp
 
 #include <sys/timeout.h>
+#include <IOKit/IOCommandGate.h>
 
 extern IOWorkLoop *_fWorkloop;
-
-void initTimeout(IOWorkLoop *workloop)
-{
-    _fWorkloop = workloop;
-}
-
-void releaseTimeout()
-{
-    _fWorkloop = NULL;
-}
+extern IOCommandGate *_fCommandGate;
 
 int splnet()
 {
@@ -38,35 +30,19 @@ void splx(int s)
 
 void timeout_set(CTimeout **t, void (*fn)(void *), void *arg)
 {
-//    if (*t == NULL) {
-//        *t = new CTimeout();
-//    }
-//    ((CTimeout*)*t)->to_func = fn;
-//    ((CTimeout*)*t)->to_arg = arg;
+    if (*t == NULL) {
+        *t = new CTimeout();
+    }
+    ((CTimeout*)*t)->to_func = fn;
+    ((CTimeout*)*t)->to_arg = arg;
 }
 
 int timeout_add_msec(CTimeout **to, int msecs)
 {
-//    if (*to == NULL) {
-//        *to = new CTimeout();
-//    }
-//    CTimeout *cto = *to;
-//    if (cto->tm) {
-//        _fWorkloop->removeEventSource(cto->tm);
-//        OSSafeReleaseNULL(cto->tm);
-//    }
-//    cto->tm = IOTimerEventSource::timerEventSource(cto, &CTimeout::timeoutOccurred);
-//    if (cto->tm == NULL)
-//        return 0;
-//    if (_fWorkloop == NULL) {
-//        IOLog("itlwm 啊啊啊啊啊啊啊啊啊啊啊啊啊,怎么是空的啊!!!!\n");
-//        return 0;
-//    }
-//    _fWorkloop->addEventSource(cto->tm);
-//    cto->tm->enable();
-//    cto->tm->setTimeoutMS(msecs);
-//    IOLog("itlwm %s\n", __func__);
-    return 1;
+    if (*to == NULL) {
+        *to = new CTimeout();
+    }
+    return _fCommandGate->runAction(&CTimeout::timeout_add_msec, *to, _fWorkloop, &msecs) == kIOReturnSuccess ? 1 : 0;
 }
 
 int timeout_add_sec(CTimeout **to, int secs)
@@ -81,20 +57,12 @@ int timeout_add_usec(CTimeout **to, int usecs)
 
 int timeout_del(CTimeout **to)
 {
-//    IOLog("timeout_del\n");
-//    if (((CTimeout*)*to) == NULL) {
-//        IOLog("timeout_del timeout NULL\n");
-//        return 0;
-//    }
-//    if (((CTimeout*)*to)->tm) {
-//        ((CTimeout*)*to)->tm->cancelTimeout();
-//        if (_fWorkloop) {
-//            _fWorkloop->removeEventSource(((CTimeout*)*to)->tm);
-//        }
-//        OSSafeReleaseNULL(((CTimeout*)*to)->tm);
-//    }
-//    OSSafeReleaseNULL(*to);
-    return 1;
+    IOLog("timeout_del\n");
+    if (((CTimeout*)*to) == NULL) {
+        IOLog("timeout_del timeout NULL\n");
+        return 0;
+    }
+    return _fCommandGate->runAction(&CTimeout::timeout_del, *to) == kIOReturnSuccess ? 1 : 0;
 }
 
 int timeout_pending(CTimeout **to)
