@@ -167,7 +167,7 @@ bool itlwm::start(IOService *provider)
             return false;
         }
         mediumTable[i] = medium;
-        if (i == kIOMediumEthernet1000BaseT | kIOMediumOptionFullDuplex | kIOMediumOptionFlowControl | kIOMediumOptionEEE) {
+        if (i == kIOMediumEthernetAuto) {
             autoMedium = medium;
         }
     }
@@ -282,7 +282,10 @@ UInt32 itlwm::outputPacket(mbuf_t m, void *param)
 {
     XYLog("%s\n", __func__);
     ifnet *ifp = &com.sc_ic.ic_ac.ac_if;
-    
+    if (ifp->if_snd == NULL) {
+        freePacket(m);
+        return kIOReturnOutputDropped;
+    }
     ifp->if_snd->enqueue(m);
     ifp->if_start(ifp);
     

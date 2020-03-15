@@ -54,6 +54,7 @@ public:
     int tsleep_nsec(void *ident, int priority, const char *wmesg, int timo);
     void wakeupOn(void* ident);
     bool intrFilter(OSObject *object, IOFilterInterruptEventSource *src);
+    static IOReturn _iwm_start_task(OSObject *target, void *arg0, void *arg1, void *arg2, void *arg3);
     
     bool createMediumTables(const IONetworkMedium **primary);
     IOReturn getPacketFilters(const OSSymbol *group, UInt32 *filters) const override;
@@ -312,7 +313,7 @@ public:
     
     
     
-private:
+public:
     IOInterruptEventSource* fInterrupt;
     IOWorkLoop *fWorkloop;
     IOCommandGate*        fCommandGate;

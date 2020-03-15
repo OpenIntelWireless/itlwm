@@ -865,14 +865,14 @@ iwm_run_init_mvm_ucode(struct iwm_softc *sc, int justnvm)
      * Nothing to do but wait for the init complete and phy DB
      * notifications from the firmware.
      */
-    while ((sc->sc_init_complete & wait_flags) != wait_flags) {
-        err = tsleep_nsec(&sc->sc_init_complete, 0, "iwminit",
-            SEC_TO_NSEC(2));
-        if (err)
-            break;
-    }
-//    err = tsleep_nsec(&sc->sc_init_complete, 0, "iwminit",
-//    SEC_TO_NSEC(2));
+//    while ((sc->sc_init_complete & wait_flags) != wait_flags) {
+//        err = tsleep_nsec(&sc->sc_init_complete, 0, "iwminit",
+//            SEC_TO_NSEC(2));
+//        if (err)
+//            break;
+//    }
+    err = tsleep_nsec(&sc->sc_init_complete, 0, "iwminit",
+    SEC_TO_NSEC(2));
     
     XYLog("%s done\n", __func__);
     

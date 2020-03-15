@@ -17,6 +17,9 @@ void* itlwm::
 malloc(vm_size_t len, int type, int how)
 {
     void* addr = IOMalloc(len + sizeof(vm_size_t));
+    if (addr == NULL) {
+        return NULL;
+    }
     *((vm_size_t*) addr) = len;
     return (void*)((uint8_t*)addr + sizeof(vm_size_t));
 }
@@ -24,6 +27,9 @@ malloc(vm_size_t len, int type, int how)
 void itlwm::
 free(void* addr)
 {
+    if (addr == NULL) {
+        return;
+    }
     void* actual_addr = (void*)((uint8_t*)addr - sizeof(vm_size_t));
     vm_size_t len = *((vm_size_t*) actual_addr);
     IOFree(actual_addr, len + sizeof(vm_size_t));

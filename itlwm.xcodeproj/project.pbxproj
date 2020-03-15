@@ -72,11 +72,14 @@
 		024A08D623FCF4D7009FBA6C /* scan.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 024A08D523FCF4D7009FBA6C /* scan.cpp */; };
 		0250B31E23FD76A200FF8CEA /* iwlwifi-3160-16.ucode in Resources */ = {isa = PBXBuildFile; fileRef = 0250B31D23FD76A200FF8CEA /* iwlwifi-3160-16.ucode */; };
 		0250B32023FD76BA00FF8CEA /* iwlwifi-3168-27.ucode in Resources */ = {isa = PBXBuildFile; fileRef = 0250B31F23FD76BA00FF8CEA /* iwlwifi-3168-27.ucode */; };
-		0250B32223FD76D200FF8CEA /* iwlwifi-7265-16.ucode in Resources */ = {isa = PBXBuildFile; fileRef = 0250B32123FD76D200FF8CEA /* iwlwifi-7265-16.ucode */; };
 		0250B32423FD76DF00FF8CEA /* iwlwifi-7260-16.ucode in Resources */ = {isa = PBXBuildFile; fileRef = 0250B32323FD76DF00FF8CEA /* iwlwifi-7260-16.ucode */; };
-		0250B32623FD76F900FF8CEA /* iwlwifi-8000C-34.ucode in Resources */ = {isa = PBXBuildFile; fileRef = 0250B32523FD76F900FF8CEA /* iwlwifi-8000C-34.ucode */; };
-		0250B32823FD770900FF8CEA /* iwlwifi-8265-34.ucode in Resources */ = {isa = PBXBuildFile; fileRef = 0250B32723FD770900FF8CEA /* iwlwifi-8265-34.ucode */; };
+		F855D30A241E14E3006032CB /* iwlwifi-8265-22.ucode in Resources */ = {isa = PBXBuildFile; fileRef = F89334CB241DF7C000CFADB9 /* iwlwifi-8265-22.ucode */; };
+		F855D30B241E14E3006032CB /* iwlwifi-8000C-22.ucode in Resources */ = {isa = PBXBuildFile; fileRef = F89334CD241DF7C900CFADB9 /* iwlwifi-8000C-22.ucode */; };
+		F855D30C241E14E3006032CB /* iwlwifi-7265D-17.ucode in Resources */ = {isa = PBXBuildFile; fileRef = F8D5FE77241E004D0013048C /* iwlwifi-7265D-17.ucode */; };
+		F855D30D241E14E3006032CB /* iwlwifi-7265-17.ucode in Resources */ = {isa = PBXBuildFile; fileRef = F8EAE8C8241DFCF6006F435A /* iwlwifi-7265-17.ucode */; };
 		F88D2B3D2414E64000BBE700 /* sha1-pbkdf2.c in Sources */ = {isa = PBXBuildFile; fileRef = F88D2B3B2414E64000BBE700 /* sha1-pbkdf2.c */; };
+		F89334CC241DF7C000CFADB9 /* iwlwifi-8265-22.ucode in Resources */ = {isa = PBXBuildFile; fileRef = F89334CB241DF7C000CFADB9 /* iwlwifi-8265-22.ucode */; };
+		F89334CE241DF7CA00CFADB9 /* iwlwifi-8000C-22.ucode in Resources */ = {isa = PBXBuildFile; fileRef = F89334CD241DF7C900CFADB9 /* iwlwifi-8000C-22.ucode */; };
 		F8C2EC4F2408031A007A9422 /* ieee80211_proto.c in Sources */ = {isa = PBXBuildFile; fileRef = F8C2EC2F24080319007A9422 /* ieee80211_proto.c */; };
 		F8C2EC502408031A007A9422 /* _string.c in Sources */ = {isa = PBXBuildFile; fileRef = F8C2EC3024080319007A9422 /* _string.c */; };
 		F8C2EC512408031A007A9422 /* ieee80211_amrr.h in Headers */ = {isa = PBXBuildFile; fileRef = F8C2EC3124080319007A9422 /* ieee80211_amrr.h */; };
@@ -120,6 +123,7 @@
 		F8C2EC9924080557007A9422 /* _null.h in Headers */ = {isa = PBXBuildFile; fileRef = F8C2EC8F24080556007A9422 /* _null.h */; };
 		F8C2EC9A24080557007A9422 /* timeout.h in Headers */ = {isa = PBXBuildFile; fileRef = F8C2EC9024080556007A9422 /* timeout.h */; };
 		F8C2EC9C2408062D007A9422 /* pcireg.h in Headers */ = {isa = PBXBuildFile; fileRef = F8C2EC9B2408062D007A9422 /* pcireg.h */; };
+		F8D5FE78241E004D0013048C /* iwlwifi-7265D-17.ucode in Resources */ = {isa = PBXBuildFile; fileRef = F8D5FE77241E004D0013048C /* iwlwifi-7265D-17.ucode */; };
 		F8DA2242241547950029EF13 /* OpenWifi.hpp in Headers */ = {isa = PBXBuildFile; fileRef = F8DA2241241547950029EF13 /* OpenWifi.hpp */; };
 		F8DA2244241547950029EF13 /* OpenWifi.cpp in Sources */ = {isa = PBXBuildFile; fileRef = F8DA2243241547950029EF13 /* OpenWifi.cpp */; };
 		F8DA2256241547BA0029EF13 /* IO80211SkywalkInterface.h in Headers */ = {isa = PBXBuildFile; fileRef = F8DA224B241547BA0029EF13 /* IO80211SkywalkInterface.h */; };
@@ -190,14 +194,12 @@
 		F8E5806A24167E8300443530 /* led.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 024A08D123FCF395009FBA6C /* led.cpp */; };
 		F8E5806B24167E8300443530 /* power.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 024A08D323FCF3E6009FBA6C /* power.cpp */; };
 		F8E5806C24167E8300443530 /* scan.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 024A08D523FCF4D7009FBA6C /* scan.cpp */; };
-		F8E5806D24167ECF00443530 /* iwlwifi-8265-34.ucode in Resources */ = {isa = PBXBuildFile; fileRef = 0250B32723FD770900FF8CEA /* iwlwifi-8265-34.ucode */; };
-		F8E5806E24167ECF00443530 /* iwlwifi-8000C-34.ucode in Resources */ = {isa = PBXBuildFile; fileRef = 0250B32523FD76F900FF8CEA /* iwlwifi-8000C-34.ucode */; };
 		F8E5806F24167ECF00443530 /* iwlwifi-7260-16.ucode in Resources */ = {isa = PBXBuildFile; fileRef = 0250B32323FD76DF00FF8CEA /* iwlwifi-7260-16.ucode */; };
-		F8E5807024167ECF00443530 /* iwlwifi-7265-16.ucode in Resources */ = {isa = PBXBuildFile; fileRef = 0250B32123FD76D200FF8CEA /* iwlwifi-7265-16.ucode */; };
 		F8E5807124167ECF00443530 /* iwlwifi-3160-16.ucode in Resources */ = {isa = PBXBuildFile; fileRef = 0250B31D23FD76A200FF8CEA /* iwlwifi-3160-16.ucode */; };
 		F8E5807224167ECF00443530 /* iwlwifi-3168-27.ucode in Resources */ = {isa = PBXBuildFile; fileRef = 0250B31F23FD76BA00FF8CEA /* iwlwifi-3168-27.ucode */; };
 		F8E5807824167EF600443530 /* _task.cpp in Sources */ = {isa = PBXBuildFile; fileRef = F8F9EDE0240B7415009CB8E7 /* _task.cpp */; };
 		F8E5807924167EF600443530 /* _string.c in Sources */ = {isa = PBXBuildFile; fileRef = F8C2EC3024080319007A9422 /* _string.c */; };
+		F8EAE8C9241DFCF6006F435A /* iwlwifi-7265-17.ucode in Resources */ = {isa = PBXBuildFile; fileRef = F8EAE8C8241DFCF6006F435A /* iwlwifi-7265-17.ucode */; };
 		F8F9257D240974EF0088B8D5 /* cfg80211.h in Headers */ = {isa = PBXBuildFile; fileRef = F8F92572240974ED0088B8D5 /* cfg80211.h */; };
 		F8F9257E240974EF0088B8D5 /* bitfield.h in Headers */ = {isa = PBXBuildFile; fileRef = F8F92573240974EE0088B8D5 /* bitfield.h */; };
 		F8F9257F240974EF0088B8D5 /* kernel.h in Headers */ = {isa = PBXBuildFile; fileRef = F8F92574240974EE0088B8D5 /* kernel.h */; };
@@ -275,11 +277,10 @@
 		024A08D523FCF4D7009FBA6C /* scan.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = scan.cpp; sourceTree = "<group>"; };
 		0250B31D23FD76A200FF8CEA /* iwlwifi-3160-16.ucode */ = {isa = PBXFileReference; lastKnownFileType = file; path = "iwlwifi-3160-16.ucode"; sourceTree = "<group>"; };
 		0250B31F23FD76BA00FF8CEA /* iwlwifi-3168-27.ucode */ = {isa = PBXFileReference; lastKnownFileType = file; path = "iwlwifi-3168-27.ucode"; sourceTree = "<group>"; };
-		0250B32123FD76D200FF8CEA /* iwlwifi-7265-16.ucode */ = {isa = PBXFileReference; lastKnownFileType = file; path = "iwlwifi-7265-16.ucode"; sourceTree = "<group>"; };
 		0250B32323FD76DF00FF8CEA /* iwlwifi-7260-16.ucode */ = {isa = PBXFileReference; lastKnownFileType = file; path = "iwlwifi-7260-16.ucode"; sourceTree = "<group>"; };
-		0250B32523FD76F900FF8CEA /* iwlwifi-8000C-34.ucode */ = {isa = PBXFileReference; lastKnownFileType = file; path = "iwlwifi-8000C-34.ucode"; sourceTree = "<group>"; };
-		0250B32723FD770900FF8CEA /* iwlwifi-8265-34.ucode */ = {isa = PBXFileReference; lastKnownFileType = file; path = "iwlwifi-8265-34.ucode"; sourceTree = "<group>"; };
 		F88D2B3B2414E64000BBE700 /* sha1-pbkdf2.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "sha1-pbkdf2.c"; sourceTree = "<group>"; };
+		F89334CB241DF7C000CFADB9 /* iwlwifi-8265-22.ucode */ = {isa = PBXFileReference; lastKnownFileType = file; path = "iwlwifi-8265-22.ucode"; sourceTree = "<group>"; };
+		F89334CD241DF7C900CFADB9 /* iwlwifi-8000C-22.ucode */ = {isa = PBXFileReference; lastKnownFileType = file; path = "iwlwifi-8000C-22.ucode"; sourceTree = "<group>"; };
 		F8B783AF240B9F87004C9777 /* _ifq.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = _ifq.h; sourceTree = "<group>"; };
 		F8C2EC2F24080319007A9422 /* ieee80211_proto.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = ieee80211_proto.c; sourceTree = "<group>"; };
 		F8C2EC3024080319007A9422 /* _string.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = _string.c; sourceTree = "<group>"; };
@@ -325,6 +326,7 @@
 		F8C2EC9024080556007A9422 /* timeout.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = timeout.h; sourceTree = "<group>"; };
 		F8C2EC9B2408062D007A9422 /* pcireg.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = pcireg.h; sourceTree = "<group>"; };
 		F8C2EC9D24080796007A9422 /* libkmod.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = libkmod.a; sourceTree = "<group>"; };
+		F8D5FE77241E004D0013048C /* iwlwifi-7265D-17.ucode */ = {isa = PBXFileReference; lastKnownFileType = file; path = "iwlwifi-7265D-17.ucode"; sourceTree = "<group>"; };
 		F8DA223F241547950029EF13 /* OpenWifi.kext */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = OpenWifi.kext; sourceTree = BUILT_PRODUCTS_DIR; };
 		F8DA2241241547950029EF13 /* OpenWifi.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = OpenWifi.hpp; sourceTree = "<group>"; };
 		F8DA2243241547950029EF13 /* OpenWifi.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = OpenWifi.cpp; sourceTree = "<group>"; };
@@ -344,6 +346,7 @@
 		F8DA2265241547CD0029EF13 /* apple80211.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = apple80211.h; sourceTree = "<group>"; };
 		F8DA22712415485D0029EF13 /* IONetworkController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = IONetworkController.h; sourceTree = "<group>"; };
 		F8DA22732415486E0029EF13 /* IONetworkInterface.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = IONetworkInterface.h; sourceTree = "<group>"; };
+		F8EAE8C8241DFCF6006F435A /* iwlwifi-7265-17.ucode */ = {isa = PBXFileReference; lastKnownFileType = file; path = "iwlwifi-7265-17.ucode"; sourceTree = "<group>"; };
 		F8EE4D1924177FEE002FA666 /* fw_gen.sh */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; path = fw_gen.sh; sourceTree = "<group>"; };
 		F8EE4D1A241786B0002FA666 /* FwData.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = FwData.h; sourceTree = "<group>"; };
 		F8F92572240974ED0088B8D5 /* cfg80211.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = cfg80211.h; sourceTree = "<group>"; };
@@ -498,11 +501,12 @@
 		0250B31C23FD768400FF8CEA /* firmware */ = {
 			isa = PBXGroup;
 			children = (
-				0250B32723FD770900FF8CEA /* iwlwifi-8265-34.ucode */,
-				0250B32523FD76F900FF8CEA /* iwlwifi-8000C-34.ucode */,
+				F89334CB241DF7C000CFADB9 /* iwlwifi-8265-22.ucode */,
+				F89334CD241DF7C900CFADB9 /* iwlwifi-8000C-22.ucode */,
 				0250B32323FD76DF00FF8CEA /* iwlwifi-7260-16.ucode */,
-				0250B32123FD76D200FF8CEA /* iwlwifi-7265-16.ucode */,
 				0250B31D23FD76A200FF8CEA /* iwlwifi-3160-16.ucode */,
+				F8D5FE77241E004D0013048C /* iwlwifi-7265D-17.ucode */,
+				F8EAE8C8241DFCF6006F435A /* iwlwifi-7265-17.ucode */,
 				0250B31F23FD76BA00FF8CEA /* iwlwifi-3168-27.ucode */,
 			);
 			path = firmware;
@@ -813,12 +817,13 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				0250B32823FD770900FF8CEA /* iwlwifi-8265-34.ucode in Resources */,
-				0250B32623FD76F900FF8CEA /* iwlwifi-8000C-34.ucode in Resources */,
+				F89334CC241DF7C000CFADB9 /* iwlwifi-8265-22.ucode in Resources */,
+				F89334CE241DF7CA00CFADB9 /* iwlwifi-8000C-22.ucode in Resources */,
 				0250B31E23FD76A200FF8CEA /* iwlwifi-3160-16.ucode in Resources */,
 				0250B32023FD76BA00FF8CEA /* iwlwifi-3168-27.ucode in Resources */,
+				F8D5FE78241E004D0013048C /* iwlwifi-7265D-17.ucode in Resources */,
 				0250B32423FD76DF00FF8CEA /* iwlwifi-7260-16.ucode in Resources */,
-				0250B32223FD76D200FF8CEA /* iwlwifi-7265-16.ucode in Resources */,
+				F8EAE8C9241DFCF6006F435A /* iwlwifi-7265-17.ucode in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -826,10 +831,11 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				F8E5806D24167ECF00443530 /* iwlwifi-8265-34.ucode in Resources */,
-				F8E5806E24167ECF00443530 /* iwlwifi-8000C-34.ucode in Resources */,
+				F855D30A241E14E3006032CB /* iwlwifi-8265-22.ucode in Resources */,
+				F855D30B241E14E3006032CB /* iwlwifi-8000C-22.ucode in Resources */,
+				F855D30C241E14E3006032CB /* iwlwifi-7265D-17.ucode in Resources */,
+				F855D30D241E14E3006032CB /* iwlwifi-7265-17.ucode in Resources */,
 				F8E5806F24167ECF00443530 /* iwlwifi-7260-16.ucode in Resources */,
-				F8E5807024167ECF00443530 /* iwlwifi-7265-16.ucode in Resources */,
 				F8E5807124167ECF00443530 /* iwlwifi-3160-16.ucode in Resources */,
 				F8E5807224167ECF00443530 /* iwlwifi-3168-27.ucode in Resources */,
 			);

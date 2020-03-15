@@ -8,6 +8,7 @@ typedef unsigned int ifnet_ctl_cmd_t;
 #include "OpenWifi.hpp"
 
 IOWorkLoop *_fWorkloop;
+IOCommandGate *_fCommandGate;
 
 #define super IO80211Controller
 OSDefineMetaClassAndStructors(itlwm, IO80211Controller);
@@ -122,6 +123,7 @@ bool itlwm::start(IOService* provider) {
         ReleaseAll();
         return false;
     }
+    _fCommandGate = fCommandGate;
     
     if (fWorkloop->addEventSource(fCommandGate) != kIOReturnSuccess) {
         XYLog("Failed to register command gate event source!");
@@ -178,6 +180,7 @@ bool itlwm::start(IOService* provider) {
 
 IOReturn itlwm::enable(IONetworkInterface* iface) {
     XYLog("enable");
+    super::enable(iface);
     IOMediumType mediumType = kIOMediumIEEE80211Auto;
     IONetworkMedium *medium = IONetworkMedium::getMediumWithType(mediumDict, mediumType);
     setLinkStatus(kIONetworkLinkActive | kIONetworkLinkValid, medium);
@@ -191,6 +194,7 @@ IOReturn itlwm::enable(IONetworkInterface* iface) {
 
 IOReturn itlwm::disable(IONetworkInterface* iface) {
     XYLog("disable");
+    super::disable(iface);
     return kIOReturnSuccess;
 }
 

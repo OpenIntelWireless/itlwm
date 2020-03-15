@@ -165,10 +165,11 @@ mq_enqueue(struct mbuf_queue *mq, mbuf_t m)
         mq->mq_drops++;
         dropped = 1;
     }
-    IORecursiveLockUnlock(mq->mq_mtx);
 
     if (dropped)
         mbuf_freem(m);
+    
+    IORecursiveLockUnlock(mq->mq_mtx);
 
     return (dropped);
 }
@@ -398,7 +399,7 @@ fail:
     return (NULL);
 }
 
-static IOLock *inputLock = IOLockAlloc();
+static IORecursiveLock *inputLock = IORecursiveLockAlloc();
 
 static inline int if_input(struct ifnet *ifq, struct mbuf_list *ml)
 {
@@ -407,11 +408,12 @@ static inline int if_input(struct ifnet *ifq, struct mbuf_list *ml)
     uint64_t packets;
     bool isEmpty = false;
     
+    IORecursiveLockLock(inputLock);
     isEmpty = ml_empty(ml);
     if (isEmpty) {
+        IORecursiveLockUnlock(inputLock);
         return (0);
     }
-    IOLockLock(inputLock);
     MBUF_LIST_FOREACH(ml, m) {
         if (ifq->iface == NULL) {
             XYLog("%s ifq->iface == NULL!!!\n", __func__);
@@ -422,12 +424,12 @@ static inline int if_input(struct ifnet *ifq, struct mbuf_list *ml)
             continue;
         }
         XYLog("%s %d 啊啊啊啊 ifq->iface->inputPacket(m)\n", __func__, __LINE__);
-        ifq->iface->inputPacket(m, 0, 0, 0);
+        ifq->iface->inputPacket(m);
     }
     if (!isEmpty) {
         ifq->iface->flushInputQueue();
     }
-    IOLockUnlock(inputLock);
+    IORecursiveLockUnlock(inputLock);
     return 1;
 }
 
@@ -438,7 +440,7 @@ static inline int if_enqueue(struct ifnet *ifq, mbuf_t m)
 {
 //    ifq->output_queue->enqueue(m, &TX_TYPE_FRAME);
     XYLog("%s 啊啊啊啊 if_enqueue!!\n", __func__);
-    ifq->if_snd->lockEnqueue(m);
+    ifq->if_snd->enqueue(m);
     return 0;
 }
 

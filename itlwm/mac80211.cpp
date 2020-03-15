@@ -589,7 +589,7 @@ iwm_rx_tx_cmd(struct iwm_softc *sc, struct iwm_rx_packet *pkt,
     //    bus_dmamap_sync(sc->sc_dmat, txd->map, 0, txd->map->dm_mapsize,
     //        BUS_DMASYNC_POSTWRITE);
     //    bus_dmamap_unload(sc->sc_dmat, txd->map);
-//    mbuf_freem(txd->m);
+    //    mbuf_freem(txd->m);
     freePacket(txd->m);
     
     _KASSERT(txd->done == 0);
@@ -622,6 +622,11 @@ iwm_rx_bmiss(struct iwm_softc *sc, struct iwm_rx_packet *pkt,
     struct ieee80211com *ic = &sc->sc_ic;
     struct iwm_missed_beacons_notif *mbn = (struct iwm_missed_beacons_notif *)pkt->data;
     uint32_t missed;
+    
+    //TODO zxy enter scan state directly;
+    iwm_newstate(ic, IEEE80211_S_SCAN, -1);
+    
+    return;
     
     if ((ic->ic_opmode != IEEE80211_M_STA) ||
         (ic->ic_state != IEEE80211_S_RUN))
@@ -1592,7 +1597,7 @@ iwm_newstate_task(void *psc)
     enum ieee80211_state ostate = ic->ic_state;
     int arg = sc->ns_arg;
     int err = 0, s = splnet();
-
+    
     if (sc->sc_flags & IWM_FLAG_SHUTDOWN) {
         /* iwm_stop() is waiting for us. */
         //        refcnt_rele_wake(&sc->task_refs);
@@ -1772,30 +1777,30 @@ iwm_endscan(struct iwm_softc *sc)
     join.i_len = strlen(ssid_name);
     join.i_flags = IEEE80211_JOIN_NWKEY;
     
-//    memset(&wpa, 0, sizeof(ieee80211_wpaparams));
-//    wpa.i_enabled = 1;
-//    wpa.i_ciphers = IEEE80211_WPA_CIPHER_TKIP | IEEE80211_WPA_CIPHER_CCMP;
-//    wpa.i_groupcipher = IEEE80211_WPA_CIPHER_TKIP | IEEE80211_WPA_CIPHER_CCMP;
-//    wpa.i_protos = IEEE80211_WPA_PROTO_WPA1 | IEEE80211_WPA_PROTO_WPA2;
-//    wpa.i_akms = IEEE80211_WPA_AKM_PSK | IEEE80211_WPA_AKM_8021X | IEEE80211_WPA_AKM_SHA256_PSK | IEEE80211_WPA_AKM_SHA256_8021X;
-//    memcpy(wpa.i_name, "zxy", strlen("zxy"));
-//    memset(&psk, 0, sizeof(ieee80211_wpapsk));
-//    memcpy(psk.i_name, "zxy", strlen("zxy"));
-//    psk.i_enabled = 1;
-//    pbkdf2_sha1(ssid_pwd, (const uint8_t*)ssid_name, strlen(ssid_name),
-//                4096, psk.i_psk , 32);
-//    XYLog("%s _psk=0x%02x,0x%02x, 0x%02x,0x%02x,0x%02x,0x%02x,0x%02x,0x%02x,0x%02x,0x%02x\n", __FUNCTION__, psk.i_psk[0], psk.i_psk[1], psk.i_psk[2], psk.i_psk[3], psk.i_psk[4], psk.i_psk[5], psk.i_psk[6], psk.i_psk[7], psk.i_psk[8], psk.i_psk[9]);
-//    memset(&nwkey, 0, sizeof(ieee80211_nwkey));
-//    nwkey.i_wepon = 0;
-//    nwkey.i_defkid = 0;
-//    memset(&join, 0, sizeof(ieee80211_join));
-//    join.i_wpaparams = wpa;
-//    join.i_wpapsk = psk;
-//    join.i_flags = IEEE80211_JOIN_WPAPSK | IEEE80211_JOIN_ANY | IEEE80211_JOIN_WPA | IEEE80211_JOIN_8021X;
-//    join.i_nwkey = nwkey;
-//    char *mac = "b0:df:c1:0b:53:10";
-//    join.i_len = strlen(ssid_name);
-//    memcpy(join.i_nwid, ssid_name, join.i_len);
+    //    memset(&wpa, 0, sizeof(ieee80211_wpaparams));
+    //    wpa.i_enabled = 1;
+    //    wpa.i_ciphers = IEEE80211_WPA_CIPHER_TKIP | IEEE80211_WPA_CIPHER_CCMP;
+    //    wpa.i_groupcipher = IEEE80211_WPA_CIPHER_TKIP | IEEE80211_WPA_CIPHER_CCMP;
+    //    wpa.i_protos = IEEE80211_WPA_PROTO_WPA1 | IEEE80211_WPA_PROTO_WPA2;
+    //    wpa.i_akms = IEEE80211_WPA_AKM_PSK | IEEE80211_WPA_AKM_8021X | IEEE80211_WPA_AKM_SHA256_PSK | IEEE80211_WPA_AKM_SHA256_8021X;
+    //    memcpy(wpa.i_name, "zxy", strlen("zxy"));
+    //    memset(&psk, 0, sizeof(ieee80211_wpapsk));
+    //    memcpy(psk.i_name, "zxy", strlen("zxy"));
+    //    psk.i_enabled = 1;
+    //    pbkdf2_sha1(ssid_pwd, (const uint8_t*)ssid_name, strlen(ssid_name),
+    //                4096, psk.i_psk , 32);
+    //    XYLog("%s _psk=0x%02x,0x%02x, 0x%02x,0x%02x,0x%02x,0x%02x,0x%02x,0x%02x,0x%02x,0x%02x\n", __FUNCTION__, psk.i_psk[0], psk.i_psk[1], psk.i_psk[2], psk.i_psk[3], psk.i_psk[4], psk.i_psk[5], psk.i_psk[6], psk.i_psk[7], psk.i_psk[8], psk.i_psk[9]);
+    //    memset(&nwkey, 0, sizeof(ieee80211_nwkey));
+    //    nwkey.i_wepon = 0;
+    //    nwkey.i_defkid = 0;
+    //    memset(&join, 0, sizeof(ieee80211_join));
+    //    join.i_wpaparams = wpa;
+    //    join.i_wpapsk = psk;
+    //    join.i_flags = IEEE80211_JOIN_WPAPSK | IEEE80211_JOIN_ANY | IEEE80211_JOIN_WPA | IEEE80211_JOIN_8021X;
+    //    join.i_nwkey = nwkey;
+    //    char *mac = "b0:df:c1:0b:53:10";
+    //    join.i_len = strlen(ssid_name);
+    //    memcpy(join.i_nwid, ssid_name, join.i_len);
     
     //    ieee80211_nwid nwid;
     ////    nwid.i_len = 6;
@@ -2166,10 +2171,11 @@ iwm_init(struct ifnet *ifp)
     return 0;
 }
 
-void itlwm::
-iwm_start(struct ifnet *ifp)
+IOReturn itlwm::
+_iwm_start_task(OSObject *target, void *arg0, void *arg1, void *arg2, void *arg3)
 {
     XYLog("%s\n", __func__);
+    struct ifnet *ifp = (struct ifnet *)arg0;
     struct iwm_softc *sc = (struct iwm_softc*)ifp->if_softc;
     itlwm *that = container_of(sc, itlwm, com);
     struct ieee80211com *ic = &sc->sc_ic;
@@ -2179,7 +2185,7 @@ iwm_start(struct ifnet *ifp)
     int ac = EDCA_AC_BE; /* XXX */
     
     if (!(ifp->if_flags & IFF_RUNNING) /*|| ifq_is_oactive(&ifp->if_snd)*/)
-        return;
+        return kIOReturnOutputDropped;
     
     for (;;) {
         /* why isn't this done per-queue? */
@@ -2238,7 +2244,87 @@ iwm_start(struct ifnet *ifp)
         }
     }
     
-    return;
+    return kIOReturnSuccess;
+}
+
+void itlwm::
+iwm_start(struct ifnet *ifp)
+{
+    //    struct iwm_softc *sc = (struct iwm_softc*)ifp->if_softc;
+    //    task_add(systqmp, &sc->output_packet_task);
+    XYLog("%s\n", __func__);
+    struct iwm_softc *sc = (struct iwm_softc*)ifp->if_softc;
+    itlwm *that = container_of(sc, itlwm, com);
+    that->fCommandGate->runAction(&itlwm::_iwm_start_task, ifp);
+    //    struct iwm_softc *sc = (struct iwm_softc*)ifp->if_softc;
+    //    itlwm *that = container_of(sc, itlwm, com);
+    //    struct ieee80211com *ic = &sc->sc_ic;
+    //    struct ieee80211_node *ni;
+    //    struct ether_header *eh;
+    //    mbuf_t m;
+    //    int ac = EDCA_AC_BE; /* XXX */
+    //
+    //    if (!(ifp->if_flags & IFF_RUNNING) /*|| ifq_is_oactive(&ifp->if_snd)*/)
+    //        return;
+    //
+    //    for (;;) {
+    //        /* why isn't this done per-queue? */
+    //        if (sc->qfullmsk != 0) {
+    //            //            ifq_set_oactive(&ifp->if_snd);
+    //            break;
+    //        }
+    //
+    //        /* need to send management frames even if we're not RUNning */
+    //        m = mq_dequeue(&ic->ic_mgtq);
+    //        if (m) {
+    //            ni = (struct ieee80211_node *)mbuf_pkthdr_rcvif(m);
+    //            goto sendit;
+    //        }
+    //
+    //        if (ic->ic_state != IEEE80211_S_RUN ||
+    //            (ic->ic_xflags & IEEE80211_F_TX_MGMT_ONLY))
+    //            break;
+    //
+    //        //        IFQ_DEQUEUE(&ifp->if_snd, m);
+    //        m = ifp->if_snd->lockDequeue();
+    //        if (!m) {
+    //            XYLog("%s 啊啊啊啊 ifp->if_snd->dequeue==NULL!!\n", __func__);
+    //            break;
+    //        }
+    //        if (mbuf_len(m) < sizeof (*eh) &&
+    //            mbuf_pullup(&m, sizeof (*eh)) != 0) {
+    //            XYLog("%s 啊啊啊啊 mbuf_pullup(&m, sizeof (*eh)) != 0!!\n", __func__);
+    //            ifp->if_oerrors++;
+    //            continue;
+    //        }
+    //#if NBPFILTER > 0
+    //        if (ifp->if_bpf != NULL)
+    //            bpf_mtap(ifp->if_bpf, m, BPF_DIRECTION_OUT);
+    //#endif
+    //        if ((m = ieee80211_encap(ifp, m, &ni)) == NULL) {
+    //            XYLog("%s 啊啊啊啊 ieee80211_encap!!\n", __func__);
+    //            ifp->if_oerrors++;
+    //            continue;
+    //        }
+    //
+    //    sendit:
+    //#if NBPFILTER > 0
+    //        if (ic->ic_rawbpf != NULL)
+    //            bpf_mtap(ic->ic_rawbpf, m, BPF_DIRECTION_OUT);
+    //#endif
+    //        if (that->iwm_tx(sc, m, ni, ac) != 0) {
+    //            ieee80211_release_node(ic, ni);
+    //            ifp->if_oerrors++;
+    //            continue;
+    //        }
+    //
+    //        if (ifp->if_flags & IFF_UP) {
+    //            sc->sc_tx_timer = 15;
+    //            ifp->if_timer = 1;
+    //        }
+    //    }
+    //
+    //    return;
 }
 
 void itlwm::
@@ -2763,7 +2849,7 @@ iwm_notif_intr(struct iwm_softc *sc)
                 SYNC_RESP_STRUCT(phy_db_notif, pkt, struct iwm_calib_res_notif_phy_db *);
                 iwm_phy_db_set_section(sc, phy_db_notif);
                 sc->sc_init_complete |= IWM_CALIB_COMPLETE;
-                wakeupOn(&sc->sc_init_complete);
+                //                wakeupOn(&sc->sc_init_complete);
                 break;
             }
                 
@@ -3299,7 +3385,7 @@ iwm_attach(struct iwm_softc *sc, struct pci_attach_args *pa)
             break;
         case PCI_PRODUCT_INTEL_WL_3165_1:
         case PCI_PRODUCT_INTEL_WL_3165_2:
-            sc->sc_fwname = "iwlwifi-7265-16.ucode";
+            sc->sc_fwname = "iwlwifi-7265-17.ucode";
             sc->host_interrupt_operation_mode = 0;
             sc->sc_device_family = IWM_DEVICE_FAMILY_7000;
             sc->sc_fwdmasegsz = IWM_FWDMASEGSZ;
@@ -3319,20 +3405,20 @@ iwm_attach(struct iwm_softc *sc, struct pci_attach_args *pa)
             break;
         case PCI_PRODUCT_INTEL_WL_7265_1:
         case PCI_PRODUCT_INTEL_WL_7265_2:
-            sc->sc_fwname = "iwlwifi-7265-16.ucode";
+            sc->sc_fwname = "iwlwifi-7265-17.ucode";
             sc->host_interrupt_operation_mode = 0;
             sc->sc_device_family = IWM_DEVICE_FAMILY_7000;
             sc->sc_fwdmasegsz = IWM_FWDMASEGSZ;
             break;
         case PCI_PRODUCT_INTEL_WL_8260_1:
         case PCI_PRODUCT_INTEL_WL_8260_2:
-            sc->sc_fwname = "iwlwifi-8000C-34.ucode";
+            sc->sc_fwname = "iwlwifi-8000C-22.ucode";
             sc->host_interrupt_operation_mode = 0;
             sc->sc_device_family = IWM_DEVICE_FAMILY_8000;
             sc->sc_fwdmasegsz = IWM_FWDMASEGSZ_8000;
             break;
         case PCI_PRODUCT_INTEL_WL_8265_1:
-            sc->sc_fwname = "iwlwifi-8265-34.ucode";
+            sc->sc_fwname = "iwlwifi-8265-22.ucode";
             sc->host_interrupt_operation_mode = 0;
             sc->sc_device_family = IWM_DEVICE_FAMILY_8000;
             sc->sc_fwdmasegsz = IWM_FWDMASEGSZ_8000;

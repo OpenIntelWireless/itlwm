@@ -127,7 +127,7 @@ ieee80211_send_eapol_key(struct ieee80211com *ic, mbuf_t m,
     
 //    ifp->output_queue->enqueue(m, &TX_TYPE_MGMT);
     XYLog("%s 啊啊啊啊 enqueue!!\n", __func__);
-    if (!ifp->if_snd->lockEnqueue(m)) {
+    if (!ifp->if_snd->enqueue(m)) {
         XYLog("%s 啊啊啊啊 enqueue fail!!\n", __func__);
         return -1;
     }

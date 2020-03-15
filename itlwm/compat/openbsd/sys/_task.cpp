@@ -134,6 +134,7 @@ taskq_thread(void *xtq)
         wakeup_one((caddr_t)&tq->tq_running);
 
 //    kthread_exit(0);
+    thread_terminate(current_thread());
 }
 
 void taskq_create_thread(void *arg)
