@@ -1,20 +1,23 @@
 # itlwm
 
-**An Intel Wifi Adapter Kernel Extension for macOS, based on the OpenBSD Project.**
+**基于 OpenBSD 的 macOS 英特尔网卡驱动。**
 
-[远景链接](http://bbs.pcbeta.com/forum.php?mod=viewthread&tid=1848662) | [English](./README_en.md)
+## Readme
+
+- **简体中文**
+- [English](./.github/README_en.md)
 
 ## 简介
 
-距离上次发布 [蓝牙固件上传驱动](http://bbs.pcbeta.com/viewthread-1838959-1-1.html) 刚好三月半，很感谢各位的支持，本人接触黑苹果半年，对于 `IOKit` 也是半知半解，摸索着前进，可能有很多东西是不对的，也是纯粹凭着对黑苹果的求知欲以及编程的爱好来完成这些的。
+[远景链接](http://bbs.pcbeta.com/forum.php?mod=viewthread&tid=1848662)
 
-关注我的朋友应该都知道我还有一个 Wi-Fi 驱动仓库，根据 2019 年十月份的 Linux `iwlWiFi` 代码移植开发的 [AppleIntelWiFiAdapter](https://github.com/zxystd/AppleIntelWifiAdapter) 驱动，截止到目前已经完成了 3、7、8、9、ax 系列 Intel 网卡的固件上传以及基本的 `RX` `TX` 输入输出代码，但是由于本人移植自 OpenBSD 的 `80211` 实在有太多东西需要去验证，所以就萌生了把整个 OpenBSD 的 iwm 驱动移植过来的想法。
+距离上次发布 [蓝牙固件上传驱动](http://bbs.pcbeta.com/viewthread-1838959-1-1.html) 刚好三月半，很感谢各位的支持，本人接触黑苹果半年，对于 IOKit 也是半知半解，摸索着前进，可能有很多东西是不对的，也是纯粹凭着对黑苹果的求知欲以及编程的爱好来完成这些的。
+
+关注我的朋友应该都知道我还有一个 Wi-Fi 驱动仓库，根据 2019 年十月份的 Linux `iwlwifi` 代码移植开发的 [AppleIntelWiFiAdapter](https://github.com/zxystd/AppleIntelWifiAdapter) 驱动，截止到目前已经完成了 3、7、8、9、ax 系列 Intel 网卡的固件上传以及基本的 `RX` `TX` 输入输出代码，但是由于本人移植自 OpenBSD 的 `80211` 实在有太多东西需要去验证，所以就萌生了把整个 OpenBSD 的 iwm 驱动移植过来的想法。
 
 因为重写过 Linux 驱动的代码的关系，移植过程非常顺利，半天即完成代码移植，断断续续花费了差不多一个月进行调试。
 
 **现在，终于实现了 Intel 无线网卡上网！**
-
-***
 
 不要看那显示的是个以太网，因为我并没有使用苹果的 `IO80211Family`，而是像 USB 网卡一样，使用以太网接口上网。
 
