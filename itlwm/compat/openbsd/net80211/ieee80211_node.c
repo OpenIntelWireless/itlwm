@@ -810,6 +810,7 @@ ieee80211_node_raise_inact(void *arg, struct ieee80211_node *ni)
 void
 ieee80211_begin_scan(struct ifnet *ifp)
 {
+    XYLog("%s\n", __FUNCTION__);
 	struct ieee80211com *ic = (struct ieee80211com *)ifp;
 
 	/*

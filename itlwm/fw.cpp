@@ -804,7 +804,7 @@ iwm_load_firmware(struct iwm_softc *sc, enum iwm_ucode_type ucode_type)
 int itlwm::
 iwm_start_fw(struct iwm_softc *sc, enum iwm_ucode_type ucode_type)
 {
-    XYLog("%s\n", __FUNCTION__);
+    XYLog("%s ucode_type=%d\n", __FUNCTION__, ucode_type);
     int err;
     
     IWM_WRITE(sc, IWM_CSR_INT, ~0);
@@ -848,7 +848,7 @@ int itlwm::
 iwm_load_ucode_wait_alive(struct iwm_softc *sc,
                           enum iwm_ucode_type ucode_type)
 {
-    XYLog("%s\n", __FUNCTION__);
+    XYLog("%s ucode_type=%d\n", __FUNCTION__, ucode_type);
     enum iwm_ucode_type old_type = sc->sc_uc_current;
     struct iwm_fw_sects *fw = &sc->sc_fw.fw_sects[ucode_type];
     int err;
@@ -901,7 +901,7 @@ iwm_load_ucode_wait_alive(struct iwm_softc *sc,
 int itlwm::
 iwm_run_init_mvm_ucode(struct iwm_softc *sc, int justnvm)
 {
-    XYLog("%s\n", __FUNCTION__);
+    XYLog("%s justnvm=%d\n", __FUNCTION__, justnvm);
     const int wait_flags = (IWM_INIT_COMPLETE | IWM_CALIB_COMPLETE);
     int err;
     
@@ -975,6 +975,7 @@ iwm_run_init_mvm_ucode(struct iwm_softc *sc, int justnvm)
 int itlwm::
 iwm_config_ltr(struct iwm_softc *sc)
 {
+    XYLog("%s\n", __FUNCTION__);
     struct iwm_ltr_config_cmd cmd = {
         .flags = htole32(IWM_LTR_CFG_FLAG_FEATURE_ENABLE),
     };

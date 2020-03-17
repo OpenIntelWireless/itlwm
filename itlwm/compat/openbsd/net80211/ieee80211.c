@@ -119,6 +119,7 @@ ieee80211_bgscan_timeout(void *arg)
 void
 ieee80211_channel_init(struct ifnet *ifp)
 {
+    XYLog("%s\n", __FUNCTION__);
     struct ieee80211com *ic = (struct ieee80211com *)ifp;
     struct ieee80211_channel *c;
     int i;
@@ -314,6 +315,7 @@ ieee80211_configure_ampdu_tx(struct ieee80211com *ic, int enable)
 void
 ieee80211_media_init(struct ifnet *ifp)
 {
+    XYLog("%s\n", __FUNCTION__);
 #define    ADD(_ic, _s, _o) \
     ifmedia_add(&(_ic)->ic_media, \
         IFM_MAKEWORD(IFM_IEEE80211, (_s), (_o), 0), 0, NULL)

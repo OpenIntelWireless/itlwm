@@ -2178,6 +2178,7 @@ iwm_fill_sf_command(struct iwm_softc *sc, struct iwm_sf_cfg_cmd *sf_cmd,
 int itlwm::
 iwm_sf_config(struct iwm_softc *sc, int new_state)
 {
+    XYLog("%s\n", __FUNCTION__);
     struct ieee80211com *ic = &sc->sc_ic;
     struct iwm_sf_cfg_cmd sf_cmd = {
         .state = htole32(new_state),

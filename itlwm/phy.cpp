@@ -73,6 +73,7 @@ int itlwm::
 iwm_phy_db_get_section_data(struct iwm_softc *sc, uint32_t type, uint8_t **data,
                             uint16_t *size, uint16_t ch_id)
 {
+    XYLog("%s\n", __FUNCTION__);
     struct iwm_phy_db_entry *entry;
     uint16_t ch_group_id = 0;
     
@@ -95,6 +96,7 @@ int itlwm::
 iwm_send_phy_db_cmd(struct iwm_softc *sc, uint16_t type, uint16_t length,
                     void *data)
 {
+    XYLog("%s\n", __FUNCTION__);
     struct iwm_phy_db_cmd phy_db_cmd;
     struct iwm_host_cmd cmd = {
         .id = IWM_PHY_DB_CMD,
@@ -116,6 +118,7 @@ int itlwm::
 iwm_phy_db_send_all_channel_groups(struct iwm_softc *sc, uint16_t type,
                                    uint8_t max_ch_groups)
 {
+    XYLog("%s\n", __FUNCTION__);
     uint16_t i;
     int err;
     struct iwm_phy_db_entry *entry;
@@ -352,7 +355,7 @@ iwm_binding_cmd(struct iwm_softc *sc, struct iwm_node *in, uint32_t action)
 int itlwm::
 iwm_send_cmd(struct iwm_softc *sc, struct iwm_host_cmd *hcmd)
 {
-    struct iwm_tx_ring *ring = &sc->txq[IWM_CMD_QUEUE];
+    struct iwm_tx_ring *ring = &sc->txq[sc->cmdqid];
     struct iwm_tfd *desc;
     struct iwm_tx_data *txdata;
     struct iwm_device_cmd *cmd;
@@ -608,7 +611,7 @@ void itlwm::
 iwm_cmd_done(struct iwm_softc *sc, int qid, int idx, int code)
 {
     XYLog("%s\n", __FUNCTION__);
-    struct iwm_tx_ring *ring = &sc->txq[IWM_CMD_QUEUE];
+    struct iwm_tx_ring *ring = &sc->txq[sc->cmdqid];
     struct iwm_tx_data *data;
     
     if (qid != sc->cmdqid) {
