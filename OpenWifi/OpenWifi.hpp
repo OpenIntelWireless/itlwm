@@ -305,6 +305,7 @@ public:
     void    iwm_tt_tx_backoff(struct iwm_softc *, uint32_t);
     int    iwm_init_hw(struct iwm_softc *);
     int    iwm_init(struct ifnet *);
+    static IOReturn _iwm_start_task(OSObject *target, void *arg0, void *arg1, void *arg2, void *arg3);
     static void    iwm_start(struct ifnet *);
     void    iwm_stop(struct ifnet *);
     static void    iwm_watchdog(struct ifnet *);
