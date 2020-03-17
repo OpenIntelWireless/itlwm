@@ -10,7 +10,7 @@
 
 void CTimeout::timeoutOccurred(OSObject* owner, IOTimerEventSource* timer)
 {
-    IOLog("itlwm %s\n", __func__);
+    IOLog("itlwm %s\n", __FUNCTION__);
     if (owner == NULL) {
         IOLog("itlwm tm owner == NULL!!!\n");
     }
@@ -37,7 +37,7 @@ IOReturn CTimeout::timeout_add_msec(OSObject *target, void *arg0, void *arg1, vo
     }
     cto->tm->enable();
     cto->tm->setTimeoutMS(msecs);
-    IOLog("itlwm %s\n", __func__);
+    IOLog("itlwm %s\n", __FUNCTION__);
     return kIOReturnSuccess;
 }
 

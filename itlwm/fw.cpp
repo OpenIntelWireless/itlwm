@@ -73,6 +73,8 @@ iwm_firmware_store_section(struct iwm_softc *sc, enum iwm_ucode_type type,
 }
 
 #define IWM_DEFAULT_SCAN_CHANNELS 40
+/* Newer firmware might support more channels. Raise this value if needed. */
+#define IWM_MAX_SCAN_CHANNELS        52 /* as of 8265-34 firmware image */
 
 struct iwm_tlv_calib_data {
     uint32_t ucode_type;
@@ -127,6 +129,8 @@ iwm_read_firmware(struct iwm_softc *sc, enum iwm_ucode_type ucode_type)
     struct iwm_fw_info *fw = &sc->sc_fw;
     struct iwm_tlv_ucode_header *uhdr;
     struct iwm_ucode_tlv tlv;
+    uint32_t usniffer_img;
+    uint32_t paging_mem_size;
     uint32_t tlv_type;
     uint8_t *data;
     int err;
@@ -162,13 +166,13 @@ iwm_read_firmware(struct iwm_softc *sc, enum iwm_ucode_type ucode_type)
     }
     fw->fw_rawdata = (u_char*)context.resource->getBytesNoCopy();
     fw->fw_rawsize = context.resource->getLength();
-//    fwData = getFWDescByName(sc->sc_fwname);
-//    if (fwData == NULL) {
-//        XYLog("%s resource load fail.\n", sc->sc_fwname);
-//        goto out;
-//    }
-//    fw->fw_rawdata = (u_char*)fwData->getBytesNoCopy();
-//    fw->fw_rawsize = fwData->getLength();
+    //    fwData = getFWDescByName(sc->sc_fwname);
+    //    if (fwData == NULL) {
+    //        XYLog("%s resource load fail.\n", sc->sc_fwname);
+    //        goto out;
+    //    }
+    //    fw->fw_rawdata = (u_char*)fwData->getBytesNoCopy();
+    //    fw->fw_rawsize = fwData->getLength();
     XYLog("load firmware done\n");
     sc->sc_capaflags = 0;
     sc->sc_capa_n_scan_channels = IWM_DEFAULT_SCAN_CHANNELS;
@@ -304,16 +308,22 @@ iwm_read_firmware(struct iwm_softc *sc, enum iwm_ucode_type ucode_type)
                 
             case IWM_UCODE_TLV_API_CHANGES_SET: {
                 struct iwm_ucode_api *api;
+                int idx, i;
                 if (tlv_len != sizeof(*api)) {
                     err = EINVAL;
                     goto parse_out;
                 }
                 api = (struct iwm_ucode_api *)tlv_data;
-                /* Flags may exceed 32 bits in future firmware. */
-                if (le32toh(api->api_index) > 0) {
+                idx = le32toh(api->api_index);
+                if (idx >= howmany(IWM_NUM_UCODE_TLV_API, 32)) {
+                    err = EINVAL;
                     goto parse_out;
                 }
-                sc->sc_ucode_api = le32toh(api->api_flags);
+                for (i = 0; i < 32; i++) {
+                    if ((le32toh(api->api_flags) & (1 << i)) == 0)
+                        continue;
+                    setbit(sc->sc_ucode_api, i + (32 * idx));
+                }
                 break;
             }
                 
@@ -351,6 +361,37 @@ iwm_read_firmware(struct iwm_softc *sc, enum iwm_ucode_type ucode_type)
                     goto parse_out;
                 break;
                 
+            case IWM_UCODE_TLV_PAGING:
+                if (tlv_len != sizeof(uint32_t)) {
+                    err = EINVAL;
+                    goto parse_out;
+                }
+                paging_mem_size = le32toh(*(const uint32_t *)tlv_data);
+                
+                XYLog("%s: Paging: paging enabled (size = %u bytes)\n",
+                      DEVNAME(sc), paging_mem_size);
+                if (paging_mem_size > IWM_MAX_PAGING_IMAGE_SIZE) {
+                    XYLog("%s: Driver only supports up to %u"
+                          " bytes for paging image (%u requested)\n",
+                          DEVNAME(sc), IWM_MAX_PAGING_IMAGE_SIZE,
+                          paging_mem_size);
+                    err = EINVAL;
+                    goto out;
+                }
+                if (paging_mem_size & (IWM_FW_PAGING_SIZE - 1)) {
+                    XYLog("%s: Paging: image isn't multiple of %u\n",
+                          DEVNAME(sc), IWM_FW_PAGING_SIZE);
+                    err = EINVAL;
+                    goto out;
+                }
+                
+                fw->fw_sects[IWM_UCODE_TYPE_REGULAR].paging_mem_size =
+                paging_mem_size;
+                usniffer_img = IWM_UCODE_TYPE_REGULAR_USNIFFER;
+                fw->fw_sects[usniffer_img].paging_mem_size =
+                paging_mem_size;
+                break;
+                
             case IWM_UCODE_TLV_N_SCAN_CHANNELS:
                 if (tlv_len != sizeof(uint32_t)) {
                     err = EINVAL;
@@ -358,6 +399,10 @@ iwm_read_firmware(struct iwm_softc *sc, enum iwm_ucode_type ucode_type)
                 }
                 sc->sc_capa_n_scan_channels =
                 le32toh(*(uint32_t *)tlv_data);
+                if (sc->sc_capa_n_scan_channels > IWM_MAX_SCAN_CHANNELS) {
+                    err = ERANGE;
+                    goto parse_out;
+                }
                 break;
                 
             case IWM_UCODE_TLV_FW_VERSION:
@@ -366,10 +411,14 @@ iwm_read_firmware(struct iwm_softc *sc, enum iwm_ucode_type ucode_type)
                     goto parse_out;
                 }
                 snprintf(sc->sc_fwver, sizeof(sc->sc_fwver),
-                         "%d.%d.%d",
+                         "%u.%u.%u",
                          le32toh(((uint32_t *)tlv_data)[0]),
                          le32toh(((uint32_t *)tlv_data)[1]),
                          le32toh(((uint32_t *)tlv_data)[2]));
+                break;
+                
+            case IWM_UCODE_TLV_FW_DBG_DEST:
+            case IWM_UCODE_TLV_FW_DBG_CONF:
                 break;
                 
             case IWM_UCODE_TLV_FW_MEM_SEG:
@@ -392,11 +441,6 @@ parse_out:
               "section type %d\n", DEVNAME(sc), err, tlv_type);
     }
     
-    if (!(sc->sc_capaflags & IWM_UCODE_TLV_FLAGS_PM_CMD_SUPPORT)) {
-        XYLog("%s: device uses unsupported power ops\n", DEVNAME(sc));
-        err = ENOTSUP;
-    }
-    
 out:
     if (err) {
         fw->fw_status = IWM_FW_STATUS_NONE;
@@ -412,6 +456,7 @@ out:
 int itlwm::
 iwm_post_alive(struct iwm_softc *sc)
 {
+    XYLog("%s\n", __FUNCTION__);
     int nwords;
     int err, chnl;
     uint32_t base;
@@ -423,6 +468,8 @@ iwm_post_alive(struct iwm_softc *sc)
     
     iwm_ict_reset(sc);
     
+    iwm_nic_unlock(sc);
+    
     /* Clear TX scheduler state in SRAM. */
     nwords = (IWM_SCD_TRANS_TBL_MEM_UPPER_BOUND -
               IWM_SCD_CONTEXT_MEM_LOWER_BOUND)
@@ -431,7 +478,10 @@ iwm_post_alive(struct iwm_softc *sc)
                         sc->sched_base + IWM_SCD_CONTEXT_MEM_LOWER_BOUND,
                         NULL, nwords);
     if (err)
-        goto out;
+        return err;
+    
+    if (!iwm_nic_lock(sc))
+        return EBUSY;
     
     /* Set physical address of TX scheduler rings (1KB aligned). */
     iwm_write_prph(sc, IWM_SCD_DRAM_BASE_ADDR, sc->sched_dma.paddr >> 10);
@@ -439,9 +489,11 @@ iwm_post_alive(struct iwm_softc *sc)
     iwm_write_prph(sc, IWM_SCD_CHAINEXT_EN, 0);
     
     /* enable command channel */
-    err = iwm_enable_txq(sc, 0 /* unused */, IWM_CMD_QUEUE, 7);
-    if (err)
-        goto out;
+    err = iwm_enable_ac_txq(sc, sc->cmdqid, IWM_TX_FIFO_CMD);
+    if (err) {
+        iwm_nic_unlock(sc);
+        return err;
+    }
     
     /* Activate TX scheduler. */
     iwm_write_prph(sc, IWM_SCD_TXFACT, 0xff);
@@ -456,13 +508,13 @@ iwm_post_alive(struct iwm_softc *sc)
     IWM_SETBITS(sc, IWM_FH_TX_CHICKEN_BITS_REG,
                 IWM_FH_TX_CHICKEN_BITS_SCD_AUTO_RETRY_EN);
     
+    iwm_nic_unlock(sc);
+    
     /* Enable L1-Active */
-    if (sc->sc_device_family != IWM_DEVICE_FAMILY_8000)
+    if (sc->sc_device_family < IWM_DEVICE_FAMILY_8000)
         iwm_clear_bits_prph(sc, IWM_APMG_PCIDEV_STT_REG,
                             IWM_APMG_PCIDEV_STT_VAL_L1_ACT_DIS);
     
-out:
-    iwm_nic_unlock(sc);
     return err;
 }
 
@@ -528,8 +580,8 @@ iwm_firmware_load_chunk(struct iwm_softc *sc, uint32_t dst_addr,
     
     /* Copy firmware chunk into pre-allocated DMA-safe memory. */
     memcpy(dma->vaddr, chunk, byte_cnt);
-    //    bus_dmamap_sync(sc->sc_dmat,
-    //        dma->map, 0, byte_cnt, BUS_DMASYNC_PREWRITE);
+    //        bus_dmamap_sync(sc->sc_dmat,
+    //            dma->map, 0, byte_cnt, BUS_DMASYNC_PREWRITE);
     
     if (dst_addr >= IWM_FW_MEM_EXTENDED_START &&
         dst_addr <= IWM_FW_MEM_EXTENDED_END)
@@ -606,6 +658,8 @@ iwm_load_firmware_7000(struct iwm_softc *sc, enum iwm_ucode_type ucode_type)
             return err;
         }
     }
+    
+    iwm_enable_interrupts(sc);
     
     IWM_WRITE(sc, IWM_CSR_RESET, 0);
     
@@ -713,17 +767,23 @@ iwm_load_firmware_8000(struct iwm_softc *sc, enum iwm_ucode_type ucode_type)
         return err;
     
     /* load to FW the binary sections of CPU2 */
-    return iwm_load_cpu_sections_8000(sc, fws, 2, &first_ucode_section);
+    err = iwm_load_cpu_sections_8000(sc, fws, 2, &first_ucode_section);
+    if (err)
+        return err;
+    
+    iwm_enable_interrupts(sc);
+    return 0;
 }
 
 int itlwm::
 iwm_load_firmware(struct iwm_softc *sc, enum iwm_ucode_type ucode_type)
 {
+    XYLog("%s\n", __FUNCTION__);
     int err, w;
     
     sc->sc_uc.uc_intr = 0;
     
-    if (sc->sc_device_family == IWM_DEVICE_FAMILY_8000)
+    if (sc->sc_device_family >= IWM_DEVICE_FAMILY_8000)
         err = iwm_load_firmware_8000(sc, ucode_type);
     else
         err = iwm_load_firmware_7000(sc, ucode_type);
@@ -744,6 +804,7 @@ iwm_load_firmware(struct iwm_softc *sc, enum iwm_ucode_type ucode_type)
 int itlwm::
 iwm_start_fw(struct iwm_softc *sc, enum iwm_ucode_type ucode_type)
 {
+    XYLog("%s\n", __FUNCTION__);
     int err;
     
     IWM_WRITE(sc, IWM_CSR_INT, ~0);
@@ -759,9 +820,9 @@ iwm_start_fw(struct iwm_softc *sc, enum iwm_ucode_type ucode_type)
     IWM_WRITE(sc, IWM_CSR_UCODE_DRV_GP1_CLR,
               IWM_CSR_UCODE_DRV_GP1_BIT_CMD_BLOCKED);
     
-    /* clear (again), then enable host interrupts */
+    /* clear (again), then enable firwmare load interrupt */
     IWM_WRITE(sc, IWM_CSR_INT, ~0);
-    iwm_enable_interrupts(sc);
+    iwm_enable_fwload_interrupt(sc);
     
     /* really make sure rfkill handshake bits are cleared */
     /* maybe we should write a few times more?  just to make sure */
@@ -774,7 +835,7 @@ iwm_start_fw(struct iwm_softc *sc, enum iwm_ucode_type ucode_type)
 int itlwm::
 iwm_send_tx_ant_cfg(struct iwm_softc *sc, uint8_t valid_tx_ant)
 {
-    XYLog("%s\n", __func__);
+    XYLog("%s\n", __FUNCTION__);
     struct iwm_tx_ant_cfg_cmd tx_ant_cmd = {
         .valid = htole32(valid_tx_ant),
     };
@@ -787,13 +848,19 @@ int itlwm::
 iwm_load_ucode_wait_alive(struct iwm_softc *sc,
                           enum iwm_ucode_type ucode_type)
 {
-    XYLog("%s\n", __func__);
+    XYLog("%s\n", __FUNCTION__);
     enum iwm_ucode_type old_type = sc->sc_uc_current;
+    struct iwm_fw_sects *fw = &sc->sc_fw.fw_sects[ucode_type];
     int err;
     
     err = iwm_read_firmware(sc, ucode_type);
     if (err)
         return err;
+    
+    if (isset(sc->sc_enabled_capa, IWM_UCODE_TLV_CAPA_DQA_SUPPORT))
+        sc->cmdqid = IWM_DQA_CMD_QUEUE;
+    else
+        sc->cmdqid = IWM_CMD_QUEUE;
     
     sc->sc_uc_current = ucode_type;
     err = iwm_start_fw(sc, ucode_type);
@@ -802,12 +869,39 @@ iwm_load_ucode_wait_alive(struct iwm_softc *sc,
         return err;
     }
     
-    return iwm_post_alive(sc);
+    err = iwm_post_alive(sc);
+    if (err)
+        return err;
+    
+    /*
+     * configure and operate fw paging mechanism.
+     * driver configures the paging flow only once, CPU2 paging image
+     * included in the IWM_UCODE_INIT image.
+     */
+    if (fw->paging_mem_size) {
+        err = iwm_save_fw_paging(sc, fw);
+        if (err) {
+            XYLog("%s: failed to save the FW paging image\n",
+                  DEVNAME(sc));
+            return err;
+        }
+        
+        err = iwm_send_paging_cmd(sc, fw);
+        if (err) {
+            XYLog("%s: failed to send the paging cmd\n",
+                  DEVNAME(sc));
+            iwm_free_fw_paging(sc);
+            return err;
+        }
+    }
+    
+    return 0;
 }
 
 int itlwm::
 iwm_run_init_mvm_ucode(struct iwm_softc *sc, int justnvm)
 {
+    XYLog("%s\n", __FUNCTION__);
     const int wait_flags = (IWM_INIT_COMPLETE | IWM_CALIB_COMPLETE);
     int err;
     
@@ -824,6 +918,15 @@ iwm_run_init_mvm_ucode(struct iwm_softc *sc, int justnvm)
         return err;
     }
     
+    if (sc->sc_device_family < IWM_DEVICE_FAMILY_8000) {
+        err = iwm_send_bt_init_conf(sc);
+        if (err) {
+            XYLog("%s: could not init bt coex (error %d)\n",
+                  DEVNAME(sc), err);
+            return err;
+        }
+    }
+    
     if (justnvm) {
         err = iwm_nvm_init(sc);
         if (err) {
@@ -837,10 +940,6 @@ iwm_run_init_mvm_ucode(struct iwm_softc *sc, int justnvm)
         
         return 0;
     }
-    
-    err = iwm_send_bt_init_conf(sc);
-    if (err)
-        return err;
     
     err = iwm_sf_config(sc, IWM_SF_INIT_OFF);
     if (err)
@@ -859,22 +958,29 @@ iwm_run_init_mvm_ucode(struct iwm_softc *sc, int justnvm)
     if (err)
         return err;
     
-    XYLog("%s wait for sc_init_complete\n", __func__);
-    
     /*
      * Nothing to do but wait for the init complete and phy DB
      * notifications from the firmware.
      */
-//    while ((sc->sc_init_complete & wait_flags) != wait_flags) {
-//        err = tsleep_nsec(&sc->sc_init_complete, 0, "iwminit",
-//            SEC_TO_NSEC(2));
-//        if (err)
-//            break;
-//    }
-    err = tsleep_nsec(&sc->sc_init_complete, 0, "iwminit",
-    SEC_TO_NSEC(2));
-    
-    XYLog("%s done\n", __func__);
+    while ((sc->sc_init_complete & wait_flags) != wait_flags) {
+        err = tsleep_nsec(&sc->sc_init_complete, 0, "iwminit",
+                          SEC_TO_NSEC(2));
+        if (err)
+            break;
+    }
     
     return err;
+}
+
+int itlwm::
+iwm_config_ltr(struct iwm_softc *sc)
+{
+    struct iwm_ltr_config_cmd cmd = {
+        .flags = htole32(IWM_LTR_CFG_FLAG_FEATURE_ENABLE),
+    };
+    
+    if (!sc->sc_ltr_enabled)
+        return 0;
+    
+    return iwm_send_cmd_pdu(sc, IWM_LTR_CONFIG, 0, sizeof(cmd), &cmd);
 }

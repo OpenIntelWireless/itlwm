@@ -124,7 +124,7 @@ void
 ieee80211_inputm(struct ifnet *ifp, mbuf_t m, struct ieee80211_node *ni,
     struct ieee80211_rxinfo *rxi, struct mbuf_list *ml)
 {
-    XYLog("%s\n", __func__);
+    XYLog("%s\n", __FUNCTION__);
 	struct ieee80211com *ic = (struct ieee80211com *)ifp;
 	struct ieee80211_frame *wh;
 	u_int16_t *orxseq, nrxseq, qos;
@@ -842,7 +842,7 @@ void
 ieee80211_enqueue_data(struct ieee80211com *ic, mbuf_t m,
     struct ieee80211_node *ni, int mcast, struct mbuf_list *ml)
 {
-    XYLog("%s\n", __func__);
+    XYLog("%s\n", __FUNCTION__);
 	struct ifnet *ifp = &ic->ic_if;
 	struct ether_header *eh;
 	mbuf_t m1;
@@ -998,7 +998,7 @@ void
 ieee80211_amsdu_decap(struct ieee80211com *ic, mbuf_t m,
     struct ieee80211_node *ni, int hdrlen, struct mbuf_list *ml)
 {
-    XYLog("%s\n", __func__);
+    XYLog("%s\n", __FUNCTION__);
 	mbuf_t n;
 	struct ether_header *eh;
 	struct llc *llc;
@@ -1366,7 +1366,7 @@ void
 ieee80211_recv_probe_resp(struct ieee80211com *ic, mbuf_t m,
     struct ieee80211_node *rni, struct ieee80211_rxinfo *rxi, int isprobe)
 {
-    XYLog("%s\n", __func__);
+    XYLog("%s\n", __FUNCTION__);
 	struct ieee80211_node *ni;
 	const struct ieee80211_frame *wh;
 	const u_int8_t *frm, *efrm;
@@ -1395,7 +1395,7 @@ ieee80211_recv_probe_resp(struct ieee80211com *ic, mbuf_t m,
 	    ic->ic_opmode != IEEE80211_M_HOSTAP &&
 #endif
 	    ic->ic_state != IEEE80211_S_SCAN) {
-		panic("%s: impossible operating mode", __func__);
+		panic("%s: impossible operating mode", __FUNCTION__);
 	}
 #endif
 	/* make sure all mandatory fixed fields are present */
@@ -1552,13 +1552,13 @@ ieee80211_recv_probe_resp(struct ieee80211com *ic, mbuf_t m,
 	    (ni == NULL || ic->ic_state == IEEE80211_S_SCAN ||
 	    (ic->ic_flags & IEEE80211_F_BGSCAN))) {
 		XYLog("%s: %s%s on chan %u (bss chan %u) ",
-		    __func__, (ni == NULL ? "new " : ""),
+		    __FUNCTION__, (ni == NULL ? "new " : ""),
 		    isprobe ? "probe response" : "beacon",
 		    chan, bchan);
 		ieee80211_print_essid(ssid + 2, ssid[1]);
 		XYLog(" from %s\n", ether_sprintf((u_int8_t *)wh->i_addr2));
 		XYLog("%s: caps 0x%x bintval %u erp 0x%x\n",
-			__func__, capinfo, bintval, erp);
+			__FUNCTION__, capinfo, bintval, erp);
 	}
 #endif
 
@@ -1723,7 +1723,7 @@ ieee80211_recv_probe_resp(struct ieee80211com *ic, mbuf_t m,
 		memset(ni->ni_essid, 0, sizeof(ni->ni_essid));
 		/* we know that ssid[1] <= IEEE80211_NWID_LEN */
 		memcpy(ni->ni_essid, &ssid[2], ssid[1]);
-        XYLog("%s ssid=%s\n", __func__, ni->ni_essid);
+        XYLog("%s ssid=%s\n", __FUNCTION__, ni->ni_essid);
 	}
 	IEEE80211_ADDR_COPY(ni->ni_bssid, wh->i_addr3);
 	/* XXX validate channel # */
@@ -1870,7 +1870,7 @@ void
 ieee80211_recv_auth(struct ieee80211com *ic, mbuf_t m,
     struct ieee80211_node *ni, struct ieee80211_rxinfo *rxi)
 {
-    XYLog("%s\n", __func__);
+    XYLog("%s\n", __FUNCTION__);
 	const struct ieee80211_frame *wh;
 	const u_int8_t *frm;
 	u_int16_t algo, seq, status;
@@ -1924,7 +1924,7 @@ void
 ieee80211_recv_assoc_req(struct ieee80211com *ic, mbuf_t m,
     struct ieee80211_node *ni, struct ieee80211_rxinfo *rxi, int reassoc)
 {
-    XYLog("%s reassoc=%d\n", __func__, reassoc);
+    XYLog("%s reassoc=%d\n", __FUNCTION__, reassoc);
 	const struct ieee80211_frame *wh;
 	const u_int8_t *frm, *efrm;
 	const u_int8_t *ssid, *rates, *xrates, *rsnie, *wpaie, *wmeie, *htcaps;
@@ -2260,7 +2260,7 @@ void
 ieee80211_recv_assoc_resp(struct ieee80211com *ic, mbuf_t m,
     struct ieee80211_node *ni, int reassoc)
 {
-    XYLog("%s reassoc=%d\n", __func__, reassoc);
+    XYLog("%s reassoc=%d\n", __FUNCTION__, reassoc);
 	struct ifnet *ifp = &ic->ic_if;
 	const struct ieee80211_frame *wh;
 	const u_int8_t *frm, *efrm;
@@ -2422,7 +2422,7 @@ void
 ieee80211_recv_deauth(struct ieee80211com *ic, mbuf_t m,
     struct ieee80211_node *ni)
 {
-    XYLog("%s\n", __func__);
+    XYLog("%s\n", __FUNCTION__);
 	const struct ieee80211_frame *wh;
 	const u_int8_t *frm;
 	u_int16_t reason;
@@ -2480,7 +2480,7 @@ void
 ieee80211_recv_disassoc(struct ieee80211com *ic, mbuf_t m,
     struct ieee80211_node *ni)
 {
-    XYLog("%s\n", __func__);
+    XYLog("%s\n", __FUNCTION__);
 	const struct ieee80211_frame *wh;
 	const u_int8_t *frm;
 	u_int16_t reason;
@@ -2536,7 +2536,7 @@ void
 ieee80211_recv_addba_req(struct ieee80211com *ic, mbuf_t m,
     struct ieee80211_node *ni)
 {
-    XYLog("%s\n", __func__);
+    XYLog("%s\n", __FUNCTION__);
 	const struct ieee80211_frame *wh;
 	const u_int8_t *frm;
 	struct ieee80211_rx_ba *ba;
@@ -2703,7 +2703,7 @@ void
 ieee80211_recv_addba_resp(struct ieee80211com *ic, mbuf_t m,
     struct ieee80211_node *ni)
 {
-    XYLog("%s\n", __func__);
+    XYLog("%s\n", __FUNCTION__);
 	const struct ieee80211_frame *wh;
 	const u_int8_t *frm;
 	struct ieee80211_tx_ba *ba;
@@ -2816,7 +2816,7 @@ void
 ieee80211_recv_delba(struct ieee80211com *ic, mbuf_t m,
     struct ieee80211_node *ni)
 {
-    XYLog("%s\n", __func__);
+    XYLog("%s\n", __FUNCTION__);
 	const struct ieee80211_frame *wh;
 	const u_int8_t *frm;
 	u_int16_t params, reason;
@@ -2891,7 +2891,7 @@ void
 ieee80211_recv_sa_query_req(struct ieee80211com *ic, mbuf_t m,
     struct ieee80211_node *ni)
 {
-    XYLog("%s\n", __func__);
+    XYLog("%s\n", __FUNCTION__);
 	const struct ieee80211_frame *wh;
 	const u_int8_t *frm;
 
@@ -2929,7 +2929,7 @@ void
 ieee80211_recv_sa_query_resp(struct ieee80211com *ic, mbuf_t m,
     struct ieee80211_node *ni)
 {
-    XYLog("%s\n", __func__);
+    XYLog("%s\n", __FUNCTION__);
 	const struct ieee80211_frame *wh;
 	const u_int8_t *frm;
 
@@ -2966,7 +2966,7 @@ void
 ieee80211_recv_action(struct ieee80211com *ic, mbuf_t m,
     struct ieee80211_node *ni)
 {
-    XYLog("%s\n", __func__);
+    XYLog("%s\n", __FUNCTION__);
 	const struct ieee80211_frame *wh;
 	const u_int8_t *frm;
 
@@ -3013,7 +3013,7 @@ void
 ieee80211_recv_mgmt(struct ieee80211com *ic, mbuf_t m,
     struct ieee80211_node *ni, struct ieee80211_rxinfo *rxi, int subtype)
 {
-    XYLog("%s\n", __func__);
+    XYLog("%s\n", __FUNCTION__);
 	switch (subtype) {
 	case IEEE80211_FC0_SUBTYPE_BEACON:
 		ieee80211_recv_probe_resp(ic, m, ni, rxi, 0);
@@ -3068,7 +3068,7 @@ void
 ieee80211_recv_pspoll(struct ieee80211com *ic, mbuf_t m,
     struct ieee80211_node *ni)
 {
-    XYLog("%s\n", __func__);
+    XYLog("%s\n", __FUNCTION__);
 	struct ifnet *ifp = &ic->ic_if;
 	struct ieee80211_frame_pspoll *psp;
 	struct ieee80211_frame *wh;

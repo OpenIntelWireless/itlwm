@@ -403,7 +403,7 @@ static IORecursiveLock *inputLock = IORecursiveLockAlloc();
 
 static inline int if_input(struct ifnet *ifq, struct mbuf_list *ml)
 {
-    XYLog("%s\n", __func__);
+    XYLog("%s\n", __FUNCTION__);
     mbuf_t m;
     uint64_t packets;
     bool isEmpty = false;
@@ -416,14 +416,14 @@ static inline int if_input(struct ifnet *ifq, struct mbuf_list *ml)
     }
     MBUF_LIST_FOREACH(ml, m) {
         if (ifq->iface == NULL) {
-            XYLog("%s ifq->iface == NULL!!!\n", __func__);
+            XYLog("%s ifq->iface == NULL!!!\n", __FUNCTION__);
             break;
         }
         if (m == NULL) {
-            XYLog("%s m == NULL!!!\n", __func__);
+            XYLog("%s m == NULL!!!\n", __FUNCTION__);
             continue;
         }
-        XYLog("%s %d 啊啊啊啊 ifq->iface->inputPacket(m)\n", __func__, __LINE__);
+        XYLog("%s %d 啊啊啊啊 ifq->iface->inputPacket(m)\n", __FUNCTION__, __LINE__);
         ifq->iface->inputPacket(m);
     }
     if (!isEmpty) {
@@ -439,7 +439,7 @@ extern int TX_TYPE_FRAME;
 static inline int if_enqueue(struct ifnet *ifq, mbuf_t m)
 {
 //    ifq->output_queue->enqueue(m, &TX_TYPE_FRAME);
-    XYLog("%s 啊啊啊啊 if_enqueue!!\n", __func__);
+    XYLog("%s 啊啊啊啊 if_enqueue!!\n", __FUNCTION__);
     ifq->if_snd->enqueue(m);
     return 0;
 }

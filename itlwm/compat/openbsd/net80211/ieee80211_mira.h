@@ -110,5 +110,6 @@ void	ieee80211_mira_cancel_timeouts(struct ieee80211_mira_node *);
 /* Returns RTS threshold to be used for a frame about to be transmitted. */
 int	ieee80211_mira_get_rts_threshold(struct ieee80211_mira_node *,
     struct ieee80211com *, struct ieee80211_node *, size_t);
-
+int ieee80211_mira_is_probing(struct ieee80211_mira_node *);
+int ieee80211_mira_get_best_mcs(struct ieee80211_mira_node *mn);
 #endif /* _NET80211_IEEE80211_MIRA_H_ */

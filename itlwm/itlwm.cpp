@@ -49,7 +49,7 @@ static UInt32 mediumSpeedArray[MEDIUM_INDEX_COUNT] = {
 
 bool itlwm::init(OSDictionary *properties)
 {
-    XYLog("%s\n", __func__);
+    XYLog("%s\n", __FUNCTION__);
     super::init(properties);
     fwLoadLock = IOLockAlloc();
     return true;
@@ -57,7 +57,7 @@ bool itlwm::init(OSDictionary *properties)
 
 IOService* itlwm::probe(IOService *provider, SInt32 *score)
 {
-    XYLog("%s\n", __func__);
+    XYLog("%s\n", __FUNCTION__);
     super::probe(provider, score);
     IOPCIDevice* device = OSDynamicCast(IOPCIDevice, provider);
     if (!device) {
@@ -117,7 +117,7 @@ bool itlwm::start(IOService *provider)
 {
     ifnet *ifp;
     
-    XYLog("%s\n", __func__);
+    XYLog("%s\n", __FUNCTION__);
     if (!super::start(provider)) {
         return false;
     }
@@ -217,7 +217,7 @@ IOReturn itlwm::selectMedium(const IONetworkMedium *medium) {
 
 void itlwm::stop(IOService *provider)
 {
-    XYLog("%s\n", __func__);
+    XYLog("%s\n", __FUNCTION__);
     taskq_destroy(systq);
     taskq_destroy(systqmp);
     taskq_destroy(com.sc_nswq);
@@ -238,7 +238,7 @@ void itlwm::stop(IOService *provider)
 
 void itlwm::free()
 {
-    XYLog("%s\n", __func__);
+    XYLog("%s\n", __FUNCTION__);
     IOLockFree(fwLoadLock);
     fwLoadLock = NULL;
     if (fWorkloop) {
@@ -256,7 +256,7 @@ void itlwm::free()
 
 IOReturn itlwm::enable(IONetworkInterface *netif)
 {
-    XYLog("%s\n", __func__);
+    XYLog("%s\n", __FUNCTION__);
     super::enable(netif);
     setLinkStatus(kIONetworkLinkValid | kIONetworkLinkActive, getCurrentMedium());
     return kIOReturnSuccess;
@@ -264,12 +264,12 @@ IOReturn itlwm::enable(IONetworkInterface *netif)
 
 IOReturn itlwm::disable(IONetworkInterface *netif)
 {
-    XYLog("%s\n", __func__);
+    XYLog("%s\n", __FUNCTION__);
     return super::disable(netif);
 }
 
 IOReturn itlwm::getHardwareAddress(IOEthernetAddress *addrP) {
-    XYLog("%s\n", __func__);
+    XYLog("%s\n", __FUNCTION__);
     if (IEEE80211_ADDR_EQ(etheranyaddr, com.sc_ic.ic_myaddr)) {
         return kIOReturnError;
     } else {
@@ -280,7 +280,7 @@ IOReturn itlwm::getHardwareAddress(IOEthernetAddress *addrP) {
 
 UInt32 itlwm::outputPacket(mbuf_t m, void *param)
 {
-    XYLog("%s\n", __func__);
+    XYLog("%s\n", __FUNCTION__);
     ifnet *ifp = &com.sc_ic.ic_ac.ac_if;
     if (ifp->if_snd == NULL) {
         freePacket(m);

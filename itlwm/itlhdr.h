@@ -61,13 +61,6 @@ const uint8_t iwm_nvm_channels_8000[] = {
     149, 153, 157, 161, 165, 169, 173, 177, 181
 };
 
-const uint8_t iwm_ac_to_tx_fifo[] = {
-    IWM_TX_FIFO_VO,
-    IWM_TX_FIFO_VI,
-    IWM_TX_FIFO_BE,
-    IWM_TX_FIFO_BK,
-};
-
 #define IWM_NUM_2GHZ_CHANNELS    14
 
 const struct iwm_rate {
@@ -128,6 +121,14 @@ const int iwm_mcs2ridx[] = {
 struct iwm_nvm_section {
     uint16_t length;
     uint8_t *data;
+};
+
+/* Map ieee80211_edca_ac categories to firmware Tx FIFO. */
+const uint8_t iwm_ac_to_tx_fifo[] = {
+    IWM_TX_FIFO_BE,
+    IWM_TX_FIFO_BK,
+    IWM_TX_FIFO_VI,
+    IWM_TX_FIFO_VO,
 };
 
 #endif /* itlhdr_h */

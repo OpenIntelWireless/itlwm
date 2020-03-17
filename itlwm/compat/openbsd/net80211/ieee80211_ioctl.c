@@ -209,7 +209,7 @@ int
 ieee80211_ioctl_setnwkeys(struct ieee80211com *ic,
     const struct ieee80211_nwkey *nwkey)
 {
-    XYLog("%s\n", __func__);
+    XYLog("%s\n", __FUNCTION__);
 	struct ieee80211_key *k;
 	int error, i;
 

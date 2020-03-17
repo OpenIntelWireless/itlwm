@@ -44,19 +44,19 @@ free(void *addr, int type, vm_size_t len)
 int itlwm::
 iwm_send_bt_init_conf(struct iwm_softc *sc)
 {
-    XYLog("%s\n", __func__);
+    XYLog("%s\n", __FUNCTION__);
     struct iwm_bt_coex_cmd bt_cmd;
-
+    
     bt_cmd.mode = htole32(IWM_BT_COEX_WIFI);
     bt_cmd.enabled_modules = htole32(IWM_BT_COEX_HIGH_BAND_RET);
-
+    
     return iwm_send_cmd_pdu(sc, IWM_BT_CONFIG, 0, sizeof(bt_cmd),
-        &bt_cmd);
+                            &bt_cmd);
 }
 
 void itlwm::wakeupOn(void *ident)
 {
-    XYLog("%s\n", __func__);
+    XYLog("%s\n", __FUNCTION__);
     if (fCommandGate == 0)
         return;
     else
@@ -65,12 +65,12 @@ void itlwm::wakeupOn(void *ident)
 
 int itlwm::tsleep_nsec(void *ident, int priority, const char *wmesg, int timo)
 {
-    XYLog("%s %s\n", __func__, wmesg);
+    XYLog("%s %s\n", __FUNCTION__, wmesg);
+    IOReturn ret;
     if (fCommandGate == 0) {
         IOSleep(timo);
         return 0;
     }
-    IOReturn ret;
     if (timo == 0) {
         ret = fCommandGate->runCommand(ident);
     } else {
@@ -84,7 +84,6 @@ int itlwm::tsleep_nsec(void *ident, int priority, const char *wmesg, int timo)
 
 IOReturn itlwm::tsleepHandler(OSObject* owner, void* arg0, void* arg1, void* arg2, void* arg3)
 {
-    XYLog("%s\n", __func__);
     itlwm* dev = OSDynamicCast(itlwm, owner);
     if (dev == 0)
         return kIOReturnError;

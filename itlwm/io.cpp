@@ -32,6 +32,13 @@ iwm_write_prph(struct iwm_softc *sc, uint32_t addr, uint32_t val)
     IWM_WRITE(sc, IWM_HBUS_TARG_PRPH_WDAT, val);
 }
 
+void itlwm::
+iwm_write_prph64(struct iwm_softc *sc, uint64_t addr, uint64_t val)
+{
+    iwm_write_prph(sc, (uint32_t)addr, val & 0xffffffff);
+    iwm_write_prph(sc, (uint32_t)addr + 4, val >> 32);
+}
+
 int itlwm::
 iwm_read_mem(struct iwm_softc *sc, uint32_t addr, void *buf, int dwords)
 {

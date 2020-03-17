@@ -56,6 +56,24 @@ int pci_mapreg_map(const struct pci_attach_args *pa, int reg, pcireg_t type, int
 	return 0;
 }
 
+int
+pci_intr_map_msix(struct pci_attach_args *pa, int vec, pci_intr_handle_t *ihp)
+{
+    pci_chipset_tag_t pc = pa->pa_pc;
+    pcitag_t tag = pa->pa_tag;
+    pcireg_t reg;
+
+    KASSERT(PCI_MSIX_VEC(vec) == vec, "PCI_MSIX_VEC(vec) == vec");
+
+    if (pci_get_capability(pc, tag, PCI_CAP_MSIX, NULL, &reg) == 0)
+        return 1;
+
+    if (vec > PCI_MSIX_MC_TBLSZ(reg))
+        return 1;
+    
+    return pci_intr_map_msi(pa, ihp);
+}
+
 int pci_intr_map_msi(struct pci_attach_args *paa, pci_intr_handle_t *ih) {
 	if (paa == 0 || ih == 0)
 		return 1;

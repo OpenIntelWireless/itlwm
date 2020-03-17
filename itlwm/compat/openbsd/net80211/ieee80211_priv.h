@@ -23,7 +23,7 @@
 extern int ieee80211_debug;
 #define DPRINTF(X) do {				\
 	if (ieee80211_debug) {			\
-		XYLog("%s: ", __func__);	\
+		XYLog("%s: ", __FUNCTION__);	\
 		XYLog X;			\
 	}					\
 } while(0)

@@ -110,7 +110,7 @@ int
 ieee80211_output(struct ifnet *ifp, mbuf_t m, struct sockaddr *dst,
     struct rtentry *rt)
 {
-    XYLog("%s 啊啊啊啊\n", __func__);
+    XYLog("%s 啊啊啊啊\n", __FUNCTION__);
 	struct ieee80211_frame *wh;
 	struct m_tag *mtag;
 	int error = 0;
@@ -245,7 +245,7 @@ ieee80211_mgmt_output(struct ifnet *ifp, struct ieee80211_node *ni,
 	mq_enqueue(&ic->ic_mgtq, m);
 	ifp->if_timer = 1;
     ifp->if_start(ifp);
-    XYLog("%s Enqueue MGMT data\n", __func__);
+    XYLog("%s Enqueue MGMT data\n", __FUNCTION__);
 //    ifp->output_queue->service();
 	return 0;
 }
@@ -502,7 +502,7 @@ ieee80211_tx_compressed_bar(struct ieee80211com *ic, struct ieee80211_node *ni,
 mbuf_t
 ieee80211_encap(struct ifnet *ifp, mbuf_t m, struct ieee80211_node **pni)
 {
-    XYLog("%s\n", __func__);
+    XYLog("%s\n", __FUNCTION__);
 	struct ieee80211com *ic = (struct ieee80211com *)ifp;
 	struct ether_header eh;
 	struct ieee80211_frame *wh;

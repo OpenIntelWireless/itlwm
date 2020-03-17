@@ -237,7 +237,7 @@ void itlwm::stop(IOService* provider) {
 }
 
 IOReturn itlwm::getHardwareAddress(IOEthernetAddress* addrP) {
-    XYLog("%s\n", __func__);
+    XYLog("%s\n", __FUNCTION__);
     if (IEEE80211_ADDR_EQ(etheranyaddr, com.sc_ic.ic_myaddr)) {
         return kIOReturnError;
     } else {
@@ -397,7 +397,7 @@ IO80211Interface* itlwm::getNetworkInterface() {
 }
 
 UInt32 itlwm::outputPacket(mbuf_t m, void* param) {
-    XYLog("%s\n", __func__);
+    XYLog("%s\n", __FUNCTION__);
     ifnet *ifp = &com.sc_ic.ic_ac.ac_if;
     
     ifp->if_snd->enqueue(m);

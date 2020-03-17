@@ -985,7 +985,7 @@ ieee80211_setmode(struct ieee80211com *ic, enum ieee80211_phymode mode)
      * channel list before committing to the new mode.
      */
     if (mode >= nitems(chanflags))
-        panic("%s: unexpected mode %u", __func__, mode);
+        panic("%s: unexpected mode %u", __FUNCTION__, mode);
     modeflags = chanflags[mode];
     for (i = 0; i <= IEEE80211_CHAN_MAX; i++) {
         c = &ic->ic_channels[i];
@@ -1162,7 +1162,7 @@ ieee80211_mcs2media(struct ieee80211com *ic, int mcs,
         case IEEE80211_MODE_11B:
         case IEEE80211_MODE_11G:
             /* these modes use rates, not MCS */
-            panic("%s: unexpected mode %d", __func__, mode);
+            panic("%s: unexpected mode %d", __FUNCTION__, mode);
             break;
         case IEEE80211_MODE_11N:
             if (mcs >= 0 && mcs < IEEE80211_HT_NUM_MCS)
@@ -1266,7 +1266,7 @@ ieee80211_rate2media(struct ieee80211com *ic, int rate,
         case IEEE80211_MODE_11N:
         case IEEE80211_MODE_11AC:
             /* 11n/11ac uses MCS, not rates. */
-            panic("%s: unexpected mode %d", __func__, mode);
+            panic("%s: unexpected mode %d", __FUNCTION__, mode);
             break;
     }
     for (i = 0; i < nitems(rates); i++)
@@ -1339,7 +1339,7 @@ ieee80211_rate2plcp(u_int8_t rate, enum ieee80211_phymode mode)
             case 108:	return 0x0c;
         }
     } else
-        panic("%s: unexpected mode %u", __func__, mode);
+        panic("%s: unexpected mode %u", __FUNCTION__, mode);
     
     DPRINTF(("unsupported rate %u\n", rate));
     
@@ -1372,7 +1372,7 @@ ieee80211_plcp2rate(u_int8_t plcp, enum ieee80211_phymode mode)
             case 0x0c:	return 108;
         }
     } else
-        panic("%s: unexpected mode %u", __func__, mode);
+        panic("%s: unexpected mode %u", __FUNCTION__, mode);
     
     DPRINTF(("unsupported plcp %u\n", plcp));
     

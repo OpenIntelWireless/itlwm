@@ -603,7 +603,7 @@ ieee80211_mira_next_rateset(struct ieee80211_mira_node *mn,
 		else				/* MCS 0-7 */
 			return NULL;
 	} else
-		panic("%s: invalid probing mode %d", __func__, mn->probing);
+		panic("%s: invalid probing mode %d", __FUNCTION__, mn->probing);
 
 	rsnext = &ieee80211_std_ratesets_11n[next];
 	if ((rsnext->mcs_mask & mn->valid_rates) == 0)
@@ -685,7 +685,7 @@ ieee80211_mira_probe_next_rateset(struct ieee80211_mira_node *mn,
 		    (1 << ieee80211_mira_next_lower_intra_rate(mn, ni));
 #endif
 	} else
-		panic("%s: invalid probing mode %d", __func__, mn->probing);
+		panic("%s: invalid probing mode %d", __FUNCTION__, mn->probing);
 }
 
 int
@@ -699,7 +699,7 @@ ieee80211_mira_next_mcs(struct ieee80211_mira_node *mn,
 	else if (mn->probing & IEEE80211_MIRA_PROBING_UP)
 		next = ieee80211_mira_next_intra_rate(mn, ni);
 	else
-		panic("%s: invalid probing mode %d", __func__, mn->probing);
+		panic("%s: invalid probing mode %d", __FUNCTION__, mn->probing);
 
 	return next;
 }
@@ -715,7 +715,7 @@ ieee80211_mira_prev_mcs(struct ieee80211_mira_node *mn,
 	else if (mn->probing & IEEE80211_MIRA_PROBING_UP)
 		next = ieee80211_mira_next_lower_intra_rate(mn, ni);
 	else
-		panic("%s: invalid probing mode %d", __func__, mn->probing);
+		panic("%s: invalid probing mode %d", __FUNCTION__, mn->probing);
 
 	return next;
 }
@@ -1255,4 +1255,16 @@ ieee80211_mira_cancel_timeouts(struct ieee80211_mira_node *mn)
 
 	for (t = 0; t < nitems(mn->probe_to); t++)
 		timeout_del(&mn->probe_to[t]);
+}
+
+int
+ieee80211_mira_is_probing(struct ieee80211_mira_node *mn)
+{
+    return mn->probing != IEEE80211_MIRA_NOT_PROBING;
+}
+
+int
+ieee80211_mira_get_best_mcs(struct ieee80211_mira_node *mn)
+{
+    return mn->best_mcs;
 }

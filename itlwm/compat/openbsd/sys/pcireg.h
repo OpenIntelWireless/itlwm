@@ -602,7 +602,16 @@ typedef u_int8_t pci_revision_t;
 #define PCI_PCIE_SLCSR_PDS	0x00400000
 #define PCI_PCIE_SLCSR_LACS	0x01000000
 #define PCI_PCIE_RCSR		0x1c
-#define PCI_PCIE_LCAP2		0x2c
+#define PCI_PCIE_DCSR2        0x28
+#define PCI_PCIE_DCSR2_LTREN    0x00000400
+#define PCI_PCIE_LCAP2        0x2c
+#define PCI_PCIE_LCSR2        0x30
+#define PCI_PCIE_LCSR2_TLS    0x0000000f
+#define PCI_PCIE_LCSR2_TLS_2_5    0x00000001
+#define PCI_PCIE_LCSR2_TLS_5    0x00000002
+#define PCI_PCIE_LCSR2_TLS_8    0x00000003
+#define PCI_PCIE_LCSR2_TLS_16    0x00000004
+#define PCI_PCIE_LCSR2_TLS_32    0x00000005
 
 /*
  * PCI Express; enhanced capabilities
