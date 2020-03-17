@@ -10,6 +10,7 @@
 #define FwData_h
 
 #include <string.h>
+#include <libkern/c++/OSContainers.h>
 
 struct FwDesc {
     const char *name;
