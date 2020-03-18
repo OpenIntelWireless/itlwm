@@ -142,47 +142,50 @@ bool itlwm::start(IOService *provider)
     }
     fCommandGate->retain();
     fWorkloop->addEventSource(fCommandGate);
-//    const IONetworkMedium *primaryMedium;
-//    if (!createMediumTables(&primaryMedium) ||
-//        !setCurrentMedium(primaryMedium)) {
+    fOutputCommandGate = IOCommandGate::commandGate(this, (IOCommandGate::Action)_iwm_start_task);
+    fWorkloop->addEventSource(fOutputCommandGate);
+    fOutputCommandGate->retain();
+    const IONetworkMedium *primaryMedium;
+    if (!createMediumTables(&primaryMedium) ||
+        !setCurrentMedium(primaryMedium)) {
+        return false;
+    }
+//    IONetworkMedium *medium;
+//    OSDictionary *mediumDict = OSDictionary::withCapacity(MEDIUM_INDEX_COUNT + 1);
+//    if (!mediumDict) {
+//        XYLog("start fail, can not create mediumdict\n");
 //        return false;
 //    }
-    IONetworkMedium *medium;
-    OSDictionary *mediumDict = OSDictionary::withCapacity(MEDIUM_INDEX_COUNT + 1);
-    if (!mediumDict) {
-        XYLog("start fail, can not create mediumdict\n");
-        return false;
-    }
-    bool result;
-    for (int i = MEDIUM_INDEX_AUTO; i < MEDIUM_INDEX_COUNT; i++) {
-        medium = IONetworkMedium::medium(mediumTypeArray[i], mediumSpeedArray[i], 0, i);
-        if (!medium) {
-            XYLog("start fail, can not create mediumdict\n");
-            return false;
-        }
-        result = IONetworkMedium::addMedium(mediumDict, medium);
-        medium->release();
-        if (!result) {
-            XYLog("start fail, can not addMedium\n");
-            return false;
-        }
-        mediumTable[i] = medium;
-        if (i == kIOMediumEthernetAuto) {
-            autoMedium = medium;
-        }
-    }
-    if (!publishMediumDictionary(mediumDict)) {
-        XYLog("start fail, can not publish mediumdict\n");
-        return false;
-    }
-    if (!setCurrentMedium(autoMedium)){
-        XYLog("start fail, can not set current medium\n");
-        return false;
-    }
-    if (!setSelectedMedium(autoMedium)){
-        XYLog("start fail, can not set current medium\n");
-        return false;
-    }
+//    bool result;
+//    for (int i = MEDIUM_INDEX_AUTO; i < MEDIUM_INDEX_COUNT; i++) {
+//        medium = IONetworkMedium::medium(mediumTypeArray[i], mediumSpeedArray[i], 0, i);
+//        if (!medium) {
+//            XYLog("start fail, can not create mediumdict\n");
+//            return false;
+//        }
+//        result = IONetworkMedium::addMedium(mediumDict, medium);
+//        medium->release();
+//        if (!result) {
+//            XYLog("start fail, can not addMedium\n");
+//            return false;
+//        }
+//        mediumTable[i] = medium;
+//        if (i == kIOMediumEthernetAuto) {
+//            autoMedium = medium;
+//        }
+//    }
+//    if (!publishMediumDictionary(mediumDict)) {
+//        XYLog("start fail, can not publish mediumdict\n");
+//        return false;
+//    }
+//    if (!setCurrentMedium(autoMedium)){
+//        XYLog("start fail, can not set current medium\n");
+//        return false;
+//    }
+//    if (!setSelectedMedium(autoMedium)){
+//        XYLog("start fail, can not set current medium\n");
+//        return false;
+//    }
     pci.workloop = _fWorkloop;
     pci.pa_tag = device;
     if (!iwm_attach(&com, &pci)) {
@@ -258,6 +261,8 @@ IOReturn itlwm::enable(IONetworkInterface *netif)
 {
     XYLog("%s\n", __FUNCTION__);
     super::enable(netif);
+    fCommandGate->enable();
+    fOutputCommandGate->enable();
     setLinkStatus(kIONetworkLinkValid | kIONetworkLinkActive, getCurrentMedium());
     return kIOReturnSuccess;
 }
@@ -265,7 +270,10 @@ IOReturn itlwm::enable(IONetworkInterface *netif)
 IOReturn itlwm::disable(IONetworkInterface *netif)
 {
     XYLog("%s\n", __FUNCTION__);
-    return super::disable(netif);
+    super::disable(netif);
+    fCommandGate->disable();
+    fOutputCommandGate->disable();
+    return kIOReturnSuccess;
 }
 
 IOReturn itlwm::getHardwareAddress(IOEthernetAddress *addrP) {
@@ -282,7 +290,7 @@ UInt32 itlwm::outputPacket(mbuf_t m, void *param)
 {
     XYLog("%s\n", __FUNCTION__);
     ifnet *ifp = &com.sc_ic.ic_ac.ac_if;
-    if (ifp->if_snd == NULL) {
+    if (com.sc_ic.ic_state != IEEE80211_S_RUN || ifp == NULL || ifp->if_snd == NULL) {
         freePacket(m);
         return kIOReturnOutputDropped;
     }

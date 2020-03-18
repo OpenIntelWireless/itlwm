@@ -2515,76 +2515,7 @@ iwm_start(struct ifnet *ifp)
     XYLog("%s\n", __FUNCTION__);
     struct iwm_softc *sc = (struct iwm_softc*)ifp->if_softc;
     itlwm *that = container_of(sc, itlwm, com);
-    that->fCommandGate->runAction(&itlwm::_iwm_start_task, ifp);
-    //    struct iwm_softc *sc = (struct iwm_softc*)ifp->if_softc;
-    //    itlwm *that = container_of(sc, itlwm, com);
-    //    struct ieee80211com *ic = &sc->sc_ic;
-    //    struct ieee80211_node *ni;
-    //    struct ether_header *eh;
-    //    mbuf_t m;
-    //    int ac = EDCA_AC_BE; /* XXX */
-    //
-    //    if (!(ifp->if_flags & IFF_RUNNING) /*|| ifq_is_oactive(&ifp->if_snd)*/)
-    //        return;
-    //
-    //    for (;;) {
-    //        /* why isn't this done per-queue? */
-    //        if (sc->qfullmsk != 0) {
-    //            //            ifq_set_oactive(&ifp->if_snd);
-    //            break;
-    //        }
-    //
-    //        /* need to send management frames even if we're not RUNning */
-    //        m = mq_dequeue(&ic->ic_mgtq);
-    //        if (m) {
-    //            ni = (struct ieee80211_node *)mbuf_pkthdr_rcvif(m);
-    //            goto sendit;
-    //        }
-    //
-    //        if (ic->ic_state != IEEE80211_S_RUN ||
-    //            (ic->ic_xflags & IEEE80211_F_TX_MGMT_ONLY))
-    //            break;
-    //
-    //        //        IFQ_DEQUEUE(&ifp->if_snd, m);
-    //        m = ifp->if_snd->lockDequeue();
-    //        if (!m) {
-    //            XYLog("%s 啊啊啊啊 ifp->if_snd->dequeue==NULL!!\n", __FUNCTION__);
-    //            break;
-    //        }
-    //        if (mbuf_len(m) < sizeof (*eh) &&
-    //            mbuf_pullup(&m, sizeof (*eh)) != 0) {
-    //            XYLog("%s 啊啊啊啊 mbuf_pullup(&m, sizeof (*eh)) != 0!!\n", __FUNCTION__);
-    //            ifp->if_oerrors++;
-    //            continue;
-    //        }
-    //#if NBPFILTER > 0
-    //        if (ifp->if_bpf != NULL)
-    //            bpf_mtap(ifp->if_bpf, m, BPF_DIRECTION_OUT);
-    //#endif
-    //        if ((m = ieee80211_encap(ifp, m, &ni)) == NULL) {
-    //            XYLog("%s 啊啊啊啊 ieee80211_encap!!\n", __FUNCTION__);
-    //            ifp->if_oerrors++;
-    //            continue;
-    //        }
-    //
-    //    sendit:
-    //#if NBPFILTER > 0
-    //        if (ic->ic_rawbpf != NULL)
-    //            bpf_mtap(ic->ic_rawbpf, m, BPF_DIRECTION_OUT);
-    //#endif
-    //        if (that->iwm_tx(sc, m, ni, ac) != 0) {
-    //            ieee80211_release_node(ic, ni);
-    //            ifp->if_oerrors++;
-    //            continue;
-    //        }
-    //
-    //        if (ifp->if_flags & IFF_UP) {
-    //            sc->sc_tx_timer = 15;
-    //            ifp->if_timer = 1;
-    //        }
-    //    }
-    //
-    //    return;
+    that->fOutputCommandGate->runCommand(ifp);
 }
 
 void itlwm::
@@ -3021,12 +2952,11 @@ int itlwm::
 iwm_intr(OSObject *arg, IOInterruptEventSource* sender, int count)
 {
     XYLog("Interrupt!!!\n");
-    struct iwm_softc *sc = &com;
+    itlwm *that = (itlwm*)arg;
+    struct iwm_softc *sc = &that->com;
     int handled = 0;
     int rv = 0;
     uint32_t r1, r2;
-    
-    IWM_WRITE(sc, IWM_CSR_INT_MASK, 0);
     
     if (sc->sc_flags & IWM_FLAG_USE_ICT) {
         uint32_t *ict = (uint32_t *)sc->ict_dma.vaddr;
@@ -3077,7 +3007,7 @@ iwm_intr(OSObject *arg, IOInterruptEventSource* sender, int count)
     
     if (r1 & IWM_CSR_INT_BIT_RF_KILL) {
         handled |= IWM_CSR_INT_BIT_RF_KILL;
-        iwm_check_rfkill(sc);
+        that->iwm_check_rfkill(sc);
         task_add(systq, &sc->init_task);
         rv = 1;
         goto out_ena;
@@ -3087,7 +3017,7 @@ iwm_intr(OSObject *arg, IOInterruptEventSource* sender, int count)
 #ifdef IWM_DEBUG
         int i;
         
-        iwm_nic_error(sc);
+        that->iwm_nic_error(sc);
         
         /* Dump driver status (TX and RX rings) while we're here. */
         XYLog("driver status:\n");
@@ -3127,7 +3057,7 @@ iwm_intr(OSObject *arg, IOInterruptEventSource* sender, int count)
         handled |= IWM_CSR_INT_BIT_FH_TX;
         
         sc->sc_fw_chunk_done = 1;
-        wakeupOn(&sc->sc_fw);
+        that->wakeupOn(&sc->sc_fw);
     }
     
     if (r1 & (IWM_CSR_INT_BIT_FH_RX | IWM_CSR_INT_BIT_SW_RX |
@@ -3155,13 +3085,13 @@ iwm_intr(OSObject *arg, IOInterruptEventSource* sender, int count)
             IWM_WRITE_1(sc, IWM_CSR_INT_PERIODIC_REG,
                         IWM_CSR_INT_PERIODIC_ENA);
         
-        iwm_notif_intr(sc);
+        that->iwm_notif_intr(sc);
     }
     
     rv = 1;
     
 out_ena:
-    iwm_restore_interrupts(sc);
+    that->iwm_restore_interrupts(sc);
 out:
     return rv;
 }
@@ -3169,7 +3099,8 @@ out:
 int itlwm::
 iwm_intr_msix(OSObject *object, IOInterruptEventSource* sender, int count)
 {
-    struct iwm_softc *sc = &com;
+    itlwm *that = (itlwm*)object;
+    struct iwm_softc *sc = &that->com;
     uint32_t inta_fh, inta_hw;
     int vector = 0;
     
@@ -3182,13 +3113,13 @@ iwm_intr_msix(OSObject *object, IOInterruptEventSource* sender, int count)
     
     if (inta_fh & IWM_MSIX_FH_INT_CAUSES_Q0 ||
         inta_fh & IWM_MSIX_FH_INT_CAUSES_Q1) {
-        iwm_notif_intr(sc);
+        that->iwm_notif_intr(sc);
     }
     
     /* firmware chunk loaded */
     if (inta_fh & IWM_MSIX_FH_INT_CAUSES_D2S_CH0_NUM) {
         sc->sc_fw_chunk_done = 1;
-        wakeupOn(&sc->sc_fw);
+        that->wakeupOn(&sc->sc_fw);
     }
     
     if ((inta_fh & IWM_MSIX_FH_INT_CAUSES_FH_ERR) ||
@@ -3197,7 +3128,7 @@ iwm_intr_msix(OSObject *object, IOInterruptEventSource* sender, int count)
 #ifdef IWM_DEBUG
         int i;
         
-        iwm_nic_error(sc);
+        that->iwm_nic_error(sc);
         
         /* Dump driver status (TX and RX rings) while we're here. */
         XYLog("driver status:\n");
@@ -3219,7 +3150,7 @@ iwm_intr_msix(OSObject *object, IOInterruptEventSource* sender, int count)
     }
     
     if (inta_hw & IWM_MSIX_HW_INT_CAUSES_REG_RF_KILL) {
-        iwm_check_rfkill(sc);
+        that->iwm_check_rfkill(sc);
         task_add(systq, &sc->init_task);
     }
     
@@ -3367,6 +3298,8 @@ iwm_attach_hook(struct device *self)
 bool itlwm::
 intrFilter(OSObject *object, IOFilterInterruptEventSource *src)
 {
+    itlwm *that = (itlwm*)object;
+    IWM_WRITE(&that->com, IWM_CSR_INT_MASK, 0);
     return true;
 }
 
@@ -3439,10 +3372,13 @@ iwm_attach(struct iwm_softc *sc, struct pci_attach_args *pa)
     }
     if (sc->sc_msix)
         sc->sc_ih =
-        IOFilterInterruptEventSource::filterInterruptEventSource(this, OSMemberFunctionCast(IOInterruptEventSource::Action,this, &itlwm::iwm_intr_msix), OSMemberFunctionCast(IOFilterInterruptAction, this, &itlwm::intrFilter)
+        IOFilterInterruptEventSource::filterInterruptEventSource(this,
+                                                                 (IOInterruptEventSource::Action)&itlwm::iwm_intr_msix,
+                                                                 &itlwm::intrFilter
                                                                  ,pa->pa_tag, msiIntrIndex);
     else
-        sc->sc_ih = IOFilterInterruptEventSource::filterInterruptEventSource(this, OSMemberFunctionCast(IOInterruptEventSource::Action,this, &itlwm::iwm_intr), OSMemberFunctionCast(IOFilterInterruptAction, this, &itlwm::intrFilter)
+        sc->sc_ih = IOFilterInterruptEventSource::filterInterruptEventSource(this,
+                                                                             (IOInterruptEventSource::Action)&itlwm::iwm_intr, &itlwm::intrFilter
                                                                              ,pa->pa_tag, msiIntrIndex);
     if (sc->sc_ih == NULL || getWorkLoop()->addEventSource(sc->sc_ih) != kIOReturnSuccess) {
         XYLog("\n");

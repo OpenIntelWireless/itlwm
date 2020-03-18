@@ -53,7 +53,7 @@ public:
     static IOReturn tsleepHandler(OSObject* owner, void* arg0 = 0, void* arg1 = 0, void* arg2 = 0, void* arg3 = 0);
     int tsleep_nsec(void *ident, int priority, const char *wmesg, int timo);
     void wakeupOn(void* ident);
-    bool intrFilter(OSObject *object, IOFilterInterruptEventSource *src);
+    static bool intrFilter(OSObject *object, IOFilterInterruptEventSource *src);
     static IOReturn _iwm_start_task(OSObject *target, void *arg0, void *arg1, void *arg2, void *arg3);
     
     bool createMediumTables(const IONetworkMedium **primary);
@@ -332,8 +332,8 @@ public:
     void    iwm_rx_pkt(struct iwm_softc *, struct iwm_rx_data *,
             struct mbuf_list *);
     void    iwm_notif_intr(struct iwm_softc *);
-    int    iwm_intr(OSObject *object, IOInterruptEventSource* sender, int count);
-    int    iwm_intr_msix(OSObject *object, IOInterruptEventSource* sender, int count);
+    static int    iwm_intr(OSObject *object, IOInterruptEventSource* sender, int count);
+    static int    iwm_intr_msix(OSObject *object, IOInterruptEventSource* sender, int count);
     int    iwm_match(IOPCIDevice *);
     int    iwm_preinit(struct iwm_softc *);
     void    iwm_attach_hook(struct device *);
@@ -348,6 +348,7 @@ public:
     IOInterruptEventSource* fInterrupt;
     IOWorkLoop *fWorkloop;
     IOCommandGate*        fCommandGate;
+    IOCommandGate*        fOutputCommandGate;
     struct pci_attach_args pci;
     struct iwm_softc com;
     IONetworkMedium *autoMedium;
