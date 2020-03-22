@@ -333,6 +333,7 @@ m_defrag(mbuf_t m, int how)
 static inline int
 m_dup_pkthdr(mbuf_t to, mbuf_t from, int wait)
 {
+    return mbuf_dup(from, wait, &to);
     int error;
 
     mbuf_setflags(to, mbuf_flags(to) & (MBUF_EXT | M_EXTWR));
@@ -367,6 +368,8 @@ m_dup_pkt(mbuf_t m0, unsigned int adj, int wait)
     int len;
 
     len = mbuf_pkthdr_len(m0) + adj;
+    
+    IOLog("itlwm: m_dup_pkt start, len=%lu\n", len);
     
     if (len > MAXMCLBYTES) /* XXX */
         return (NULL);

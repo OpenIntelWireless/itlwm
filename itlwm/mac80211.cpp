@@ -543,8 +543,10 @@ iwm_txd_done(struct iwm_softc *sc, struct iwm_tx_data *txd)
     //    bus_dmamap_sync(sc->sc_dmat, txd->map, 0, txd->map->dm_mapsize,
     //        BUS_DMASYNC_POSTWRITE);
     //    bus_dmamap_unload(sc->sc_dmat, txd->map);
-    mbuf_freem(txd->m);
-    txd->m = NULL;
+    if (txd->m) {
+        freePacket(txd->m);
+        txd->m = NULL;
+    }
     
     KASSERT(txd->in, "txd->in");
     ieee80211_release_node(ic, &txd->in->in_ni);
@@ -633,8 +635,8 @@ iwm_rx_bmiss(struct iwm_softc *sc, struct iwm_rx_packet *pkt,
     if (missed > ic->ic_bmissthres && ic->ic_mgt_timer == 0) {
         if (ic->ic_if.if_flags & IFF_DEBUG)
             XYLog("%s: receiving no beacons from %s; checking if "
-                   "this AP is still responding to probe requests\n",
-                   DEVNAME(sc), ether_sprintf(ic->ic_bss->ni_macaddr));
+                  "this AP is still responding to probe requests\n",
+                  DEVNAME(sc), ether_sprintf(ic->ic_bss->ni_macaddr));
         /*
          * Rather than go directly to scan state, try to send a
          * directed probe request first. If that fails then the
@@ -883,22 +885,24 @@ iwm_tx(struct iwm_softc *sc, mbuf_t m, struct ieee80211_node *ni, int ac)
     mbuf_adj(m, hdrlen);
     
     err = bus_dmamap_load_mbuf(data->map, m);
-    if (err && err != EFBIG) {
+    //    err = data->map->cursor->getPhysicalSegmentsWithCoalesce(m, data->map->dm_segs, 1);
+    if (err) {
         XYLog("%s: can't map mbuf (error %d)\n", DEVNAME(sc), err);
-        mbuf_freem(m);
+        freePacket(m);
         return err;
     }
     if (err) {
         /* Too many DMA segments, linearize mbuf. */
         if (m_defrag(m, MBUF_DONTWAIT)) {
-            mbuf_freem(m);
+            freePacket(m);
             return ENOBUFS;
         }
         err = bus_dmamap_load_mbuf(data->map, m);
+        //        err = data->map->cursor->getPhysicalSegmentsWithCoalesce(m, data->map->dm_segs, 1);
         if (err) {
             XYLog("%s: can't map mbuf (error %d)\n", DEVNAME(sc),
                   err);
-            mbuf_freem(m);
+            freePacket(m);
             return err;
         }
     }
@@ -1403,7 +1407,7 @@ iwm_run(struct iwm_softc *sc)
     err = iwm_sf_config(sc, IWM_SF_FULL_ON);
     if (err) {
         XYLog("%s: could not set sf full on (error %d)\n",
-               DEVNAME(sc), err);
+              DEVNAME(sc), err);
         return err;
     }
     
@@ -1429,7 +1433,7 @@ iwm_run(struct iwm_softc *sc)
     err = iwm_enable_beacon_filter(sc, in);
     if (err) {
         XYLog("%s: could not enable beacon filter\n",
-               DEVNAME(sc));
+              DEVNAME(sc));
         return err;
     }
 #endif
@@ -1998,30 +2002,30 @@ iwm_endscan(struct iwm_softc *sc)
     join.i_len = strlen(ssid_name);
     join.i_flags = IEEE80211_JOIN_NWKEY;
     
-    //    memset(&wpa, 0, sizeof(ieee80211_wpaparams));
-    //    wpa.i_enabled = 1;
-    //    wpa.i_ciphers = IEEE80211_WPA_CIPHER_TKIP | IEEE80211_WPA_CIPHER_CCMP;
-    //    wpa.i_groupcipher = IEEE80211_WPA_CIPHER_TKIP | IEEE80211_WPA_CIPHER_CCMP;
-    //    wpa.i_protos = IEEE80211_WPA_PROTO_WPA1 | IEEE80211_WPA_PROTO_WPA2;
-    //    wpa.i_akms = IEEE80211_WPA_AKM_PSK | IEEE80211_WPA_AKM_8021X | IEEE80211_WPA_AKM_SHA256_PSK | IEEE80211_WPA_AKM_SHA256_8021X;
-    //    memcpy(wpa.i_name, "zxy", strlen("zxy"));
-    //    memset(&psk, 0, sizeof(ieee80211_wpapsk));
-    //    memcpy(psk.i_name, "zxy", strlen("zxy"));
-    //    psk.i_enabled = 1;
-    //    pbkdf2_sha1(ssid_pwd, (const uint8_t*)ssid_name, strlen(ssid_name),
-    //                4096, psk.i_psk , 32);
-    //    XYLog("%s _psk=0x%02x,0x%02x, 0x%02x,0x%02x,0x%02x,0x%02x,0x%02x,0x%02x,0x%02x,0x%02x\n", __FUNCTION__, psk.i_psk[0], psk.i_psk[1], psk.i_psk[2], psk.i_psk[3], psk.i_psk[4], psk.i_psk[5], psk.i_psk[6], psk.i_psk[7], psk.i_psk[8], psk.i_psk[9]);
-    //    memset(&nwkey, 0, sizeof(ieee80211_nwkey));
-    //    nwkey.i_wepon = 0;
-    //    nwkey.i_defkid = 0;
-    //    memset(&join, 0, sizeof(ieee80211_join));
-    //    join.i_wpaparams = wpa;
-    //    join.i_wpapsk = psk;
-    //    join.i_flags = IEEE80211_JOIN_WPAPSK | IEEE80211_JOIN_ANY | IEEE80211_JOIN_WPA | IEEE80211_JOIN_8021X;
-    //    join.i_nwkey = nwkey;
-    //    char *mac = "b0:df:c1:0b:53:10";
-    //    join.i_len = strlen(ssid_name);
-    //    memcpy(join.i_nwid, ssid_name, join.i_len);
+    //        memset(&wpa, 0, sizeof(ieee80211_wpaparams));
+    //        wpa.i_enabled = 1;
+    //        wpa.i_ciphers = IEEE80211_WPA_CIPHER_TKIP | IEEE80211_WPA_CIPHER_CCMP;
+    //        wpa.i_groupcipher = IEEE80211_WPA_CIPHER_TKIP | IEEE80211_WPA_CIPHER_CCMP;
+    //        wpa.i_protos = IEEE80211_WPA_PROTO_WPA1 | IEEE80211_WPA_PROTO_WPA2;
+    //        wpa.i_akms = IEEE80211_WPA_AKM_PSK | IEEE80211_WPA_AKM_8021X | IEEE80211_WPA_AKM_SHA256_PSK | IEEE80211_WPA_AKM_SHA256_8021X;
+    //        memcpy(wpa.i_name, "zxy", strlen("zxy"));
+    //        memset(&psk, 0, sizeof(ieee80211_wpapsk));
+    //        memcpy(psk.i_name, "zxy", strlen("zxy"));
+    //        psk.i_enabled = 1;
+    //        pbkdf2_sha1(ssid_pwd, (const uint8_t*)ssid_name, strlen(ssid_name),
+    //                    4096, psk.i_psk , 32);
+    //        XYLog("%s _psk=0x%02x,0x%02x, 0x%02x,0x%02x,0x%02x,0x%02x,0x%02x,0x%02x,0x%02x,0x%02x\n", __FUNCTION__, psk.i_psk[0], psk.i_psk[1], psk.i_psk[2], psk.i_psk[3], psk.i_psk[4], psk.i_psk[5], psk.i_psk[6], psk.i_psk[7], psk.i_psk[8], psk.i_psk[9]);
+    //        memset(&nwkey, 0, sizeof(ieee80211_nwkey));
+    //        nwkey.i_wepon = 0;
+    //        nwkey.i_defkid = 0;
+    //        memset(&join, 0, sizeof(ieee80211_join));
+    //        join.i_wpaparams = wpa;
+    //        join.i_wpapsk = psk;
+    //        join.i_flags = IEEE80211_JOIN_WPAPSK | IEEE80211_JOIN_ANY | IEEE80211_JOIN_WPA | IEEE80211_JOIN_8021X;
+    //        join.i_nwkey = nwkey;
+    //        char *mac = "b0:df:c1:0b:53:10";
+    //        join.i_len = strlen(ssid_name);
+    //        memcpy(join.i_nwid, ssid_name, join.i_len);
     
     //    ieee80211_nwid nwid;
     ////    nwid.i_len = 6;
@@ -2270,7 +2274,7 @@ iwm_init_hw(struct iwm_softc *sc)
     err = iwm_send_bt_init_conf(sc);
     if (err) {
         XYLog("%s: could not init bt coex (error %d)\n",
-               DEVNAME(sc), err);
+              DEVNAME(sc), err);
         return err;
     }
     
@@ -2312,7 +2316,7 @@ iwm_init_hw(struct iwm_softc *sc)
     err = iwm_config_ltr(sc);
     if (err) {
         XYLog("%s: PCIe LTR configuration failed (error %d)\n",
-               DEVNAME(sc), err);
+              DEVNAME(sc), err);
     }
     
     err = iwm_power_update_device(sc);
@@ -2335,7 +2339,7 @@ iwm_init_hw(struct iwm_softc *sc)
         err = iwm_config_umac_scan(sc);
         if (err) {
             XYLog("%s: could not configure scan (error %d)\n",
-                   DEVNAME(sc), err);
+                  DEVNAME(sc), err);
             goto err;
         }
     }
@@ -2363,7 +2367,7 @@ iwm_init_hw(struct iwm_softc *sc)
                                  iwm_ac_to_tx_fifo[ac]);
             if (err) {
                 XYLog("%s: could not enable Tx queue %d "
-                       "(error %d)\n", DEVNAME(sc), ac, err);
+                      "(error %d)\n", DEVNAME(sc), ac, err);
                 goto err;
             }
         }
@@ -2748,7 +2752,7 @@ iwm_nic_umac_error(struct iwm_softc *sc)
     
     if (base < 0x800000) {
         XYLog("%s: Invalid error log pointer 0x%08x\n",
-               DEVNAME(sc), base);
+              DEVNAME(sc), base);
         return;
     }
     
@@ -3350,9 +3354,9 @@ iwm_attach(struct iwm_softc *sc, struct pci_attach_args *pa)
     }
     
     if (0) {
-//    if (pci_intr_map_msix(pa, 0, &sc->ih) == 0) {
+        //    if (pci_intr_map_msix(pa, 0, &sc->ih) == 0) {
         sc->sc_msix = 1;
-    } else if (pci_intr_map_msi(pa, &sc->ih) && pci_intr_map(pa, &sc->ih)) {
+    } else if (pci_intr_map_msi(pa, &sc->ih)) {
         XYLog("%s: can't map interrupt\n", DEVNAME(sc));
         return false;
     }
@@ -3634,6 +3638,7 @@ iwm_attach(struct iwm_softc *sc, struct pci_attach_args *pa)
     
     ic->ic_max_rssi = IWM_MAX_DBM - IWM_MIN_DBM;
     
+    ifp->controller = this;
     ifp->if_snd = IOPacketQueue::withCapacity(4096);
     ifp->if_softc = sc;
     ifp->if_flags = IFF_BROADCAST | IFF_SIMPLEX | IFF_MULTICAST;

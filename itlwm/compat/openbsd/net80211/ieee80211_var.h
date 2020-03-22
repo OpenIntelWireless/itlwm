@@ -194,6 +194,14 @@ static char* ether_sprintf(const uint8_t *ap)
          return (etherbuf);
 }
 
+static void array_sprintf(char *output, uint8_t output_size, const uint8_t *array, const uint8_t len)
+{
+    uint8_t index = 0;
+    for (index = 0; index < len; index++) {
+        snprintf(output, output_size, "0x%02x ", array++);
+    }
+}
+
 #define	IEEE80211_CHAN_MAX	255
 #define	IEEE80211_CHAN_ANY	0xffff		/* token for ``any channel'' */
 #define	IEEE80211_CHAN_ANYC \

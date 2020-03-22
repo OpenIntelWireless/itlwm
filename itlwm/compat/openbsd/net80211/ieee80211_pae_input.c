@@ -642,18 +642,21 @@ ieee80211_recv_4way_msg3(struct ieee80211com *ic,
 			}
 		}
 	}
-	if (info & EAPOL_KEY_INSTALL)
+    if (info & EAPOL_KEY_INSTALL) {
+        XYLog("%s %d info &= EAPOL_KEY_INSTALL\n", __FUNCTION__, __LINE__);
 		ni->ni_flags |= IEEE80211_NODE_TXRXPROT;
+    }
 
 	if (info & EAPOL_KEY_SECURE) {
+        XYLog("%s %d info &= EAPOL_KEY_SECURE\n", __FUNCTION__, __LINE__);
 		ni->ni_flags |= IEEE80211_NODE_TXRXPROT;
 #ifndef IEEE80211_STA_ONLY
 		if (ic->ic_opmode != IEEE80211_M_IBSS ||
 		    ++ni->ni_key_count == 2)
 #endif
 		{
-			DPRINTF(("marking port %s valid\n",
-			    ether_sprintf(ni->ni_macaddr)));
+			XYLog("marking port %s valid\n",
+			    ether_sprintf(ni->ni_macaddr));
 			ni->ni_port_valid = 1;
 			ieee80211_set_link_state(ic, LINK_STATE_UP);
 			ni->ni_assoc_fail = 0;

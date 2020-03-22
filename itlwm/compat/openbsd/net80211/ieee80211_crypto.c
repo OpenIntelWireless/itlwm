@@ -469,6 +469,7 @@ typedef union _ANY_CTX {
 void
 ieee80211_eapol_key_mic(struct ieee80211_eapol_key *key, const u_int8_t *kck)
 {
+    XYLog("%s\n", __FUNCTION__);
 	u_int8_t digest[SHA1_DIGEST_LENGTH];
 	ANY_CTX ctx;	/* XXX off stack? */
 	u_int len;

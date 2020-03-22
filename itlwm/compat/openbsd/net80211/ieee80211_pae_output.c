@@ -62,6 +62,7 @@ int
 ieee80211_send_eapol_key(struct ieee80211com *ic, mbuf_t m,
                          struct ieee80211_node *ni, const struct ieee80211_ptk *ptk)
 {
+    XYLog("%s\n", __FUNCTION__);
     struct ifnet *ifp = &ic->ic_if;
     struct ether_header *eh;
     struct ieee80211_eapol_key *key;
@@ -150,8 +151,8 @@ ieee80211_eapol_timeout(void *arg)
     struct ieee80211com *ic = ni->ni_ic;
     int s;
     
-    DPRINTF(("no answer from station %s in state %d\n",
-             ether_sprintf(ni->ni_macaddr), ni->ni_rsn_state));
+    XYLog("no answer from station %s in state %d\n",
+             ether_sprintf(ni->ni_macaddr), ni->ni_rsn_state);
     
     s = splnet();
     
@@ -282,8 +283,10 @@ ieee80211_send_4way_msg1(struct ieee80211com *ic, struct ieee80211_node *ni)
     }
     m = ieee80211_get_eapol_key(MBUF_DONTWAIT, MT_DATA,
                                 (ni->ni_rsnprotos == IEEE80211_PROTO_RSN) ? 2 + 20 : 0);
-    if (m == NULL)
+    if (m == NULL) {
+        XYLog("%s\n ieee80211_get_eapol_key==NULL", __FUNCTION__);
         return ENOMEM;
+    }
     key = mtod(m, struct ieee80211_eapol_key *);
     memset(key, 0, sizeof(*key));
     
@@ -365,9 +368,9 @@ ieee80211_send_4way_msg2(struct ieee80211com *ic, struct ieee80211_node *ni,
     mbuf_setlen(m, l);
     
     if (ic->ic_if.if_flags & IFF_DEBUG)
-        XYLog("%s: sending msg %d/%d of the %s handshake to %s\n",
+        XYLog("%s: sending msg %d/%d of the %s handshake to %s, type=%s\n",
                ic->ic_if.if_xname, 2, 4, "4-way",
-               ether_sprintf(ni->ni_macaddr));
+              ether_sprintf(ni->ni_macaddr), ni->ni_rsnprotos == IEEE80211_PROTO_WPA ? "WPA" : "RSN");
     
     return ieee80211_send_eapol_key(ic, m, ni, tptk);
 }
@@ -507,7 +510,7 @@ ieee80211_send_4way_msg4(struct ieee80211com *ic, struct ieee80211_node *ni)
 int
 ieee80211_send_group_msg1(struct ieee80211com *ic, struct ieee80211_node *ni)
 {
-    XYLog("%s\n", __FUNCTION__);
+    XYLog("%s Send Group Key Handshake Message 1 to the supplicant.\n", __FUNCTION__);
     struct ieee80211_eapol_key *key;
     const struct ieee80211_key *k;
     mbuf_t m;

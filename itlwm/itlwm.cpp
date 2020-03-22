@@ -95,7 +95,7 @@ bool itlwm::createMediumTables(const IONetworkMedium **primary)
         return false;
     }
     
-    medium = IONetworkMedium::medium(kIOMediumEthernetAuto, 480 * 1000000);
+    medium = IONetworkMedium::medium(kIOMediumEthernetAuto, 1024 * 1000000);
     IONetworkMedium::addMedium(mediumDict, medium);
     medium->release();  // 'mediumDict' holds a ref now.
     if (primary) {
@@ -221,21 +221,45 @@ IOReturn itlwm::selectMedium(const IONetworkMedium *medium) {
 void itlwm::stop(IOService *provider)
 {
     XYLog("%s\n", __FUNCTION__);
+    struct ifnet *ifp = &com.sc_ic.ic_ac.ac_if;
+    IOEthernetInterface *inf = ifp->iface;
+    pci_intr_handle *handle = com.ih;
+    
+    setLinkStatus(kIONetworkLinkNoNetworkChange);
     taskq_destroy(systq);
     taskq_destroy(systqmp);
     taskq_destroy(com.sc_nswq);
-    iwm_stop(&com.sc_ic.ic_ac.ac_if);
-    ieee80211_ifdetach(&com.sc_ic.ic_ac.ac_if);
-    if (fWorkloop) {
-        if (com.sc_ih) {
-            fWorkloop->removeEventSource(com.sc_ih);
-            OSSafeReleaseNULL(com.sc_ih);
-        }
-        fWorkloop->release();
-        fWorkloop = NULL;
+    iwm_stop(ifp);
+    ieee80211_ifdetach(ifp);
+    if (inf) {
+        detachInterface(inf);
+        OSSafeReleaseNULL(inf);
     }
-    OSSafeReleaseNULL(com.ih);
-    OSSafeReleaseNULL(fCommandGate);
+    if (handle) {
+        handle->dev->release();
+        handle->dev = NULL;
+        handle->func = NULL;
+        handle->arg = NULL;
+        handle->intr->disable();
+        fWorkloop->removeEventSource(handle->intr);
+        handle->intr->release();
+        handle->intr = NULL;
+        OSSafeReleaseNULL(handle);
+    }
+    if (fCommandGate) {
+        fCommandGate->disable();
+        fWorkloop->removeEventSource(fCommandGate);
+        fCommandGate->release();
+        fCommandGate = NULL;
+    }
+    if (fOutputCommandGate) {
+        fOutputCommandGate->disable();
+        fWorkloop->removeEventSource(fOutputCommandGate);
+        fOutputCommandGate->release();
+        fOutputCommandGate = NULL;
+    }
+    fWorkloop->release();
+    fWorkloop = NULL;
     super::stop(provider);
 }
 
@@ -244,16 +268,6 @@ void itlwm::free()
     XYLog("%s\n", __FUNCTION__);
     IOLockFree(fwLoadLock);
     fwLoadLock = NULL;
-    if (fWorkloop) {
-        if (com.sc_ih) {
-            fWorkloop->removeEventSource(com.sc_ih);
-            OSSafeReleaseNULL(com.sc_ih);
-        }
-        fWorkloop->release();
-        fWorkloop = NULL;
-    }
-    OSSafeReleaseNULL(com.ih);
-    OSSafeReleaseNULL(fCommandGate);
     super::free();
 }
 
