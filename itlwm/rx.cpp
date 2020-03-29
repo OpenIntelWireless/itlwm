@@ -72,7 +72,7 @@ iwm_free_rx_ring(struct iwm_softc *sc, struct iwm_rx_ring *ring)
             //            bus_dmamap_sync(sc->sc_dmat, data->map, 0,
             //                data->map->dm_mapsize, BUS_DMASYNC_POSTREAD);
             //            bus_dmamap_unload(sc->sc_dmat, data->map);
-            freePacket(data->m);
+            mbuf_freem(data->m);
             data->m = NULL;
         }
         if (data->map != NULL)
@@ -159,14 +159,16 @@ iwm_rx_addbuf(struct iwm_softc *sc, int size, int idx)
     mbuf_t m;
     int err;
     int fatal = 0;
+    unsigned int maxChunks = 1;
     
-    m = allocatePacket(IWM_RBUF_SIZE);
+    mbuf_allocpacket(MBUF_WAITOK, IWM_RBUF_SIZE, &maxChunks, &m);
     
     if (m == NULL) {
         XYLog("%s allocatePacket==NULL\n", __FUNCTION__);
         return ENOMEM;
     }
-    
+    mbuf_setlen(m, IWM_RBUF_SIZE);
+    mbuf_pkthdr_setlen(m, IWM_RBUF_SIZE);
     //    mbuf_gethdr(MBUF_DONTWAIT, MT_DATA, &m);
     //    if (m == NULL)
     //        return ENOBUFS;
@@ -197,7 +199,7 @@ iwm_rx_addbuf(struct iwm_softc *sc, int size, int idx)
         /* XXX */
         if (fatal)
             panic("iwm: could not load RX mbuf");
-        freePacket(m);
+        mbuf_freem(m);
         return err;
     }
     data->m = m;
@@ -256,30 +258,30 @@ iwm_rx_mpdu(struct iwm_softc *sc, mbuf_t m, void *pktdata,
         if (len < sizeof(struct ieee80211_frame_cts)) {
             ic->ic_stats.is_rx_tooshort++;
             IC2IFP(ic)->if_ierrors++;
-            freePacket(m);
+            mbuf_freem(m);
             return;
         }
     } else if (len < sizeof(struct ieee80211_frame)) {
         ic->ic_stats.is_rx_tooshort++;
         IC2IFP(ic)->if_ierrors++;
-        freePacket(m);
+        mbuf_freem(m);
         return;
     }
     if (len > maxlen - sizeof(*rx_res)) {
         IC2IFP(ic)->if_ierrors++;
-        freePacket(m);
+        mbuf_freem(m);
         return;
     }
     
     if (phy_info->cfg_phy_cnt > 20) {
-        freePacket(m);
+        mbuf_freem(m);
         return;
     }
     
     rx_pkt_status = le32toh(*(uint32_t *)((uint8_t*)pktdata + sizeof(*rx_res) + len));
     if (!(rx_pkt_status & IWM_RX_MPDU_RES_STATUS_CRC_OK) ||
         !(rx_pkt_status & IWM_RX_MPDU_RES_STATUS_OVERRUN_OK)) {
-        freePacket(m);
+        mbuf_freem(m);
         return; /* drop */
     }
     
@@ -324,7 +326,7 @@ iwm_rx_mpdu_mq(struct iwm_softc *sc, mbuf_t m, void *pktdata,
     
     if (!(desc->status & htole16(IWM_RX_MPDU_RES_STATUS_CRC_OK)) ||
         !(desc->status & htole16(IWM_RX_MPDU_RES_STATUS_OVERRUN_OK))) {
-        freePacket(m);
+        mbuf_freem(m);
         return; /* drop */
     }
     
@@ -334,18 +336,18 @@ iwm_rx_mpdu_mq(struct iwm_softc *sc, mbuf_t m, void *pktdata,
         if (len < sizeof(struct ieee80211_frame_cts)) {
             ic->ic_stats.is_rx_tooshort++;
             IC2IFP(ic)->if_ierrors++;
-            freePacket(m);
+            mbuf_freem(m);
             return;
         }
     } else if (len < sizeof(struct ieee80211_frame)) {
         ic->ic_stats.is_rx_tooshort++;
         IC2IFP(ic)->if_ierrors++;
-        freePacket(m);
+        mbuf_freem(m);
         return;
     }
     if (len > maxlen - sizeof(*desc)) {
         IC2IFP(ic)->if_ierrors++;
-        freePacket(m);
+        mbuf_freem(m);
         return;
     }
     
@@ -429,24 +431,7 @@ iwm_rx_pkt(struct iwm_softc *sc, struct iwm_rx_data *data, struct mbuf_list *ml)
     
     //    bus_dmamap_sync(sc->sc_dmat, data->map, 0, IWM_RBUF_SIZE,
     //        BUS_DMASYNC_POSTREAD);
-    
-    mbuf_gethdr(MBUF_DONTWAIT, MT_DATA, &m0);
-    if (m0 == NULL) {
-        return;
-    }
-    if (mbuf_pkthdr_len(data->m) <= MCLBYTES) {
-        mbuf_mclget(MBUF_DONTWAIT, MT_DATA, &m0);
-    } else {
-        mbuf_getcluster(MBUF_DONTWAIT, MT_DATA, IWM_RBUF_SIZE, &m0);
-    }
-    if ((mbuf_flags(m0) & MBUF_EXT) == 0) {
-        mbuf_freem(m0);
-        return;
-    }
-    
-    //                mbuf_setlen(m0, mbuf_pkthdr_len(data->m));
-    //                mbuf_pkthdr_setlen(m0, mbuf_pkthdr_len(data->m));
-    mbuf_copym(data->m, 0, MBUF_COPYALL, MBUF_DONTWAIT, &m0);
+    m0 = data->m;
     while (m0 && offset + minsz < IWM_RBUF_SIZE) {
         pkt = (struct iwm_rx_packet *)((uint8_t*)mbuf_data(m0) + offset);
         qid = pkt->hdr.qid;
@@ -466,13 +451,12 @@ iwm_rx_pkt(struct iwm_softc *sc, struct iwm_rx_data *data, struct mbuf_list *ml)
         
         if (code == IWM_REPLY_RX_MPDU_CMD && ++nmpdu == 1) {
             /* Take mbuf m0 off the RX ring. */
-            //            if (iwm_rx_addbuf(sc, IWM_RBUF_SIZE, sc->rxq.cur)) {
-            //                ifp->if_ierrors++;
-            //                break;
-            //            }
-            //            m0 = allocatePacket(IWM_RBUF_SIZE);
+            if (iwm_rx_addbuf(sc, IWM_RBUF_SIZE, sc->rxq.cur)) {
+                ifp->if_ierrors++;
+                break;
+            }
             
-            //            KASSERT(data->m != m0, "data->m != m0");
+            KASSERT(data->m != m0, "data->m != m0");
         }
         
         switch (code) {
@@ -782,6 +766,7 @@ iwm_rx_pkt(struct iwm_softc *sc, struct iwm_rx_data *data, struct mbuf_list *ml)
         offset += roundup(len, IWM_FH_RSCSR_FRAME_ALIGN);
     }
     
-    if (m0 && m0 != data->m)
+    if (m0 && m0 != data->m) {
         mbuf_freem(m0);
+    }
 }

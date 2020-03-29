@@ -13,6 +13,7 @@
 #include <sys/kpi_mbuf.h>
 #include <IOKit/network/IOPacketQueue.h>
 
+#define PACKET_TAG_DLT            0x0100 /* data link layer type */
 #define IPL_NET        6
 
 #define    mtod(x,t)    ((t) mbuf_data(x))
@@ -166,8 +167,9 @@ mq_enqueue(struct mbuf_queue *mq, mbuf_t m)
         dropped = 1;
     }
 
-    if (dropped)
+    if (dropped) {
         mbuf_freem(m);
+    }
     
     IORecursiveLockUnlock(mq->mq_mtx);
 
@@ -202,8 +204,9 @@ mq_enlist(struct mbuf_queue *mq, struct mbuf_list *ml)
     IORecursiveLockUnlock(mq->mq_mtx);
 
     if (dropped) {
-        while ((m = ml_dequeue(ml)) != NULL)
+        while ((m = ml_dequeue(ml)) != NULL) {
             mbuf_freem(m);
+        }
     }
 
     return (dropped);

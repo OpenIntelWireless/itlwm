@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 48;
+	objectVersion = 52;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -610,7 +610,7 @@
 				};
 			};
 			buildConfigurationList = 024A07A623FCBC3C009FBA6C /* Build configuration list for PBXProject "itlwm" */;
-			compatibilityVersion = "Xcode 8.0";
+			compatibilityVersion = "Xcode 11.0";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -846,7 +846,10 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.zxystd.itlwm;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
-				SYSTEM_HEADER_SEARCH_PATHS = "itlwm/compat/openbsd itlwm/compat/linux";
+				SYSTEM_HEADER_SEARCH_PATHS = (
+					itlwm/compat/openbsd,
+					itlwm/compat/linux,
+				);
 				WRAPPER_EXTENSION = kext;
 			};
 			name = Debug;
@@ -871,7 +874,10 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.zxystd.itlwm;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
-				SYSTEM_HEADER_SEARCH_PATHS = "itlwm/compat/openbsd itlwm/compat/linux";
+				SYSTEM_HEADER_SEARCH_PATHS = (
+					itlwm/compat/openbsd,
+					itlwm/compat/linux,
+				);
 				WRAPPER_EXTENSION = kext;
 			};
 			name = Release;

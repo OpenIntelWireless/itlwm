@@ -24,7 +24,7 @@ iwm_free_tx_ring(iwm_softc *sc, struct iwm_tx_ring *ring)
         struct iwm_tx_data *data = &ring->data[i];
         
         if (data->m != NULL) {
-            freePacket(data->m);
+            mbuf_freem(data->m);
         }
         if (data->map != NULL)
             bus_dmamap_destroy(sc->sc_dmat, data->map);
@@ -43,7 +43,7 @@ iwm_reset_tx_ring(struct iwm_softc *sc, struct iwm_tx_ring *ring)
             //            bus_dmamap_sync(sc->sc_dmat, data->map, 0,
             //                data->map->dm_mapsize, BUS_DMASYNC_POSTWRITE);
             //            bus_dmamap_unload(sc->sc_dmat, data->map);
-            freePacket(data->m);
+            mbuf_freem(data->m);
             data->m = NULL;
         }
     }

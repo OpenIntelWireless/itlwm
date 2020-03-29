@@ -544,7 +544,7 @@ iwm_txd_done(struct iwm_softc *sc, struct iwm_tx_data *txd)
     //        BUS_DMASYNC_POSTWRITE);
     //    bus_dmamap_unload(sc->sc_dmat, txd->map);
     if (txd->m) {
-        freePacket(txd->m);
+        mbuf_freem(txd->m);
         txd->m = NULL;
     }
     
@@ -884,27 +884,11 @@ iwm_tx(struct iwm_softc *sc, mbuf_t m, struct ieee80211_node *ni, int ac)
     /* Trim 802.11 header. */
     mbuf_adj(m, hdrlen);
     
-    err = bus_dmamap_load_mbuf(data->map, m);
-    //    err = data->map->cursor->getPhysicalSegmentsWithCoalesce(m, data->map->dm_segs, 1);
-    if (err) {
-        XYLog("%s: can't map mbuf (error %d)\n", DEVNAME(sc), err);
-        freePacket(m);
-        return err;
-    }
-    if (err) {
-        /* Too many DMA segments, linearize mbuf. */
-        if (m_defrag(m, MBUF_DONTWAIT)) {
-            freePacket(m);
-            return ENOBUFS;
-        }
-        err = bus_dmamap_load_mbuf(data->map, m);
-        //        err = data->map->cursor->getPhysicalSegmentsWithCoalesce(m, data->map->dm_segs, 1);
-        if (err) {
-            XYLog("%s: can't map mbuf (error %d)\n", DEVNAME(sc),
-                  err);
-            freePacket(m);
-            return err;
-        }
+    data->map->dm_nsegs = data->map->cursor->getPhysicalSegmentsWithCoalesce(m, data->map->dm_segs, 18);
+    if (data->map->dm_nsegs == 0) {
+        XYLog("%s: can't map mbuf (error %d)\n", DEVNAME(sc), data->map->dm_nsegs);
+        mbuf_freem(m);
+        return ENOMEM;
     }
     data->m = m;
     data->in = in;
@@ -2002,30 +1986,30 @@ iwm_endscan(struct iwm_softc *sc)
     join.i_len = strlen(ssid_name);
     join.i_flags = IEEE80211_JOIN_NWKEY;
     
-    //        memset(&wpa, 0, sizeof(ieee80211_wpaparams));
-    //        wpa.i_enabled = 1;
-    //        wpa.i_ciphers = IEEE80211_WPA_CIPHER_TKIP | IEEE80211_WPA_CIPHER_CCMP;
-    //        wpa.i_groupcipher = IEEE80211_WPA_CIPHER_TKIP | IEEE80211_WPA_CIPHER_CCMP;
-    //        wpa.i_protos = IEEE80211_WPA_PROTO_WPA1 | IEEE80211_WPA_PROTO_WPA2;
-    //        wpa.i_akms = IEEE80211_WPA_AKM_PSK | IEEE80211_WPA_AKM_8021X | IEEE80211_WPA_AKM_SHA256_PSK | IEEE80211_WPA_AKM_SHA256_8021X;
-    //        memcpy(wpa.i_name, "zxy", strlen("zxy"));
-    //        memset(&psk, 0, sizeof(ieee80211_wpapsk));
-    //        memcpy(psk.i_name, "zxy", strlen("zxy"));
-    //        psk.i_enabled = 1;
-    //        pbkdf2_sha1(ssid_pwd, (const uint8_t*)ssid_name, strlen(ssid_name),
-    //                    4096, psk.i_psk , 32);
-    //        XYLog("%s _psk=0x%02x,0x%02x, 0x%02x,0x%02x,0x%02x,0x%02x,0x%02x,0x%02x,0x%02x,0x%02x\n", __FUNCTION__, psk.i_psk[0], psk.i_psk[1], psk.i_psk[2], psk.i_psk[3], psk.i_psk[4], psk.i_psk[5], psk.i_psk[6], psk.i_psk[7], psk.i_psk[8], psk.i_psk[9]);
-    //        memset(&nwkey, 0, sizeof(ieee80211_nwkey));
-    //        nwkey.i_wepon = 0;
-    //        nwkey.i_defkid = 0;
-    //        memset(&join, 0, sizeof(ieee80211_join));
-    //        join.i_wpaparams = wpa;
-    //        join.i_wpapsk = psk;
-    //        join.i_flags = IEEE80211_JOIN_WPAPSK | IEEE80211_JOIN_ANY | IEEE80211_JOIN_WPA | IEEE80211_JOIN_8021X;
-    //        join.i_nwkey = nwkey;
-    //        char *mac = "b0:df:c1:0b:53:10";
-    //        join.i_len = strlen(ssid_name);
-    //        memcpy(join.i_nwid, ssid_name, join.i_len);
+//            memset(&wpa, 0, sizeof(ieee80211_wpaparams));
+//            wpa.i_enabled = 1;
+//            wpa.i_ciphers = IEEE80211_WPA_CIPHER_CCMP;
+//            wpa.i_groupcipher = IEEE80211_WPA_CIPHER_TKIP;
+//            wpa.i_protos = IEEE80211_WPA_PROTO_WPA1;
+//            wpa.i_akms = IEEE80211_WPA_AKM_PSK | IEEE80211_WPA_AKM_8021X | IEEE80211_WPA_AKM_SHA256_PSK | IEEE80211_WPA_AKM_SHA256_8021X;
+//            memcpy(wpa.i_name, "zxy", strlen("zxy"));
+//            memset(&psk, 0, sizeof(ieee80211_wpapsk));
+//            memcpy(psk.i_name, "zxy", strlen("zxy"));
+//            psk.i_enabled = 1;
+//            pbkdf2_sha1(ssid_pwd, (const uint8_t*)ssid_name, strlen(ssid_name),
+//                        4096, psk.i_psk , 32);
+//            XYLog("%s _psk=0x%02x,0x%02x, 0x%02x,0x%02x,0x%02x,0x%02x,0x%02x,0x%02x,0x%02x,0x%02x\n", __FUNCTION__, psk.i_psk[0], psk.i_psk[1], psk.i_psk[2], psk.i_psk[3], psk.i_psk[4], psk.i_psk[5], psk.i_psk[6], psk.i_psk[7], psk.i_psk[8], psk.i_psk[9]);
+//            memset(&nwkey, 0, sizeof(ieee80211_nwkey));
+//            nwkey.i_wepon = 0;
+//            nwkey.i_defkid = 0;
+//            memset(&join, 0, sizeof(ieee80211_join));
+//            join.i_wpaparams = wpa;
+//            join.i_wpapsk = psk;
+//            join.i_flags = IEEE80211_JOIN_WPAPSK | IEEE80211_JOIN_ANY | IEEE80211_JOIN_WPA | IEEE80211_JOIN_8021X;
+//            join.i_nwkey = nwkey;
+//            char *mac = "b0:df:c1:0b:53:10";
+//            join.i_len = strlen(ssid_name);
+//            memcpy(join.i_nwid, ssid_name, join.i_len);
     
     //    ieee80211_nwid nwid;
     ////    nwid.i_len = 6;
@@ -2069,7 +2053,7 @@ iwm_endscan(struct iwm_softc *sc)
     ni = RB_MIN(ieee80211_tree, &ic->ic_tree);
     for (; ni != NULL; ni = nextbs) {
         nextbs = RB_NEXT(ieee80211_tree, &ic->ic_tree, ni);
-        XYLog("%s ssid=%s, bssid=%s\n", __FUNCTION__, ni->ni_essid, ether_sprintf(ni->ni_bssid));
+        XYLog("%s scan_result ssid=%s, bssid=%s, ni_rsnciphers=%d, ni_rsncipher=%d, ni_rsngroupmgmtcipher=%d, ni_rsngroupcipher=%d, ni_rssi=%d,  ni_capinfo=%d, ni_intval=%d, ni_rsnakms=%d, ni_supported_rsnakms=%d, ni_rsnprotos=%d, ni_supported_rsnprotos=%d, ni_rstamp=%d\n", __FUNCTION__, ni->ni_essid, ether_sprintf(ni->ni_bssid), ni->ni_rsnciphers, ni->ni_rsncipher, ni->ni_rsngroupmgmtcipher, ni->ni_rsngroupcipher, ni->ni_rssi, ni->ni_capinfo, ni->ni_intval, ni->ni_rsnakms, ni->ni_supported_rsnakms, ni->ni_rsnprotos, ni->ni_supported_rsnprotos, ni->ni_rstamp);
     }
     
     if ((sc->sc_flags & (IWM_FLAG_SCANNING | IWM_FLAG_BGSCAN)) == 0)

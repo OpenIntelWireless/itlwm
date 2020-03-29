@@ -227,7 +227,6 @@ void itlwm::stop(IOService *provider)
     
     setLinkStatus(kIONetworkLinkNoNetworkChange);
     taskq_destroy(systq);
-    taskq_destroy(systqmp);
     taskq_destroy(com.sc_nswq);
     iwm_stop(ifp);
     ieee80211_ifdetach(ifp);
