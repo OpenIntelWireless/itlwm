@@ -6,17 +6,13 @@
 //  Copyright © 2020 钟先耀. All rights reserved.
 //
 
-#ifndef CUSTOM_HEADER
 #include "itlwm.hpp"
-#else
-#include "OpenWifi.hpp"
-#endif
 #include <IOKit/IOLib.h>
 
 void* itlwm::
 malloc(vm_size_t len, int type, int how)
 {
-    void* addr = IOMalloc(len + sizeof(vm_size_t));
+    void* addr = IOMallocAligned(len + sizeof(vm_size_t), 1);
     if (addr == NULL) {
         return NULL;
     }
@@ -32,13 +28,7 @@ free(void* addr)
     }
     void* actual_addr = (void*)((uint8_t*)addr - sizeof(vm_size_t));
     vm_size_t len = *((vm_size_t*) actual_addr);
-    IOFree(actual_addr, len + sizeof(vm_size_t));
-}
-
-void itlwm::
-free(void *addr, int type, vm_size_t len)
-{
-    IOFree(addr, len);
+    IOFreeAligned(actual_addr, len + sizeof(vm_size_t));
 }
 
 int itlwm::

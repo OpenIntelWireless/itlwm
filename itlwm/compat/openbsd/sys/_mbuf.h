@@ -336,32 +336,37 @@ m_defrag(mbuf_t m, int how)
 static inline int
 m_dup_pkthdr(mbuf_t to, mbuf_t from, int wait)
 {
-    return mbuf_dup(from, wait, &to);
     int error;
-
-    mbuf_setflags(to, mbuf_flags(to) & (MBUF_EXT | M_EXTWR));
-//    to->m_flags = (to->m_flags & (M_EXT | M_EXTWR));
-    mbuf_setflags(to, mbuf_flags(to) | (mbuf_flags(from)));
-//    to->m_flags |= (from->m_flags & M_COPYFLAGS);
-    mbuf_pkthdr_setheader(to, mbuf_pkthdr_header(from));
-//    to->m_pkthdr = from->m_pkthdr;
-
-//#if NPF > 0
-//    to->m_pkthdr.pf.statekey = NULL;
-//    pf_mbuf_link_state_key(to, from->m_pkthdr.pf.statekey);
-//    to->m_pkthdr.pf.inp = NULL;
-//    pf_mbuf_link_inpcb(to, from->m_pkthdr.pf.inp);
-//#endif    /* NPF > 0 */
-
-//    SLIST_INIT(&to->m_pkthdr.ph_tags);
-
-//    if ((error = m_tag_copy_chain(to, from, wait)) != 0)
-//        return (error);
-
-    if ((mbuf_flags(to) & MBUF_EXT) == 0)
-        mbuf_setdata(to, mbuf_pkthdr_header(to) , mbuf_pkthdr_len(to));
-
+    mbuf_copy_pkthdr(to, from);
+    mbuf_pkthdr_setlen(to, mbuf_pkthdr_len(from));
+    mbuf_setlen(to, mbuf_pkthdr_len(from));
     return (0);
+    
+//    int error;
+
+//    mbuf_setflags(to, mbuf_flags(to) & (MBUF_EXT | M_EXTWR));
+////    to->m_flags = (to->m_flags & (M_EXT | M_EXTWR));
+//    mbuf_setflags(to, mbuf_flags(to) | (mbuf_flags(from)));
+////    to->m_flags |= (from->m_flags & M_COPYFLAGS);
+//    mbuf_pkthdr_setheader(to, mbuf_pkthdr_header(from));
+////    to->m_pkthdr = from->m_pkthdr;
+//
+////#if NPF > 0
+////    to->m_pkthdr.pf.statekey = NULL;
+////    pf_mbuf_link_state_key(to, from->m_pkthdr.pf.statekey);
+////    to->m_pkthdr.pf.inp = NULL;
+////    pf_mbuf_link_inpcb(to, from->m_pkthdr.pf.inp);
+////#endif    /* NPF > 0 */
+//
+////    SLIST_INIT(&to->m_pkthdr.ph_tags);
+//
+////    if ((error = m_tag_copy_chain(to, from, wait)) != 0)
+////        return (error);
+//
+//    if ((mbuf_flags(to) & MBUF_EXT) == 0)
+//        mbuf_setdata(to, mbuf_pkthdr_header(to) , mbuf_pkthdr_len(to));
+//
+//    return (0);
 }
 
 static inline mbuf_t

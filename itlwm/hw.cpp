@@ -6,11 +6,7 @@
 //  Copyright © 2020 钟先耀. All rights reserved.
 //
 
-#ifndef CUSTOM_HEADER
 #include "itlwm.hpp"
-#else
-#include "OpenWifi.hpp"
-#endif
 
 void itlwm::
 iwm_enable_rfkill_int(struct iwm_softc *sc)

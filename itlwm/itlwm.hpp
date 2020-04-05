@@ -64,7 +64,6 @@ public:
     //utils
     static void *malloc(vm_size_t len, int type, int how);
     static void free(void* addr);
-    static void free(void *addr, int type, vm_size_t len);
     
     //fw
     uint8_t iwm_fw_valid_tx_ant(struct iwm_softc *sc);
@@ -356,6 +355,7 @@ public:
     IONetworkStats *fpNetStats;
     
     IOLock *fwLoadLock;
+    semaphore_t outputThreadSignal;
 };
 
 struct ResourceCallbackContext

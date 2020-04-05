@@ -5,11 +5,8 @@
 //  Created by 钟先耀 on 2020/2/19.
 //  Copyright © 2020 钟先耀. All rights reserved.
 //
-#ifndef CUSTOM_HEADER
+
 #include "itlwm.hpp"
-#else
-#include "OpenWifi.hpp"
-#endif
 #include "FwData.h"
 
 int itlwm::
@@ -101,7 +98,7 @@ iwm_set_default_calib(struct iwm_softc *sc, const void *data)
 void itlwm::
 iwm_fw_info_free(struct iwm_fw_info *fw)
 {
-    free(fw->fw_rawdata, M_DEVBUF, fw->fw_rawsize);
+    free(fw->fw_rawdata);
     fw->fw_rawdata = NULL;
     fw->fw_rawsize = 0;
     /* don't touch fw->fw_status */
@@ -157,6 +154,8 @@ iwm_read_firmware(struct iwm_softc *sc, enum iwm_ucode_type ucode_type)
         .context = this,
         .resource = NULL
     };
+    
+    //here leaks
     IOReturn ret = OSKextRequestResource(OSKextGetCurrentIdentifier(), sc->sc_fwname, onLoadFW, &context, NULL);
     IOLockSleep(fwLoadLock, this, 0);
     IOLockUnlock(fwLoadLock);
@@ -164,7 +163,8 @@ iwm_read_firmware(struct iwm_softc *sc, enum iwm_ucode_type ucode_type)
         XYLog("%s resource load fail.\n", sc->sc_fwname);
         goto out;
     }
-    fw->fw_rawdata = (u_char*)context.resource->getBytesNoCopy();
+    fw->fw_rawdata = malloc(context.resource->getLength(), 1, 1);
+    memcpy(fw->fw_rawdata, context.resource->getBytesNoCopy(), context.resource->getLength());
     fw->fw_rawsize = context.resource->getLength();
     //    fwData = getFWDescByName(sc->sc_fwname);
     //    if (fwData == NULL) {

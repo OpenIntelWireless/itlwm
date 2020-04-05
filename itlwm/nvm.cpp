@@ -6,11 +6,7 @@
 //  Copyright © 2020 钟先耀. All rights reserved.
 //
 
-#ifndef CUSTOM_HEADER
 #include "itlwm.hpp"
-#else
-#include "OpenWifi.hpp"
-#endif
 
 /*
  * NVM read access and content parsing.  We do not support

@@ -92,6 +92,7 @@ ieee80211_bip_encap(struct ieee80211com *ic, mbuf_t m0,
 	struct ieee80211_frame *wh;
 	u_int8_t *mmie, mic[AES_CMAC_DIGEST_LENGTH];
 	mbuf_t m;
+    mbuf_t temp;
 
 	wh = mtod(m0, struct ieee80211_frame *);
 	_KASSERT((wh->i_fc[0] & IEEE80211_FC0_TYPE_MASK) ==
@@ -116,11 +117,12 @@ ieee80211_bip_encap(struct ieee80211com *ic, mbuf_t m0,
 	m = m0;
 	/* reserve trailing space for MMIE */
 	if (mbuf_trailingspace(m) < IEEE80211_MMIE_LEN) {
-        mbuf_t temp = mbuf_next(m);
+        temp = NULL;
         mbuf_mclget(MBUF_DONTWAIT, mbuf_type(m), &temp);
 		if (temp == NULL)
 			goto nospace;
-		m = mbuf_next(m);
+        mbuf_setnext(m, temp);
+		m = temp;
         mbuf_setlen(m, 0);
 	}
 

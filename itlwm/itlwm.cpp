@@ -113,9 +113,22 @@ bool itlwm::createMediumTables(const IONetworkMedium **primary)
     return result;
 }
 
+static void output_thread_task(void *arg)
+{
+    itlwm *that = (itlwm*)arg;
+    while (true) {
+        semaphore_wait(that->outputThreadSignal);
+        that->fCommandGate->runAction(itlwm::_iwm_start_task, &that->com.sc_ic.ic_ac.ac_if);
+//        itlwm::_iwm_start_task(that, &that->com.sc_ic.ic_ac.ac_if, NULL, NULL, NULL);
+        IODelay(1);
+    }
+    thread_terminate(current_thread());
+}
+
 bool itlwm::start(IOService *provider)
 {
     ifnet *ifp;
+    thread_t new_thread;
     
     XYLog("%s\n", __FUNCTION__);
     if (!super::start(provider)) {
@@ -142,9 +155,6 @@ bool itlwm::start(IOService *provider)
     }
     fCommandGate->retain();
     fWorkloop->addEventSource(fCommandGate);
-    fOutputCommandGate = IOCommandGate::commandGate(this, (IOCommandGate::Action)_iwm_start_task);
-    fWorkloop->addEventSource(fOutputCommandGate);
-    fOutputCommandGate->retain();
     const IONetworkMedium *primaryMedium;
     if (!createMediumTables(&primaryMedium) ||
         !setCurrentMedium(primaryMedium)) {
@@ -199,6 +209,9 @@ bool itlwm::start(IOService *provider)
     }
     setLinkStatus(kIONetworkLinkValid);
     registerService();
+    semaphore_create(current_task(), &outputThreadSignal, 0, 1);
+    kernel_thread_start((thread_continue_t)output_thread_task, this, &new_thread);
+    thread_deallocate(new_thread);
     return true;
 }
 
@@ -251,12 +264,6 @@ void itlwm::stop(IOService *provider)
         fCommandGate->release();
         fCommandGate = NULL;
     }
-    if (fOutputCommandGate) {
-        fOutputCommandGate->disable();
-        fWorkloop->removeEventSource(fOutputCommandGate);
-        fOutputCommandGate->release();
-        fOutputCommandGate = NULL;
-    }
     fWorkloop->release();
     fWorkloop = NULL;
     super::stop(provider);
@@ -275,7 +282,6 @@ IOReturn itlwm::enable(IONetworkInterface *netif)
     XYLog("%s\n", __FUNCTION__);
     super::enable(netif);
     fCommandGate->enable();
-    fOutputCommandGate->enable();
     setLinkStatus(kIONetworkLinkValid | kIONetworkLinkActive, getCurrentMedium());
     return kIOReturnSuccess;
 }
@@ -285,7 +291,6 @@ IOReturn itlwm::disable(IONetworkInterface *netif)
     XYLog("%s\n", __FUNCTION__);
     super::disable(netif);
     fCommandGate->disable();
-    fOutputCommandGate->disable();
     return kIOReturnSuccess;
 }
 
@@ -303,11 +308,39 @@ UInt32 itlwm::outputPacket(mbuf_t m, void *param)
 {
     XYLog("%s\n", __FUNCTION__);
     ifnet *ifp = &com.sc_ic.ic_ac.ac_if;
+    mbuf_t m0, m1;
+    size_t buf_len = 0;
+    int buf_cnt = 0;
+    unsigned int max_chunks = 1;
+    int index = 0;
+    
     if (com.sc_ic.ic_state != IEEE80211_S_RUN || ifp == NULL || ifp->if_snd == NULL) {
         freePacket(m);
         return kIOReturnOutputDropped;
     }
-    ifp->if_snd->enqueue(m);
+    
+//    m0 = m;
+//    while (m0) {
+//        buf_len += mbuf_len(m0);
+//        buf_cnt++;
+//        m0 = mbuf_next(m0);
+//    }
+//    mbuf_allocpacket(MBUF_DONTWAIT, buf_len + 200, &max_chunks, &m1);
+//    if (!m1) {
+//        freePacket(m);
+//        return kIOReturnOutputDropped;
+//    }
+//    mbuf_setdata(m1, (uint8_t*)mbuf_datastart(m1) + 192, buf_len);
+//    m0 = m;
+//    while (m0) {
+//        mbuf_copydata(m0, 0, mbuf_len(m0), (uint8_t*)mbuf_data(m1) + index);
+//        index += mbuf_len(m0);
+//        m0 = mbuf_next(m0);
+//    }
+//    mbuf_pkthdr_setrcvif(m1, mbuf_pkthdr_rcvif(m));
+//    freePacket(m);
+//    ifp->if_snd->lockEnqueue(m1);
+    ifp->if_snd->lockEnqueue(m);
     ifp->if_start(ifp);
     
     return kIOReturnOutputSuccess;

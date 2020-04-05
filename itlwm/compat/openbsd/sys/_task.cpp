@@ -10,6 +10,9 @@
 #include <sys/proc.h>
 
 #include <IOKit/IOLib.h>
+#include <IOKit/IOCommandGate.h>
+
+extern IOCommandGate *_fCommandGate;
 
 enum ETQ_STATE {
     TQ_S_CREATED,
@@ -43,19 +46,18 @@ struct taskq taskq_sys = {
     taskq_sys_name,
 };
 
-static const char taskq_sys_mp_name[] = "systqmp";
-
-struct taskq taskq_sys_mp = {
-    TQ_S_CREATED,
-    0,
-    0,
-    1,
-    TASKQ_MPSAFE,
-    taskq_sys_mp_name,
-};
-
 struct taskq *const systq = &taskq_sys;
-struct taskq *const systqmp = &taskq_sys_mp;
+
+IOReturn
+taskq_run(OSObject *target, void *arg0, void *arg1, void *arg2, void *arg3)
+{
+    struct taskq *tq = (struct taskq *)arg0;
+    struct task *work = (struct task *)arg1;
+    
+    (*work->t_func)(work->t_arg);
+    
+    return kIOReturnSuccess;
+}
 
 int
 taskq_next_work(struct taskq *tq, struct task *work)
@@ -117,10 +119,11 @@ taskq_thread(void *xtq)
 
     while (taskq_next_work(tq, &work)) {
 //        WITNESS_LOCK(&tq->tq_lock_object, 0);
-        (*work.t_func)(work.t_arg);
+//        (*work.t_func)(work.t_arg);
+        _fCommandGate->runAction(taskq_run, tq, &work);
 //        WITNESS_UNLOCK(&tq->tq_lock_object, 0);
 //        sched_pause(yield);
-        IOSleep(1);
+        IODelay(1);
     }
 
     lck_mtx_lock(tq->tq_mtx);
@@ -191,12 +194,7 @@ taskq_init(void)
     TAILQ_INIT(&systq->tq_worklist);
     thread_t new_thread;
     kernel_thread_start((thread_continue_t)taskq_create_thread, systq, &new_thread);
-    systqmp->tq_attr = lck_attr_alloc_init();
-    systqmp->tq_grp_attr = lck_grp_attr_alloc_init();
-    systqmp->tq_grp = lck_grp_alloc_init("systqmp", systqmp->tq_grp_attr);
-    systqmp->tq_mtx = lck_mtx_alloc_init(systqmp->tq_grp, systqmp->tq_attr);
-    TAILQ_INIT(&systqmp->tq_worklist);
-    kernel_thread_start((thread_continue_t)taskq_create_thread, systqmp, &new_thread);
+    thread_deallocate(new_thread);
 }
 
 struct taskq *
@@ -261,7 +259,7 @@ taskq_destroy(struct taskq *tq)
     lck_grp_attr_free(tq->tq_grp_attr);
     lck_attr_free(tq->tq_attr);
     lck_grp_free(tq->tq_grp);
-    if (tq != systq && tq != systqmp) {
+    if (tq != systq) {
         IOFree(tq, sizeof(*tq));
     }
     

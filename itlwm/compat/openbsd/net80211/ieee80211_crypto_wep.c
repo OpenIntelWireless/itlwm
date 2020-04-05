@@ -89,6 +89,7 @@ ieee80211_wep_encrypt(struct ieee80211com *ic, mbuf_t m0,
 	u_int8_t *ivp, *icvp;
 	u_int32_t iv, crc;
 	int left, moff, noff, len, hdrlen;
+    mbuf_t temp;
 
     mbuf_get(MBUF_DONTWAIT, mbuf_type(m0), &n0);
 	if (n0 == NULL)
@@ -143,11 +144,12 @@ ieee80211_wep_encrypt(struct ieee80211com *ic, mbuf_t m0,
 		}
 		if (noff == mbuf_len(n)) {
 			/* n is full and there's more data to copy */
-            mbuf_t temp = mbuf_next(n);
+            temp = NULL;
 			mbuf_get(MBUF_DONTWAIT, mbuf_type(n), &temp);
 			if (temp == NULL)
 				goto nospace;
-			n = mbuf_next(n);
+            mbuf_setnext(n, temp);
+			n = temp;
             mbuf_setlen(n, mbuf_get_mlen());
 			if (left >= mbuf_get_minclsize() - IEEE80211_WEP_CRCLEN) {
                 mbuf_mclget(MBUF_DONTWAIT, mbuf_type(n), &n);
@@ -172,12 +174,12 @@ ieee80211_wep_encrypt(struct ieee80211com *ic, mbuf_t m0,
 
 	/* reserve trailing space for WEP ICV */
 	if (mbuf_trailingspace(n) < IEEE80211_WEP_CRCLEN) {
-        mbuf_t temp = mbuf_next(n);
+        temp = NULL;
         mbuf_get(MBUF_DONTWAIT, mbuf_type(n), &temp);
 		if (temp == NULL)
 			goto nospace;
         mbuf_setnext(n, temp);
-		n = mbuf_next(n);
+		n = temp;
         mbuf_setlen(n, 0);
 	}
 
@@ -212,6 +214,7 @@ ieee80211_wep_decrypt(struct ieee80211com *ic, mbuf_t m0,
 	u_int8_t *ivp;
 	mbuf_t n0, m, n;
 	int hdrlen, left, moff, noff, len;
+    mbuf_t temp;
 
 	wh = mtod(m0, struct ieee80211_frame *);
 	hdrlen = ieee80211_get_hdrlen(wh);
@@ -265,12 +268,12 @@ ieee80211_wep_decrypt(struct ieee80211com *ic, mbuf_t m0,
 		}
 		if (noff == mbuf_len(n)) {
 			/* n is full and there's more data to copy */
-            mbuf_t temp = mbuf_next(n);
+            temp = NULL;
             mbuf_get(MBUF_DONTWAIT, mbuf_type(n), &temp);
 			if (temp == NULL)
 				goto nospace;
             mbuf_setnext(n, temp);
-			n = mbuf_next(n);
+			n = temp;
 			mbuf_setlen(n, mbuf_get_mlen());
 			if (left >= mbuf_get_minclsize()) {
                 mbuf_mclget(MBUF_DONTWAIT, mbuf_type(n), &n);

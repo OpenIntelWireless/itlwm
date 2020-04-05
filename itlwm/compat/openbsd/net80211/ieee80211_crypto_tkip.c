@@ -193,6 +193,7 @@ ieee80211_tkip_encrypt(struct ieee80211com *ic, mbuf_t m0,
 	mbuf_t n0, m, n;
 	u_int32_t crc;
 	int left, moff, noff, len, hdrlen;
+    mbuf_t temp;
 
     mbuf_get(MBUF_DONTWAIT, mbuf_type(m0), &n0);
 	if (n0 == NULL)
@@ -202,9 +203,9 @@ ieee80211_tkip_encrypt(struct ieee80211com *ic, mbuf_t m0,
     mbuf_pkthdr_setlen(n0, mbuf_pkthdr_len(n0) + IEEE80211_TKIP_HDRLEN);
     mbuf_setlen(n0, mbuf_get_mlen());
 	if (mbuf_pkthdr_len(n0) >= mbuf_get_minclsize() - IEEE80211_TKIP_TAILLEN) {
-        mbuf_mclget(MBUF_DONTWAIT, mbuf_type(n0), &n0);
+        mbuf_getcluster(MBUF_DONTWAIT, mbuf_type(n0), 4096, &n0);
         if (mbuf_flags(n0) & MBUF_EXT)
-            mbuf_setlen(n0, mbuf_maxlen(n0));
+            mbuf_setlen(n0, 4096);
 	}
 	if (mbuf_len(n0) > mbuf_pkthdr_len(n0))
         mbuf_setlen(n0, mbuf_pkthdr_len(n0));
@@ -252,16 +253,17 @@ ieee80211_tkip_encrypt(struct ieee80211com *ic, mbuf_t m0,
 		}
 		if (noff == mbuf_len(n)) {
 			/* n is full and there's more data to copy */
-            mbuf_t temp = mbuf_next(n);
+            temp = NULL;
             mbuf_get(MBUF_DONTWAIT, mbuf_type(n), &temp);
 			if (temp == NULL)
 				goto nospace;
+            mbuf_setnext(n, temp);
 			n = mbuf_next(n);
             mbuf_setlen(n, mbuf_get_mlen());
 			if (left >= mbuf_get_minclsize() - IEEE80211_TKIP_TAILLEN) {
-                mbuf_mclget(MBUF_DONTWAIT, mbuf_type(n), &n);
+                mbuf_getcluster(MBUF_DONTWAIT, mbuf_type(n), 4096, &n);
 				if (mbuf_flags(n) & MBUF_EXT)
-                    mbuf_setlen(n, mbuf_maxlen(n));
+                    mbuf_setlen(n, 4096);
 			}
 			if (mbuf_len(n) > left)
                 mbuf_setlen(n, left);
@@ -280,10 +282,11 @@ ieee80211_tkip_encrypt(struct ieee80211com *ic, mbuf_t m0,
 
 	/* reserve trailing space for TKIP MIC and WEP ICV */
 	if (mbuf_trailingspace(n) < IEEE80211_TKIP_TAILLEN) {
-        mbuf_t temp = mbuf_next(n);
+        temp = NULL;
         mbuf_get(MBUF_DONTWAIT, mbuf_type(n), &temp);
 		if (temp == NULL)
 			goto nospace;
+        mbuf_setnext(n, temp);
 		n = mbuf_next(n);
         mbuf_setlen(n, 0);
 	}
@@ -330,6 +333,7 @@ ieee80211_tkip_decrypt(struct ieee80211com *ic, mbuf_t m0,
 	u_int8_t tid;
 	mbuf_t n0, m, n;
 	int hdrlen, left, moff, noff, len;
+    mbuf_t temp;
 
 	wh = mtod(m0, struct ieee80211_frame *);
 	hdrlen = ieee80211_get_hdrlen(wh);
@@ -373,9 +377,9 @@ ieee80211_tkip_decrypt(struct ieee80211com *ic, mbuf_t m0,
     mbuf_pkthdr_setlen(n0, mbuf_pkthdr_len(n0) - IEEE80211_TKIP_OVHD);
     mbuf_setlen(n0, mbuf_get_mlen());
 	if (mbuf_pkthdr_len(n0) >= mbuf_get_minclsize()) {
-        mbuf_mclget(MBUF_DONTWAIT, mbuf_type(n0), &n0);
+        mbuf_getcluster(MBUF_DONTWAIT, mbuf_type(n0), 4096, &n0);
 		if (mbuf_flags(n0) & MBUF_EXT)
-            mbuf_setlen(n0, mbuf_maxlen(n0));
+            mbuf_setlen(n0, 4096);
 	}
 	if (mbuf_len(n0) > mbuf_pkthdr_len(n0))
         mbuf_setlen(n0, mbuf_pkthdr_len(n0));
@@ -409,16 +413,17 @@ ieee80211_tkip_decrypt(struct ieee80211com *ic, mbuf_t m0,
 		}
 		if (noff == mbuf_len(n)) {
 			/* n is full and there's more data to copy */
-            mbuf_t temp = mbuf_next(n);
+            temp = NULL;
             mbuf_get(MBUF_DONTWAIT, mbuf_type(n), &temp);
 			if (temp == NULL)
 				goto nospace;
+            mbuf_setnext(n, temp);
 			n = mbuf_next(n);
             mbuf_setlen(n, mbuf_get_mlen());
 			if (left >= mbuf_get_minclsize()) {
-                mbuf_mclget(MBUF_DONTWAIT, mbuf_type(n), &n);
+                mbuf_getcluster(MBUF_DONTWAIT, mbuf_type(n), 4096, &n);
 				if (mbuf_flags(n) & MBUF_EXT)
-                    mbuf_setlen(n, mbuf_maxlen(n));
+                    mbuf_setlen(n, 4096);
 			}
 			if (mbuf_len(n) > left)
                 mbuf_setlen(n, left);

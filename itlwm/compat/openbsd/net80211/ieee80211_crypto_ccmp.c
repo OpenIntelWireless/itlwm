@@ -175,6 +175,7 @@ ieee80211_ccmp_encrypt(struct ieee80211com *ic, mbuf_t m0,
 	int hdrlen, left, moff, noff, len;
 	u_int16_t ctr;
 	int i, j;
+    mbuf_t temp;
 
     mbuf_get(MBUF_DONTWAIT, mbuf_type(m0), &n0);
 	if (n0 == NULL)
@@ -184,9 +185,9 @@ ieee80211_ccmp_encrypt(struct ieee80211com *ic, mbuf_t m0,
     mbuf_pkthdr_setlen(n0, mbuf_pkthdr_len(n0) + IEEE80211_CCMP_HDRLEN);
     mbuf_setlen(n0, mbuf_get_mhlen());
 	if (mbuf_pkthdr_len(n0) >= mbuf_get_minclsize() - IEEE80211_CCMP_MICLEN) {
-        mbuf_mclget(MBUF_DONTWAIT, mbuf_type(n0), &n0);
+        mbuf_getcluster(MBUF_DONTWAIT, mbuf_type(n0), 4096, &n0);
 		if (mbuf_flags(n0) & MBUF_EXT)
-            mbuf_setlen(n0, mbuf_maxlen(n0));
+            mbuf_setlen(n0, 4096);
 	}
 	if (mbuf_len(n0) > mbuf_pkthdr_len(n0))
         mbuf_setlen(n0, mbuf_pkthdr_len(n0));
@@ -234,16 +235,17 @@ ieee80211_ccmp_encrypt(struct ieee80211com *ic, mbuf_t m0,
 		}
 		if (noff == mbuf_len(n)) {
 			/* n is full and there's more data to copy */
-            mbuf_t temp = mbuf_next(n);
+            temp = NULL;
             mbuf_get(MBUF_DONTWAIT, mbuf_type(n), &temp);
 			if (temp == NULL)
 				goto nospace;
-			n = mbuf_next(n);
+            mbuf_setnext(n, temp);
+			n = temp;
             mbuf_setlen(n, mbuf_get_mhlen());
 			if (left >= mbuf_get_minclsize() - IEEE80211_CCMP_MICLEN) {
-                mbuf_mclget(MBUF_DONTWAIT, mbuf_type(n), &n);
+                mbuf_getcluster(MBUF_DONTWAIT, mbuf_type(n), 4096, &n);
 				if (mbuf_flags(n) & MBUF_EXT)
-                    mbuf_setlen(n, mbuf_maxlen(n));
+                    mbuf_setlen(n, 4096);
 			}
 			if (mbuf_len(n) > left)
                 mbuf_setlen(n, left);
@@ -279,11 +281,12 @@ ieee80211_ccmp_encrypt(struct ieee80211com *ic, mbuf_t m0,
 
 	/* reserve trailing space for MIC */
 	if (mbuf_trailingspace(n) < IEEE80211_CCMP_MICLEN) {
-        mbuf_t temp = mbuf_next(n);
+        temp = NULL;
         mbuf_get(MBUF_DONTWAIT, mbuf_type(n), &temp);
 		if (temp == NULL)
 			goto nospace;
-		n = mbuf_next(n);
+        mbuf_setnext(n, temp);
+		n = temp;
         mbuf_setlen(n, 0);
 	}
 	/* finalize MIC, U := T XOR first-M-bytes( S_0 ) */
@@ -317,6 +320,7 @@ ieee80211_ccmp_decrypt(struct ieee80211com *ic, mbuf_t m0,
 	int hdrlen, left, moff, noff, len;
 	u_int16_t ctr;
 	int i, j;
+    mbuf_t temp;
 
 	wh = mtod(m0, struct ieee80211_frame *);
 	hdrlen = ieee80211_get_hdrlen(wh);
@@ -365,9 +369,9 @@ ieee80211_ccmp_decrypt(struct ieee80211com *ic, mbuf_t m0,
     mbuf_pkthdr_setlen(n0, mbuf_pkthdr_len(n0) - (IEEE80211_CCMP_HDRLEN + IEEE80211_CCMP_MICLEN));
     mbuf_setlen(n0, mbuf_get_mhlen());
 	if (mbuf_pkthdr_len(n0) >= mbuf_get_minclsize()) {
-        mbuf_mclget(MBUF_DONTWAIT, mbuf_type(n0), &n0);
+        mbuf_getcluster(MBUF_DONTWAIT, mbuf_type(n0), 4096, &n0);
 		if (mbuf_flags(n0) & MBUF_EXT)
-            mbuf_setlen(n0, mbuf_maxlen(n0));
+            mbuf_setlen(n0, 4096);
 	}
 	if (mbuf_len(n0) > mbuf_pkthdr_len(n0))
         mbuf_setlen(n0, mbuf_pkthdr_len(n0));
@@ -402,16 +406,17 @@ ieee80211_ccmp_decrypt(struct ieee80211com *ic, mbuf_t m0,
 		}
 		if (noff == mbuf_len(n)) {
 			/* n is full and there's more data to copy */
-            mbuf_t temp = mbuf_next(n);
+            temp = NULL;
             mbuf_get(MBUF_DONTWAIT, mbuf_type(n), &temp);
 			if (temp == NULL)
 				goto nospace;
+            mbuf_setnext(n, temp);
 			n = mbuf_next(n);
             mbuf_setlen(n, mbuf_get_mlen());
 			if (left >= mbuf_get_minclsize()) {
-                mbuf_mclget(MBUF_DONTWAIT, mbuf_type(n), &n);
+                mbuf_getcluster(MBUF_DONTWAIT, mbuf_type(n), 4096, &n);
 				if (mbuf_flags(n) & MBUF_EXT)
-                    mbuf_setlen(n, mbuf_maxlen(n));
+                    mbuf_setlen(n, 4096);
 			}
 			if (mbuf_len(n) > left)
                 mbuf_setlen(n, left);

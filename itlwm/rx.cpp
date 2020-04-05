@@ -6,11 +6,7 @@
 //  Copyright © 2020 钟先耀. All rights reserved.
 //
 
-#ifndef CUSTOM_HEADER
 #include "itlwm.hpp"
-#else
-#include "OpenWifi.hpp"
-#endif
 
 void itlwm::
 iwm_disable_rx_dma(struct iwm_softc *sc)
@@ -649,8 +645,7 @@ iwm_rx_pkt(struct iwm_softc *sc, struct iwm_rx_data *data, struct mbuf_list *ml)
                 if ((pkt->hdr.flags & IWM_CMD_FAILED_MSK) ||
                     pkt_len < sizeof(*pkt) ||
                     pkt_len > sc->sc_cmd_resp_len[idx]) {
-                    free(sc->sc_cmd_resp_pkt[idx], M_DEVBUF,
-                         sc->sc_cmd_resp_len[idx]);
+                    free(sc->sc_cmd_resp_pkt[idx]);
                     sc->sc_cmd_resp_pkt[idx] = NULL;
                     break;
                 }

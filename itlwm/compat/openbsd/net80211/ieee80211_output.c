@@ -572,6 +572,8 @@ ieee80211_encap(struct ifnet *ifp, mbuf_t m, struct ieee80211_node **pni)
 		ic->ic_stats.is_tx_nonode++;
 		goto bad;
 	}
+    
+    XYLog("sending to port %s\n", ether_sprintf(ni->ni_macaddr));
 
 	if ((ic->ic_flags & IEEE80211_F_RSNON) &&
 	    !ni->ni_port_valid &&

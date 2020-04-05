@@ -6,11 +6,7 @@
 //  Copyright © 2020 钟先耀. All rights reserved.
 //
 
-#ifndef CUSTOM_HEADER
 #include "itlwm.hpp"
-#else
-#include "OpenWifi.hpp"
-#endif
 
 struct iwm_phy_db_entry * itlwm::
 iwm_phy_db_get_section(struct iwm_softc *sc, uint16_t type, uint16_t chg_id)
@@ -367,6 +363,7 @@ iwm_send_cmd(struct iwm_softc *sc, struct iwm_host_cmd *hcmd)
     size_t hdrlen, datasz;
     uint8_t *data;
     int generation = sc->sc_generation;
+    unsigned int max_chunks = 1;
     
     code = hcmd->id;
     async = hcmd->flags & IWM_CMD_ASYNC;
@@ -383,16 +380,13 @@ iwm_send_cmd(struct iwm_softc *sc, struct iwm_host_cmd *hcmd)
         _KASSERT(!async);
         _KASSERT(hcmd->resp_pkt_len >= sizeof(struct iwm_rx_packet));
         _KASSERT(hcmd->resp_pkt_len <= IWM_CMD_RESP_MAX);
-        //        if (idx >= IWM_TX_RING_COUNT) {
-        //            XYLog("%s Error!! idx >= IWM_TX_RING_COUNT\n", __FUNCTION__);
-        //            return ENOSPC;
-        //        }
         if (sc->sc_cmd_resp_pkt[idx] != NULL)
             return ENOSPC;
         resp_buf = (uint8_t *)malloc(hcmd->resp_pkt_len, M_DEVBUF,
                                      M_NOWAIT | M_ZERO);
         if (resp_buf == NULL)
             return ENOMEM;
+        bzero(resp_buf, hcmd->resp_pkt_len);
         sc->sc_cmd_resp_pkt[idx] = resp_buf;
         sc->sc_cmd_resp_len[idx] = hcmd->resp_pkt_len;
     } else {
@@ -425,12 +419,12 @@ iwm_send_cmd(struct iwm_softc *sc, struct iwm_host_cmd *hcmd)
         m = allocatePacket(totlen);
         //        mbuf_gethdr(MBUF_DONTWAIT, MT_DATA, &m);
         ////        m = MCLGETI(NULL, M_DONTWAIT, NULL, totlen);
-        //        if (m == NULL) {
-        //            XYLog("%s: could not get fw cmd mbuf (%zd bytes)\n",
-        //                DEVNAME(sc), totlen);
-        //            err = ENOMEM;
-        //            goto out;
-        //        }
+        if (m == NULL) {
+            XYLog("%s: could not get fw cmd mbuf (%zd bytes)\n",
+                  DEVNAME(sc), totlen);
+            err = ENOMEM;
+            goto out;
+        }
         //        if (totlen > mbuf_get_mhlen()) {
         //            mbuf_getcluster(MBUF_DONTWAIT, MT_DATA, MCLBYTES, &m);
         //            if (!(mbuf_flags(m) & MBUF_EXT)) {
@@ -529,8 +523,7 @@ iwm_send_cmd(struct iwm_softc *sc, struct iwm_host_cmd *hcmd)
             hcmd->resp_pkt = (struct iwm_rx_packet *)sc->sc_cmd_resp_pkt[idx];
             sc->sc_cmd_resp_pkt[idx] = NULL;
         } else if (generation == sc->sc_generation) {
-            free(sc->sc_cmd_resp_pkt[idx], M_DEVBUF,
-                 sc->sc_cmd_resp_len[idx]);
+            free(sc->sc_cmd_resp_pkt[idx]);
             sc->sc_cmd_resp_pkt[idx] = NULL;
         }
     }

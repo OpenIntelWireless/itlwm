@@ -6,11 +6,7 @@
 //  Copyright © 2020 钟先耀. All rights reserved.
 //
 
-#ifndef CUSTOM_HEADER
 #include "itlwm.hpp"
-#else
-#include "OpenWifi.hpp"
-#endif
 
 uint16_t itlwm::
 iwm_scan_rx_chain(struct iwm_softc *sc)
