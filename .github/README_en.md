@@ -36,6 +36,7 @@ WPA 4way-handshake has implemented, but encryption and decryption still have som
 - 3xxx: 3160, 3165, 3168
 - 7xxx: 7260, 7265
 - 8xxx: 8260, 8265
+- 9xxx: 9260、9560、9462
 
 ## Credit
 
