@@ -1933,12 +1933,12 @@ iwm_endscan(struct iwm_softc *sc)
     XYLog("%s\n", __FUNCTION__);
     int error;
     
-    static const char *ssid_name = "Redmi";
-    static const char *ssid_pwd = "zxyssdt112233";
+//    static const char *ssid_name = "Redmi";
+//    static const char *ssid_pwd = "zxyssdt112233";
 //        static const char *ssid_name = "CMCC-KtG6";
 //        static const char *ssid_pwd = "9utc5c5f";
-//    static const char *ssid_name = "ssdt";
-//    static const char *ssid_pwd = "zxyssdt112233";
+    static const char *ssid_name = "ssdt";
+    static const char *ssid_pwd = "zxyssdt112233";
     
     struct ieee80211_node *ni, *nextbs;
     struct ieee80211com *ic = &sc->sc_ic;
@@ -1986,29 +1986,29 @@ iwm_endscan(struct iwm_softc *sc)
     join.i_len = strlen(ssid_name);
     join.i_flags = IEEE80211_JOIN_NWKEY;
     
-//                memset(&wpa, 0, sizeof(ieee80211_wpaparams));
-//                wpa.i_enabled = 1;
-//                wpa.i_ciphers = IEEE80211_WPA_CIPHER_CCMP;
-//                wpa.i_groupcipher = IEEE80211_WPA_CIPHER_CCMP;
-//                wpa.i_protos = IEEE80211_WPA_PROTO_WPA1 | IEEE80211_WPA_PROTO_WPA2;
-//                wpa.i_akms = IEEE80211_WPA_AKM_PSK | IEEE80211_WPA_AKM_8021X | IEEE80211_WPA_AKM_SHA256_PSK | IEEE80211_WPA_AKM_SHA256_8021X;
-//                memcpy(wpa.i_name, "zxy", strlen("zxy"));
-//                memset(&psk, 0, sizeof(ieee80211_wpapsk));
-//                memcpy(psk.i_name, "zxy", strlen("zxy"));
-//                psk.i_enabled = 1;
-//                pbkdf2_sha1(ssid_pwd, (const uint8_t*)ssid_name, strlen(ssid_name),
-//                            4096, psk.i_psk , 32);
-//                XYLog("%s _psk=0x%02x,0x%02x, 0x%02x,0x%02x,0x%02x,0x%02x,0x%02x,0x%02x,0x%02x,0x%02x\n", __FUNCTION__, psk.i_psk[0], psk.i_psk[1], psk.i_psk[2], psk.i_psk[3], psk.i_psk[4], psk.i_psk[5], psk.i_psk[6], psk.i_psk[7], psk.i_psk[8], psk.i_psk[9]);
-//                memset(&nwkey, 0, sizeof(ieee80211_nwkey));
-//                nwkey.i_wepon = 0;
-//                nwkey.i_defkid = 0;
-//                memset(&join, 0, sizeof(ieee80211_join));
-//                join.i_wpaparams = wpa;
-//                join.i_wpapsk = psk;
-//                join.i_flags = IEEE80211_JOIN_WPAPSK | IEEE80211_JOIN_ANY | IEEE80211_JOIN_WPA | IEEE80211_JOIN_8021X;
-//                join.i_nwkey = nwkey;
-//                join.i_len = strlen(ssid_name);
-//                memcpy(join.i_nwid, ssid_name, join.i_len);
+                memset(&wpa, 0, sizeof(ieee80211_wpaparams));
+                wpa.i_enabled = 1;
+                wpa.i_ciphers = IEEE80211_WPA_CIPHER_CCMP;
+                wpa.i_groupcipher = IEEE80211_WPA_CIPHER_CCMP;
+                wpa.i_protos = IEEE80211_WPA_PROTO_WPA1 | IEEE80211_WPA_PROTO_WPA2;
+                wpa.i_akms = IEEE80211_WPA_AKM_PSK | IEEE80211_WPA_AKM_8021X | IEEE80211_WPA_AKM_SHA256_PSK | IEEE80211_WPA_AKM_SHA256_8021X;
+                memcpy(wpa.i_name, "zxy", strlen("zxy"));
+                memset(&psk, 0, sizeof(ieee80211_wpapsk));
+                memcpy(psk.i_name, "zxy", strlen("zxy"));
+                psk.i_enabled = 1;
+                pbkdf2_sha1(ssid_pwd, (const uint8_t*)ssid_name, strlen(ssid_name),
+                            4096, psk.i_psk , 32);
+                XYLog("%s _psk=0x%02x,0x%02x, 0x%02x,0x%02x,0x%02x,0x%02x,0x%02x,0x%02x,0x%02x,0x%02x\n", __FUNCTION__, psk.i_psk[0], psk.i_psk[1], psk.i_psk[2], psk.i_psk[3], psk.i_psk[4], psk.i_psk[5], psk.i_psk[6], psk.i_psk[7], psk.i_psk[8], psk.i_psk[9]);
+                memset(&nwkey, 0, sizeof(ieee80211_nwkey));
+                nwkey.i_wepon = 0;
+                nwkey.i_defkid = 0;
+                memset(&join, 0, sizeof(ieee80211_join));
+                join.i_wpaparams = wpa;
+                join.i_wpapsk = psk;
+                join.i_flags = IEEE80211_JOIN_WPAPSK | IEEE80211_JOIN_ANY | IEEE80211_JOIN_WPA | IEEE80211_JOIN_8021X;
+                join.i_nwkey = nwkey;
+                join.i_len = strlen(ssid_name);
+                memcpy(join.i_nwid, ssid_name, join.i_len);
     
     //    ieee80211_nwid nwid;
     ////    nwid.i_len = 6;

@@ -416,7 +416,7 @@ iwm_send_cmd(struct iwm_softc *sc, struct iwm_host_cmd *hcmd)
             err = EINVAL;
             goto out;
         }
-        m = allocatePacket(totlen);
+        mbuf_allocpacket(MBUF_DONTWAIT, totlen, &max_chunks, &m);
         //        mbuf_gethdr(MBUF_DONTWAIT, MT_DATA, &m);
         ////        m = MCLGETI(NULL, M_DONTWAIT, NULL, totlen);
         if (m == NULL) {
@@ -425,6 +425,8 @@ iwm_send_cmd(struct iwm_softc *sc, struct iwm_host_cmd *hcmd)
             err = ENOMEM;
             goto out;
         }
+        mbuf_setlen(m, totlen);
+        mbuf_pkthdr_setlen(m, totlen);
         //        if (totlen > mbuf_get_mhlen()) {
         //            mbuf_getcluster(MBUF_DONTWAIT, MT_DATA, MCLBYTES, &m);
         //            if (!(mbuf_flags(m) & MBUF_EXT)) {

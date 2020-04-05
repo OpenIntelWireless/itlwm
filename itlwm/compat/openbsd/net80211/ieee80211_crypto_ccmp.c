@@ -176,8 +176,9 @@ ieee80211_ccmp_encrypt(struct ieee80211com *ic, mbuf_t m0,
 	u_int16_t ctr;
 	int i, j;
     mbuf_t temp;
+    unsigned int max_chunks = 1;
 
-    mbuf_get(MBUF_DONTWAIT, mbuf_type(m0), &n0);
+    mbuf_allocpacket(MBUF_DONTWAIT, mbuf_get_mhlen(), &max_chunks, &n0);
 	if (n0 == NULL)
 		goto nospace;
 	if (m_dup_pkthdr(n0, m0, MBUF_DONTWAIT))
@@ -321,6 +322,7 @@ ieee80211_ccmp_decrypt(struct ieee80211com *ic, mbuf_t m0,
 	u_int16_t ctr;
 	int i, j;
     mbuf_t temp;
+    unsigned int max_chunks = 1;
 
 	wh = mtod(m0, struct ieee80211_frame *);
 	hdrlen = ieee80211_get_hdrlen(wh);
@@ -360,7 +362,8 @@ ieee80211_ccmp_decrypt(struct ieee80211com *ic, mbuf_t m0,
 		return NULL;
 	}
 
-    mbuf_get(MBUF_DONTWAIT, mbuf_type(m0), &n0);
+//    mbuf_get(MBUF_DONTWAIT, mbuf_type(m0), &n0);
+    mbuf_allocpacket(MBUF_DONTWAIT, mbuf_get_mhlen(), &max_chunks, &n0);
 	if (n0 == NULL)
 		goto nospace;
 	if (m_dup_pkthdr(n0, m0, MBUF_DONTWAIT))
