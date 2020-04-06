@@ -2421,6 +2421,8 @@ iwm_init(struct ifnet *ifp)
     return 0;
 }
 
+IORecursiveLock *_outputLock = IORecursiveLockAlloc();
+
 IOReturn itlwm::
 _iwm_start_task(OSObject *target, void *arg0, void *arg1, void *arg2, void *arg3)
 {
@@ -2434,8 +2436,12 @@ _iwm_start_task(OSObject *target, void *arg0, void *arg1, void *arg2, void *arg3
     mbuf_t m;
     int ac = EDCA_AC_BE; /* XXX */
     
-    if (!(ifp->if_flags & IFF_RUNNING) /*|| ifq_is_oactive(&ifp->if_snd)*/)
+    IORecursiveLockLock(_outputLock);
+    
+    if (!(ifp->if_flags & IFF_RUNNING) /*|| ifq_is_oactive(&ifp->if_snd)*/) {
+        IORecursiveLockUnlock(_outputLock);
         return kIOReturnOutputDropped;
+    }
     
     for (;;) {
         /* why isn't this done per-queue? */
@@ -2496,6 +2502,8 @@ _iwm_start_task(OSObject *target, void *arg0, void *arg1, void *arg2, void *arg3
         }
     }
     
+    IORecursiveLockUnlock(_outputLock);
+    
     return kIOReturnSuccess;
 }
 
@@ -2505,9 +2513,10 @@ iwm_start(struct ifnet *ifp)
     XYLog("%s\n", __FUNCTION__);
     struct iwm_softc *sc = (struct iwm_softc*)ifp->if_softc;
     itlwm *that = container_of(sc, itlwm, com);
-    if (that->outputThreadSignal) {
-        semaphore_signal(that->outputThreadSignal);
-    }
+//    if (that->outputThreadSignal) {
+//        semaphore_signal(that->outputThreadSignal);
+//    }
+    _iwm_start_task(that, &that->com.sc_ic.ic_ac.ac_if, NULL, NULL, NULL);
 }
 
 void itlwm::
@@ -2529,7 +2538,7 @@ iwm_stop(struct ifnet *ifp)
     iwm_del_task(sc, systq, &sc->setrates_task);
     iwm_del_task(sc, systq, &sc->ba_task);
     iwm_del_task(sc, systq, &sc->htprot_task);
-    KASSERT(sc->task_refs.refs >= 1, "sc->task_refs.refs >= 1");
+//    KASSERT(sc->task_refs.refs >= 1, "sc->task_refs.refs >= 1");
     //    refcnt_finalize(&sc->task_refs, "iwmstop");
     
     iwm_stop_device(sc);

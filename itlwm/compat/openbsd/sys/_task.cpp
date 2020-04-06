@@ -119,8 +119,8 @@ taskq_thread(void *xtq)
 
     while (taskq_next_work(tq, &work)) {
 //        WITNESS_LOCK(&tq->tq_lock_object, 0);
-//        (*work.t_func)(work.t_arg);
-        _fCommandGate->runAction(taskq_run, tq, &work);
+        (*work.t_func)(work.t_arg);
+//        _fCommandGate->runAction(taskq_run, tq, &work);
 //        WITNESS_UNLOCK(&tq->tq_lock_object, 0);
 //        sched_pause(yield);
         IODelay(1);

@@ -55,6 +55,8 @@ public:
     void wakeupOn(void* ident);
     static bool intrFilter(OSObject *object, IOFilterInterruptEventSource *src);
     static IOReturn _iwm_start_task(OSObject *target, void *arg0, void *arg1, void *arg2, void *arg3);
+    virtual bool createWorkLoop() override;
+    virtual IOWorkLoop* getWorkLoop() const override;
     
     bool createMediumTables(const IONetworkMedium **primary);
     IOReturn getPacketFilters(const OSSymbol *group, UInt32 *filters) const override;

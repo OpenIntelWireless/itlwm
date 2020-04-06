@@ -119,8 +119,8 @@ static void output_thread_task(void *arg)
     itlwm *that = (itlwm*)arg;
     while (true) {
         semaphore_wait(that->outputThreadSignal);
-//        that->fCommandGate->runAction(itlwm::_iwm_start_task, &that->com.sc_ic.ic_ac.ac_if);
-        itlwm::_iwm_start_task(that, &that->com.sc_ic.ic_ac.ac_if, NULL, NULL, NULL);
+        that->fCommandGate->runAction(itlwm::_iwm_start_task, &that->com.sc_ic.ic_ac.ac_if);
+//        itlwm::_iwm_start_task(that, &that->com.sc_ic.ic_ac.ac_if, NULL, NULL, NULL);
         IODelay(1);
     }
     thread_terminate(current_thread());
@@ -143,11 +143,7 @@ bool itlwm::start(IOService *provider)
     device->setIOEnable(true);
     device->setMemoryEnable(true);
     device->configWrite8(0x41, 0);
-    fWorkloop = IOWorkLoop::workLoop();
-    if (!fWorkloop) {
-        return false;
-    }
-    _fWorkloop = fWorkloop;
+    _fWorkloop = getWorkLoop();
     fCommandGate = IOCommandGate::commandGate(this, (IOCommandGate::Action)tsleepHandler);
     _fCommandGate = fCommandGate;
     if (fCommandGate == 0) {
@@ -225,6 +221,17 @@ IOReturn itlwm::getPacketFilters(const OSSymbol *group, UInt32 *filters) const {
     }
 
     return rtn;
+}
+
+bool itlwm::createWorkLoop()
+{
+    fWorkloop = IOWorkLoop::workLoop();
+    return fWorkloop ? true : false;
+}
+
+IOWorkLoop* itlwm::getWorkLoop() const
+{
+    return fWorkloop;
 }
 
 IOReturn itlwm::selectMedium(const IONetworkMedium *medium) {
