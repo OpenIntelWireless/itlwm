@@ -1935,10 +1935,10 @@ iwm_endscan(struct iwm_softc *sc)
     XYLog("%s\n", __FUNCTION__);
     int error;
     
-//    static const char *ssid_name = "Redmi";
-//    static const char *ssid_pwd = "zxyssdt112233";
-//        static const char *ssid_name = "CMCC-KtG6";
-//        static const char *ssid_pwd = "9utc5c5f";
+    //    static const char *ssid_name = "Redmi";
+    //    static const char *ssid_pwd = "zxyssdt112233";
+    //        static const char *ssid_name = "CMCC-KtG6";
+    //        static const char *ssid_pwd = "9utc5c5f";
     static const char *ssid_name = "ssdt";
     static const char *ssid_pwd = "zxyssdt112233";
     
@@ -1988,29 +1988,29 @@ iwm_endscan(struct iwm_softc *sc)
     join.i_len = strlen(ssid_name);
     join.i_flags = IEEE80211_JOIN_NWKEY;
     
-                memset(&wpa, 0, sizeof(ieee80211_wpaparams));
-                wpa.i_enabled = 1;
-                wpa.i_ciphers = IEEE80211_WPA_CIPHER_CCMP;
-                wpa.i_groupcipher = IEEE80211_WPA_CIPHER_CCMP;
-                wpa.i_protos = IEEE80211_WPA_PROTO_WPA1 | IEEE80211_WPA_PROTO_WPA2;
-                wpa.i_akms = IEEE80211_WPA_AKM_PSK | IEEE80211_WPA_AKM_8021X | IEEE80211_WPA_AKM_SHA256_PSK | IEEE80211_WPA_AKM_SHA256_8021X;
-                memcpy(wpa.i_name, "zxy", strlen("zxy"));
-                memset(&psk, 0, sizeof(ieee80211_wpapsk));
-                memcpy(psk.i_name, "zxy", strlen("zxy"));
-                psk.i_enabled = 1;
-                pbkdf2_sha1(ssid_pwd, (const uint8_t*)ssid_name, strlen(ssid_name),
-                            4096, psk.i_psk , 32);
-                XYLog("%s _psk=0x%02x,0x%02x, 0x%02x,0x%02x,0x%02x,0x%02x,0x%02x,0x%02x,0x%02x,0x%02x\n", __FUNCTION__, psk.i_psk[0], psk.i_psk[1], psk.i_psk[2], psk.i_psk[3], psk.i_psk[4], psk.i_psk[5], psk.i_psk[6], psk.i_psk[7], psk.i_psk[8], psk.i_psk[9]);
-                memset(&nwkey, 0, sizeof(ieee80211_nwkey));
-                nwkey.i_wepon = 0;
-                nwkey.i_defkid = 0;
-                memset(&join, 0, sizeof(ieee80211_join));
-                join.i_wpaparams = wpa;
-                join.i_wpapsk = psk;
-                join.i_flags = IEEE80211_JOIN_WPAPSK | IEEE80211_JOIN_ANY | IEEE80211_JOIN_WPA | IEEE80211_JOIN_8021X;
-                join.i_nwkey = nwkey;
-                join.i_len = strlen(ssid_name);
-                memcpy(join.i_nwid, ssid_name, join.i_len);
+    memset(&wpa, 0, sizeof(ieee80211_wpaparams));
+    wpa.i_enabled = 1;
+    wpa.i_ciphers = IEEE80211_WPA_CIPHER_CCMP;
+    wpa.i_groupcipher = IEEE80211_WPA_CIPHER_CCMP;
+    wpa.i_protos = IEEE80211_WPA_PROTO_WPA1 | IEEE80211_WPA_PROTO_WPA2;
+    wpa.i_akms = IEEE80211_WPA_AKM_PSK | IEEE80211_WPA_AKM_8021X | IEEE80211_WPA_AKM_SHA256_PSK | IEEE80211_WPA_AKM_SHA256_8021X;
+    memcpy(wpa.i_name, "zxy", strlen("zxy"));
+    memset(&psk, 0, sizeof(ieee80211_wpapsk));
+    memcpy(psk.i_name, "zxy", strlen("zxy"));
+    psk.i_enabled = 1;
+    pbkdf2_sha1(ssid_pwd, (const uint8_t*)ssid_name, strlen(ssid_name),
+                4096, psk.i_psk , 32);
+    XYLog("%s _psk=0x%02x,0x%02x, 0x%02x,0x%02x,0x%02x,0x%02x,0x%02x,0x%02x,0x%02x,0x%02x\n", __FUNCTION__, psk.i_psk[0], psk.i_psk[1], psk.i_psk[2], psk.i_psk[3], psk.i_psk[4], psk.i_psk[5], psk.i_psk[6], psk.i_psk[7], psk.i_psk[8], psk.i_psk[9]);
+    memset(&nwkey, 0, sizeof(ieee80211_nwkey));
+    nwkey.i_wepon = 0;
+    nwkey.i_defkid = 0;
+    memset(&join, 0, sizeof(ieee80211_join));
+    join.i_wpaparams = wpa;
+    join.i_wpapsk = psk;
+    join.i_flags = IEEE80211_JOIN_WPAPSK | IEEE80211_JOIN_ANY | IEEE80211_JOIN_WPA | IEEE80211_JOIN_8021X;
+    join.i_nwkey = nwkey;
+    join.i_len = strlen(ssid_name);
+    memcpy(join.i_nwid, ssid_name, join.i_len);
     
     //    ieee80211_nwid nwid;
     ////    nwid.i_len = 6;
@@ -2513,9 +2513,9 @@ iwm_start(struct ifnet *ifp)
     XYLog("%s\n", __FUNCTION__);
     struct iwm_softc *sc = (struct iwm_softc*)ifp->if_softc;
     itlwm *that = container_of(sc, itlwm, com);
-//    if (that->outputThreadSignal) {
-//        semaphore_signal(that->outputThreadSignal);
-//    }
+    //    if (that->outputThreadSignal) {
+    //        semaphore_signal(that->outputThreadSignal);
+    //    }
     _iwm_start_task(that, &that->com.sc_ic.ic_ac.ac_if, NULL, NULL, NULL);
 }
 
@@ -2538,7 +2538,7 @@ iwm_stop(struct ifnet *ifp)
     iwm_del_task(sc, systq, &sc->setrates_task);
     iwm_del_task(sc, systq, &sc->ba_task);
     iwm_del_task(sc, systq, &sc->htprot_task);
-//    KASSERT(sc->task_refs.refs >= 1, "sc->task_refs.refs >= 1");
+    //    KASSERT(sc->task_refs.refs >= 1, "sc->task_refs.refs >= 1");
     //    refcnt_finalize(&sc->task_refs, "iwmstop");
     
     iwm_stop_device(sc);
@@ -3197,6 +3197,10 @@ typedef void *iwm_match_t;
 #define    PCI_PRODUCT_INTEL_WL_9260_1    0x2526
 #define    PCI_PRODUCT_INTEL_WL_9560_1    0x9df0        /* Dual Band Wireless AC 9560 */
 #define    PCI_PRODUCT_INTEL_WL_9560_2    0xa370        /* Dual Band Wireless AC 9560 */
+#define    PCI_PRODUCT_INTEL_WL_9560_3    0x31DC        /* Dual Band Wireless AC 9560 */
+#define    PCI_PRODUCT_INTEL_WL_9560_4    0x30DC        /* Dual Band Wireless AC 9560 */
+#define    PCI_PRODUCT_INTEL_WL_9560_5    0x271C        /* Dual Band Wireless AC 9560 */
+#define    PCI_PRODUCT_INTEL_WL_9560_6    0x271B        /* Dual Band Wireless AC 9560 */
 
 static const struct pci_matchid iwm_devices[] = {
     { PCI_VENDOR_INTEL, PCI_PRODUCT_INTEL_WL_3160_1 },
@@ -3467,6 +3471,10 @@ iwm_attach(struct iwm_softc *sc, struct pci_attach_args *pa)
             break;
         case PCI_PRODUCT_INTEL_WL_9560_1:
         case PCI_PRODUCT_INTEL_WL_9560_2:
+        case PCI_PRODUCT_INTEL_WL_9560_3:
+        case PCI_PRODUCT_INTEL_WL_9560_4:
+        case PCI_PRODUCT_INTEL_WL_9560_5:
+        case PCI_PRODUCT_INTEL_WL_9560_6:
             sc->sc_fwname = "iwm-9000-34";
             sc->host_interrupt_operation_mode = 0;
             sc->sc_device_family = IWM_DEVICE_FAMILY_9000;
