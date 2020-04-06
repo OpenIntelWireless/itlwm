@@ -149,7 +149,7 @@ ieee80211_wep_encrypt(struct ieee80211com *ic, mbuf_t m0,
 			if (temp == NULL)
 				goto nospace;
             mbuf_setnext(n, temp);
-			n = temp;
+			n = mbuf_next(n);
             mbuf_setlen(n, mbuf_get_mlen());
 			if (left >= mbuf_get_minclsize() - IEEE80211_WEP_CRCLEN) {
                 mbuf_mclget(MBUF_DONTWAIT, mbuf_type(n), &n);
@@ -179,7 +179,7 @@ ieee80211_wep_encrypt(struct ieee80211com *ic, mbuf_t m0,
 		if (temp == NULL)
 			goto nospace;
         mbuf_setnext(n, temp);
-		n = temp;
+		n = mbuf_next(n);
         mbuf_setlen(n, 0);
 	}
 
@@ -273,7 +273,7 @@ ieee80211_wep_decrypt(struct ieee80211com *ic, mbuf_t m0,
 			if (temp == NULL)
 				goto nospace;
             mbuf_setnext(n, temp);
-			n = temp;
+			n = mbuf_next(n);
 			mbuf_setlen(n, mbuf_get_mlen());
 			if (left >= mbuf_get_minclsize()) {
                 mbuf_mclget(MBUF_DONTWAIT, mbuf_type(n), &n);

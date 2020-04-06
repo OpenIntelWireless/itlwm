@@ -241,7 +241,7 @@ ieee80211_ccmp_encrypt(struct ieee80211com *ic, mbuf_t m0,
 			if (temp == NULL)
 				goto nospace;
             mbuf_setnext(n, temp);
-			n = temp;
+			n = mbuf_next(n);
             mbuf_setlen(n, mbuf_get_mhlen());
 			if (left >= mbuf_get_minclsize() - IEEE80211_CCMP_MICLEN) {
                 mbuf_getcluster(MBUF_DONTWAIT, mbuf_type(n), 4096, &n);
@@ -287,7 +287,7 @@ ieee80211_ccmp_encrypt(struct ieee80211com *ic, mbuf_t m0,
 		if (temp == NULL)
 			goto nospace;
         mbuf_setnext(n, temp);
-		n = temp;
+		n = mbuf_next(n);
         mbuf_setlen(n, 0);
 	}
 	/* finalize MIC, U := T XOR first-M-bytes( S_0 ) */

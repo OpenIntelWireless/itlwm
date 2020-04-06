@@ -526,8 +526,10 @@ iwm_rx_tx_cmd_single(struct iwm_softc *sc, struct iwm_rx_packet *pkt,
         }
     }
     
-    if (txfail)
-        ifp->if_oerrors++;
+    if (txfail) {
+        XYLog("%s %d OUTPUT_ERROR\n", __FUNCTION__, __LINE__);
+        ifp->netStat->outputErrors++;
+    }
 }
 
 void itlwm::
@@ -2450,19 +2452,19 @@ _iwm_start_task(OSObject *target, void *arg0, void *arg1, void *arg2, void *arg3
         }
         
         if (ic->ic_state != IEEE80211_S_RUN ||
-            (ic->ic_xflags & IEEE80211_F_TX_MGMT_ONLY))
+            (ic->ic_xflags & IEEE80211_F_TX_MGMT_ONLY)) {
+            ifp->if_snd->lockFlush();
             break;
+        }
         
-        //        IFQ_DEQUEUE(&ifp->if_snd, m);
         m = ifp->if_snd->lockDequeue();
         if (!m) {
-            XYLog("%s 啊啊啊啊 ifp->if_snd->dequeue==NULL!!\n", __FUNCTION__);
             break;
         }
         if (mbuf_len(m) < sizeof (*eh) &&
             mbuf_pullup(&m, sizeof (*eh)) != 0) {
-            XYLog("%s 啊啊啊啊 mbuf_pullup(&m, sizeof (*eh)) != 0!!\n", __FUNCTION__);
-            ifp->if_oerrors++;
+            XYLog("%s %d OUTPUT_ERROR\n", __FUNCTION__, __LINE__);
+            ifp->netStat->outputErrors++;
             continue;
         }
 #if NBPFILTER > 0
@@ -2470,8 +2472,8 @@ _iwm_start_task(OSObject *target, void *arg0, void *arg1, void *arg2, void *arg3
             bpf_mtap(ifp->if_bpf, m, BPF_DIRECTION_OUT);
 #endif
         if ((m = ieee80211_encap(ifp, m, &ni)) == NULL) {
-            XYLog("%s 啊啊啊啊 ieee80211_encap!!\n", __FUNCTION__);
-            ifp->if_oerrors++;
+            XYLog("%s %d OUTPUT_ERROR\n", __FUNCTION__, __LINE__);
+            ifp->netStat->outputErrors++;
             continue;
         }
         
@@ -2482,9 +2484,11 @@ _iwm_start_task(OSObject *target, void *arg0, void *arg1, void *arg2, void *arg3
 #endif
         if (that->iwm_tx(sc, m, ni, ac) != 0) {
             ieee80211_release_node(ic, ni);
-            ifp->if_oerrors++;
+            XYLog("%s %d OUTPUT_ERROR\n", __FUNCTION__, __LINE__);
+            ifp->netStat->outputErrors++;
             continue;
         }
+        ifp->netStat->outputPackets++;
         
         if (ifp->if_flags & IFF_UP) {
             sc->sc_tx_timer = 15;
@@ -2579,7 +2583,8 @@ iwm_watchdog(struct ifnet *ifp)
             if ((sc->sc_flags & IWM_FLAG_SHUTDOWN) == 0) {
                 task_add(systq, &sc->init_task);
             }
-            ifp->if_oerrors++;
+            XYLog("%s %d OUTPUT_ERROR\n", __FUNCTION__, __LINE__);
+            ifp->netStat->outputErrors++;
             return;
         }
         ifp->if_timer = 1;

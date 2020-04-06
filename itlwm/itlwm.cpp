@@ -81,6 +81,7 @@ bool itlwm::configureInterface(IONetworkInterface *netif) {
     }
     
     XYLog("fpNetStats: %p", fpNetStats);
+    com.sc_ic.ic_ac.ac_if.netStat = fpNetStats;
     
     return true;
 }
@@ -118,8 +119,8 @@ static void output_thread_task(void *arg)
     itlwm *that = (itlwm*)arg;
     while (true) {
         semaphore_wait(that->outputThreadSignal);
-        that->fCommandGate->runAction(itlwm::_iwm_start_task, &that->com.sc_ic.ic_ac.ac_if);
-//        itlwm::_iwm_start_task(that, &that->com.sc_ic.ic_ac.ac_if, NULL, NULL, NULL);
+//        that->fCommandGate->runAction(itlwm::_iwm_start_task, &that->com.sc_ic.ic_ac.ac_if);
+        itlwm::_iwm_start_task(that, &that->com.sc_ic.ic_ac.ac_if, NULL, NULL, NULL);
         IODelay(1);
     }
     thread_terminate(current_thread());

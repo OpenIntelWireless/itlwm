@@ -416,7 +416,7 @@ iwm_send_cmd(struct iwm_softc *sc, struct iwm_host_cmd *hcmd)
             err = EINVAL;
             goto out;
         }
-        mbuf_allocpacket(MBUF_DONTWAIT, totlen, &max_chunks, &m);
+        mbuf_allocpacket(MBUF_WAITOK, totlen, &max_chunks, &m);
         //        mbuf_gethdr(MBUF_DONTWAIT, MT_DATA, &m);
         ////        m = MCLGETI(NULL, M_DONTWAIT, NULL, totlen);
         if (m == NULL) {

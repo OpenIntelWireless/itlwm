@@ -253,18 +253,18 @@ iwm_rx_mpdu(struct iwm_softc *sc, mbuf_t m, void *pktdata,
         /* Allow control frames in monitor mode. */
         if (len < sizeof(struct ieee80211_frame_cts)) {
             ic->ic_stats.is_rx_tooshort++;
-            IC2IFP(ic)->if_ierrors++;
+            IC2IFP(ic)->netStat->inputErrors++;
             mbuf_freem(m);
             return;
         }
     } else if (len < sizeof(struct ieee80211_frame)) {
         ic->ic_stats.is_rx_tooshort++;
-        IC2IFP(ic)->if_ierrors++;
+        IC2IFP(ic)->netStat->inputErrors++;
         mbuf_freem(m);
         return;
     }
     if (len > maxlen - sizeof(*rx_res)) {
-        IC2IFP(ic)->if_ierrors++;
+        IC2IFP(ic)->netStat->inputErrors++;
         mbuf_freem(m);
         return;
     }
@@ -331,18 +331,18 @@ iwm_rx_mpdu_mq(struct iwm_softc *sc, mbuf_t m, void *pktdata,
         /* Allow control frames in monitor mode. */
         if (len < sizeof(struct ieee80211_frame_cts)) {
             ic->ic_stats.is_rx_tooshort++;
-            IC2IFP(ic)->if_ierrors++;
+            IC2IFP(ic)->netStat->inputErrors++;
             mbuf_freem(m);
             return;
         }
     } else if (len < sizeof(struct ieee80211_frame)) {
         ic->ic_stats.is_rx_tooshort++;
-        IC2IFP(ic)->if_ierrors++;
+        IC2IFP(ic)->netStat->inputErrors++;
         mbuf_freem(m);
         return;
     }
     if (len > maxlen - sizeof(*desc)) {
-        IC2IFP(ic)->if_ierrors++;
+        IC2IFP(ic)->netStat->inputErrors++;
         mbuf_freem(m);
         return;
     }
@@ -448,7 +448,7 @@ iwm_rx_pkt(struct iwm_softc *sc, struct iwm_rx_data *data, struct mbuf_list *ml)
         if (code == IWM_REPLY_RX_MPDU_CMD && ++nmpdu == 1) {
             /* Take mbuf m0 off the RX ring. */
             if (iwm_rx_addbuf(sc, IWM_RBUF_SIZE, sc->rxq.cur)) {
-                ifp->if_ierrors++;
+                ifp->netStat->inputErrors++;
                 break;
             }
             
@@ -488,7 +488,7 @@ iwm_rx_pkt(struct iwm_softc *sc, struct iwm_rx_data *data, struct mbuf_list *ml)
                     mbuf_copym(m0, 0, MBUF_COPYALL, MBUF_DONTWAIT, &m);
                     //                m = m_copym(m0, 0, M_COPYALL, M_DONTWAIT);
                     if (m == NULL) {
-                        ifp->if_ierrors++;
+                        ifp->netStat->inputErrors++;
                         mbuf_freem(m0);
                         m0 = NULL;
                         break;

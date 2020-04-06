@@ -138,6 +138,7 @@ struct ifnet {                /* and the entries */
     caddr_t if_mcast6;        /* used by IPv6 multicast code */
     caddr_t    if_pf_kif;        /* pf interface abstraction */
     
+    IONetworkStats *netStat;
     ///extra
     uint32_t if_ierrors;
     uint32_t if_oerrors;

@@ -436,6 +436,9 @@ static inline int if_input(struct ifnet *ifq, struct mbuf_list *ml)
         }
         XYLog("%s %d 啊啊啊啊 ifq->iface->inputPacket(m)\n", __FUNCTION__, __LINE__);
         ifq->iface->inputPacket(m);
+        if (ifq->netStat != NULL) {
+            ifq->netStat->inputPackets++;
+        }
     }
     if (!isEmpty) {
         ifq->iface->flushInputQueue();
