@@ -3201,6 +3201,16 @@ typedef void *iwm_match_t;
 #define    PCI_PRODUCT_INTEL_WL_9560_4    0x30DC        /* Dual Band Wireless AC 9560 */
 #define    PCI_PRODUCT_INTEL_WL_9560_5    0x271C        /* Dual Band Wireless AC 9560 */
 #define    PCI_PRODUCT_INTEL_WL_9560_6    0x271B        /* Dual Band Wireless AC 9560 */
+#define    PCI_PRODUCT_INTEL_WL_9462_1    0x42a4        /* Dual Band Wireless AC 9462 */
+#define    PCI_PRODUCT_INTEL_WL_9462_2    0x00a0        /* Dual Band Wireless AC 9462 */
+#define    PCI_PRODUCT_INTEL_WL_9462_3    0x00a4        /* Dual Band Wireless AC 9462 */
+#define    PCI_PRODUCT_INTEL_WL_9462_4    0x02a0        /* Dual Band Wireless AC 9462 */
+#define    PCI_PRODUCT_INTEL_WL_9462_5    0x02a4        /* Dual Band Wireless AC 9462 */
+#define    PCI_PRODUCT_INTEL_WL_9462_6    0x40a4        /* Dual Band Wireless AC 9462 */
+#define    PCI_PRODUCT_INTEL_WL_9461_1    0x0060        /* Dual Band Wireless AC 9461 */
+#define    PCI_PRODUCT_INTEL_WL_9461_2    0x0064        /* Dual Band Wireless AC 9461 */
+#define    PCI_PRODUCT_INTEL_WL_9461_3    0x0260        /* Dual Band Wireless AC 9461 */
+#define    PCI_PRODUCT_INTEL_WL_9461_4    0x0264        /* Dual Band Wireless AC 9461 */
 
 static const struct pci_matchid iwm_devices[] = {
     { PCI_VENDOR_INTEL, PCI_PRODUCT_INTEL_WL_3160_1 },
@@ -3218,6 +3228,20 @@ static const struct pci_matchid iwm_devices[] = {
     { PCI_VENDOR_INTEL, PCI_PRODUCT_INTEL_WL_9260_1 },
     { PCI_VENDOR_INTEL, PCI_PRODUCT_INTEL_WL_9560_1 },
     { PCI_VENDOR_INTEL, PCI_PRODUCT_INTEL_WL_9560_2 },
+    { PCI_VENDOR_INTEL, PCI_PRODUCT_INTEL_WL_9560_3 },
+    { PCI_VENDOR_INTEL, PCI_PRODUCT_INTEL_WL_9560_4 },
+    { PCI_VENDOR_INTEL, PCI_PRODUCT_INTEL_WL_9560_5 },
+    { PCI_VENDOR_INTEL, PCI_PRODUCT_INTEL_WL_9560_6 },
+    { PCI_VENDOR_INTEL, PCI_PRODUCT_INTEL_WL_9462_1 },
+    { PCI_VENDOR_INTEL, PCI_PRODUCT_INTEL_WL_9462_2 },
+    { PCI_VENDOR_INTEL, PCI_PRODUCT_INTEL_WL_9462_3 },
+    { PCI_VENDOR_INTEL, PCI_PRODUCT_INTEL_WL_9462_4 },
+    { PCI_VENDOR_INTEL, PCI_PRODUCT_INTEL_WL_9462_5 },
+    { PCI_VENDOR_INTEL, PCI_PRODUCT_INTEL_WL_9462_6 },
+    { PCI_VENDOR_INTEL, PCI_PRODUCT_INTEL_WL_9461_1 },
+    { PCI_VENDOR_INTEL, PCI_PRODUCT_INTEL_WL_9461_2 },
+    { PCI_VENDOR_INTEL, PCI_PRODUCT_INTEL_WL_9461_3 },
+    { PCI_VENDOR_INTEL, PCI_PRODUCT_INTEL_WL_9461_4 }
 };
 
 int itlwm::
@@ -3475,6 +3499,16 @@ iwm_attach(struct iwm_softc *sc, struct pci_attach_args *pa)
         case PCI_PRODUCT_INTEL_WL_9560_4:
         case PCI_PRODUCT_INTEL_WL_9560_5:
         case PCI_PRODUCT_INTEL_WL_9560_6:
+        case PCI_PRODUCT_INTEL_WL_9462_1:
+        case PCI_PRODUCT_INTEL_WL_9462_2:
+        case PCI_PRODUCT_INTEL_WL_9462_3:
+        case PCI_PRODUCT_INTEL_WL_9462_4:
+        case PCI_PRODUCT_INTEL_WL_9462_5:
+        case PCI_PRODUCT_INTEL_WL_9462_6:
+        case PCI_PRODUCT_INTEL_WL_9461_1:
+        case PCI_PRODUCT_INTEL_WL_9461_2:
+        case PCI_PRODUCT_INTEL_WL_9461_3:
+        case PCI_PRODUCT_INTEL_WL_9461_4:
             sc->sc_fwname = "iwm-9000-34";
             sc->host_interrupt_operation_mode = 0;
             sc->sc_device_family = IWM_DEVICE_FAMILY_9000;
