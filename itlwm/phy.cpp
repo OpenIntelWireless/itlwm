@@ -435,8 +435,8 @@ iwm_send_cmd(struct iwm_softc *sc, struct iwm_host_cmd *hcmd)
         //            }
         //        }
         cmd = mtod(m, struct iwm_device_cmd *);
-        err = bus_dmamap_load(txdata->map, m);
-        if (err) {
+        txdata->map->dm_nsegs = txdata->map->cursor->getPhysicalSegmentsWithCoalesce(m, txdata->map->dm_segs, 1);
+        if (txdata->map->dm_nsegs == 0) {
             XYLog("%s: could not load fw cmd mbuf (%zd bytes)\n",
                   DEVNAME(sc), totlen);
             mbuf_freem(m);

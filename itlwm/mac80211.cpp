@@ -1937,8 +1937,8 @@ iwm_endscan(struct iwm_softc *sc)
     
     //    static const char *ssid_name = "Redmi";
     //    static const char *ssid_pwd = "zxyssdt112233";
-    //        static const char *ssid_name = "CMCC-KtG6";
-    //        static const char *ssid_pwd = "9utc5c5f";
+//            static const char *ssid_name = "CMCC-KtG6";
+//            static const char *ssid_pwd = "9utc5c5f";
     static const char *ssid_name = "ssdt";
     static const char *ssid_pwd = "zxyssdt112233";
     
@@ -1990,8 +1990,8 @@ iwm_endscan(struct iwm_softc *sc)
     
     memset(&wpa, 0, sizeof(ieee80211_wpaparams));
     wpa.i_enabled = 1;
-    wpa.i_ciphers = IEEE80211_WPA_CIPHER_CCMP;
-    wpa.i_groupcipher = IEEE80211_WPA_CIPHER_CCMP;
+    wpa.i_ciphers = IEEE80211_WPA_CIPHER_CCMP | IEEE80211_WPA_CIPHER_TKIP;
+    wpa.i_groupcipher = IEEE80211_WPA_CIPHER_CCMP | IEEE80211_WPA_CIPHER_TKIP;
     wpa.i_protos = IEEE80211_WPA_PROTO_WPA1 | IEEE80211_WPA_PROTO_WPA2;
     wpa.i_akms = IEEE80211_WPA_AKM_PSK | IEEE80211_WPA_AKM_8021X | IEEE80211_WPA_AKM_SHA256_PSK | IEEE80211_WPA_AKM_SHA256_8021X;
     memcpy(wpa.i_name, "zxy", strlen("zxy"));

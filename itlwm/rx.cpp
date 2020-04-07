@@ -187,10 +187,10 @@ iwm_rx_addbuf(struct iwm_softc *sc, int size, int idx)
     //    mbuf_setlen(m, mbuf_maxlen(m));
     //    mbuf_pkthdr_setlen(m, mbuf_maxlen(m));
     //    m->m_len = m->m_pkthdr.len = m->m_ext.ext_size;
-    err = bus_dmamap_load(data->map, m);
-    //    err = data->map->cursor->getPhysicalSegments(m, data->map->dm_segs, 1);
+//    err = bus_dmamap_load(data->map, m);
+    data->map->dm_nsegs = data->map->cursor->getPhysicalSegments(m, data->map->dm_segs, 1);
     XYLog("Map new address=0x%llx\n", mbuf_data_to_physical(mbuf_data(m)));
-    if (err) {
+    if (data->map->dm_nsegs == 0) {
         XYLog("RX Map new address FAIL!!!!\n");
         /* XXX */
         if (fatal)

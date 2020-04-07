@@ -195,9 +195,10 @@ ieee80211_tkip_encrypt(struct ieee80211com *ic, mbuf_t m0,
 	int left, moff, noff, len, hdrlen;
     mbuf_t temp;
     unsigned int max_chunks = 1;
+    struct ifnet *ifp = &ic->ic_ac.ac_if;
 
 //    mbuf_get(MBUF_DONTWAIT, mbuf_type(m0), &n0);
-    mbuf_allocpacket(MBUF_DONTWAIT, mbuf_get_mhlen(), &max_chunks, &n0);
+    mbuf_allocpacket(MBUF_DONTWAIT, mbuf_get_mlen(), &max_chunks, &n0);
 	if (n0 == NULL)
 		goto nospace;
 	if (m_dup_pkthdr(n0, m0, MBUF_DONTWAIT))
@@ -286,9 +287,11 @@ ieee80211_tkip_encrypt(struct ieee80211com *ic, mbuf_t m0,
 	if (mbuf_trailingspace(n) < IEEE80211_TKIP_TAILLEN) {
         temp = NULL;
 //        mbuf_get(MBUF_DONTWAIT, mbuf_type(n), &temp);
-        mbuf_allocpacket(MBUF_DONTWAIT, mbuf_get_mhlen(), &max_chunks, &temp);
+        mbuf_allocpacket(MBUF_DONTWAIT, mbuf_get_mlen(), &max_chunks, &temp);
 		if (temp == NULL)
 			goto nospace;
+        mbuf_setlen(temp, mbuf_get_mlen());
+        mbuf_pkthdr_setlen(temp, mbuf_get_mlen());
         mbuf_setnext(n, temp);
 		n = mbuf_next(n);
         mbuf_setlen(n, 0);
@@ -338,6 +341,7 @@ ieee80211_tkip_decrypt(struct ieee80211com *ic, mbuf_t m0,
 	int hdrlen, left, moff, noff, len;
     mbuf_t temp;
     unsigned int max_chunks = 1;
+    struct ifnet *ifp = &ic->ic_ac.ac_if;
 
 	wh = mtod(m0, struct ieee80211_frame *);
 	hdrlen = ieee80211_get_hdrlen(wh);
@@ -374,7 +378,7 @@ ieee80211_tkip_decrypt(struct ieee80211com *ic, mbuf_t m0,
 	}
 
 //    mbuf_get(MBUF_DONTWAIT, mbuf_type(m0), &n0);
-    mbuf_allocpacket(MBUF_DONTWAIT, mbuf_get_mhlen(), &max_chunks, &n0);
+    mbuf_allocpacket(MBUF_DONTWAIT, mbuf_get_mlen(), &max_chunks, &n0);
 	if (n0 == NULL)
 		goto nospace;
 	if (m_dup_pkthdr(n0, m0, MBUF_DONTWAIT))

@@ -348,6 +348,7 @@ public:
 public:
     IOInterruptEventSource* fInterrupt;
     IOWorkLoop *fWorkloop;
+    IOWorkLoop *irqWorkloop;
     IOCommandGate*        fCommandGate;
     IOCommandGate*        fOutputCommandGate;
     struct pci_attach_args pci;
