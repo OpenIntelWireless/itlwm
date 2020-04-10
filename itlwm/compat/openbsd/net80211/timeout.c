@@ -57,9 +57,8 @@ int timeout_add_usec(CTimeout **to, int usecs)
 
 int timeout_del(CTimeout **to)
 {
-    IOLog("timeout_del\n");
+//    IOLog("timeout_del\n");
     if (((CTimeout*)*to) == NULL) {
-        IOLog("timeout_del timeout NULL\n");
         return 0;
     }
     return _fCommandGate->runAction(&CTimeout::timeout_del, *to) == kIOReturnSuccess ? 1 : 0;

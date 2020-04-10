@@ -1333,7 +1333,6 @@ ieee80211_node_choose_bss(struct ieee80211com *ic, int bgscan,
 void
 ieee80211_end_scan(struct ifnet *ifp)
 {
-    XYLog("%s\n", __FUNCTION__);
 	struct ieee80211com *ic = (struct ieee80211com *)ifp;
 	struct ieee80211_node *ni, *selbs = NULL, *curbs = NULL;
 	int bgscan = ((ic->ic_flags & IEEE80211_F_BGSCAN) &&

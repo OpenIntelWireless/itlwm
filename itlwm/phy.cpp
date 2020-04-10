@@ -69,7 +69,6 @@ int itlwm::
 iwm_phy_db_get_section_data(struct iwm_softc *sc, uint32_t type, uint8_t **data,
                             uint16_t *size, uint16_t ch_id)
 {
-    XYLog("%s\n", __FUNCTION__);
     struct iwm_phy_db_entry *entry;
     uint16_t ch_group_id = 0;
     
@@ -605,7 +604,6 @@ iwm_free_resp(struct iwm_softc *sc, struct iwm_host_cmd *hcmd)
 void itlwm::
 iwm_cmd_done(struct iwm_softc *sc, int qid, int idx, int code)
 {
-    XYLog("%s\n", __FUNCTION__);
     struct iwm_tx_ring *ring = &sc->txq[sc->cmdqid];
     struct iwm_tx_data *data;
     

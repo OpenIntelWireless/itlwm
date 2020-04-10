@@ -178,7 +178,6 @@ IOBufferMemoryDescriptor* allocDmaMemory
     uint64_t    phymask;
     int        i;
     
-    XYLog("Asked to allocate %u bytes with align=%u\n", size, alignment);
     
     if (alignment <= PAGE_SIZE) {
         reqsize = size;
@@ -189,7 +188,7 @@ IOBufferMemoryDescriptor* allocDmaMemory
     }
     
     IOBufferMemoryDescriptor* mem = 0;
-    mem = IOBufferMemoryDescriptor::inTaskWithPhysicalMask(kernel_task, kIOMemoryPhysicallyContiguous | kIODirectionInOut,
+    mem = IOBufferMemoryDescriptor::inTaskWithPhysicalMask(kernel_task, kIOMemoryPhysicallyContiguous | kIODirectionInOut | kIOMapInhibitCache,
                                    reqsize, phymask);
     if (!mem) {
         XYLog("Could not allocate DMA memory\n");
@@ -198,8 +197,6 @@ IOBufferMemoryDescriptor* allocDmaMemory
     mem->prepare();
     *paddr = mem->getPhysicalAddress();
     *vaddr = mem->getBytesNoCopy();
-    
-    XYLog("Got allocated at paddr=0x%x, vaddr=0x%x\n", *paddr, *vaddr);
     
     /*
      * Check the alignment and increment by 4096 until we get the
@@ -220,7 +217,6 @@ IOBufferMemoryDescriptor* allocDmaMemory
             return 0;
         }
     }
-    XYLog("Re-aligned DMA memory to paddr=0x%x, vaddr=0x%x\n", *paddr, *vaddr);
     return mem;
 }
 

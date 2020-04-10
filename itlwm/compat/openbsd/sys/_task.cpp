@@ -119,7 +119,9 @@ taskq_thread(void *xtq)
 
     while (taskq_next_work(tq, &work)) {
 //        WITNESS_LOCK(&tq->tq_lock_object, 0);
+//        IOLog("itlwm: taskq worker thread=%lld work=%lld\n", thread_tid(current_thread()), &work);
         (*work.t_func)(work.t_arg);
+//        IOLog("itlwm: taskq worker thread=%lld work=%lld done", thread_tid(current_thread()), &work);
 //        _fCommandGate->runAction(taskq_run, tq, &work);
 //        WITNESS_UNLOCK(&tq->tq_lock_object, 0);
 //        sched_pause(yield);
@@ -194,7 +196,6 @@ taskq_init(void)
     TAILQ_INIT(&systq->tq_worklist);
     thread_t new_thread;
     kernel_thread_start((thread_continue_t)taskq_create_thread, systq, &new_thread);
-    thread_deallocate(new_thread);
 }
 
 struct taskq *
@@ -277,12 +278,15 @@ int
 task_add(struct taskq *tq, struct task *w)
 {
     int rv = 0;
-
-    if (ISSET(w->t_flags, TASK_ONQUEUE))
+//    IOLog("itlwm: taskq task_add task=%lld\n", w);
+    if (ISSET(w->t_flags, TASK_ONQUEUE)) {
+        IOLog("itlwm: taskq task_add is already on /queue\n");
         return (0);
+    }
 
     lck_mtx_lock(tq->tq_mtx);
     if (!ISSET(w->t_flags, TASK_ONQUEUE)) {
+//        IOLog("itlwm: taskq task_add add to queue\n");
         rv = 1;
         SET(w->t_flags, TASK_ONQUEUE);
         TAILQ_INSERT_TAIL(&tq->tq_worklist, w, t_entry);
@@ -299,7 +303,7 @@ int
 task_del(struct taskq *tq, struct task *w)
 {
     int rv = 0;
-
+//    IOLog("itlwm: taskq task_del task=%lld\n", w);
     if (!ISSET(w->t_flags, TASK_ONQUEUE))
         return (0);
 

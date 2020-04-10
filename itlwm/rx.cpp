@@ -157,7 +157,7 @@ iwm_rx_addbuf(struct iwm_softc *sc, int size, int idx)
     int fatal = 0;
     unsigned int maxChunks = 1;
     
-    mbuf_allocpacket(MBUF_WAITOK, IWM_RBUF_SIZE, &maxChunks, &m);
+    m = allocatePacket(IWM_RBUF_SIZE);
     
     if (m == NULL) {
         XYLog("%s allocatePacket==NULL\n", __FUNCTION__);
@@ -188,15 +188,14 @@ iwm_rx_addbuf(struct iwm_softc *sc, int size, int idx)
     //    mbuf_pkthdr_setlen(m, mbuf_maxlen(m));
     //    m->m_len = m->m_pkthdr.len = m->m_ext.ext_size;
 //    err = bus_dmamap_load(data->map, m);
-    data->map->dm_nsegs = data->map->cursor->getPhysicalSegments(m, data->map->dm_segs, 1);
-    XYLog("Map new address=0x%llx\n", mbuf_data_to_physical(mbuf_data(m)));
+    data->map->dm_nsegs = data->map->cursor->getPhysicalSegments(m, &data->map->dm_segs[0], 1);
     if (data->map->dm_nsegs == 0) {
         XYLog("RX Map new address FAIL!!!!\n");
         /* XXX */
         if (fatal)
             panic("iwm: could not load RX mbuf");
         mbuf_freem(m);
-        return err;
+        return ENOMEM;
     }
     data->m = m;
     //    bus_dmamap_sync(sc->sc_dmat, data->map, 0, size, BUS_DMASYNC_PREREAD);
@@ -235,7 +234,6 @@ void itlwm::
 iwm_rx_mpdu(struct iwm_softc *sc, mbuf_t m, void *pktdata,
             size_t maxlen, struct mbuf_list *ml)
 {
-    XYLog("%s\n", __FUNCTION__);
     struct ieee80211com *ic = &sc->sc_ic;
     struct ieee80211_rxinfo rxi;
     struct iwm_rx_phy_info *phy_info;
@@ -309,7 +307,6 @@ void itlwm::
 iwm_rx_mpdu_mq(struct iwm_softc *sc, mbuf_t m, void *pktdata,
                size_t maxlen, struct mbuf_list *ml)
 {
-    XYLog("%s\n", __FUNCTION__);
     struct ieee80211com *ic = &sc->sc_ic;
     struct ieee80211_rxinfo rxi;
     struct iwm_rx_mpdu_desc *desc;
@@ -416,7 +413,6 @@ _var_ = (t)((_pkt_)+1);                    \
 void itlwm::
 iwm_rx_pkt(struct iwm_softc *sc, struct iwm_rx_data *data, struct mbuf_list *ml)
 {
-    XYLog("%s\n", __FUNCTION__);
     struct ifnet *ifp = IC2IFP(&sc->sc_ic);
     struct iwm_rx_packet *pkt, *nextpkt;
     uint32_t offset = 0, nextoff = 0, nmpdu = 0, len;
@@ -434,8 +430,6 @@ iwm_rx_pkt(struct iwm_softc *sc, struct iwm_rx_data *data, struct mbuf_list *ml)
         idx = pkt->hdr.idx;
         
         code = IWM_WIDE_ID(pkt->hdr.flags, pkt->hdr.code);
-        
-        XYLog("code=0x%02x", code);
         
         if (!iwm_rx_pkt_valid(pkt))
             break;
@@ -468,7 +462,6 @@ iwm_rx_pkt(struct iwm_softc *sc, struct iwm_rx_data *data, struct mbuf_list *ml)
                 ((uint8_t*)mbuf_data(m0) + nextoff);
                 if (nextoff + minsz >= IWM_RBUF_SIZE ||
                     !iwm_rx_pkt_valid(nextpkt)) {
-                    XYLog("mbuf input %lu bytes", mbuf_pkthdr_len(m0));
                     /* No need to copy last frame in buffer. */
                     if (offset > 0)
                         mbuf_adj(m0, offset);

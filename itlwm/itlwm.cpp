@@ -49,7 +49,6 @@ static UInt32 mediumSpeedArray[MEDIUM_INDEX_COUNT] = {
 
 bool itlwm::init(OSDictionary *properties)
 {
-    XYLog("%s\n", __FUNCTION__);
     super::init(properties);
     fwLoadLock = IOLockAlloc();
     return true;
@@ -57,7 +56,6 @@ bool itlwm::init(OSDictionary *properties)
 
 IOService* itlwm::probe(IOService *provider, SInt32 *score)
 {
-    XYLog("%s\n", __FUNCTION__);
     super::probe(provider, score);
     IOPCIDevice* device = OSDynamicCast(IOPCIDevice, provider);
     if (!device) {
@@ -80,7 +78,6 @@ bool itlwm::configureInterface(IONetworkInterface *netif) {
         return false;
     }
     
-    XYLog("fpNetStats: %p", fpNetStats);
     com.sc_ic.ic_ac.ac_if.netStat = fpNetStats;
     
     return true;
@@ -131,7 +128,6 @@ bool itlwm::start(IOService *provider)
     ifnet *ifp;
     thread_t new_thread;
     
-    XYLog("%s\n", __FUNCTION__);
     if (!super::start(provider)) {
         return false;
     }
@@ -199,16 +195,17 @@ bool itlwm::start(IOService *provider)
         return false;
     }
     ifp = &com.sc_ic.ic_ac.ac_if;
-    iwm_init(ifp);
+    ifp->if_flags |= IFF_UP;
+    iwm_init_task(&com);
     if (!attachInterface((IONetworkInterface **)&com.sc_ic.ic_ac.ac_if.iface)) {
         XYLog("attach to interface fail\n");
         return false;
     }
     setLinkStatus(kIONetworkLinkValid);
     registerService();
-    semaphore_create(current_task(), &outputThreadSignal, 0, 1);
-    kernel_thread_start((thread_continue_t)output_thread_task, this, &new_thread);
-    thread_deallocate(new_thread);
+//    semaphore_create(current_task(), &outputThreadSignal, 0, 1);
+//    kernel_thread_start((thread_continue_t)output_thread_task, this, &new_thread);
+//    thread_deallocate(new_thread);
     return true;
 }
 
@@ -303,7 +300,6 @@ IOReturn itlwm::disable(IONetworkInterface *netif)
 }
 
 IOReturn itlwm::getHardwareAddress(IOEthernetAddress *addrP) {
-    XYLog("%s\n", __FUNCTION__);
     if (IEEE80211_ADDR_EQ(etheranyaddr, com.sc_ic.ic_myaddr)) {
         return kIOReturnError;
     } else {

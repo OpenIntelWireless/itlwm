@@ -414,7 +414,6 @@ static IORecursiveLock *inputLock = IORecursiveLockAlloc();
 
 static inline int if_input(struct ifnet *ifq, struct mbuf_list *ml)
 {
-    XYLog("%s\n", __FUNCTION__);
     mbuf_t m;
     uint64_t packets;
     bool isEmpty = false;

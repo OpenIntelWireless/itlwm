@@ -46,7 +46,7 @@ iwm_send_bt_init_conf(struct iwm_softc *sc)
 
 void itlwm::wakeupOn(void *ident)
 {
-    XYLog("%s\n", __FUNCTION__);
+//    XYLog("%s\n", __FUNCTION__);
     if (fCommandGate == 0)
         return;
     else
@@ -55,7 +55,7 @@ void itlwm::wakeupOn(void *ident)
 
 int itlwm::tsleep_nsec(void *ident, int priority, const char *wmesg, int timo)
 {
-    XYLog("%s %s\n", __FUNCTION__, wmesg);
+//    XYLog("%s %s\n", __FUNCTION__, wmesg);
     IOReturn ret;
     if (fCommandGate == 0) {
         IOSleep(timo);

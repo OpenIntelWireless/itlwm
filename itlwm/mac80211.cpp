@@ -333,7 +333,6 @@ iwm_rxmq_get_signal_strength(struct iwm_softc *sc,
 int itlwm::
 iwm_get_noise(const struct iwm_statistics_rx_non_phy *stats)
 {
-    XYLog("%s\n", __FUNCTION__);
     int i, total, nbant, noise;
     
     total = nbant = noise = 0;
@@ -437,7 +436,6 @@ iwm_rx_frame(struct iwm_softc *sc, mbuf_t m, int chanidx,
 void itlwm::
 iwm_enable_ht_cck_fallback(struct iwm_softc *sc, struct iwm_node *in)
 {
-    XYLog("%s\n", __FUNCTION__);
     struct ieee80211com *ic = &sc->sc_ic;
     struct ieee80211_node *ni = &in->in_ni;
     struct ieee80211_rateset *rs = &ni->ni_rates;
@@ -470,7 +468,6 @@ void itlwm::
 iwm_rx_tx_cmd_single(struct iwm_softc *sc, struct iwm_rx_packet *pkt,
                      struct iwm_node *in)
 {
-    XYLog("%s\n", __FUNCTION__);
     struct ieee80211com *ic = &sc->sc_ic;
     struct ieee80211_node *ni = &in->in_ni;
     struct ifnet *ifp = IC2IFP(ic);
@@ -516,6 +513,7 @@ iwm_rx_tx_cmd_single(struct iwm_softc *sc, struct iwm_rx_packet *pkt,
             best_mcs = ieee80211_mira_get_best_mcs(&in->in_mn);
             if (best_mcs != in->chosen_txmcs) {
                 in->chosen_txmcs = best_mcs;
+                XYLog("iwm_add_task best_mcs=%d\n", best_mcs);
                 iwm_add_task(sc, systq, &sc->setrates_task);
             }
             
@@ -535,7 +533,6 @@ iwm_rx_tx_cmd_single(struct iwm_softc *sc, struct iwm_rx_packet *pkt,
 void itlwm::
 iwm_txd_done(struct iwm_softc *sc, struct iwm_tx_data *txd)
 {
-    XYLog("%s\n", __FUNCTION__);
     struct ieee80211com *ic = &sc->sc_ic;
     
     //    bus_dmamap_sync(sc->sc_dmat, txd->map, 0, txd->map->dm_mapsize,
@@ -558,7 +555,6 @@ void itlwm::
 iwm_rx_tx_cmd(struct iwm_softc *sc, struct iwm_rx_packet *pkt,
               struct iwm_rx_data *data)
 {
-    XYLog("%s\n", __FUNCTION__);
     struct ieee80211com *ic = &sc->sc_ic;
     struct ifnet *ifp = IC2IFP(ic);
     struct iwm_cmd_header *cmd_hdr = &pkt->hdr;
@@ -617,7 +613,6 @@ void itlwm::
 iwm_rx_bmiss(struct iwm_softc *sc, struct iwm_rx_packet *pkt,
              struct iwm_rx_data *data)
 {
-    XYLog("%s\n", __FUNCTION__);
     struct ieee80211com *ic = &sc->sc_ic;
     struct iwm_missed_beacons_notif *mbn = (struct iwm_missed_beacons_notif *)pkt->data;
     uint32_t missed;
@@ -656,7 +651,6 @@ const struct iwm_rate * itlwm::
 iwm_tx_fill_cmd(struct iwm_softc *sc, struct iwm_node *in,
                 struct ieee80211_frame *wh, struct iwm_tx_cmd *tx)
 {
-    XYLog("%s\n", __FUNCTION__);
     struct ieee80211com *ic = &sc->sc_ic;
     struct ieee80211_node *ni = &in->in_ni;
     struct ieee80211_rateset *rs = &ni->ni_rates;
@@ -729,7 +723,6 @@ iwm_tx_fill_cmd(struct iwm_softc *sc, struct iwm_node *in,
 int itlwm::
 iwm_tx(struct iwm_softc *sc, mbuf_t m, struct ieee80211_node *ni, int ac)
 {
-    XYLog("%s\n", __FUNCTION__);
     struct ieee80211com *ic = &sc->sc_ic;
     struct iwm_node *in = (struct iwm_node *)ni;
     struct iwm_tx_ring *ring;
@@ -940,7 +933,6 @@ iwm_tx(struct iwm_softc *sc, mbuf_t m, struct ieee80211_node *ni, int ac)
 int itlwm::
 iwm_flush_tx_path(struct iwm_softc *sc, int tfd_queue_msk)
 {
-    XYLog("%s\n", __FUNCTION__);
     struct iwm_tx_path_flush_cmd flush_cmd = {
         .queues_ctl = htole32(tfd_queue_msk),
         .flush_ctl = htole16(IWM_DUMP_TX_FIFO_FLUSH),
@@ -1109,7 +1101,6 @@ iwm_mac_ctxt_cmd(struct iwm_softc *sc, struct iwm_node *in, uint32_t action,
 int itlwm::
 iwm_update_quotas(struct iwm_softc *sc, struct iwm_node *in, int running)
 {
-    XYLog("%s\n", __FUNCTION__);
     struct iwm_time_quota_cmd cmd;
     int i, idx, num_active_macs, quota, quota_rem;
     int colors[IWM_MAX_BINDINGS] = { -1, -1, -1, -1, };
@@ -1532,6 +1523,7 @@ iwm_calib_timeout(void *arg)
          */
         if (ni->ni_txrate != in->chosen_txrate) {
             in->chosen_txrate = ni->ni_txrate;
+            XYLog("iwm_calib_timeout in->chosen_txrate=%d\n", in->chosen_txrate);
             that->iwm_add_task(sc, systq, &sc->setrates_task);
         }
         if (in->ht_force_cck) {
@@ -1557,6 +1549,7 @@ iwm_setrates_task(void *arg)
     struct iwm_node *in = (struct iwm_node *)ic->ic_bss;
     int s = splnet();
     
+    XYLog("%s sc->sc_flags=%d\n", __FUNCTION__, sc->sc_flags);
     if (sc->sc_flags & IWM_FLAG_SHUTDOWN) {
         //        refcnt_rele_wake(&sc->task_refs);
         splx(s);
@@ -1582,6 +1575,7 @@ iwm_setrates(struct iwm_node *in)
         .id = IWM_LQ_CMD,
         .len = { sizeof(lqcmd), },
     };
+    XYLog("%s\n", __FUNCTION__);
     
     memset(&lqcmd, 0, sizeof(lqcmd));
     lqcmd.sta_id = IWM_STATION_ID;
@@ -1797,7 +1791,6 @@ int itlwm::iwm_media_change(struct ifnet *ifp)
 void itlwm::
 iwm_newstate_task(void *psc)
 {
-    XYLog("%s\n", __FUNCTION__);
     struct iwm_softc *sc = (struct iwm_softc *)psc;
     itlwm *that = container_of(sc, itlwm, com);
     struct ieee80211com *ic = &sc->sc_ic;
@@ -1932,15 +1925,14 @@ ieee80211_join join;
 void itlwm::
 iwm_endscan(struct iwm_softc *sc)
 {
-    XYLog("%s\n", __FUNCTION__);
     int error;
     
-    //    static const char *ssid_name = "Redmi";
-    //    static const char *ssid_pwd = "zxyssdt112233";
+        static const char *ssid_name = "Redmi";
+        static const char *ssid_pwd = "zxyssdt112233";
 //            static const char *ssid_name = "CMCC-KtG6";
 //            static const char *ssid_pwd = "9utc5c5f";
-    static const char *ssid_name = "ssdt";
-    static const char *ssid_pwd = "zxyssdt112233";
+//    static const char *ssid_name = "ssdt";
+//    static const char *ssid_pwd = "zxyssdt112233";
     
     struct ieee80211_node *ni, *nextbs;
     struct ieee80211com *ic = &sc->sc_ic;
@@ -1988,29 +1980,28 @@ iwm_endscan(struct iwm_softc *sc)
     join.i_len = strlen(ssid_name);
     join.i_flags = IEEE80211_JOIN_NWKEY;
     
-    memset(&wpa, 0, sizeof(ieee80211_wpaparams));
-    wpa.i_enabled = 1;
-    wpa.i_ciphers = IEEE80211_WPA_CIPHER_CCMP | IEEE80211_WPA_CIPHER_TKIP;
-    wpa.i_groupcipher = IEEE80211_WPA_CIPHER_CCMP | IEEE80211_WPA_CIPHER_TKIP;
-    wpa.i_protos = IEEE80211_WPA_PROTO_WPA1 | IEEE80211_WPA_PROTO_WPA2;
-    wpa.i_akms = IEEE80211_WPA_AKM_PSK | IEEE80211_WPA_AKM_8021X | IEEE80211_WPA_AKM_SHA256_PSK | IEEE80211_WPA_AKM_SHA256_8021X;
-    memcpy(wpa.i_name, "zxy", strlen("zxy"));
-    memset(&psk, 0, sizeof(ieee80211_wpapsk));
-    memcpy(psk.i_name, "zxy", strlen("zxy"));
-    psk.i_enabled = 1;
-    pbkdf2_sha1(ssid_pwd, (const uint8_t*)ssid_name, strlen(ssid_name),
-                4096, psk.i_psk , 32);
-    XYLog("%s _psk=0x%02x,0x%02x, 0x%02x,0x%02x,0x%02x,0x%02x,0x%02x,0x%02x,0x%02x,0x%02x\n", __FUNCTION__, psk.i_psk[0], psk.i_psk[1], psk.i_psk[2], psk.i_psk[3], psk.i_psk[4], psk.i_psk[5], psk.i_psk[6], psk.i_psk[7], psk.i_psk[8], psk.i_psk[9]);
-    memset(&nwkey, 0, sizeof(ieee80211_nwkey));
-    nwkey.i_wepon = 0;
-    nwkey.i_defkid = 0;
-    memset(&join, 0, sizeof(ieee80211_join));
-    join.i_wpaparams = wpa;
-    join.i_wpapsk = psk;
-    join.i_flags = IEEE80211_JOIN_WPAPSK | IEEE80211_JOIN_ANY | IEEE80211_JOIN_WPA | IEEE80211_JOIN_8021X;
-    join.i_nwkey = nwkey;
-    join.i_len = strlen(ssid_name);
-    memcpy(join.i_nwid, ssid_name, join.i_len);
+//    memset(&wpa, 0, sizeof(ieee80211_wpaparams));
+//    wpa.i_enabled = 1;
+//    wpa.i_ciphers = IEEE80211_WPA_CIPHER_CCMP | IEEE80211_WPA_CIPHER_TKIP;
+//    wpa.i_groupcipher = IEEE80211_WPA_CIPHER_CCMP | IEEE80211_WPA_CIPHER_TKIP;
+//    wpa.i_protos = IEEE80211_WPA_PROTO_WPA1 | IEEE80211_WPA_PROTO_WPA2;
+//    wpa.i_akms = IEEE80211_WPA_AKM_PSK | IEEE80211_WPA_AKM_8021X | IEEE80211_WPA_AKM_SHA256_PSK | IEEE80211_WPA_AKM_SHA256_8021X;
+//    memcpy(wpa.i_name, "zxy", strlen("zxy"));
+//    memset(&psk, 0, sizeof(ieee80211_wpapsk));
+//    memcpy(psk.i_name, "zxy", strlen("zxy"));
+//    psk.i_enabled = 1;
+//    pbkdf2_sha1(ssid_pwd, (const uint8_t*)ssid_name, strlen(ssid_name),
+//                4096, psk.i_psk , 32);
+//    memset(&nwkey, 0, sizeof(ieee80211_nwkey));
+//    nwkey.i_wepon = 0;
+//    nwkey.i_defkid = 0;
+//    memset(&join, 0, sizeof(ieee80211_join));
+//    join.i_wpaparams = wpa;
+//    join.i_wpapsk = psk;
+//    join.i_flags = IEEE80211_JOIN_WPAPSK | IEEE80211_JOIN_ANY | IEEE80211_JOIN_WPA | IEEE80211_JOIN_8021X;
+//    join.i_nwkey = nwkey;
+//    join.i_len = strlen(ssid_name);
+//    memcpy(join.i_nwid, ssid_name, join.i_len);
     
     //    ieee80211_nwid nwid;
     ////    nwid.i_len = 6;
@@ -2426,7 +2417,6 @@ IORecursiveLock *_outputLock = IORecursiveLockAlloc();
 IOReturn itlwm::
 _iwm_start_task(OSObject *target, void *arg0, void *arg1, void *arg2, void *arg3)
 {
-    XYLog("%s\n", __FUNCTION__);
     struct ifnet *ifp = (struct ifnet *)arg0;
     struct iwm_softc *sc = (struct iwm_softc*)ifp->if_softc;
     itlwm *that = container_of(sc, itlwm, com);
@@ -2510,7 +2500,6 @@ _iwm_start_task(OSObject *target, void *arg0, void *arg1, void *arg2, void *arg3
 void itlwm::
 iwm_start(struct ifnet *ifp)
 {
-    XYLog("%s\n", __FUNCTION__);
     struct iwm_softc *sc = (struct iwm_softc*)ifp->if_softc;
     itlwm *that = container_of(sc, itlwm, com);
     //    if (that->outputThreadSignal) {
@@ -2914,7 +2903,6 @@ iwm_nic_error(struct iwm_softc *sc)
 void itlwm::
 iwm_notif_intr(struct iwm_softc *sc)
 {
-    XYLog("%s\n", __FUNCTION__);
     struct mbuf_list ml = MBUF_LIST_INITIALIZER();
     uint32_t wreg;
     uint16_t hw;
@@ -2934,7 +2922,7 @@ iwm_notif_intr(struct iwm_softc *sc)
     hw = le16toh(sc->rxq.stat->closed_rb_num) & 0xfff;
     hw &= (count - 1);
     if (sc->rxq.cur == hw) {
-        XYLog("hw=%d noting was sent by ucode\n", hw);
+        
     }
     while (sc->rxq.cur != hw) {
         struct iwm_rx_data *data = &sc->rxq.data[sc->rxq.cur];
@@ -2953,7 +2941,6 @@ iwm_notif_intr(struct iwm_softc *sc)
 int itlwm::
 iwm_intr(OSObject *arg, IOInterruptEventSource* sender, int count)
 {
-    XYLog("Interrupt!!!\n");
     itlwm *that = (itlwm*)arg;
     struct iwm_softc *sc = &that->com;
     int handled = 0;
@@ -3789,7 +3776,6 @@ iwm_init_task(void *arg1)
 void itlwm::
 iwm_htprot_task(void *arg)
 {
-    XYLog("%s\n", __FUNCTION__);
     struct iwm_softc *sc = (struct iwm_softc *)arg;
     itlwm *that = container_of(sc, itlwm, com);
     struct ieee80211com *ic = &sc->sc_ic;
@@ -3815,7 +3801,6 @@ iwm_htprot_task(void *arg)
 void itlwm::
 iwm_ba_task(void *arg)
 {
-    XYLog("%s\n", __FUNCTION__);
     struct iwm_softc *sc = (struct iwm_softc *)arg;
     itlwm *that = container_of(sc, itlwm, com);
     struct ieee80211com *ic = &sc->sc_ic;
@@ -3860,7 +3845,6 @@ iwm_resume(struct iwm_softc *sc)
 void itlwm::
 iwm_add_task(struct iwm_softc *sc, struct taskq *taskq, struct task *task)
 {
-    XYLog("%s\n", __FUNCTION__);
     int s = splnet();
     
     if (sc->sc_flags & IWM_FLAG_SHUTDOWN) {
@@ -3878,7 +3862,6 @@ iwm_add_task(struct iwm_softc *sc, struct taskq *taskq, struct task *task)
 void itlwm::
 iwm_del_task(struct iwm_softc *sc, struct taskq *taskq, struct task *task)
 {
-    XYLog("%s\n", __FUNCTION__);
     if (task_del(taskq, task)) {
         //        refcnt_rele(&sc->task_refs);
     }

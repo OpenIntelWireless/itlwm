@@ -127,7 +127,6 @@ ieee80211_send_eapol_key(struct ieee80211com *ic, mbuf_t m,
 #endif
     
 //    ifp->output_queue->enqueue(m, &TX_TYPE_MGMT);
-    XYLog("%s 啊啊啊啊 enqueue!!\n", __FUNCTION__);
     if (!ifp->if_snd->enqueue(m)) {
         XYLog("%s 啊啊啊啊 enqueue fail!!\n", __FUNCTION__);
         return -1;
@@ -237,7 +236,6 @@ ieee80211_add_igtk_kde(u_int8_t *frm, const struct ieee80211_key *k)
 mbuf_t
 ieee80211_get_eapol_key(int flags, int type, u_int pktlen)
 {
-    XYLog("%s\n", __FUNCTION__);
     mbuf_t m;
     
     /* reserve space for 802.11 encapsulation and EAPOL-Key header */

@@ -124,7 +124,6 @@ void
 ieee80211_inputm(struct ifnet *ifp, mbuf_t m, struct ieee80211_node *ni,
                  struct ieee80211_rxinfo *rxi, struct mbuf_list *ml)
 {
-    XYLog("%s\n", __FUNCTION__);
     struct ieee80211com *ic = (struct ieee80211com *)ifp;
     struct ieee80211_frame *wh;
     u_int16_t *orxseq, nrxseq, qos;
@@ -429,7 +428,6 @@ ieee80211_inputm(struct ifnet *ifp, mbuf_t m, struct ieee80211_node *ni,
             if (ic->ic_rawbpf)
                 bpf_mtap(ic->ic_rawbpf, m, BPF_DIRECTION_IN);
 #endif
-            XYLog("%s %d\n", __FUNCTION__, __LINE__);
             if ((ni->ni_flags & IEEE80211_NODE_HT) &&
                 hasqos && (qos & IEEE80211_QOS_AMSDU))
                 ieee80211_amsdu_decap(ic, m, ni, hdrlen, ml);
@@ -842,7 +840,6 @@ void
 ieee80211_enqueue_data(struct ieee80211com *ic, mbuf_t m,
                        struct ieee80211_node *ni, int mcast, struct mbuf_list *ml)
 {
-    XYLog("%s\n", __FUNCTION__);
     struct ifnet *ifp = &ic->ic_if;
     struct ether_header *eh;
     mbuf_t m1;
@@ -892,7 +889,6 @@ ieee80211_enqueue_data(struct ieee80211com *ic, mbuf_t m,
                 m = NULL;
             }
         }
-        XYLog("%s %d 啊啊啊啊\n", __FUNCTION__, __LINE__);
         if (m1 != NULL) {
             if (if_enqueue(ifp, m1)) {
                 XYLog("%s %d OUTPUT_ERROR\n", __FUNCTION__, __LINE__);
@@ -915,7 +911,6 @@ ieee80211_enqueue_data(struct ieee80211com *ic, mbuf_t m,
 #endif
             ieee80211_eapol_key_input(ic, m, ni);
         } else {
-            XYLog("%s %d 啊啊啊啊 ml_enqueue\n", __FUNCTION__, __LINE__);
             ml_enqueue(ml, m);
         }
     }
@@ -925,7 +920,6 @@ void
 ieee80211_decap(struct ieee80211com *ic, mbuf_t m,
                 struct ieee80211_node *ni, int hdrlen, struct mbuf_list *ml)
 {
-    XYLog("%s\n", __FUNCTION__);
     struct ether_header eh;
     struct ieee80211_frame *wh;
     struct llc *llc;
@@ -965,16 +959,13 @@ ieee80211_decap(struct ieee80211com *ic, mbuf_t m,
         llc->llc_snap.org_code[0] == 0 &&
         llc->llc_snap.org_code[1] == 0 &&
         llc->llc_snap.org_code[2] == 0) {
-        XYLog("%s %d\n", __FUNCTION__, __LINE__);
         eh.ether_type = llc->llc_snap.ether_type;
         mbuf_adj(m, hdrlen + LLC_SNAPFRAMELEN - ETHER_HDR_LEN);
     } else {
-        XYLog("%s %d\n", __FUNCTION__, __LINE__);
         eh.ether_type = htons(mbuf_pkthdr_len(m) - hdrlen);
         mbuf_adj(m, hdrlen - ETHER_HDR_LEN);
     }
     memcpy(mtod(m, caddr_t), &eh, ETHER_HDR_LEN);
-    XYLog("%s %d\n", __FUNCTION__, __LINE__);
     if (!ALIGNED_POINTER((mtod(m, caddr_t) + ETHER_HDR_LEN), u_int32_t)) {
         XYLog("%s %d\n", __FUNCTION__, __LINE__);
         mbuf_t m0 = m;
@@ -991,7 +982,6 @@ ieee80211_decap(struct ieee80211com *ic, mbuf_t m,
             return;
         }
     }
-    XYLog("%s begin ieee80211_enqueue_data\n", __FUNCTION__);
     ieee80211_enqueue_data(ic, m, ni, mcast, ml);
 }
 
@@ -1002,7 +992,6 @@ void
 ieee80211_amsdu_decap(struct ieee80211com *ic, mbuf_t m,
                       struct ieee80211_node *ni, int hdrlen, struct mbuf_list *ml)
 {
-    XYLog("%s\n", __FUNCTION__);
     mbuf_t n;
     struct ether_header *eh;
     struct llc *llc;
@@ -1370,7 +1359,6 @@ void
 ieee80211_recv_probe_resp(struct ieee80211com *ic, mbuf_t m,
                           struct ieee80211_node *rni, struct ieee80211_rxinfo *rxi, int isprobe)
 {
-    XYLog("%s\n", __FUNCTION__);
     struct ieee80211_node *ni;
     const struct ieee80211_frame *wh;
     const u_int8_t *frm, *efrm;
@@ -1727,7 +1715,6 @@ ieee80211_recv_probe_resp(struct ieee80211com *ic, mbuf_t m,
         memset(ni->ni_essid, 0, sizeof(ni->ni_essid));
         /* we know that ssid[1] <= IEEE80211_NWID_LEN */
         memcpy(ni->ni_essid, &ssid[2], ssid[1]);
-        XYLog("%s ssid=%s\n", __FUNCTION__, ni->ni_essid);
     }
     IEEE80211_ADDR_COPY(ni->ni_bssid, wh->i_addr3);
     /* XXX validate channel # */
@@ -1874,7 +1861,6 @@ void
 ieee80211_recv_auth(struct ieee80211com *ic, mbuf_t m,
                     struct ieee80211_node *ni, struct ieee80211_rxinfo *rxi)
 {
-    XYLog("%s\n", __FUNCTION__);
     const struct ieee80211_frame *wh;
     const u_int8_t *frm;
     u_int16_t algo, seq, status;
@@ -1928,7 +1914,6 @@ void
 ieee80211_recv_assoc_req(struct ieee80211com *ic, mbuf_t m,
                          struct ieee80211_node *ni, struct ieee80211_rxinfo *rxi, int reassoc)
 {
-    XYLog("%s reassoc=%d\n", __FUNCTION__, reassoc);
     const struct ieee80211_frame *wh;
     const u_int8_t *frm, *efrm;
     const u_int8_t *ssid, *rates, *xrates, *rsnie, *wpaie, *wmeie, *htcaps;
@@ -2264,7 +2249,6 @@ void
 ieee80211_recv_assoc_resp(struct ieee80211com *ic, mbuf_t m,
                           struct ieee80211_node *ni, int reassoc)
 {
-    XYLog("%s reassoc=%d\n", __FUNCTION__, reassoc);
     struct ifnet *ifp = &ic->ic_if;
     const struct ieee80211_frame *wh;
     const u_int8_t *frm, *efrm;
@@ -2540,7 +2524,6 @@ void
 ieee80211_recv_addba_req(struct ieee80211com *ic, mbuf_t m,
                          struct ieee80211_node *ni)
 {
-    XYLog("%s\n", __FUNCTION__);
     const struct ieee80211_frame *wh;
     const u_int8_t *frm;
     struct ieee80211_rx_ba *ba;
@@ -2707,7 +2690,6 @@ void
 ieee80211_recv_addba_resp(struct ieee80211com *ic, mbuf_t m,
                           struct ieee80211_node *ni)
 {
-    XYLog("%s\n", __FUNCTION__);
     const struct ieee80211_frame *wh;
     const u_int8_t *frm;
     struct ieee80211_tx_ba *ba;
@@ -2820,7 +2802,6 @@ void
 ieee80211_recv_delba(struct ieee80211com *ic, mbuf_t m,
                      struct ieee80211_node *ni)
 {
-    XYLog("%s\n", __FUNCTION__);
     const struct ieee80211_frame *wh;
     const u_int8_t *frm;
     u_int16_t params, reason;
@@ -2895,7 +2876,6 @@ void
 ieee80211_recv_sa_query_req(struct ieee80211com *ic, mbuf_t m,
                             struct ieee80211_node *ni)
 {
-    XYLog("%s\n", __FUNCTION__);
     const struct ieee80211_frame *wh;
     const u_int8_t *frm;
     
@@ -2933,7 +2913,6 @@ void
 ieee80211_recv_sa_query_resp(struct ieee80211com *ic, mbuf_t m,
                              struct ieee80211_node *ni)
 {
-    XYLog("%s\n", __FUNCTION__);
     const struct ieee80211_frame *wh;
     const u_int8_t *frm;
     
@@ -2970,7 +2949,6 @@ void
 ieee80211_recv_action(struct ieee80211com *ic, mbuf_t m,
                       struct ieee80211_node *ni)
 {
-    XYLog("%s\n", __FUNCTION__);
     const struct ieee80211_frame *wh;
     const u_int8_t *frm;
     
@@ -3017,7 +2995,6 @@ void
 ieee80211_recv_mgmt(struct ieee80211com *ic, mbuf_t m,
                     struct ieee80211_node *ni, struct ieee80211_rxinfo *rxi, int subtype)
 {
-    XYLog("%s\n", __FUNCTION__);
     switch (subtype) {
         case IEEE80211_FC0_SUBTYPE_BEACON:
             ieee80211_recv_probe_resp(ic, m, ni, rxi, 0);
@@ -3072,7 +3049,6 @@ void
 ieee80211_recv_pspoll(struct ieee80211com *ic, mbuf_t m,
                       struct ieee80211_node *ni)
 {
-    XYLog("%s\n", __FUNCTION__);
     struct ifnet *ifp = &ic->ic_if;
     struct ieee80211_frame_pspoll *psp;
     struct ieee80211_frame *wh;

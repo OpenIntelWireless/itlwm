@@ -503,7 +503,6 @@ ieee80211_tx_compressed_bar(struct ieee80211com *ic, struct ieee80211_node *ni,
 mbuf_t
 ieee80211_encap(struct ifnet *ifp, mbuf_t m, struct ieee80211_node **pni)
 {
-    XYLog("%s\n", __FUNCTION__);
 	struct ieee80211com *ic = (struct ieee80211com *)ifp;
 	struct ether_header eh;
 	struct ieee80211_frame *wh;
@@ -573,7 +572,7 @@ ieee80211_encap(struct ifnet *ifp, mbuf_t m, struct ieee80211_node **pni)
 		goto bad;
 	}
     
-    XYLog("sending to port %s\n", ether_sprintf(ni->ni_macaddr));
+//    XYLog("sending to port %s\n", ether_sprintf(ni->ni_macaddr));
 
 	if ((ic->ic_flags & IEEE80211_F_RSNON) &&
 	    !ni->ni_port_valid &&

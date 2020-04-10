@@ -241,7 +241,6 @@ mbuf_t
 ieee80211_decrypt(struct ieee80211com *ic, mbuf_t m0,
     struct ieee80211_node *ni)
 {
-    XYLog("%s\n", __FUNCTION__);
 	struct ieee80211_frame *wh;
 	struct ieee80211_key *k;
 	u_int8_t *ivp, *mmie;
@@ -293,7 +292,6 @@ ieee80211_decrypt(struct ieee80211com *ic, mbuf_t m0,
 		mbuf_free(m0);
 		return NULL;
 	}
-    XYLog("%s %d\n", __FUNCTION__, __LINE__);
 	switch (k->k_cipher) {
 	case IEEE80211_CIPHER_WEP40:
 	case IEEE80211_CIPHER_WEP104:
