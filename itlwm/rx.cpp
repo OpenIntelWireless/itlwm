@@ -163,8 +163,6 @@ iwm_rx_addbuf(struct iwm_softc *sc, int size, int idx)
         XYLog("%s allocatePacket==NULL\n", __FUNCTION__);
         return ENOMEM;
     }
-    mbuf_setlen(m, IWM_RBUF_SIZE);
-    mbuf_pkthdr_setlen(m, IWM_RBUF_SIZE);
     //    mbuf_gethdr(MBUF_DONTWAIT, MT_DATA, &m);
     //    if (m == NULL)
     //        return ENOBUFS;
@@ -189,6 +187,7 @@ iwm_rx_addbuf(struct iwm_softc *sc, int size, int idx)
     //    m->m_len = m->m_pkthdr.len = m->m_ext.ext_size;
 //    err = bus_dmamap_load(data->map, m);
     data->map->dm_nsegs = data->map->cursor->getPhysicalSegments(m, &data->map->dm_segs[0], 1);
+    XYLog("map rx dm_nsegs=%d\n", data->map->dm_nsegs);
     if (data->map->dm_nsegs == 0) {
         XYLog("RX Map new address FAIL!!!!\n");
         /* XXX */

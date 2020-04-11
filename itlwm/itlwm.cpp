@@ -312,38 +312,11 @@ UInt32 itlwm::outputPacket(mbuf_t m, void *param)
 {
     XYLog("%s\n", __FUNCTION__);
     ifnet *ifp = &com.sc_ic.ic_ac.ac_if;
-    mbuf_t m0, m1;
-    size_t buf_len = 0;
-    int buf_cnt = 0;
-    unsigned int max_chunks = 1;
-    int index = 0;
     
     if (com.sc_ic.ic_state != IEEE80211_S_RUN || ifp == NULL || ifp->if_snd == NULL) {
         freePacket(m);
         return kIOReturnOutputDropped;
     }
-    
-//    m0 = m;
-//    while (m0) {
-//        buf_len += mbuf_len(m0);
-//        buf_cnt++;
-//        m0 = mbuf_next(m0);
-//    }
-//    mbuf_allocpacket(MBUF_DONTWAIT, buf_len + 200, &max_chunks, &m1);
-//    if (!m1) {
-//        freePacket(m);
-//        return kIOReturnOutputDropped;
-//    }
-//    mbuf_setdata(m1, (uint8_t*)mbuf_datastart(m1) + 192, buf_len);
-//    m0 = m;
-//    while (m0) {
-//        mbuf_copydata(m0, 0, mbuf_len(m0), (uint8_t*)mbuf_data(m1) + index);
-//        index += mbuf_len(m0);
-//        m0 = mbuf_next(m0);
-//    }
-//    mbuf_pkthdr_setrcvif(m1, mbuf_pkthdr_rcvif(m));
-//    freePacket(m);
-//    ifp->if_snd->lockEnqueue(m1);
     ifp->if_snd->lockEnqueue(m);
     ifp->if_start(ifp);
     

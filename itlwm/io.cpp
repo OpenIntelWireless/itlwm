@@ -7,6 +7,7 @@
 //
 
 #include "itlwm.hpp"
+#include <IOKit/IODMACommand.h>
 
 uint32_t itlwm::
 iwm_read_prph(struct iwm_softc *sc, uint32_t addr)
@@ -172,7 +173,7 @@ iwm_clear_bits_prph(struct iwm_softc *sc, uint32_t reg, uint32_t bits)
 }
 
 IOBufferMemoryDescriptor* allocDmaMemory
-( size_t size, int alignment, void** vaddr, uint32_t* paddr )
+( size_t size, int alignment, void** vaddr, uint64_t* paddr )
 {
     size_t        reqsize;
     uint64_t    phymask;
@@ -217,7 +218,37 @@ IOBufferMemoryDescriptor* allocDmaMemory
             return 0;
         }
     }
+    mem->map();
     return mem;
+}
+
+IOBufferMemoryDescriptor* allocDmaMemory2(size_t size, int alignment, void** vaddr, uint64_t* paddr)
+{
+    IOBufferMemoryDescriptor *bmd;
+    IODMACommand::Segment64 seg;
+    UInt64 ofs = 0;
+    UInt32 numSegs = 1;
+    int        i;
+    
+    bmd = IOBufferMemoryDescriptor::inTaskWithPhysicalMask(kernel_task, kIODirectionInOut | kIOMemoryPhysicallyContiguous | kIOMapInhibitCache, size, DMA_BIT_MASK(36));
+    
+    IODMACommand *cmd = IODMACommand::withSpecification(kIODMACommandOutputHost64, 64, 0, IODMACommand::kMapped, 0, 1);
+    cmd->setMemoryDescriptor(bmd);
+    cmd->prepare();
+    
+    if (cmd->gen64IOVMSegments(&ofs, &seg, &numSegs) != kIOReturnSuccess) {
+        cmd->complete();
+        cmd->release();
+        cmd = NULL;
+        bmd->complete();
+        bmd->release();
+        bmd = NULL;
+        return NULL;
+    }
+    *paddr = seg.fIOVMAddr;
+    *vaddr = bmd->getBytesNoCopy();
+    XYLog("allocDmaMemory2 apply_size=%d, align=%d, alloc_size=%lld", size, alignment, seg.fLength);
+    return bmd;
 }
 
 void itlwm::
@@ -239,7 +270,7 @@ int itlwm::
 iwm_dma_contig_alloc(bus_dma_tag_t tag, struct iwm_dma_info *dma, void **kvap,
              bus_size_t size, bus_size_t alignment)
 {
-    dma->buffer = allocDmaMemory((size_t)size, (int)alignment, (void**)&dma->vaddr, (uint32_t*)&dma->paddr);
+    dma->buffer = allocDmaMemory((size_t)size, (int)alignment, (void**)&dma->vaddr, &dma->paddr);
     if (dma->buffer == NULL)
         return 1;
     

@@ -434,13 +434,14 @@ iwm_send_cmd(struct iwm_softc *sc, struct iwm_host_cmd *hcmd)
         //            }
         //        }
         cmd = mtod(m, struct iwm_device_cmd *);
-        txdata->map->dm_nsegs = txdata->map->cursor->getPhysicalSegmentsWithCoalesce(m, txdata->map->dm_segs, 1);
+        txdata->map->dm_nsegs = txdata->map->cursor->getPhysicalSegmentsWithCoalesce(m, &txdata->map->dm_segs[0], 1);
         if (txdata->map->dm_nsegs == 0) {
             XYLog("%s: could not load fw cmd mbuf (%zd bytes)\n",
                   DEVNAME(sc), totlen);
             mbuf_freem(m);
             goto out;
         }
+        XYLog("map fw cmd dm_nsegs=%d\n", txdata->map->dm_nsegs);
         txdata->m = m; /* mbuf will be freed in iwm_cmd_done() */
         paddr = txdata->map->dm_segs[0].location;
     } else {

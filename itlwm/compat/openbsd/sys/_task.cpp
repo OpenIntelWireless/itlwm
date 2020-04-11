@@ -304,8 +304,6 @@ task_del(struct taskq *tq, struct task *w)
 {
     int rv = 0;
 //    IOLog("itlwm: taskq task_del task=%lld\n", w);
-    if (!ISSET(w->t_flags, TASK_ONQUEUE))
-        return (0);
 
     lck_mtx_lock(tq->tq_mtx);
     if (ISSET(w->t_flags, TASK_ONQUEUE)) {
