@@ -82,7 +82,7 @@
 #endif
 
 #ifndef unlikely
-#include <kernel.h>
+#include "kernel.h"
 #endif
 
 #ifndef WARN_ON_ONCE

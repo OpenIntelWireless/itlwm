@@ -150,6 +150,14 @@ void pci_intr_disestablish(pci_chipset_tag_t pc, void *ih) {
 	ih = 0;
 }
 
+uint64_t bus_space_read_8(bus_space_tag_t space, bus_space_handle_t handle, bus_size_t offset) {
+    return *((uint64_t*)(handle + offset));
+}
+
+void bus_space_write_8(bus_space_tag_t space, bus_space_handle_t handle, bus_size_t offset, uint64_t value) {
+    *((uint64_t*)(handle + offset)) = value;
+}
+
 uint32_t bus_space_read_4(bus_space_tag_t space, bus_space_handle_t handle, bus_size_t offset) {
 	return *((uint32_t*)(handle + offset));
 }
