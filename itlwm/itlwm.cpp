@@ -1,4 +1,18 @@
 /* add your code here */
+
+/*
+* Copyright (C) 2020  钟先耀
+*
+* This program is free software; you can redistribute it and/or modify
+* it under the terms of the GNU General Public License as published by
+* the Free Software Foundation; either version 2 of the License, or
+* (at your option) any later version.
+*
+* This program is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+* GNU General Public License for more details.
+*/
 #include "itlwm.hpp"
 #include "types.h"
 #include "kernel.h"
@@ -140,6 +154,7 @@ bool itlwm::start(IOService *provider)
     device->setMemoryEnable(true);
     device->configWrite8(0x41, 0);
     _fWorkloop = getWorkLoop();
+    irqWorkloop = IOWorkLoop::workLoop();
     fCommandGate = IOCommandGate::commandGate(this, (IOCommandGate::Action)tsleepHandler);
     _fCommandGate = fCommandGate;
     if (fCommandGate == 0) {
@@ -147,7 +162,7 @@ bool itlwm::start(IOService *provider)
         return false;
     }
     fCommandGate->retain();
-    fWorkloop->addEventSource(fCommandGate);
+    _fWorkloop->addEventSource(fCommandGate);
     const IONetworkMedium *primaryMedium;
     if (!createMediumTables(&primaryMedium) ||
         !setCurrentMedium(primaryMedium)) {
@@ -189,7 +204,7 @@ bool itlwm::start(IOService *provider)
 //        XYLog("start fail, can not set current medium\n");
 //        return false;
 //    }
-    pci.workloop = _fWorkloop;
+    pci.workloop = irqWorkloop;
     pci.pa_tag = device;
     if (!iwm_attach(&com, &pci)) {
         return false;
@@ -220,16 +235,16 @@ IOReturn itlwm::getPacketFilters(const OSSymbol *group, UInt32 *filters) const {
     return rtn;
 }
 
-bool itlwm::createWorkLoop()
-{
-    fWorkloop = IOWorkLoop::workLoop();
-    return fWorkloop ? true : false;
-}
-
-IOWorkLoop* itlwm::getWorkLoop() const
-{
-    return fWorkloop;
-}
+//bool itlwm::createWorkLoop()
+//{
+//    fWorkloop = IOWorkLoop::workLoop();
+//    return fWorkloop ? true : false;
+//}
+//
+//IOWorkLoop* itlwm::getWorkLoop() const
+//{
+//    return fWorkloop;
+//}
 
 IOReturn itlwm::selectMedium(const IONetworkMedium *medium) {
     setSelectedMedium(medium);
@@ -244,8 +259,8 @@ void itlwm::stop(IOService *provider)
     pci_intr_handle *handle = com.ih;
     
     setLinkStatus(kIONetworkLinkNoNetworkChange);
-    taskq_destroy(systq);
-    taskq_destroy(com.sc_nswq);
+//    taskq_destroy(systq);
+//    taskq_destroy(com.sc_nswq);
     iwm_stop(ifp);
     ieee80211_ifdetach(ifp);
     if (inf) {

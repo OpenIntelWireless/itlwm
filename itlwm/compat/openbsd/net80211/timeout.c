@@ -6,6 +6,20 @@
 //  Copyright © 2020 钟先耀. All rights reserved.
 //
 
+/*
+ * Copyright (C) 2020  钟先耀
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+
 #ifndef timeout_cpp
 #define timeout_cpp
 
@@ -17,15 +31,15 @@ extern IOCommandGate *_fCommandGate;
 
 int splnet()
 {
-//    _fWorkloop->disableAllInterrupts();
-//    _fWorkloop->disableAllEventSources();
+    //    _fWorkloop->disableAllInterrupts();
+    //    _fWorkloop->disableAllEventSources();
     return 1;
 }
 
 void splx(int s)
 {
-//    _fWorkloop->enableAllInterrupts();
-//    _fWorkloop->enableAllEventSources();
+    //    _fWorkloop->enableAllInterrupts();
+    //    _fWorkloop->enableAllEventSources();
 }
 
 void timeout_set(CTimeout **t, void (*fn)(void *), void *arg)
@@ -57,7 +71,7 @@ int timeout_add_usec(CTimeout **to, int usecs)
 
 int timeout_del(CTimeout **to)
 {
-//    IOLog("timeout_del\n");
+    //    IOLog("timeout_del\n");
     if (((CTimeout*)*to) == NULL) {
         return 0;
     }

@@ -1,10 +1,12 @@
-//
-//  cfg80211.h
-//  AppleIntelWifiAdapter
-//
-//  Created by 钟先耀 on 2020/1/22.
-//  Copyright © 2020 钟先耀. All rights reserved.
-//
+/* SPDX-License-Identifier: GPL-2.0-only */
+/*
+ * 802.11 device and configuration interface
+ *
+ * Copyright 2006-2010    Johannes Berg <johannes@sipsolutions.net>
+ * Copyright 2013-2014 Intel Mobile Communications GmbH
+ * Copyright 2015-2017    Intel Deutschland GmbH
+ * Copyright (C) 2018-2019 Intel Corporation
+ */
 
 #ifndef cfg80211_h
 #define cfg80211_h
@@ -111,7 +113,7 @@ enum ieee80211_channel_flags {
 };
 
 #define IEEE80211_CHAN_NO_HT40 \
-    (IEEE80211_CHAN_NO_HT40PLUS | IEEE80211_CHAN_NO_HT40MINUS)
+(IEEE80211_CHAN_NO_HT40PLUS | IEEE80211_CHAN_NO_HT40MINUS)
 
 #define IEEE80211_DFS_MIN_CAC_TIME_MS        60000
 #define IEEE80211_DFS_MIN_NOP_TIME_MS        (30 * 60 * 1000)
@@ -221,7 +223,7 @@ enum ieee80211_privacy {
 };
 
 #define IEEE80211_PRIVACY(x)    \
-    ((x) ? IEEE80211_PRIVACY_ON : IEEE80211_PRIVACY_OFF)
+((x) ? IEEE80211_PRIVACY_ON : IEEE80211_PRIVACY_OFF)
 
 /**
  * struct ieee80211_rate - bitrate definition
@@ -426,21 +428,21 @@ struct ieee80211_supported_band {
  */
 static inline const struct ieee80211_sband_iftype_data *
 ieee80211_get_sband_iftype_data(const struct ieee80211_supported_band *sband,
-                u8 iftype)
+                                u8 iftype)
 {
     int i;
-
+    
     if (WARN_ON(iftype >= NL80211_IFTYPE_MAX))
         return NULL;
-
+    
     for (i = 0; i < sband->n_iftype_data; i++)  {
         const struct ieee80211_sband_iftype_data *data =
-            &sband->iftype_data[i];
-
+        &sband->iftype_data[i];
+        
         if (data->types_mask & BIT(iftype))
             return data;
     }
-
+    
     return NULL;
 }
 
@@ -453,14 +455,14 @@ ieee80211_get_sband_iftype_data(const struct ieee80211_supported_band *sband,
  */
 static inline const struct ieee80211_sta_he_cap *
 ieee80211_get_he_iftype_cap(const struct ieee80211_supported_band *sband,
-                u8 iftype)
+                            u8 iftype)
 {
     const struct ieee80211_sband_iftype_data *data =
-        ieee80211_get_sband_iftype_data(sband, iftype);
-
+    ieee80211_get_sband_iftype_data(sband, iftype);
+    
     if (data && data->he_cap.has_he)
         return &data->he_cap;
-
+    
     return NULL;
 }
 
@@ -524,7 +526,7 @@ static inline void wiphy_read_of_freq_limits(struct wiphy *wiphy)
  */
 
 #define VHT_MUMIMO_GROUPS_DATA_LEN (WLAN_MEMBERSHIP_LEN +\
-                    WLAN_USER_POSITION_LEN)
+WLAN_USER_POSITION_LEN)
 
 /**
  * struct vif_params - describes virtual interface parameters
@@ -604,17 +606,17 @@ static inline enum nl80211_channel_type
 cfg80211_get_chandef_type(const struct cfg80211_chan_def *chandef)
 {
     switch (chandef->width) {
-    case NL80211_CHAN_WIDTH_20_NOHT:
-        return NL80211_CHAN_NO_HT;
-    case NL80211_CHAN_WIDTH_20:
-        return NL80211_CHAN_HT20;
-    case NL80211_CHAN_WIDTH_40:
-        if (chandef->center_freq1 > chandef->chan->center_freq)
-            return NL80211_CHAN_HT40PLUS;
-        return NL80211_CHAN_HT40MINUS;
-    default:
-        WARN_ON(1);
-        return NL80211_CHAN_NO_HT;
+        case NL80211_CHAN_WIDTH_20_NOHT:
+            return NL80211_CHAN_NO_HT;
+        case NL80211_CHAN_WIDTH_20:
+            return NL80211_CHAN_HT20;
+        case NL80211_CHAN_WIDTH_40:
+            if (chandef->center_freq1 > chandef->chan->center_freq)
+                return NL80211_CHAN_HT40PLUS;
+            return NL80211_CHAN_HT40MINUS;
+        default:
+            WARN_ON(1);
+            return NL80211_CHAN_NO_HT;
     }
 }
 
@@ -627,8 +629,8 @@ cfg80211_get_chandef_type(const struct cfg80211_chan_def *chandef)
  * Given a channel type, create a channel definition.
  */
 void cfg80211_chandef_create(struct cfg80211_chan_def *chandef,
-                 struct ieee80211_channel *channel,
-                 enum nl80211_channel_type chantype);
+                             struct ieee80211_channel *channel,
+                             enum nl80211_channel_type chantype);
 
 /**
  * cfg80211_chandef_identical - check if two channel definitions are identical
@@ -640,12 +642,12 @@ void cfg80211_chandef_create(struct cfg80211_chan_def *chandef,
  */
 static inline bool
 cfg80211_chandef_identical(const struct cfg80211_chan_def *chandef1,
-               const struct cfg80211_chan_def *chandef2)
+                           const struct cfg80211_chan_def *chandef2)
 {
     return (chandef1->chan == chandef2->chan &&
-        chandef1->width == chandef2->width &&
-        chandef1->center_freq1 == chandef2->center_freq1 &&
-        chandef1->center_freq2 == chandef2->center_freq2);
+            chandef1->width == chandef2->width &&
+            chandef1->center_freq1 == chandef2->center_freq1 &&
+            chandef1->center_freq2 == chandef2->center_freq2);
 }
 
 /**
@@ -671,7 +673,7 @@ cfg80211_chandef_is_edmg(const struct cfg80211_chan_def *chandef)
  */
 const struct cfg80211_chan_def *
 cfg80211_chandef_compatible(const struct cfg80211_chan_def *chandef1,
-                const struct cfg80211_chan_def *chandef2);
+                            const struct cfg80211_chan_def *chandef2);
 
 /**
  * cfg80211_chandef_valid - check if a channel definition is valid
@@ -688,8 +690,8 @@ bool cfg80211_chandef_valid(const struct cfg80211_chan_def *chandef);
  * Return: %true if secondary channels are usable. %false otherwise.
  */
 bool cfg80211_chandef_usable(struct wiphy *wiphy,
-                 const struct cfg80211_chan_def *chandef,
-                 u32 prohibited_flags);
+                             const struct cfg80211_chan_def *chandef,
+                             u32 prohibited_flags);
 
 /**
  * cfg80211_chandef_dfs_required - checks if radar detection is required
@@ -700,8 +702,8 @@ bool cfg80211_chandef_usable(struct wiphy *wiphy,
  *    1 if radar detection is required, 0 if it is not, < 0 on error
  */
 int cfg80211_chandef_dfs_required(struct wiphy *wiphy,
-                  const struct cfg80211_chan_def *chandef,
-                  enum nl80211_iftype iftype);
+                                  const struct cfg80211_chan_def *chandef,
+                                  enum nl80211_iftype iftype);
 
 /**
  * ieee80211_chandef_rate_flags - returns rate flags for a channel
@@ -717,12 +719,12 @@ static inline enum ieee80211_rate_flags
 ieee80211_chandef_rate_flags(struct cfg80211_chan_def *chandef)
 {
     switch (chandef->width) {
-    case NL80211_CHAN_WIDTH_5:
-        return IEEE80211_RATE_SUPPORTS_5MHZ;
-    case NL80211_CHAN_WIDTH_10:
-        return IEEE80211_RATE_SUPPORTS_10MHZ;
-    default:
-        break;
+        case NL80211_CHAN_WIDTH_5:
+            return IEEE80211_RATE_SUPPORTS_5MHZ;
+        case NL80211_CHAN_WIDTH_10:
+            return IEEE80211_RATE_SUPPORTS_10MHZ;
+        default:
+            break;
     }
     return (ieee80211_rate_flags)0;
 }
@@ -742,14 +744,14 @@ static inline int
 ieee80211_chandef_max_power(struct cfg80211_chan_def *chandef)
 {
     switch (chandef->width) {
-    case NL80211_CHAN_WIDTH_5:
-        return min(chandef->chan->max_reg_power - 6,
-               chandef->chan->max_power);
-    case NL80211_CHAN_WIDTH_10:
-        return min(chandef->chan->max_reg_power - 3,
-               chandef->chan->max_power);
-    default:
-        break;
+        case NL80211_CHAN_WIDTH_5:
+            return min(chandef->chan->max_reg_power - 6,
+                       chandef->chan->max_power);
+        case NL80211_CHAN_WIDTH_10:
+            return min(chandef->chan->max_reg_power - 3,
+                       chandef->chan->max_power);
+        default:
+            break;
     }
     return chandef->chan->max_power;
 }
@@ -899,7 +901,7 @@ struct cfg80211_beacon_data {
     const u8 *lci;
     const u8 *civicloc;
     s8 ftm_responder;
-
+    
     size_t head_len, tail_len;
     size_t beacon_ies_len;
     size_t proberesp_ies_len;
@@ -924,7 +926,7 @@ struct mac_address {
 struct cfg80211_acl_data {
     enum nl80211_acl_policy acl_policy;
     int n_acl_entries;
-
+    
     /* Keep it last */
     struct mac_address mac_addrs[];
 };
@@ -988,9 +990,9 @@ enum cfg80211_ap_settings_flags {
  */
 struct cfg80211_ap_settings {
     struct cfg80211_chan_def chandef;
-
+    
     struct cfg80211_beacon_data beacon;
-
+    
     int beacon_interval, dtim_period;
     const u8 *ssid;
     size_t ssid_len;
@@ -1005,7 +1007,7 @@ struct cfg80211_ap_settings {
     const struct cfg80211_acl_data *acl;
     bool pbss;
     struct cfg80211_bitrate_mask beacon_rate;
-
+    
     const struct ieee80211_ht_cap *ht_cap;
     const struct ieee80211_vht_cap *vht_cap;
     const struct ieee80211_he_cap_elem *he_cap;
@@ -1240,8 +1242,8 @@ enum cfg80211_station_type {
  * backward compatibility reasons, so don't use them before calling this.
  */
 int cfg80211_check_station_change(struct wiphy *wiphy,
-                  struct station_parameters *params,
-                  enum cfg80211_station_type statype);
+                                  struct station_parameters *params,
+                                  enum cfg80211_station_type statype);
 
 /**
  * enum station_info_rate_flags - bitrate info flags
@@ -1478,11 +1480,11 @@ struct station_info {
     u8 plink_state;
     s8 signal;
     s8 signal_avg;
-
+    
     u8 chains;
     s8 chain_signal[IEEE80211_MAX_CHAINS];
     s8 chain_signal_avg[IEEE80211_MAX_CHAINS];
-
+    
     struct rate_info txrate;
     struct rate_info rxrate;
     u32 rx_packets;
@@ -1492,35 +1494,35 @@ struct station_info {
     u32 rx_dropped_misc;
     struct sta_bss_parameters bss_param;
     struct nl80211_sta_flag_update sta_flags;
-
+    
     int generation;
-
+    
     const u8 *assoc_req_ies;
     size_t assoc_req_ies_len;
-
+    
     u32 beacon_loss_count;
     s64 t_offset;
     enum nl80211_mesh_power_mode local_pm;
     enum nl80211_mesh_power_mode peer_pm;
     enum nl80211_mesh_power_mode nonpeer_pm;
-
+    
     u32 expected_throughput;
-
+    
     u64 tx_duration;
     u64 rx_duration;
     u64 rx_beacon;
     u8 rx_beacon_signal_avg;
     u8 connected_to_gate;
-
+    
     struct cfg80211_tid_stats *pertid;
     s8 ack_signal;
     s8 avg_ack_signal;
-
+    
     u16 airtime_weight;
-
+    
     u32 rx_mpdu_count;
     u32 fcs_err_count;
-
+    
     u32 airtime_link_metric;
 };
 
@@ -1535,7 +1537,7 @@ struct station_info {
  * considered undefined.
  */
 int cfg80211_get_station(net_device *dev, const u8 *mac_addr,
-             struct station_info *sinfo);
+                         struct station_info *sinfo);
 
 /**
  * enum monitor_flags - monitor flags
@@ -1620,7 +1622,7 @@ struct mpath_info {
     u8 flags;
     u8 hop_count;
     u32 path_change_count;
-
+    
     int generation;
 };
 
@@ -1925,22 +1927,22 @@ struct cfg80211_scan_request {
     u16 duration;
     bool duration_mandatory;
     u32 flags;
-
+    
     u32 rates[NUM_NL80211_BANDS];
-
+    
     struct wireless_dev *wdev;
-
+    
     u8 mac_addr[ETH_ALEN] __aligned(2);
     u8 mac_addr_mask[ETH_ALEN] __aligned(2);
     u8 bssid[ETH_ALEN] __aligned(2);
-
+    
     /* internal */
     struct wiphy *wiphy;
     unsigned long scan_start;
     struct cfg80211_scan_info info;
     bool notified;
     bool no_cck;
-
+    
     /* keep last */
     struct ieee80211_channel *channels[0];
 };
@@ -1948,7 +1950,7 @@ struct cfg80211_scan_request {
 static inline void get_random_mask_addr(u8 *buf, const u8 *addr, const u8 *mask)
 {
     int i;
-
+    
     get_random_bytes(buf, ETH_ALEN);
     for (i = 0; i < ETH_ALEN; i++) {
         buf[i] &= ~mask[i];
@@ -2069,14 +2071,14 @@ struct cfg80211_sched_scan_request {
     u32 delay;
     struct cfg80211_sched_scan_plan *scan_plans;
     int n_scan_plans;
-
+    
     u8 mac_addr[ETH_ALEN] __aligned(2);
     u8 mac_addr_mask[ETH_ALEN] __aligned(2);
-
+    
     bool relative_rssi_set;
     s8 relative_rssi;
     struct cfg80211_bss_select_adjust rssi_adjust;
-
+    
     /* internal */
     struct wiphy *wiphy;
     net_device *dev;
@@ -2086,7 +2088,7 @@ struct cfg80211_sched_scan_request {
     u32 owner_nlportid;
     bool nl_owner_dead;
     struct list_head list;
-
+    
     /* keep last */
     struct ieee80211_channel *channels[0];
 };
@@ -2189,27 +2191,27 @@ struct cfg80211_bss_ies {
 struct cfg80211_bss {
     struct ieee80211_channel *channel;
     enum nl80211_bss_scan_width scan_width;
-
+    
     const struct cfg80211_bss_ies __rcu *ies;
     const struct cfg80211_bss_ies __rcu *beacon_ies;
     const struct cfg80211_bss_ies __rcu *proberesp_ies;
-
+    
     struct cfg80211_bss *hidden_beacon_bss;
     struct cfg80211_bss *transmitted_bss;
     struct list_head nontrans_list;
-
+    
     s32 signal;
-
+    
     u16 beacon_interval;
     u16 capability;
-
+    
     u8 bssid[ETH_ALEN];
     u8 chains;
     s8 chain_signal[IEEE80211_MAX_CHAINS];
-
+    
     u8 bssid_index;
     u8 max_bssid_indicator;
-
+    
     u8 priv[0] __aligned(sizeof(void *));
 };
 
@@ -2691,8 +2693,8 @@ struct cfg80211_wowlan_tcp {
  */
 struct cfg80211_wowlan {
     bool any, disconnect, magic_pkt, gtk_rekey_failure,
-         eap_identity_req, four_way_handshake,
-         rfkill_release;
+    eap_identity_req, four_way_handshake,
+    rfkill_release;
     struct cfg80211_pkt_pattern *patterns;
     struct cfg80211_wowlan_tcp *tcp;
     int n_patterns;
@@ -2780,9 +2782,9 @@ struct cfg80211_wowlan_nd_info {
  */
 struct cfg80211_wowlan_wakeup {
     bool disconnect, magic_pkt, gtk_rekey_failure,
-         eap_identity_req, four_way_handshake,
-         rfkill_release, packet_80211,
-         tcp_match, tcp_connlost, tcp_nomoretokens;
+    eap_identity_req, four_way_handshake,
+    rfkill_release, packet_80211,
+    tcp_match, tcp_connlost, tcp_nomoretokens;
     s32 pattern_idx;
     u32 packet_present_len, packet_len;
     const void *packet;
@@ -2867,7 +2869,7 @@ struct cfg80211_dscp_range {
 #define IEEE80211_QOS_MAP_MAX_EX    21
 #define IEEE80211_QOS_MAP_LEN_MIN    16
 #define IEEE80211_QOS_MAP_LEN_MAX \
-    (IEEE80211_QOS_MAP_LEN_MIN + 2 * IEEE80211_QOS_MAP_MAX_EX)
+(IEEE80211_QOS_MAP_LEN_MIN + 2 * IEEE80211_QOS_MAP_MAX_EX)
 
 /**
  * struct cfg80211_qos_map - QoS Map Information
@@ -3124,19 +3126,19 @@ struct cfg80211_pmsr_ftm_result {
     s64 dist_avg;
     s64 dist_variance;
     s64 dist_spread;
-
+    
     u16 num_ftmr_attempts_valid:1,
-        num_ftmr_successes_valid:1,
-        rssi_avg_valid:1,
-        rssi_spread_valid:1,
-        tx_rate_valid:1,
-        rx_rate_valid:1,
-        rtt_avg_valid:1,
-        rtt_variance_valid:1,
-        rtt_spread_valid:1,
-        dist_avg_valid:1,
-        dist_variance_valid:1,
-        dist_spread_valid:1;
+num_ftmr_successes_valid:1,
+rssi_avg_valid:1,
+rssi_spread_valid:1,
+tx_rate_valid:1,
+rx_rate_valid:1,
+rtt_avg_valid:1,
+rtt_variance_valid:1,
+rtt_spread_valid:1,
+dist_avg_valid:1,
+dist_variance_valid:1,
+dist_spread_valid:1;
 };
 
 /**
@@ -3156,14 +3158,14 @@ struct cfg80211_pmsr_ftm_result {
 struct cfg80211_pmsr_result {
     u64 host_time, ap_tsf;
     enum nl80211_peer_measurement_status status;
-
+    
     u8 addr[ETH_ALEN];
-
+    
     u8 final:1,
-       ap_tsf_valid:1;
-
+ap_tsf_valid:1;
+    
     enum nl80211_peer_measurement_type type;
-
+    
     union {
         struct cfg80211_pmsr_ftm_result ftm;
     };
@@ -3188,9 +3190,9 @@ struct cfg80211_pmsr_ftm_request_peer {
     enum nl80211_preamble preamble;
     u16 burst_period;
     u8 requested:1,
-       asap:1,
-       request_lci:1,
-       request_civicloc:1;
+asap:1,
+request_lci:1,
+request_civicloc:1;
     u8 num_bursts_exp;
     u8 burst_duration;
     u8 ftms_per_burst;
@@ -3232,14 +3234,14 @@ struct cfg80211_pmsr_request {
     void *drv_data;
     u32 n_peers;
     u32 nl_portid;
-
+    
     u32 timeout;
-
+    
     u8 mac_addr[ETH_ALEN] __aligned(2);
     u8 mac_addr_mask[ETH_ALEN] __aligned(2);
-
+    
     struct list_head list;
-
+    
     struct cfg80211_pmsr_request_peer peers[];
 };
 
@@ -3618,319 +3620,319 @@ struct cfg80211_ops {
     int    (*suspend)(struct wiphy *wiphy, struct cfg80211_wowlan *wow);
     int    (*resume)(struct wiphy *wiphy);
     void    (*set_wakeup)(struct wiphy *wiphy, bool enabled);
-
+    
     struct wireless_dev * (*add_virtual_intf)(struct wiphy *wiphy,
-                          const char *name,
-                          unsigned char name_assign_type,
-                          enum nl80211_iftype type,
-                          struct vif_params *params);
+                                              const char *name,
+                                              unsigned char name_assign_type,
+                                              enum nl80211_iftype type,
+                                              struct vif_params *params);
     int    (*del_virtual_intf)(struct wiphy *wiphy,
-                    struct wireless_dev *wdev);
+                               struct wireless_dev *wdev);
     int    (*change_virtual_intf)(struct wiphy *wiphy,
-                       net_device *dev,
-                       enum nl80211_iftype type,
-                       struct vif_params *params);
-
+                                  net_device *dev,
+                                  enum nl80211_iftype type,
+                                  struct vif_params *params);
+    
     int    (*add_key)(struct wiphy *wiphy, net_device *netdev,
-               u8 key_index, bool pairwise, const u8 *mac_addr,
-               struct key_params *params);
+                      u8 key_index, bool pairwise, const u8 *mac_addr,
+                      struct key_params *params);
     int    (*get_key)(struct wiphy *wiphy, net_device *netdev,
-               u8 key_index, bool pairwise, const u8 *mac_addr,
-               void *cookie,
-               void (*callback)(void *cookie, struct key_params*));
+                      u8 key_index, bool pairwise, const u8 *mac_addr,
+                      void *cookie,
+                      void (*callback)(void *cookie, struct key_params*));
     int    (*del_key)(struct wiphy *wiphy, net_device *netdev,
-               u8 key_index, bool pairwise, const u8 *mac_addr);
+                      u8 key_index, bool pairwise, const u8 *mac_addr);
     int    (*set_default_key)(struct wiphy *wiphy,
-                   net_device *netdev,
-                   u8 key_index, bool unicast, bool multicast);
+                              net_device *netdev,
+                              u8 key_index, bool unicast, bool multicast);
     int    (*set_default_mgmt_key)(struct wiphy *wiphy,
-                    net_device *netdev,
-                    u8 key_index);
-
+                                   net_device *netdev,
+                                   u8 key_index);
+    
     int    (*start_ap)(struct wiphy *wiphy, net_device *dev,
-                struct cfg80211_ap_settings *settings);
+                       struct cfg80211_ap_settings *settings);
     int    (*change_beacon)(struct wiphy *wiphy, net_device *dev,
-                 struct cfg80211_beacon_data *info);
+                            struct cfg80211_beacon_data *info);
     int    (*stop_ap)(struct wiphy *wiphy, net_device *dev);
-
-
+    
+    
     int    (*add_station)(struct wiphy *wiphy, net_device *dev,
-                   const u8 *mac,
-                   struct station_parameters *params);
+                          const u8 *mac,
+                          struct station_parameters *params);
     int    (*del_station)(struct wiphy *wiphy, net_device *dev,
-                   struct station_del_parameters *params);
+                          struct station_del_parameters *params);
     int    (*change_station)(struct wiphy *wiphy, net_device *dev,
-                  const u8 *mac,
-                  struct station_parameters *params);
+                             const u8 *mac,
+                             struct station_parameters *params);
     int    (*get_station)(struct wiphy *wiphy, net_device *dev,
-                   const u8 *mac, struct station_info *sinfo);
+                          const u8 *mac, struct station_info *sinfo);
     int    (*dump_station)(struct wiphy *wiphy, net_device *dev,
-                int idx, u8 *mac, struct station_info *sinfo);
-
+                           int idx, u8 *mac, struct station_info *sinfo);
+    
     int    (*add_mpath)(struct wiphy *wiphy, net_device *dev,
-                   const u8 *dst, const u8 *next_hop);
+                        const u8 *dst, const u8 *next_hop);
     int    (*del_mpath)(struct wiphy *wiphy, net_device *dev,
-                   const u8 *dst);
+                        const u8 *dst);
     int    (*change_mpath)(struct wiphy *wiphy, net_device *dev,
-                  const u8 *dst, const u8 *next_hop);
+                           const u8 *dst, const u8 *next_hop);
     int    (*get_mpath)(struct wiphy *wiphy, net_device *dev,
-                 u8 *dst, u8 *next_hop, struct mpath_info *pinfo);
+                        u8 *dst, u8 *next_hop, struct mpath_info *pinfo);
     int    (*dump_mpath)(struct wiphy *wiphy, net_device *dev,
-                  int idx, u8 *dst, u8 *next_hop,
-                  struct mpath_info *pinfo);
+                         int idx, u8 *dst, u8 *next_hop,
+                         struct mpath_info *pinfo);
     int    (*get_mpp)(struct wiphy *wiphy, net_device *dev,
-               u8 *dst, u8 *mpp, struct mpath_info *pinfo);
+                      u8 *dst, u8 *mpp, struct mpath_info *pinfo);
     int    (*dump_mpp)(struct wiphy *wiphy, net_device *dev,
-                int idx, u8 *dst, u8 *mpp,
-                struct mpath_info *pinfo);
+                       int idx, u8 *dst, u8 *mpp,
+                       struct mpath_info *pinfo);
     int    (*get_mesh_config)(struct wiphy *wiphy,
-                net_device *dev,
-                struct mesh_config *conf);
+                              net_device *dev,
+                              struct mesh_config *conf);
     int    (*update_mesh_config)(struct wiphy *wiphy,
-                      net_device *dev, u32 mask,
-                      const struct mesh_config *nconf);
+                                 net_device *dev, u32 mask,
+                                 const struct mesh_config *nconf);
     int    (*join_mesh)(struct wiphy *wiphy, net_device *dev,
-                 const struct mesh_config *conf,
-                 const struct mesh_setup *setup);
+                        const struct mesh_config *conf,
+                        const struct mesh_setup *setup);
     int    (*leave_mesh)(struct wiphy *wiphy, net_device *dev);
-
+    
     int    (*join_ocb)(struct wiphy *wiphy, net_device *dev,
-                struct ocb_setup *setup);
+                       struct ocb_setup *setup);
     int    (*leave_ocb)(struct wiphy *wiphy, net_device *dev);
-
+    
     int    (*change_bss)(struct wiphy *wiphy, net_device *dev,
-                  struct bss_parameters *params);
-
+                         struct bss_parameters *params);
+    
     int    (*set_txq_params)(struct wiphy *wiphy, net_device *dev,
-                  struct ieee80211_txq_params *params);
-
+                             struct ieee80211_txq_params *params);
+    
     int    (*libertas_set_mesh_channel)(struct wiphy *wiphy,
-                         net_device *dev,
-                         struct ieee80211_channel *chan);
-
+                                        net_device *dev,
+                                        struct ieee80211_channel *chan);
+    
     int    (*set_monitor_channel)(struct wiphy *wiphy,
-                       struct cfg80211_chan_def *chandef);
-
+                                  struct cfg80211_chan_def *chandef);
+    
     int    (*scan)(struct wiphy *wiphy,
-            struct cfg80211_scan_request *request);
+                   struct cfg80211_scan_request *request);
     void    (*abort_scan)(struct wiphy *wiphy, struct wireless_dev *wdev);
-
+    
     int    (*auth)(struct wiphy *wiphy, net_device *dev,
-            struct cfg80211_auth_request *req);
+                   struct cfg80211_auth_request *req);
     int    (*assoc)(struct wiphy *wiphy, net_device *dev,
-             struct cfg80211_assoc_request *req);
+                    struct cfg80211_assoc_request *req);
     int    (*deauth)(struct wiphy *wiphy, net_device *dev,
-              struct cfg80211_deauth_request *req);
+                     struct cfg80211_deauth_request *req);
     int    (*disassoc)(struct wiphy *wiphy, net_device *dev,
-                struct cfg80211_disassoc_request *req);
-
+                       struct cfg80211_disassoc_request *req);
+    
     int    (*connect)(struct wiphy *wiphy, net_device *dev,
-               struct cfg80211_connect_params *sme);
+                      struct cfg80211_connect_params *sme);
     int    (*update_connect_params)(struct wiphy *wiphy,
-                     net_device *dev,
-                     struct cfg80211_connect_params *sme,
-                     u32 changed);
+                                    net_device *dev,
+                                    struct cfg80211_connect_params *sme,
+                                    u32 changed);
     int    (*disconnect)(struct wiphy *wiphy, net_device *dev,
-                  u16 reason_code);
-
+                         u16 reason_code);
+    
     int    (*join_ibss)(struct wiphy *wiphy, net_device *dev,
-                 struct cfg80211_ibss_params *params);
+                        struct cfg80211_ibss_params *params);
     int    (*leave_ibss)(struct wiphy *wiphy, net_device *dev);
-
+    
     int    (*set_mcast_rate)(struct wiphy *wiphy, net_device *dev,
-                  int rate[NUM_NL80211_BANDS]);
-
+                             int rate[NUM_NL80211_BANDS]);
+    
     int    (*set_wiphy_params)(struct wiphy *wiphy, u32 changed);
-
+    
     int    (*set_tx_power)(struct wiphy *wiphy, struct wireless_dev *wdev,
-                enum nl80211_tx_power_setting type, int mbm);
+                           enum nl80211_tx_power_setting type, int mbm);
     int    (*get_tx_power)(struct wiphy *wiphy, struct wireless_dev *wdev,
-                int *dbm);
-
+                           int *dbm);
+    
     int    (*set_wds_peer)(struct wiphy *wiphy, net_device *dev,
-                const u8 *addr);
-
+                           const u8 *addr);
+    
     void    (*rfkill_poll)(struct wiphy *wiphy);
-
+    
 #ifdef CONFIG_NL80211_TESTMODE
     int    (*testmode_cmd)(struct wiphy *wiphy, struct wireless_dev *wdev,
-                void *data, int len);
+                           void *data, int len);
     int    (*testmode_dump)(struct wiphy *wiphy, struct sk_buff *skb,
-                 struct netlink_callback *cb,
-                 void *data, int len);
+                            struct netlink_callback *cb,
+                            void *data, int len);
 #endif
-
+    
     int    (*set_bitrate_mask)(struct wiphy *wiphy,
-                    net_device *dev,
-                    const u8 *peer,
-                    const struct cfg80211_bitrate_mask *mask);
-
+                               net_device *dev,
+                               const u8 *peer,
+                               const struct cfg80211_bitrate_mask *mask);
+    
     int    (*dump_survey)(struct wiphy *wiphy, net_device *netdev,
-            int idx, struct survey_info *info);
-
+                          int idx, struct survey_info *info);
+    
     int    (*set_pmksa)(struct wiphy *wiphy, net_device *netdev,
-                 struct cfg80211_pmksa *pmksa);
+                        struct cfg80211_pmksa *pmksa);
     int    (*del_pmksa)(struct wiphy *wiphy, net_device *netdev,
-                 struct cfg80211_pmksa *pmksa);
+                        struct cfg80211_pmksa *pmksa);
     int    (*flush_pmksa)(struct wiphy *wiphy, net_device *netdev);
-
+    
     int    (*remain_on_channel)(struct wiphy *wiphy,
-                     struct wireless_dev *wdev,
-                     struct ieee80211_channel *chan,
-                     unsigned int duration,
-                     u64 *cookie);
+                                struct wireless_dev *wdev,
+                                struct ieee80211_channel *chan,
+                                unsigned int duration,
+                                u64 *cookie);
     int    (*cancel_remain_on_channel)(struct wiphy *wiphy,
-                        struct wireless_dev *wdev,
-                        u64 cookie);
-
+                                       struct wireless_dev *wdev,
+                                       u64 cookie);
+    
     int    (*mgmt_tx)(struct wiphy *wiphy, struct wireless_dev *wdev,
-               struct cfg80211_mgmt_tx_params *params,
-               u64 *cookie);
+                      struct cfg80211_mgmt_tx_params *params,
+                      u64 *cookie);
     int    (*mgmt_tx_cancel_wait)(struct wiphy *wiphy,
-                       struct wireless_dev *wdev,
-                       u64 cookie);
-
+                                  struct wireless_dev *wdev,
+                                  u64 cookie);
+    
     int    (*set_power_mgmt)(struct wiphy *wiphy, net_device *dev,
-                  bool enabled, int timeout);
-
+                             bool enabled, int timeout);
+    
     int    (*set_cqm_rssi_config)(struct wiphy *wiphy,
-                       net_device *dev,
-                       s32 rssi_thold, u32 rssi_hyst);
-
+                                  net_device *dev,
+                                  s32 rssi_thold, u32 rssi_hyst);
+    
     int    (*set_cqm_rssi_range_config)(struct wiphy *wiphy,
-                         net_device *dev,
-                         s32 rssi_low, s32 rssi_high);
-
+                                        net_device *dev,
+                                        s32 rssi_low, s32 rssi_high);
+    
     int    (*set_cqm_txe_config)(struct wiphy *wiphy,
-                      net_device *dev,
-                      u32 rate, u32 pkts, u32 intvl);
-
+                                 net_device *dev,
+                                 u32 rate, u32 pkts, u32 intvl);
+    
     void    (*mgmt_frame_register)(struct wiphy *wiphy,
-                       struct wireless_dev *wdev,
-                       u16 frame_type, bool reg);
-
+                                   struct wireless_dev *wdev,
+                                   u16 frame_type, bool reg);
+    
     int    (*set_antenna)(struct wiphy *wiphy, u32 tx_ant, u32 rx_ant);
     int    (*get_antenna)(struct wiphy *wiphy, u32 *tx_ant, u32 *rx_ant);
-
+    
     int    (*sched_scan_start)(struct wiphy *wiphy,
-                net_device *dev,
-                struct cfg80211_sched_scan_request *request);
+                               net_device *dev,
+                               struct cfg80211_sched_scan_request *request);
     int    (*sched_scan_stop)(struct wiphy *wiphy, net_device *dev,
-                   u64 reqid);
-
+                              u64 reqid);
+    
     int    (*set_rekey_data)(struct wiphy *wiphy, net_device *dev,
-                  struct cfg80211_gtk_rekey_data *data);
-
+                             struct cfg80211_gtk_rekey_data *data);
+    
     int    (*tdls_mgmt)(struct wiphy *wiphy, net_device *dev,
-                 const u8 *peer, u8 action_code,  u8 dialog_token,
-                 u16 status_code, u32 peer_capability,
-                 bool initiator, const u8 *buf, size_t len);
+                        const u8 *peer, u8 action_code,  u8 dialog_token,
+                        u16 status_code, u32 peer_capability,
+                        bool initiator, const u8 *buf, size_t len);
     int    (*tdls_oper)(struct wiphy *wiphy, net_device *dev,
-                 const u8 *peer, enum nl80211_tdls_operation oper);
-
+                        const u8 *peer, enum nl80211_tdls_operation oper);
+    
     int    (*probe_client)(struct wiphy *wiphy, net_device *dev,
-                const u8 *peer, u64 *cookie);
-
+                           const u8 *peer, u64 *cookie);
+    
     int    (*set_noack_map)(struct wiphy *wiphy,
-                  net_device *dev,
-                  u16 noack_map);
-
+                            net_device *dev,
+                            u16 noack_map);
+    
     int    (*get_channel)(struct wiphy *wiphy,
-                   struct wireless_dev *wdev,
-                   struct cfg80211_chan_def *chandef);
-
+                          struct wireless_dev *wdev,
+                          struct cfg80211_chan_def *chandef);
+    
     int    (*start_p2p_device)(struct wiphy *wiphy,
-                    struct wireless_dev *wdev);
+                               struct wireless_dev *wdev);
     void    (*stop_p2p_device)(struct wiphy *wiphy,
-                   struct wireless_dev *wdev);
-
+                               struct wireless_dev *wdev);
+    
     int    (*set_mac_acl)(struct wiphy *wiphy, net_device *dev,
-                   const struct cfg80211_acl_data *params);
-
+                          const struct cfg80211_acl_data *params);
+    
     int    (*start_radar_detection)(struct wiphy *wiphy,
-                     net_device *dev,
-                     struct cfg80211_chan_def *chandef,
-                     u32 cac_time_ms);
+                                    net_device *dev,
+                                    struct cfg80211_chan_def *chandef,
+                                    u32 cac_time_ms);
     int    (*update_ft_ies)(struct wiphy *wiphy, net_device *dev,
-                 struct cfg80211_update_ft_ies_params *ftie);
+                            struct cfg80211_update_ft_ies_params *ftie);
     int    (*crit_proto_start)(struct wiphy *wiphy,
-                    struct wireless_dev *wdev,
-                    enum nl80211_crit_proto_id protocol,
-                    u16 duration);
+                               struct wireless_dev *wdev,
+                               enum nl80211_crit_proto_id protocol,
+                               u16 duration);
     void    (*crit_proto_stop)(struct wiphy *wiphy,
-                   struct wireless_dev *wdev);
+                               struct wireless_dev *wdev);
     int    (*set_coalesce)(struct wiphy *wiphy,
-                struct cfg80211_coalesce *coalesce);
-
+                           struct cfg80211_coalesce *coalesce);
+    
     int    (*channel_switch)(struct wiphy *wiphy,
-                  net_device *dev,
-                  struct cfg80211_csa_settings *params);
-
+                             net_device *dev,
+                             struct cfg80211_csa_settings *params);
+    
     int     (*set_qos_map)(struct wiphy *wiphy,
-                   net_device *dev,
-                   struct cfg80211_qos_map *qos_map);
-
+                           net_device *dev,
+                           struct cfg80211_qos_map *qos_map);
+    
     int    (*set_ap_chanwidth)(struct wiphy *wiphy, net_device *dev,
-                    struct cfg80211_chan_def *chandef);
-
+                               struct cfg80211_chan_def *chandef);
+    
     int    (*add_tx_ts)(struct wiphy *wiphy, net_device *dev,
-                 u8 tsid, const u8 *peer, u8 user_prio,
-                 u16 admitted_time);
+                        u8 tsid, const u8 *peer, u8 user_prio,
+                        u16 admitted_time);
     int    (*del_tx_ts)(struct wiphy *wiphy, net_device *dev,
-                 u8 tsid, const u8 *peer);
-
+                        u8 tsid, const u8 *peer);
+    
     int    (*tdls_channel_switch)(struct wiphy *wiphy,
-                       net_device *dev,
-                       const u8 *addr, u8 oper_class,
-                       struct cfg80211_chan_def *chandef);
+                                  net_device *dev,
+                                  const u8 *addr, u8 oper_class,
+                                  struct cfg80211_chan_def *chandef);
     void    (*tdls_cancel_channel_switch)(struct wiphy *wiphy,
-                          net_device *dev,
-                          const u8 *addr);
+                                          net_device *dev,
+                                          const u8 *addr);
     int    (*start_nan)(struct wiphy *wiphy, struct wireless_dev *wdev,
-                 struct cfg80211_nan_conf *conf);
+                        struct cfg80211_nan_conf *conf);
     void    (*stop_nan)(struct wiphy *wiphy, struct wireless_dev *wdev);
     int    (*add_nan_func)(struct wiphy *wiphy, struct wireless_dev *wdev,
-                struct cfg80211_nan_func *nan_func);
+                           struct cfg80211_nan_func *nan_func);
     void    (*del_nan_func)(struct wiphy *wiphy, struct wireless_dev *wdev,
-                   u64 cookie);
+                            u64 cookie);
     int    (*nan_change_conf)(struct wiphy *wiphy,
-                   struct wireless_dev *wdev,
-                   struct cfg80211_nan_conf *conf,
-                   u32 changes);
-
+                              struct wireless_dev *wdev,
+                              struct cfg80211_nan_conf *conf,
+                              u32 changes);
+    
     int    (*set_multicast_to_unicast)(struct wiphy *wiphy,
-                        net_device *dev,
-                        const bool enabled);
-
+                                       net_device *dev,
+                                       const bool enabled);
+    
     int    (*get_txq_stats)(struct wiphy *wiphy,
-                 struct wireless_dev *wdev,
-                 struct cfg80211_txq_stats *txqstats);
-
+                            struct wireless_dev *wdev,
+                            struct cfg80211_txq_stats *txqstats);
+    
     int    (*set_pmk)(struct wiphy *wiphy, net_device *dev,
-               const struct cfg80211_pmk_conf *conf);
+                      const struct cfg80211_pmk_conf *conf);
     int    (*del_pmk)(struct wiphy *wiphy, net_device *dev,
-               const u8 *aa);
+                      const u8 *aa);
     int     (*external_auth)(struct wiphy *wiphy, net_device *dev,
-                 struct cfg80211_external_auth_params *params);
-
+                             struct cfg80211_external_auth_params *params);
+    
     int    (*tx_control_port)(struct wiphy *wiphy,
-                   net_device *dev,
-                   const u8 *buf, size_t len,
-                   const u8 *dest, const __be16 proto,
-                   const bool noencrypt);
-
+                              net_device *dev,
+                              const u8 *buf, size_t len,
+                              const u8 *dest, const __be16 proto,
+                              const bool noencrypt);
+    
     int    (*get_ftm_responder_stats)(struct wiphy *wiphy,
-                net_device *dev,
-                struct cfg80211_ftm_responder_stats *ftm_stats);
-
+                                      net_device *dev,
+                                      struct cfg80211_ftm_responder_stats *ftm_stats);
+    
     int    (*start_pmsr)(struct wiphy *wiphy, struct wireless_dev *wdev,
-                  struct cfg80211_pmsr_request *request);
+                         struct cfg80211_pmsr_request *request);
     void    (*abort_pmsr)(struct wiphy *wiphy, struct wireless_dev *wdev,
-                  struct cfg80211_pmsr_request *request);
+                          struct cfg80211_pmsr_request *request);
     int    (*update_owe_info)(struct wiphy *wiphy, net_device *dev,
-                   struct cfg80211_update_owe_info *owe_info);
+                              struct cfg80211_update_owe_info *owe_info);
     int    (*probe_mesh_link)(struct wiphy *wiphy, net_device *dev,
-                   const u8 *buf, size_t len);
+                              const u8 *buf, size_t len);
 };
 
 /*
@@ -4082,44 +4084,44 @@ struct ieee80211_iface_combination {
      * limits for the given interface types
      */
     const struct ieee80211_iface_limit *limits;
-
+    
     /**
      * @num_different_channels:
      * can use up to this many different channels
      */
     u32 num_different_channels;
-
+    
     /**
      * @max_interfaces:
      * maximum number of interfaces in total allowed in this group
      */
     u16 max_interfaces;
-
+    
     /**
      * @n_limits:
      * number of limitations
      */
     u8 n_limits;
-
+    
     /**
      * @beacon_int_infra_match:
      * In this combination, the beacon intervals between infrastructure
      * and AP types must match. This is required only in special cases.
      */
     bool beacon_int_infra_match;
-
+    
     /**
      * @radar_detect_widths:
      * bitmap of channel widths supported for radar detection
      */
     u8 radar_detect_widths;
-
+    
     /**
      * @radar_detect_regions:
      * bitmap of regions supported for radar detection
      */
     u8 radar_detect_regions;
-
+    
     /**
      * @beacon_int_min_gcd:
      * This interface combination supports different beacon intervals.
@@ -4285,10 +4287,10 @@ struct wiphy_vendor_command {
     struct nl80211_vendor_cmd_info info;
     u32 flags;
     int (*doit)(struct wiphy *wiphy, struct wireless_dev *wdev,
-            const void *data, int data_len);
+                const void *data, int data_len);
     int (*dumpit)(struct wiphy *wiphy, struct wireless_dev *wdev,
-              struct sk_buff *skb, const void *data, int data_len,
-              unsigned long *storage);
+                  struct sk_buff *skb, const void *data, int data_len,
+                  unsigned long *storage);
     const struct nla_policy *policy;
     unsigned int maxattr;
 };
@@ -4332,18 +4334,18 @@ struct wiphy_iftype_ext_capab {
 struct cfg80211_pmsr_capabilities {
     unsigned int max_peers;
     u8 report_ap_tsf:1,
-       randomize_mac_addr:1;
-
+randomize_mac_addr:1;
+    
     struct {
         u32 preambles;
         u32 bandwidths;
         s8 max_bursts_exponent;
         u8 max_ftms_per_burst;
         u8 supported:1,
-           asap:1,
-           non_asap:1,
-           request_lci:1,
-           request_civicloc:1;
+    asap:1,
+    non_asap:1,
+    request_lci:1,
+    request_civicloc:1;
     } ftm;
 };
 
@@ -4529,33 +4531,33 @@ typedef struct {
  */
 struct wiphy {
     /* assign these fields before you register the wiphy */
-
+    
     /* permanent MAC address(es) */
     u8 perm_addr[ETH_ALEN];
     u8 addr_mask[ETH_ALEN];
-
+    
     struct mac_address *addresses;
-
+    
     const struct ieee80211_txrx_stypes *mgmt_stypes;
-
+    
     const struct ieee80211_iface_combination *iface_combinations;
     int n_iface_combinations;
     u16 software_iftypes;
-
+    
     u16 n_addresses;
-
+    
     /* Supported interface modes, OR together BIT(NL80211_IFTYPE_...) */
     u16 interface_modes;
-
+    
     u16 max_acl_mac_addrs;
-
+    
     u32 flags, regulatory_flags, features;
     u8 ext_features[DIV_ROUND_UP(NUM_NL80211_EXT_FEATURES, 8)];
-
+    
     u32 ap_sme_capa;
-
+    
     enum cfg80211_signal_type signal_type;
-
+    
     int bss_priv_size;
     u8 max_scan_ssids;
     u8 max_sched_scan_reqs;
@@ -4566,110 +4568,110 @@ struct wiphy {
     u32 max_sched_scan_plans;
     u32 max_sched_scan_plan_interval;
     u32 max_sched_scan_plan_iterations;
-
+    
     int n_cipher_suites;
     const u32 *cipher_suites;
-
+    
     int n_akm_suites;
     const u32 *akm_suites;
-
+    
     u8 retry_short;
     u8 retry_long;
     u32 frag_threshold;
     u32 rts_threshold;
     u8 coverage_class;
-
+    
     char fw_version[ETHTOOL_FWVERS_LEN];
     u32 hw_version;
-
+    
 #ifdef CONFIG_PM
     const struct wiphy_wowlan_support *wowlan;
     struct cfg80211_wowlan *wowlan_config;
 #endif
-
+    
     u16 max_remain_on_channel_duration;
-
+    
     u8 max_num_pmkids;
-
+    
     u32 available_antennas_tx;
     u32 available_antennas_rx;
-
+    
     /*
      * Bitmap of supported protocols for probe response offloading
      * see &enum nl80211_probe_resp_offload_support_attr. Only valid
      * when the wiphy flag @WIPHY_FLAG_AP_PROBE_RESP_OFFLOAD is set.
      */
     u32 probe_resp_offload;
-
+    
     const u8 *extended_capabilities, *extended_capabilities_mask;
     u8 extended_capabilities_len;
-
+    
     const struct wiphy_iftype_ext_capab *iftype_ext_capab;
     unsigned int num_iftype_ext_capab;
-
+    
     /* If multiple wiphys are registered and you're handed e.g.
      * a regular netdev with assigned ieee80211_ptr, you won't
      * know whether it points to a wiphy your driver has registered
      * or not. Assign this to something global to your driver to
      * help determine whether you own this wiphy or not. */
     const void *privid;
-
+    
     struct ieee80211_supported_band *bands[NUM_NL80211_BANDS];
-
+    
     /* Lets us get back the wiphy on the callback */
     void (*reg_notifier)(struct wiphy *wiphy,
-                 struct regulatory_request *request);
-
+                         struct regulatory_request *request);
+    
     /* fields below are read-only, assigned by cfg80211 */
-
+    
     const struct ieee80211_regdomain __rcu *regd;
-
+    
     /* the item in /sys/class/ieee80211/ points to this,
      * you need use set_wiphy_dev() (see below) */
     device dev;
-
+    
     /* protects ->resume, ->suspend sysfs callbacks against unregister hw */
     bool registered;
-
+    
     /* dir in debugfs: ieee80211/<wiphyname> */
     struct dentry *debugfsdir;
-
+    
     const struct ieee80211_ht_cap *ht_capa_mod_mask;
     const struct ieee80211_vht_cap *vht_capa_mod_mask;
-
+    
     list_head wdev_list;
-
+    
     /* the network namespace this phy lives in currently */
     possible_net_t _net;
-
+    
 #ifdef CONFIG_CFG80211_WEXT
     const struct iw_handler_def *wext;
 #endif
-
+    
     const struct wiphy_coalesce_support *coalesce;
-
+    
     const struct wiphy_vendor_command *vendor_commands;
     const struct nl80211_vendor_cmd_info *vendor_events;
     int n_vendor_commands, n_vendor_events;
-
+    
     u16 max_ap_assoc_sta;
-
+    
     u8 max_num_csa_counters;
     u8 max_adj_channel_rssi_comp;
-
+    
     u32 bss_select_support;
-
+    
     u8 nan_supported_bands;
-
+    
     u32 txq_limit;
     u32 txq_memory_limit;
     u32 txq_quantum;
-
+    
     u8 support_mbssid:1,
-       support_only_he_mbssid:1;
-
+support_only_he_mbssid:1;
+    
     const struct cfg80211_pmsr_capabilities *pmsr_capa;
-
+    
     char priv[0] __aligned(NETDEV_ALIGN);
 };
 
@@ -4753,7 +4755,7 @@ static inline const char *wiphy_name(const struct wiphy *wiphy)
  * assigned to each netdev's ieee80211_ptr for proper operation.
  */
 struct wiphy *wiphy_new_nm(const struct cfg80211_ops *ops, int sizeof_priv,
-               const char *requested_name);
+                           const char *requested_name);
 
 /**
  * wiphy_new - create a new wiphy for use with cfg80211
@@ -4768,7 +4770,7 @@ struct wiphy *wiphy_new_nm(const struct cfg80211_ops *ops, int sizeof_priv,
  * assigned to each netdev's ieee80211_ptr for proper operation.
  */
 static inline struct wiphy *wiphy_new(const struct cfg80211_ops *ops,
-                      int sizeof_priv)
+                                      int sizeof_priv)
 {
     return wiphy_new_nm(ops, sizeof_priv, NULL);
 }
@@ -4888,22 +4890,22 @@ struct cfg80211_cqm_config;
 struct wireless_dev {
     struct wiphy *wiphy;
     enum nl80211_iftype iftype;
-
+    
     /* the remainder of this struct should be private to cfg80211 */
     struct list_head list;
     net_device *netdev;
-
+    
     u32 identifier;
-
+    
     struct list_head mgmt_registrations;
     IOSimpleLock* mgmt_registrations_lock;
-
+    
     IOSimpleLock *mtx;
-
+    
     bool use_4addr, is_running;
-
+    
     u8 address[ETH_ALEN] __aligned(sizeof(u16));
-
+    
     /* currently used for IBSS and SME - might be rearranged later */
     u8 ssid[IEEE80211_MAX_SSID_LEN];
     u8 ssid_len, mesh_id_len, mesh_id_up_len;
@@ -4911,34 +4913,34 @@ struct wireless_dev {
     struct cfg80211_cached_keys *connect_keys;
     enum ieee80211_bss_type conn_bss_type;
     u32 conn_owner_nlportid;
-
+    
     struct work_struct disconnect_wk;
     u8 disconnect_bssid[ETH_ALEN];
-
+    
     struct list_head event_list;
     IOSimpleLock* event_lock;
-
+    
     struct cfg80211_internal_bss *current_bss; /* associated / joined */
     struct cfg80211_chan_def preset_chandef;
     struct cfg80211_chan_def chandef;
-
+    
     bool ibss_fixed;
     bool ibss_dfs_possible;
-
+    
     bool ps;
     int ps_timeout;
-
+    
     int beacon_interval;
-
+    
     u32 ap_unexpected_nlportid;
-
+    
     u32 owner_nlportid;
     bool nl_owner_dead;
-
+    
     bool cac_started;
     unsigned long cac_start_time;
     unsigned int cac_time_ms;
-
+    
     /* wext data */
     struct {
         struct cfg80211_ibss_params ibss;
@@ -4952,9 +4954,9 @@ struct wireless_dev {
         s8 default_key, default_mgmt_key;
         bool prev_bssid_valid;
     } wext;
-
+    
     struct cfg80211_cqm_config *cqm_config;
-
+    
     struct list_head pmsr_list;
     IOSimpleLock* pmsr_lock;
     struct work_struct pmsr_free_wk;
@@ -5034,7 +5036,7 @@ struct ieee80211_channel *ieee80211_get_channel(struct wiphy *wiphy, int freq);
  */
 struct ieee80211_rate *
 ieee80211_get_response_rate(struct ieee80211_supported_band *sband,
-                u32 basic_rates, int bitrate);
+                            u32 basic_rates, int bitrate);
 
 /**
  * ieee80211_mandatory_rates - get mandatory rates for a given band
@@ -5045,7 +5047,7 @@ ieee80211_get_response_rate(struct ieee80211_supported_band *sband,
  * band, bits are set according to the rate position in the bitrates array.
  */
 u32 ieee80211_mandatory_rates(struct ieee80211_supported_band *sband,
-                  enum nl80211_bss_scan_width scan_width);
+                              enum nl80211_bss_scan_width scan_width);
 
 /*
  * Radiotap parsing functions -- for controlled injection support
@@ -5103,16 +5105,16 @@ struct ieee80211_radiotap_iterator {
     struct ieee80211_radiotap_header *_rtheader;
     const struct ieee80211_radiotap_vendor_namespaces *_vns;
     const struct ieee80211_radiotap_namespace *current_namespace;
-
+    
     unsigned char *_arg, *_next_ns_data;
     __le32 *_next_bitmap;
-
+    
     unsigned char *this_arg;
     int this_arg_index;
     int this_arg_size;
-
+    
     int is_radiotap_ns;
-
+    
     int _max_length;
     int _arg_index;
     uint32_t _bitmap_shifter;
@@ -5121,9 +5123,9 @@ struct ieee80211_radiotap_iterator {
 
 int
 ieee80211_radiotap_iterator_init(struct ieee80211_radiotap_iterator *iterator,
-                 struct ieee80211_radiotap_header *radiotap_header,
-                 int max_length,
-                 const struct ieee80211_radiotap_vendor_namespaces *vns);
+                                 struct ieee80211_radiotap_header *radiotap_header,
+                                 int max_length,
+                                 const struct ieee80211_radiotap_vendor_namespaces *vns);
 
 int
 ieee80211_radiotap_iterator_next(struct ieee80211_radiotap_iterator *iterator);
@@ -5181,8 +5183,8 @@ unsigned int ieee80211_get_mesh_hdrlen(struct ieee80211s_hdr *meshhdr);
  * Return: 0 on success. Non-zero on error.
  */
 int ieee80211_data_to_8023_exthdr(struct sk_buff *skb, struct ethhdr *ehdr,
-                  const u8 *addr, enum nl80211_iftype iftype,
-                  u8 data_offset);
+                                  const u8 *addr, enum nl80211_iftype iftype,
+                                  u8 data_offset);
 
 /**
  * ieee80211_data_to_8023 - convert an 802.11 data frame to 802.3
@@ -5192,7 +5194,7 @@ int ieee80211_data_to_8023_exthdr(struct sk_buff *skb, struct ethhdr *ehdr,
  * Return: 0 on success. Non-zero on error.
  */
 static inline int ieee80211_data_to_8023(struct sk_buff *skb, const u8 *addr,
-                     enum nl80211_iftype iftype)
+                                         enum nl80211_iftype iftype)
 {
     return ieee80211_data_to_8023_exthdr(skb, NULL, addr, iftype, 0);
 }
@@ -5214,9 +5216,9 @@ static inline int ieee80211_data_to_8023(struct sk_buff *skb, const u8 *addr,
  * @check_sa: SA to check in the inner ethernet header, or NULL
  */
 void ieee80211_amsdu_to_8023s(struct sk_buff *skb, struct sk_buff_head *list,
-                  const u8 *addr, enum nl80211_iftype iftype,
-                  const unsigned int extra_headroom,
-                  const u8 *check_da, const u8 *check_sa);
+                              const u8 *addr, enum nl80211_iftype iftype,
+                              const unsigned int extra_headroom,
+                              const u8 *check_da, const u8 *check_sa);
 
 /**
  * cfg80211_classify8021d - determine the 802.1p/1d tag for a data frame
@@ -5225,7 +5227,7 @@ void ieee80211_amsdu_to_8023s(struct sk_buff *skb, struct sk_buff_head *list,
  * Return: The 802.1p/1d tag.
  */
 unsigned int cfg80211_classify8021d(struct sk_buff *skb,
-                    struct cfg80211_qos_map *qos_map);
+                                    struct cfg80211_qos_map *qos_map);
 
 /**
  * cfg80211_find_elem_match - match information element and byte array in data
@@ -5251,8 +5253,8 @@ unsigned int cfg80211_classify8021d(struct sk_buff *skb,
  */
 const struct element *
 cfg80211_find_elem_match(u8 eid, const u8 *ies, unsigned int len,
-             const u8 *match, unsigned int match_len,
-             unsigned int match_offset);
+                         const u8 *match, unsigned int match_len,
+                         unsigned int match_offset);
 
 /**
  * cfg80211_find_ie_match - match information element and byte array in data
@@ -5280,20 +5282,20 @@ cfg80211_find_elem_match(u8 eid, const u8 *ies, unsigned int len,
  */
 static inline const u8 *
 cfg80211_find_ie_match(u8 eid, const u8 *ies, unsigned int len,
-               const u8 *match, unsigned int match_len,
-               unsigned int match_offset)
+                       const u8 *match, unsigned int match_len,
+                       unsigned int match_offset)
 {
     /* match_offset can't be smaller than 2, unless match_len is
      * zero, in which case match_offset must be zero as well.
      */
     if (WARN_ON((match_len && match_offset < 2) ||
-            (!match_len && match_offset)))
+                (!match_len && match_offset)))
         return NULL;
-
+    
     return (const u8 *)cfg80211_find_elem_match(eid, ies, len,
-                        match, match_len,
-                        match_offset ?
-                            match_offset - 2 : 0);
+                                                match, match_len,
+                                                match_offset ?
+                                                match_offset - 2 : 0);
 }
 
 /**
@@ -5356,7 +5358,7 @@ static inline const struct element *
 cfg80211_find_ext_elem(u8 ext_eid, const u8 *ies, int len)
 {
     return cfg80211_find_elem_match(WLAN_EID_EXTENSION, ies, len,
-                    &ext_eid, 1, 0);
+                                    &ext_eid, 1, 0);
 }
 
 /**
@@ -5377,7 +5379,7 @@ cfg80211_find_ext_elem(u8 ext_eid, const u8 *ies, int len)
 static inline const u8 *cfg80211_find_ext_ie(u8 ext_eid, const u8 *ies, int len)
 {
     return cfg80211_find_ie_match(WLAN_EID_EXTENSION, ies, len,
-                      &ext_eid, 1, 2);
+                                  &ext_eid, 1, 2);
 }
 
 /**
@@ -5396,8 +5398,8 @@ static inline const u8 *cfg80211_find_ext_ie(u8 ext_eid, const u8 *ies, int len)
  * the given data.
  */
 const struct element *cfg80211_find_vendor_elem(unsigned int oui, int oui_type,
-                        const u8 *ies,
-                        unsigned int len);
+                                                const u8 *ies,
+                                                unsigned int len);
 
 /**
  * cfg80211_find_vendor_ie - find vendor specific information element in data
@@ -5417,7 +5419,7 @@ const struct element *cfg80211_find_vendor_elem(unsigned int oui, int oui_type,
  */
 static inline const u8 *
 cfg80211_find_vendor_ie(unsigned int oui, int oui_type,
-            const u8 *ies, unsigned int len)
+                        const u8 *ies, unsigned int len)
 {
     return (const u8 *)cfg80211_find_vendor_elem(oui, oui_type, ies, len);
 }
@@ -5478,7 +5480,7 @@ int regulatory_hint(struct wiphy *wiphy, const char *alpha2);
  * Return: 0 on success. -EINVAL, -EPERM
  */
 int regulatory_set_wiphy_regd(struct wiphy *wiphy,
-                  struct ieee80211_regdomain *rd);
+                              struct ieee80211_regdomain *rd);
 
 /**
  * regulatory_set_wiphy_regd_sync_rtnl - set regdom for self-managed drivers
@@ -5492,7 +5494,7 @@ int regulatory_set_wiphy_regd(struct wiphy *wiphy,
  * Return: 0 on success. -EINVAL, -EPERM
  */
 int regulatory_set_wiphy_regd_sync_rtnl(struct wiphy *wiphy,
-                    struct ieee80211_regdomain *rd);
+                                        struct ieee80211_regdomain *rd);
 
 /**
  * wiphy_apply_custom_regulatory - apply a custom driver regulatory domain
@@ -5510,7 +5512,7 @@ int regulatory_set_wiphy_regd_sync_rtnl(struct wiphy *wiphy,
  * that called this helper.
  */
 void wiphy_apply_custom_regulatory(struct wiphy *wiphy,
-                   const struct ieee80211_regdomain *regd);
+                                   const struct ieee80211_regdomain *regd);
 
 /**
  * freq_reg_info - get regulatory information for the given frequency
@@ -5531,7 +5533,7 @@ void wiphy_apply_custom_regulatory(struct wiphy *wiphy,
  * purely subjective and right now it's 802.11 specific.
  */
 const struct ieee80211_reg_rule *freq_reg_info(struct wiphy *wiphy,
-                           u32 center_freq);
+                                               u32 center_freq);
 
 /**
  * reg_initiator_name - map regulatory request initiator enum to name
@@ -5573,7 +5575,7 @@ bool regulatory_pre_cac_allowed(struct wiphy *wiphy);
  * Return: 0 on success. -ENODATA.
  */
 int reg_query_regdb_wmm(char *alpha2, int freq,
-            struct ieee80211_reg_rule *rule);
+                        struct ieee80211_reg_rule *rule);
 
 /*
  * callbacks for asynchronous cfg80211 methods, notification
@@ -5587,7 +5589,7 @@ int reg_query_regdb_wmm(char *alpha2, int freq,
  * @info: information about the completed scan
  */
 void cfg80211_scan_done(struct cfg80211_scan_request *request,
-            struct cfg80211_scan_info *info);
+                        struct cfg80211_scan_info *info);
 
 /**
  * cfg80211_sched_scan_results - notify that new scan results are available
@@ -5638,38 +5640,38 @@ void cfg80211_sched_scan_stopped_rtnl(struct wiphy *wiphy, u64 reqid);
  */
 struct cfg80211_bss * __must_check
 cfg80211_inform_bss_frame_data(struct wiphy *wiphy,
-                   struct cfg80211_inform_bss *data,
-                   struct ieee80211_mgmt *mgmt, size_t len,
-                   gfp_t gfp);
+                               struct cfg80211_inform_bss *data,
+                               struct ieee80211_mgmt *mgmt, size_t len,
+                               gfp_t gfp);
 
 static inline struct cfg80211_bss * __must_check
 cfg80211_inform_bss_width_frame(struct wiphy *wiphy,
-                struct ieee80211_channel *rx_channel,
-                enum nl80211_bss_scan_width scan_width,
-                struct ieee80211_mgmt *mgmt, size_t len,
-                s32 signal, gfp_t gfp)
+                                struct ieee80211_channel *rx_channel,
+                                enum nl80211_bss_scan_width scan_width,
+                                struct ieee80211_mgmt *mgmt, size_t len,
+                                s32 signal, gfp_t gfp)
 {
     struct cfg80211_inform_bss data = {
         .chan = rx_channel,
         .scan_width = scan_width,
         .signal = signal,
     };
-
+    
     return cfg80211_inform_bss_frame_data(wiphy, &data, mgmt, len, gfp);
 }
 
 static inline struct cfg80211_bss * __must_check
 cfg80211_inform_bss_frame(struct wiphy *wiphy,
-              struct ieee80211_channel *rx_channel,
-              struct ieee80211_mgmt *mgmt, size_t len,
-              s32 signal, gfp_t gfp)
+                          struct ieee80211_channel *rx_channel,
+                          struct ieee80211_mgmt *mgmt, size_t len,
+                          s32 signal, gfp_t gfp)
 {
     struct cfg80211_inform_bss data = {
         .chan = rx_channel,
         .scan_width = NL80211_BSS_CHAN_WIDTH_20,
         .signal = signal,
     };
-
+    
     return cfg80211_inform_bss_frame_data(wiphy, &data, mgmt, len, gfp);
 }
 
@@ -5681,16 +5683,16 @@ cfg80211_inform_bss_frame(struct wiphy *wiphy,
  * @new_bssid: calculated nontransmitted BSSID
  */
 static inline void cfg80211_gen_new_bssid(const u8 *bssid, u8 max_bssid,
-                      u8 mbssid_index, u8 *new_bssid)
+                                          u8 mbssid_index, u8 *new_bssid)
 {
     u64 bssid_u64 = ether_addr_to_u64(bssid);
     u64 mask = GENMASK_ULL(max_bssid - 1, 0);
     u64 new_bssid_u64;
-
+    
     new_bssid_u64 = bssid_u64 & ~mask;
-
+    
     new_bssid_u64 |= ((bssid_u64 & mask) + mbssid_index) & mask;
-
+    
     u64_to_ether_addr(new_bssid_u64, new_bssid);
 }
 
@@ -5700,7 +5702,7 @@ static inline void cfg80211_gen_new_bssid(const u8 *bssid, u8 max_bssid,
  * @non_inherit_element: non inheritance element
  */
 bool cfg80211_is_element_inherited(const struct element *element,
-                   const struct element *non_inherit_element);
+                                   const struct element *non_inherit_element);
 
 /**
  * cfg80211_merge_profile - merges a MBSSID profile if it is split between IEs
@@ -5712,9 +5714,9 @@ bool cfg80211_is_element_inherited(const struct element *element,
  * @max_copy_len: max merged profile length
  */
 size_t cfg80211_merge_profile(const u8 *ie, size_t ielen,
-                  const struct element *mbssid_elem,
-                  const struct element *sub_elem,
-                  u8 *merged_ie, size_t max_copy_len);
+                              const struct element *mbssid_elem,
+                              const struct element *sub_elem,
+                              u8 *merged_ie, size_t max_copy_len);
 
 /**
  * enum cfg80211_bss_frame_type - frame type that the BSS data came from
@@ -5751,49 +5753,49 @@ enum cfg80211_bss_frame_type {
  */
 struct cfg80211_bss * __must_check
 cfg80211_inform_bss_data(struct wiphy *wiphy,
-             struct cfg80211_inform_bss *data,
-             enum cfg80211_bss_frame_type ftype,
-             const u8 *bssid, u64 tsf, u16 capability,
-             u16 beacon_interval, const u8 *ie, size_t ielen,
-             gfp_t gfp);
+                         struct cfg80211_inform_bss *data,
+                         enum cfg80211_bss_frame_type ftype,
+                         const u8 *bssid, u64 tsf, u16 capability,
+                         u16 beacon_interval, const u8 *ie, size_t ielen,
+                         gfp_t gfp);
 
 static inline struct cfg80211_bss * __must_check
 cfg80211_inform_bss_width(struct wiphy *wiphy,
-              struct ieee80211_channel *rx_channel,
-              enum nl80211_bss_scan_width scan_width,
-              enum cfg80211_bss_frame_type ftype,
-              const u8 *bssid, u64 tsf, u16 capability,
-              u16 beacon_interval, const u8 *ie, size_t ielen,
-              s32 signal, gfp_t gfp)
+                          struct ieee80211_channel *rx_channel,
+                          enum nl80211_bss_scan_width scan_width,
+                          enum cfg80211_bss_frame_type ftype,
+                          const u8 *bssid, u64 tsf, u16 capability,
+                          u16 beacon_interval, const u8 *ie, size_t ielen,
+                          s32 signal, gfp_t gfp)
 {
     struct cfg80211_inform_bss data = {
         .chan = rx_channel,
         .scan_width = scan_width,
         .signal = signal,
     };
-
+    
     return cfg80211_inform_bss_data(wiphy, &data, ftype, bssid, tsf,
-                    capability, beacon_interval, ie, ielen,
-                    gfp);
+                                    capability, beacon_interval, ie, ielen,
+                                    gfp);
 }
 
 static inline struct cfg80211_bss * __must_check
 cfg80211_inform_bss(struct wiphy *wiphy,
-            struct ieee80211_channel *rx_channel,
-            enum cfg80211_bss_frame_type ftype,
-            const u8 *bssid, u64 tsf, u16 capability,
-            u16 beacon_interval, const u8 *ie, size_t ielen,
-            s32 signal, gfp_t gfp)
+                    struct ieee80211_channel *rx_channel,
+                    enum cfg80211_bss_frame_type ftype,
+                    const u8 *bssid, u64 tsf, u16 capability,
+                    u16 beacon_interval, const u8 *ie, size_t ielen,
+                    s32 signal, gfp_t gfp)
 {
     struct cfg80211_inform_bss data = {
         .chan = rx_channel,
         .scan_width = NL80211_BSS_CHAN_WIDTH_20,
         .signal = signal,
     };
-
+    
     return cfg80211_inform_bss_data(wiphy, &data, ftype, bssid, tsf,
-                    capability, beacon_interval, ie, ielen,
-                    gfp);
+                                    capability, beacon_interval, ie, ielen,
+                                    gfp);
 }
 
 /**
@@ -5807,19 +5809,19 @@ cfg80211_inform_bss(struct wiphy *wiphy,
  * @privacy: privacy filter, see &enum ieee80211_privacy
  */
 struct cfg80211_bss *cfg80211_get_bss(struct wiphy *wiphy,
-                      struct ieee80211_channel *channel,
-                      const u8 *bssid,
-                      const u8 *ssid, size_t ssid_len,
-                      enum ieee80211_bss_type bss_type,
-                      enum ieee80211_privacy privacy);
+                                      struct ieee80211_channel *channel,
+                                      const u8 *bssid,
+                                      const u8 *ssid, size_t ssid_len,
+                                      enum ieee80211_bss_type bss_type,
+                                      enum ieee80211_privacy privacy);
 static inline struct cfg80211_bss *
 cfg80211_get_ibss(struct wiphy *wiphy,
-          struct ieee80211_channel *channel,
-          const u8 *ssid, size_t ssid_len)
+                  struct ieee80211_channel *channel,
+                  const u8 *ssid, size_t ssid_len)
 {
     return cfg80211_get_bss(wiphy, channel, NULL, ssid, ssid_len,
-                IEEE80211_BSS_TYPE_IBSS,
-                IEEE80211_PRIVACY_ANY);
+                            IEEE80211_BSS_TYPE_IBSS,
+                            IEEE80211_PRIVACY_ANY);
 }
 
 /**
@@ -5866,22 +5868,22 @@ void cfg80211_unlink_bss(struct wiphy *wiphy, struct cfg80211_bss *bss);
  * @iter_data: an argument to the iterator function
  */
 void cfg80211_bss_iter(struct wiphy *wiphy,
-               struct cfg80211_chan_def *chandef,
-               void (*iter)(struct wiphy *wiphy,
-                    struct cfg80211_bss *bss,
-                    void *data),
-               void *iter_data);
+                       struct cfg80211_chan_def *chandef,
+                       void (*iter)(struct wiphy *wiphy,
+                       struct cfg80211_bss *bss,
+                                    void *data),
+                       void *iter_data);
 
 static inline enum nl80211_bss_scan_width
 cfg80211_chandef_to_scan_width(const struct cfg80211_chan_def *chandef)
 {
     switch (chandef->width) {
-    case NL80211_CHAN_WIDTH_5:
-        return NL80211_BSS_CHAN_WIDTH_5;
-    case NL80211_CHAN_WIDTH_10:
-        return NL80211_BSS_CHAN_WIDTH_10;
-    default:
-        return NL80211_BSS_CHAN_WIDTH_20;
+        case NL80211_CHAN_WIDTH_5:
+            return NL80211_BSS_CHAN_WIDTH_5;
+        case NL80211_CHAN_WIDTH_10:
+            return NL80211_BSS_CHAN_WIDTH_10;
+        default:
+            return NL80211_BSS_CHAN_WIDTH_20;
     }
 }
 
@@ -5934,10 +5936,10 @@ void cfg80211_auth_timeout(net_device *dev, const u8 *addr);
  * This function may sleep. The caller must hold the corresponding wdev's mutex.
  */
 void cfg80211_rx_assoc_resp(net_device *dev,
-                struct cfg80211_bss *bss,
-                const u8 *buf, size_t len,
-                int uapsd_queues,
-                const u8 *req_ies, size_t req_ies_len);
+                            struct cfg80211_bss *bss,
+                            const u8 *buf, size_t len,
+                            int uapsd_queues,
+                            const u8 *req_ies, size_t req_ies_len);
 
 /**
  * cfg80211_assoc_timeout - notification of timed out association
@@ -5983,7 +5985,7 @@ void cfg80211_tx_mlme_mgmt(net_device *dev, const u8 *buf, size_t len);
  * frame was not protected. This function may sleep.
  */
 void cfg80211_rx_unprot_mlme_mgmt(net_device *dev,
-                  const u8 *buf, size_t len);
+                                  const u8 *buf, size_t len);
 
 /**
  * cfg80211_michael_mic_failure - notification of Michael MIC failure (TKIP)
@@ -5999,8 +6001,8 @@ void cfg80211_rx_unprot_mlme_mgmt(net_device *dev,
  * primitive.
  */
 void cfg80211_michael_mic_failure(net_device *dev, const u8 *addr,
-                  enum nl80211_key_type key_type, int key_id,
-                  const u8 *tsc, gfp_t gfp);
+                                  enum nl80211_key_type key_type, int key_id,
+                                  const u8 *tsc, gfp_t gfp);
 
 /**
  * cfg80211_ibss_joined - notify cfg80211 that device joined an IBSS
@@ -6018,7 +6020,7 @@ void cfg80211_michael_mic_failure(net_device *dev, const u8 *addr,
  * always a scan result for this IBSS. cfg80211 will handle the rest.
  */
 void cfg80211_ibss_joined(net_device *dev, const u8 *bssid,
-              struct ieee80211_channel *channel, gfp_t gfp);
+                          struct ieee80211_channel *channel, gfp_t gfp);
 
 /**
  * cfg80211_notify_new_candidate - notify cfg80211 of a new mesh peer candidate
@@ -6034,8 +6036,8 @@ void cfg80211_ibss_joined(net_device *dev, const u8 *bssid,
  * cfg80211 then sends a notification to userspace.
  */
 void cfg80211_notify_new_peer_candidate(net_device *dev,
-        const u8 *macaddr, const u8 *ie, u8 ie_len,
-        int sig_dbm, gfp_t gfp);
+                                        const u8 *macaddr, const u8 *ie, u8 ie_len,
+                                        int sig_dbm, gfp_t gfp);
 
 /**
  * DOC: RFkill integration
@@ -6091,17 +6093,17 @@ void wiphy_rfkill_stop_polling(struct wiphy *wiphy);
  */
 
 struct sk_buff *__cfg80211_alloc_reply_skb(struct wiphy *wiphy,
-                       enum nl80211_commands cmd,
-                       enum nl80211_attrs attr,
-                       int approxlen);
+                                           enum nl80211_commands cmd,
+                                           enum nl80211_attrs attr,
+                                           int approxlen);
 
 struct sk_buff *__cfg80211_alloc_event_skb(struct wiphy *wiphy,
-                       struct wireless_dev *wdev,
-                       enum nl80211_commands cmd,
-                       enum nl80211_attrs attr,
-                       unsigned int portid,
-                       int vendor_event_idx,
-                       int approxlen, gfp_t gfp);
+                                           struct wireless_dev *wdev,
+                                           enum nl80211_commands cmd,
+                                           enum nl80211_attrs attr,
+                                           unsigned int portid,
+                                           int vendor_event_idx,
+                                           int approxlen, gfp_t gfp);
 
 void __cfg80211_send_event_skb(struct sk_buff *skb, gfp_t gfp);
 
@@ -6132,7 +6134,7 @@ static inline struct sk_buff *
 cfg80211_vendor_cmd_alloc_reply_skb(struct wiphy *wiphy, int approxlen)
 {
     return __cfg80211_alloc_reply_skb(wiphy, NL80211_CMD_VENDOR,
-                      NL80211_ATTR_VENDOR_DATA, approxlen);
+                                      NL80211_ATTR_VENDOR_DATA, approxlen);
 }
 
 /**
@@ -6181,11 +6183,11 @@ unsigned int cfg80211_vendor_cmd_get_sender(struct wiphy *wiphy);
  */
 static inline struct sk_buff *
 cfg80211_vendor_event_alloc(struct wiphy *wiphy, struct wireless_dev *wdev,
-                 int approxlen, int event_idx, gfp_t gfp)
+                            int approxlen, int event_idx, gfp_t gfp)
 {
     return __cfg80211_alloc_event_skb(wiphy, wdev, NL80211_CMD_VENDOR,
-                      NL80211_ATTR_VENDOR_DATA,
-                      0, event_idx, approxlen, gfp);
+                                      NL80211_ATTR_VENDOR_DATA,
+                                      0, event_idx, approxlen, gfp);
 }
 
 /**
@@ -6214,13 +6216,13 @@ cfg80211_vendor_event_alloc(struct wiphy *wiphy, struct wireless_dev *wdev,
  */
 static inline struct sk_buff *
 cfg80211_vendor_event_alloc_ucast(struct wiphy *wiphy,
-                  struct wireless_dev *wdev,
-                  unsigned int portid, int approxlen,
-                  int event_idx, gfp_t gfp)
+                                  struct wireless_dev *wdev,
+                                  unsigned int portid, int approxlen,
+                                  int event_idx, gfp_t gfp)
 {
     return __cfg80211_alloc_event_skb(wiphy, wdev, NL80211_CMD_VENDOR,
-                      NL80211_ATTR_VENDOR_DATA,
-                      portid, event_idx, approxlen, gfp);
+                                      NL80211_ATTR_VENDOR_DATA,
+                                      portid, event_idx, approxlen, gfp);
 }
 
 /**
@@ -6275,7 +6277,7 @@ static inline struct sk_buff *
 cfg80211_testmode_alloc_reply_skb(struct wiphy *wiphy, int approxlen)
 {
     return __cfg80211_alloc_reply_skb(wiphy, NL80211_CMD_TESTMODE,
-                      NL80211_ATTR_TESTDATA, approxlen);
+                                      NL80211_ATTR_TESTDATA, approxlen);
 }
 
 /**
@@ -6320,8 +6322,8 @@ static inline struct sk_buff *
 cfg80211_testmode_alloc_event_skb(struct wiphy *wiphy, int approxlen, gfp_t gfp)
 {
     return __cfg80211_alloc_event_skb(wiphy, NULL, NL80211_CMD_TESTMODE,
-                      NL80211_ATTR_TESTDATA, 0, -1,
-                      approxlen, gfp);
+                                      NL80211_ATTR_TESTDATA, 0, -1,
+                                      approxlen, gfp);
 }
 
 /**
@@ -6426,8 +6428,8 @@ struct cfg80211_connect_resp_params {
  * and cfg80211_connect_done() should be called.
  */
 void cfg80211_connect_done(net_device *dev,
-               struct cfg80211_connect_resp_params *params,
-               gfp_t gfp);
+                           struct cfg80211_connect_resp_params *params,
+                           gfp_t gfp);
 
 /**
  * cfg80211_connect_bss - notify cfg80211 of connection result
@@ -6469,13 +6471,13 @@ void cfg80211_connect_done(net_device *dev,
  */
 static inline void
 cfg80211_connect_bss(net_device *dev, const u8 *bssid,
-             struct cfg80211_bss *bss, const u8 *req_ie,
-             size_t req_ie_len, const u8 *resp_ie,
-             size_t resp_ie_len, int status, gfp_t gfp,
-             enum nl80211_timeout_reason timeout_reason)
+                     struct cfg80211_bss *bss, const u8 *req_ie,
+                     size_t req_ie_len, const u8 *resp_ie,
+                     size_t resp_ie_len, int status, gfp_t gfp,
+                     enum nl80211_timeout_reason timeout_reason)
 {
     struct cfg80211_connect_resp_params params;
-
+    
     memset(&params, 0, sizeof(params));
     params.status = status;
     params.bssid = bssid;
@@ -6485,7 +6487,7 @@ cfg80211_connect_bss(net_device *dev, const u8 *bssid,
     params.resp_ie = resp_ie;
     params.resp_ie_len = resp_ie_len;
     params.timeout_reason = timeout_reason;
-
+    
     cfg80211_connect_done(dev, &params, gfp);
 }
 
@@ -6511,13 +6513,13 @@ cfg80211_connect_bss(net_device *dev, const u8 *bssid,
  */
 static inline void
 cfg80211_connect_result(net_device *dev, const u8 *bssid,
-            const u8 *req_ie, size_t req_ie_len,
-            const u8 *resp_ie, size_t resp_ie_len,
-            u16 status, gfp_t gfp)
+                        const u8 *req_ie, size_t req_ie_len,
+                        const u8 *resp_ie, size_t resp_ie_len,
+                        u16 status, gfp_t gfp)
 {
     cfg80211_connect_bss(dev, bssid, NULL, req_ie, req_ie_len, resp_ie,
-                 resp_ie_len, status, gfp,
-                 NL80211_TIMEOUT_UNSPECIFIED);
+                         resp_ie_len, status, gfp,
+                         NL80211_TIMEOUT_UNSPECIFIED);
 }
 
 /**
@@ -6540,11 +6542,11 @@ cfg80211_connect_result(net_device *dev, const u8 *bssid,
  */
 static inline void
 cfg80211_connect_timeout(net_device *dev, const u8 *bssid,
-             const u8 *req_ie, size_t req_ie_len, gfp_t gfp,
-             enum nl80211_timeout_reason timeout_reason)
+                         const u8 *req_ie, size_t req_ie_len, gfp_t gfp,
+                         enum nl80211_timeout_reason timeout_reason)
 {
     cfg80211_connect_bss(dev, bssid, NULL, req_ie, req_ie_len, NULL, 0, -1,
-                 gfp, timeout_reason);
+                         gfp, timeout_reason);
 }
 
 /**
@@ -6589,7 +6591,7 @@ struct cfg80211_roam_info {
  * released while diconneting from the current bss.
  */
 void cfg80211_roamed(net_device *dev, struct cfg80211_roam_info *info,
-             gfp_t gfp);
+                     gfp_t gfp);
 
 /**
  * cfg80211_port_authorized - notify cfg80211 of successful security association
@@ -6606,7 +6608,7 @@ void cfg80211_roamed(net_device *dev, struct cfg80211_roam_info *info,
  * indicate the 802.11 association.
  */
 void cfg80211_port_authorized(net_device *dev, const u8 *bssid,
-                  gfp_t gfp);
+                              gfp_t gfp);
 
 /**
  * cfg80211_disconnected - notify cfg80211 that connection was dropped
@@ -6622,8 +6624,8 @@ void cfg80211_port_authorized(net_device *dev, const u8 *bssid,
  * and not try to connect to any AP any more.
  */
 void cfg80211_disconnected(net_device *dev, u16 reason,
-               const u8 *ie, size_t ie_len,
-               bool locally_generated, gfp_t gfp);
+                           const u8 *ie, size_t ie_len,
+                           bool locally_generated, gfp_t gfp);
 
 /**
  * cfg80211_ready_on_channel - notification of remain_on_channel start
@@ -6635,8 +6637,8 @@ void cfg80211_disconnected(net_device *dev, u16 reason,
  * @gfp: allocation flags
  */
 void cfg80211_ready_on_channel(struct wireless_dev *wdev, u64 cookie,
-                   struct ieee80211_channel *chan,
-                   unsigned int duration, gfp_t gfp);
+                               struct ieee80211_channel *chan,
+                               unsigned int duration, gfp_t gfp);
 
 /**
  * cfg80211_remain_on_channel_expired - remain_on_channel duration expired
@@ -6646,8 +6648,8 @@ void cfg80211_ready_on_channel(struct wireless_dev *wdev, u64 cookie,
  * @gfp: allocation flags
  */
 void cfg80211_remain_on_channel_expired(struct wireless_dev *wdev, u64 cookie,
-                    struct ieee80211_channel *chan,
-                    gfp_t gfp);
+                                        struct ieee80211_channel *chan,
+                                        gfp_t gfp);
 
 /**
  * cfg80211_tx_mgmt_expired - tx_mgmt duration expired
@@ -6657,7 +6659,7 @@ void cfg80211_remain_on_channel_expired(struct wireless_dev *wdev, u64 cookie,
  * @gfp: allocation flags
  */
 void cfg80211_tx_mgmt_expired(struct wireless_dev *wdev, u64 cookie,
-                  struct ieee80211_channel *chan, gfp_t gfp);
+                              struct ieee80211_channel *chan, gfp_t gfp);
 
 /**
  * cfg80211_sinfo_alloc_tid_stats - allocate per-tid statistics.
@@ -6689,7 +6691,7 @@ static inline void cfg80211_sinfo_release_content(struct station_info *sinfo)
  * @gfp: allocation flags
  */
 void cfg80211_new_sta(net_device *dev, const u8 *mac_addr,
-              struct station_info *sinfo, gfp_t gfp);
+                      struct station_info *sinfo, gfp_t gfp);
 
 /**
  * cfg80211_del_sta_sinfo - notify userspace about deletion of a station
@@ -6699,7 +6701,7 @@ void cfg80211_new_sta(net_device *dev, const u8 *mac_addr,
  * @gfp: allocation flags
  */
 void cfg80211_del_sta_sinfo(net_device *dev, const u8 *mac_addr,
-                struct station_info *sinfo, gfp_t gfp);
+                            struct station_info *sinfo, gfp_t gfp);
 
 /**
  * cfg80211_del_sta - notify userspace about deletion of a station
@@ -6709,7 +6711,7 @@ void cfg80211_del_sta_sinfo(net_device *dev, const u8 *mac_addr,
  * @gfp: allocation flags
  */
 static inline void cfg80211_del_sta(net_device *dev,
-                    const u8 *mac_addr, gfp_t gfp)
+                                    const u8 *mac_addr, gfp_t gfp)
 {
     cfg80211_del_sta_sinfo(dev, mac_addr, NULL, gfp);
 }
@@ -6730,8 +6732,8 @@ static inline void cfg80211_del_sta(net_device *dev,
  * nl80211_connect_failed_reason enum
  */
 void cfg80211_conn_failed(net_device *dev, const u8 *mac_addr,
-              enum nl80211_connect_failed_reason reason,
-              gfp_t gfp);
+                          enum nl80211_connect_failed_reason reason,
+                          gfp_t gfp);
 
 /**
  * cfg80211_rx_mgmt - notification of received, unprocessed management frame
@@ -6751,7 +6753,7 @@ void cfg80211_conn_failed(net_device *dev, const u8 *mac_addr,
  * driver is responsible for rejecting the frame.
  */
 bool cfg80211_rx_mgmt(struct wireless_dev *wdev, int freq, int sig_dbm,
-              const u8 *buf, size_t len, u32 flags);
+                      const u8 *buf, size_t len, u32 flags);
 
 /**
  * cfg80211_mgmt_tx_status - notification of TX status for management frame
@@ -6767,7 +6769,7 @@ bool cfg80211_rx_mgmt(struct wireless_dev *wdev, int freq, int sig_dbm,
  * transmission attempt.
  */
 void cfg80211_mgmt_tx_status(struct wireless_dev *wdev, u64 cookie,
-                 const u8 *buf, size_t len, bool ack, gfp_t gfp);
+                             const u8 *buf, size_t len, bool ack, gfp_t gfp);
 
 
 /**
@@ -6790,7 +6792,7 @@ void cfg80211_mgmt_tx_status(struct wireless_dev *wdev, u64 cookie,
  * Return: %true if the frame was passed to userspace
  */
 bool cfg80211_rx_control_port(net_device *dev,
-                  struct sk_buff *skb, bool unencrypted);
+                              struct sk_buff *skb, bool unencrypted);
 
 /**
  * cfg80211_cqm_rssi_notify - connection quality monitoring rssi event
@@ -6803,8 +6805,8 @@ bool cfg80211_rx_control_port(net_device *dev,
  * rssi threshold reached event occurs.
  */
 void cfg80211_cqm_rssi_notify(net_device *dev,
-                  enum nl80211_cqm_rssi_threshold_event rssi_event,
-                  s32 rssi_level, gfp_t gfp);
+                              enum nl80211_cqm_rssi_threshold_event rssi_event,
+                              s32 rssi_level, gfp_t gfp);
 
 /**
  * cfg80211_cqm_pktloss_notify - notify userspace about packetloss to peer
@@ -6816,7 +6818,7 @@ void cfg80211_cqm_rssi_notify(net_device *dev,
  * @gfp: context flags
  */
 void cfg80211_cqm_pktloss_notify(net_device *dev,
-                 const u8 *peer, u32 num_packets, gfp_t gfp);
+                                 const u8 *peer, u32 num_packets, gfp_t gfp);
 
 /**
  * cfg80211_cqm_txe_notify - TX error rate event
@@ -6831,7 +6833,7 @@ void cfg80211_cqm_pktloss_notify(net_device *dev,
  * given interval is exceeded.
  */
 void cfg80211_cqm_txe_notify(net_device *dev, const u8 *peer,
-                 u32 num_packets, u32 rate, u32 intvl, gfp_t gfp);
+                             u32 num_packets, u32 rate, u32 intvl, gfp_t gfp);
 
 /**
  * cfg80211_cqm_beacon_loss_notify - beacon loss event
@@ -6851,7 +6853,7 @@ void cfg80211_cqm_beacon_loss_notify(net_device *dev, gfp_t gfp);
  * This function is called when a radar is detected on the current chanenl.
  */
 void cfg80211_radar_event(struct wiphy *wiphy,
-              struct cfg80211_chan_def *chandef, gfp_t gfp);
+                          struct cfg80211_chan_def *chandef, gfp_t gfp);
 
 /**
  * cfg80211_sta_opmode_change_notify - STA's ht/vht operation mode change event
@@ -6864,8 +6866,8 @@ void cfg80211_radar_event(struct wiphy *wiphy,
  * frame.
  */
 void cfg80211_sta_opmode_change_notify(net_device *dev, const u8 *mac,
-                       struct sta_opmode_info *sta_opmode,
-                       gfp_t gfp);
+                                       struct sta_opmode_info *sta_opmode,
+                                       gfp_t gfp);
 
 /**
  * cfg80211_cac_event - Channel availability check (CAC) event
@@ -6879,8 +6881,8 @@ void cfg80211_sta_opmode_change_notify(net_device *dev, const u8 *mac,
  * also by full-MAC drivers.
  */
 void cfg80211_cac_event(net_device *netdev,
-            const struct cfg80211_chan_def *chandef,
-            enum nl80211_radar_event event, gfp_t gfp);
+                        const struct cfg80211_chan_def *chandef,
+                        enum nl80211_radar_event event, gfp_t gfp);
 
 
 /**
@@ -6891,7 +6893,7 @@ void cfg80211_cac_event(net_device *netdev,
  * @gfp: allocation flags
  */
 void cfg80211_gtk_rekey_notify(net_device *dev, const u8 *bssid,
-                   const u8 *replay_ctr, gfp_t gfp);
+                               const u8 *replay_ctr, gfp_t gfp);
 
 /**
  * cfg80211_pmksa_candidate_notify - notify about PMKSA caching candidate
@@ -6902,7 +6904,7 @@ void cfg80211_gtk_rekey_notify(net_device *dev, const u8 *bssid,
  * @gfp: allocation flags
  */
 void cfg80211_pmksa_candidate_notify(net_device *dev, int index,
-                     const u8 *bssid, bool preauth, gfp_t gfp);
+                                     const u8 *bssid, bool preauth, gfp_t gfp);
 
 /**
  * cfg80211_rx_spurious_frame - inform userspace about a spurious frame
@@ -6917,7 +6919,7 @@ void cfg80211_pmksa_candidate_notify(net_device *dev, int index,
  * for a reason other than not having a subscription.)
  */
 bool cfg80211_rx_spurious_frame(net_device *dev,
-                const u8 *addr, gfp_t gfp);
+                                const u8 *addr, gfp_t gfp);
 
 /**
  * cfg80211_rx_unexpected_4addr_frame - inform about unexpected WDS frame
@@ -6933,7 +6935,7 @@ bool cfg80211_rx_spurious_frame(net_device *dev,
  * for a reason other than not having a subscription.)
  */
 bool cfg80211_rx_unexpected_4addr_frame(net_device *dev,
-                    const u8 *addr, gfp_t gfp);
+                                        const u8 *addr, gfp_t gfp);
 
 /**
  * cfg80211_probe_status - notify userspace about probe status
@@ -6946,8 +6948,8 @@ bool cfg80211_rx_unexpected_4addr_frame(net_device *dev,
  * @gfp: allocation flags
  */
 void cfg80211_probe_status(net_device *dev, const u8 *addr,
-               u64 cookie, bool acked, s32 ack_signal,
-               bool is_valid_ack_signal, gfp_t gfp);
+                           u64 cookie, bool acked, s32 ack_signal,
+                           bool is_valid_ack_signal, gfp_t gfp);
 
 /**
  * cfg80211_report_obss_beacon - report beacon from other APs
@@ -6962,8 +6964,8 @@ void cfg80211_probe_status(net_device *dev, const u8 *addr,
  * netdev that is in AP/GO mode.
  */
 void cfg80211_report_obss_beacon(struct wiphy *wiphy,
-                 const u8 *frame, size_t len,
-                 int freq, int sig_dbm);
+                                 const u8 *frame, size_t len,
+                                 int freq, int sig_dbm);
 
 /**
  * cfg80211_reg_can_beacon - check if beaconing is allowed
@@ -6975,8 +6977,8 @@ void cfg80211_report_obss_beacon(struct wiphy *wiphy,
  * can be used for beaconing (i.e. is not a radar channel etc.)
  */
 bool cfg80211_reg_can_beacon(struct wiphy *wiphy,
-                 struct cfg80211_chan_def *chandef,
-                 enum nl80211_iftype iftype);
+                             struct cfg80211_chan_def *chandef,
+                             enum nl80211_iftype iftype);
 
 /**
  * cfg80211_reg_can_beacon_relax - check if beaconing is allowed with relaxation
@@ -6992,8 +6994,8 @@ bool cfg80211_reg_can_beacon(struct wiphy *wiphy,
  * Requires the RTNL to be held.
  */
 bool cfg80211_reg_can_beacon_relax(struct wiphy *wiphy,
-                   struct cfg80211_chan_def *chandef,
-                   enum nl80211_iftype iftype);
+                                   struct cfg80211_chan_def *chandef,
+                                   enum nl80211_iftype iftype);
 
 /*
  * cfg80211_ch_switch_notify - update wdev channel and notify userspace
@@ -7004,7 +7006,7 @@ bool cfg80211_reg_can_beacon_relax(struct wiphy *wiphy,
  * driver context!
  */
 void cfg80211_ch_switch_notify(net_device *dev,
-                   struct cfg80211_chan_def *chandef);
+                               struct cfg80211_chan_def *chandef);
 
 /*
  * cfg80211_ch_switch_started_notify - notify channel switch start
@@ -7017,8 +7019,8 @@ void cfg80211_ch_switch_notify(net_device *dev,
  * channel switch on other vifs), if necessary.
  */
 void cfg80211_ch_switch_started_notify(net_device *dev,
-                       struct cfg80211_chan_def *chandef,
-                       u8 count);
+                                       struct cfg80211_chan_def *chandef,
+                                       u8 count);
 
 /**
  * ieee80211_operating_class_to_band - convert operating class to band
@@ -7029,7 +7031,7 @@ void cfg80211_ch_switch_started_notify(net_device *dev,
  * Returns %true if the conversion was successful, %false otherwise.
  */
 bool ieee80211_operating_class_to_band(u8 operating_class,
-                       enum nl80211_band *band);
+                                       enum nl80211_band *band);
 
 /**
  * ieee80211_chandef_to_operating_class - convert chandef to operation class
@@ -7040,7 +7042,7 @@ bool ieee80211_operating_class_to_band(u8 operating_class,
  * Returns %true if the conversion was successful, %false otherwise.
  */
 bool ieee80211_chandef_to_operating_class(struct cfg80211_chan_def *chandef,
-                      u8 *op_class);
+                                          u8 *op_class);
 
 /*
  * cfg80211_tdls_oper_request - request userspace to perform TDLS operation
@@ -7058,8 +7060,8 @@ bool ieee80211_chandef_to_operating_class(struct cfg80211_chan_def *chandef,
  * based on traffic and signal strength for a peer).
  */
 void cfg80211_tdls_oper_request(net_device *dev, const u8 *peer,
-                enum nl80211_tdls_operation oper,
-                u16 reason_code, gfp_t gfp);
+                                enum nl80211_tdls_operation oper,
+                                u16 reason_code, gfp_t gfp);
 
 /*
  * cfg80211_calculate_bitrate - calculate actual bitrate (in 100Kbps units)
@@ -7107,7 +7109,7 @@ struct cfg80211_ft_event_params {
  * @ft_event: IE information
  */
 void cfg80211_ft_event(net_device *netdev,
-               struct cfg80211_ft_event_params *ft_event);
+                       struct cfg80211_ft_event_params *ft_event);
 
 /**
  * cfg80211_get_p2p_attr - find and copy a P2P attribute from IE buffer
@@ -7126,8 +7128,8 @@ void cfg80211_ft_event(net_device *netdev,
  * length of the found attribute (which can be zero).
  */
 int cfg80211_get_p2p_attr(const u8 *ies, unsigned int len,
-              enum ieee80211_p2p_attr_id attr,
-              u8 *buf, unsigned int bufsize);
+                          enum ieee80211_p2p_attr_id attr,
+                          u8 *buf, unsigned int bufsize);
 
 /**
  * ieee80211_ie_split_ric - split an IE buffer according to ordering (with RIC)
@@ -7157,9 +7159,9 @@ int cfg80211_get_p2p_attr(const u8 *ies, unsigned int len,
  * of the buffer should be used.
  */
 size_t ieee80211_ie_split_ric(const u8 *ies, size_t ielen,
-                  const u8 *ids, int n_ids,
-                  const u8 *after_ric, int n_after_ric,
-                  size_t offset);
+                              const u8 *ids, int n_ids,
+                              const u8 *after_ric, int n_after_ric,
+                              size_t offset);
 
 /**
  * ieee80211_ie_split - split an IE buffer according to ordering
@@ -7187,7 +7189,7 @@ size_t ieee80211_ie_split_ric(const u8 *ies, size_t ielen,
  * of the buffer should be used.
  */
 static inline size_t ieee80211_ie_split(const u8 *ies, size_t ielen,
-                    const u8 *ids, int n_ids, size_t offset)
+                                        const u8 *ids, int n_ids, size_t offset)
 {
     return ieee80211_ie_split_ric(ies, ielen, ids, n_ids, NULL, 0, offset);
 }
@@ -7204,8 +7206,8 @@ static inline size_t ieee80211_ie_split(const u8 *ies, size_t ielen,
  * else caused the wakeup.
  */
 void cfg80211_report_wowlan_wakeup(struct wireless_dev *wdev,
-                   struct cfg80211_wowlan_wakeup *wakeup,
-                   gfp_t gfp);
+                                   struct cfg80211_wowlan_wakeup *wakeup,
+                                   gfp_t gfp);
 
 /**
  * cfg80211_crit_proto_stopped() - indicate critical protocol stopped by driver.
@@ -7238,7 +7240,7 @@ unsigned int ieee80211_get_num_supported_channels(struct wiphy *wiphy);
  * the interface combinations.
  */
 int cfg80211_check_combinations(struct wiphy *wiphy,
-                struct iface_combination_params *params);
+                                struct iface_combination_params *params);
 
 /**
  * cfg80211_iter_combinations - iterate over matching combinations
@@ -7253,10 +7255,10 @@ int cfg80211_check_combinations(struct wiphy *wiphy,
  * purposes.
  */
 int cfg80211_iter_combinations(struct wiphy *wiphy,
-                   struct iface_combination_params *params,
-                   void (*iter)(const struct ieee80211_iface_combination *c,
-                        void *data),
-                   void *data);
+                               struct iface_combination_params *params,
+                               void (*iter)(const struct ieee80211_iface_combination *c,
+                               void *data),
+                               void *data);
 
 /*
  * cfg80211_stop_iface - trigger interface disconnection
@@ -7271,7 +7273,7 @@ int cfg80211_iter_combinations(struct wiphy *wiphy,
  * Note: This doesn't need any locks and is asynchronous.
  */
 void cfg80211_stop_iface(struct wiphy *wiphy, struct wireless_dev *wdev,
-             gfp_t gfp);
+                         gfp_t gfp);
 
 /**
  * cfg80211_shutdown_all_interfaces - shut down all interfaces for a wiphy
@@ -7297,10 +7299,10 @@ void cfg80211_shutdown_all_interfaces(struct wiphy *wiphy);
  * &struct wiphy.@ext_features)
  */
 static inline void wiphy_ext_feature_set(struct wiphy *wiphy,
-                     enum nl80211_ext_feature_index ftidx)
+                                         enum nl80211_ext_feature_index ftidx)
 {
     u8 *ft_byte;
-
+    
     ft_byte = &wiphy->ext_features[ftidx / 8];
     *ft_byte |= BIT(ftidx % 8);
 }
@@ -7316,10 +7318,10 @@ static inline void wiphy_ext_feature_set(struct wiphy *wiphy,
  */
 static inline bool
 wiphy_ext_feature_isset(struct wiphy *wiphy,
-            enum nl80211_ext_feature_index ftidx)
+                        enum nl80211_ext_feature_index ftidx)
 {
     u8 ft_byte;
-
+    
     ft_byte = wiphy->ext_features[ftidx / 8];
     return (ft_byte & BIT(ftidx % 8)) != 0;
 }
@@ -7367,7 +7369,7 @@ struct cfg80211_nan_match_params {
  * was sent. It can also be a follow up that was received.
  */
 void cfg80211_nan_match(struct wireless_dev *wdev,
-            struct cfg80211_nan_match_params *match, gfp_t gfp);
+                        struct cfg80211_nan_match_params *match, gfp_t gfp);
 
 /**
  * cfg80211_nan_func_terminated - notify about NAN function termination.
@@ -7381,9 +7383,9 @@ void cfg80211_nan_match(struct wireless_dev *wdev,
  * This function reports that the a NAN function is terminated.
  */
 void cfg80211_nan_func_terminated(struct wireless_dev *wdev,
-                  u8 inst_id,
-                  enum nl80211_nan_func_term_reason reason,
-                  u64 cookie, gfp_t gfp);
+                                  u8 inst_id,
+                                  enum nl80211_nan_func_term_reason reason,
+                                  u64 cookie, gfp_t gfp);
 
 /* ethtool helper */
 void cfg80211_get_drvinfo(net_device *dev, struct ethtool_drvinfo *info);
@@ -7396,8 +7398,8 @@ void cfg80211_get_drvinfo(net_device *dev, struct ethtool_drvinfo *info);
  * Returns: 0 on success, < 0 on error
  */
 int cfg80211_external_auth_request(net_device *netdev,
-                   struct cfg80211_external_auth_params *params,
-                   gfp_t gfp);
+                                   struct cfg80211_external_auth_params *params,
+                                   gfp_t gfp);
 
 /**
  * cfg80211_pmsr_report - report peer measurement result data
@@ -7407,9 +7409,9 @@ int cfg80211_external_auth_request(net_device *netdev,
  * @gfp: allocation flags
  */
 void cfg80211_pmsr_report(struct wireless_dev *wdev,
-              struct cfg80211_pmsr_request *req,
-              struct cfg80211_pmsr_result *result,
-              gfp_t gfp);
+                          struct cfg80211_pmsr_request *req,
+                          struct cfg80211_pmsr_result *result,
+                          gfp_t gfp);
 
 /**
  * cfg80211_pmsr_complete - report peer measurement completed
@@ -7421,8 +7423,8 @@ void cfg80211_pmsr_report(struct wireless_dev *wdev,
  * the request pointer will no longer be valid.
  */
 void cfg80211_pmsr_complete(struct wireless_dev *wdev,
-                struct cfg80211_pmsr_request *req,
-                gfp_t gfp);
+                            struct cfg80211_pmsr_request *req,
+                            gfp_t gfp);
 
 /**
  * cfg80211_iftype_allowed - check whether the interface can be allowed
@@ -7436,7 +7438,7 @@ void cfg80211_pmsr_complete(struct wireless_dev *wdev,
  * check_swif is '1'.
  */
 bool cfg80211_iftype_allowed(struct wiphy *wiphy, enum nl80211_iftype iftype,
-                 bool is_4addr, u8 check_swif);
+                             bool is_4addr, u8 check_swif);
 
 
 /* Logging, debugging and troubleshooting/diagnostic helpers. */
@@ -7444,41 +7446,41 @@ bool cfg80211_iftype_allowed(struct wiphy *wiphy, enum nl80211_iftype iftype,
 /* wiphy_printk helpers, similar to dev_printk */
 
 #define wiphy_printk(level, wiphy, format, args...)        \
-    dev_printk(level, &(wiphy)->dev, format, ##args)
+dev_printk(level, &(wiphy)->dev, format, ##args)
 #define wiphy_emerg(wiphy, format, args...)            \
-    dev_emerg(&(wiphy)->dev, format, ##args)
+dev_emerg(&(wiphy)->dev, format, ##args)
 #define wiphy_alert(wiphy, format, args...)            \
-    dev_alert(&(wiphy)->dev, format, ##args)
+dev_alert(&(wiphy)->dev, format, ##args)
 #define wiphy_crit(wiphy, format, args...)            \
-    dev_crit(&(wiphy)->dev, format, ##args)
+dev_crit(&(wiphy)->dev, format, ##args)
 #define wiphy_err(wiphy, format, args...)            \
-    dev_err(&(wiphy)->dev, format, ##args)
+dev_err(&(wiphy)->dev, format, ##args)
 #define wiphy_warn(wiphy, format, args...)            \
-    dev_warn(&(wiphy)->dev, format, ##args)
+dev_warn(&(wiphy)->dev, format, ##args)
 #define wiphy_notice(wiphy, format, args...)            \
-    dev_notice(&(wiphy)->dev, format, ##args)
+dev_notice(&(wiphy)->dev, format, ##args)
 #define wiphy_info(wiphy, format, args...)            \
-    dev_info(&(wiphy)->dev, format, ##args)
+dev_info(&(wiphy)->dev, format, ##args)
 
 #define wiphy_err_ratelimited(wiphy, format, args...)        \
-    dev_err_ratelimited(&(wiphy)->dev, format, ##args)
+dev_err_ratelimited(&(wiphy)->dev, format, ##args)
 #define wiphy_warn_ratelimited(wiphy, format, args...)        \
-    dev_warn_ratelimited(&(wiphy)->dev, format, ##args)
+dev_warn_ratelimited(&(wiphy)->dev, format, ##args)
 
 #define wiphy_debug(wiphy, format, args...)            \
-    wiphy_printk(KERN_DEBUG, wiphy, format, ##args)
+wiphy_printk(KERN_DEBUG, wiphy, format, ##args)
 
 #define wiphy_dbg(wiphy, format, args...)            \
-    dev_dbg(&(wiphy)->dev, format, ##args)
+dev_dbg(&(wiphy)->dev, format, ##args)
 
 #if defined(VERBOSE_DEBUG)
 #define wiphy_vdbg    wiphy_dbg
 #else
 #define wiphy_vdbg(wiphy, format, args...)                \
 ({                                    \
-    if (0)                                \
-        wiphy_printk(KERN_DEBUG, wiphy, format, ##args);    \
-    0;                                \
+if (0)                                \
+wiphy_printk(KERN_DEBUG, wiphy, format, ##args);    \
+0;                                \
 })
 #endif
 
@@ -7488,7 +7490,7 @@ bool cfg80211_iftype_allowed(struct wiphy *wiphy, enum nl80211_iftype iftype,
  * file/line information and a backtrace.
  */
 #define wiphy_WARN(wiphy, format, args...)            \
-    WARN(1, "wiphy: %s\n" format, wiphy_name(wiphy), ##args);
+WARN(1, "wiphy: %s\n" format, wiphy_name(wiphy), ##args);
 
 /**
  * cfg80211_update_owe_info_event - Notify the peer's OWE info to user space
@@ -7497,7 +7499,7 @@ bool cfg80211_iftype_allowed(struct wiphy *wiphy, enum nl80211_iftype iftype,
  * @gfp: allocation flags
  */
 void cfg80211_update_owe_info_event(net_device *netdev,
-                    struct cfg80211_update_owe_info *owe_info,
-                    gfp_t gfp);
+                                    struct cfg80211_update_owe_info *owe_info,
+                                    gfp_t gfp);
 
 #endif /* cfg80211_h */

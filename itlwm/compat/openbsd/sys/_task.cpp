@@ -6,6 +6,20 @@
 //  Copyright © 2020 钟先耀. All rights reserved.
 //
 
+/*
+* Copyright (C) 2020  钟先耀
+*
+* This program is free software; you can redistribute it and/or modify
+* it under the terms of the GNU General Public License as published by
+* the Free Software Foundation; either version 2 of the License, or
+* (at your option) any later version.
+*
+* This program is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+* GNU General Public License for more details.
+*/
+
 #include "_task.h"
 #include <sys/proc.h>
 
@@ -119,7 +133,7 @@ taskq_thread(void *xtq)
 
     while (taskq_next_work(tq, &work)) {
 //        WITNESS_LOCK(&tq->tq_lock_object, 0);
-//        IOLog("itlwm: taskq worker thread=%lld work=%lld\n", thread_tid(current_thread()), &work);
+        IOLog("itlwm: taskq worker thread=%lld work=%lld\n", thread_tid(current_thread()), &work);
         (*work.t_func)(work.t_arg);
 //        IOLog("itlwm: taskq worker thread=%lld work=%lld done", thread_tid(current_thread()), &work);
 //        _fCommandGate->runAction(taskq_run, tq, &work);
@@ -304,6 +318,8 @@ task_del(struct taskq *tq, struct task *w)
 {
     int rv = 0;
 //    IOLog("itlwm: taskq task_del task=%lld\n", w);
+    if (!ISSET(w->t_flags, TASK_ONQUEUE))
+        return (0);
 
     lck_mtx_lock(tq->tq_mtx);
     if (ISSET(w->t_flags, TASK_ONQUEUE)) {

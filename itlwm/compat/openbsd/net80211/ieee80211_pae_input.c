@@ -1,3 +1,16 @@
+/*
+* Copyright (C) 2020  钟先耀
+*
+* This program is free software; you can redistribute it and/or modify
+* it under the terms of the GNU General Public License as published by
+* the Free Software Foundation; either version 2 of the License, or
+* (at your option) any later version.
+*
+* This program is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+* GNU General Public License for more details.
+*/
 /*	$OpenBSD: ieee80211_pae_input.c,v 1.33 2019/09/02 12:54:21 stsp Exp $	*/
 
 /*-
@@ -88,64 +101,85 @@ ieee80211_eapol_key_input(struct ieee80211com *ic, mbuf_t m,
 
 	eh = mtod(m, struct ether_header *);
 	if (IEEE80211_IS_MULTICAST(eh->ether_dhost)) {
+        XYLog("%s %d error, eh->ether_dhost=%s\n", __FUNCTION__, __LINE__, ether_sprintf(eh->ether_dhost));
 		ifp->if_imcasts++;
 		goto done;
 	}
 	mbuf_adj(m, sizeof(*eh));
 
-	if (mbuf_pkthdr_len(m) < sizeof(*key))
+    if (mbuf_pkthdr_len(m) < sizeof(*key)) {
+        XYLog("%s %d error, mbuf_pkthdr_len(m)=%d\n", __FUNCTION__, __LINE__, mbuf_pkthdr_len(m));
 		goto done;
+    }
 	if (mbuf_len(m) < sizeof(*key) &&
 	    mbuf_pullup(&m, sizeof(*key))) {
+        XYLog("%s %d error, m==NULL %s\n", __FUNCTION__, __LINE__, m==NULL?"true":"false");
 		ic->ic_stats.is_rx_nombuf++;
 		goto done;
 	}
 	key = mtod(m, struct ieee80211_eapol_key *);
 
-	if (key->type != EAPOL_KEY)
+    if (key->type != EAPOL_KEY) {
+        XYLog("%s %d error, key->type=%d\n", __FUNCTION__, __LINE__, key->type);
 		goto done;
+    }
 	ic->ic_stats.is_rx_eapol_key++;
 
 	if ((ni->ni_rsnprotos == IEEE80211_PROTO_RSN &&
 	     key->desc != EAPOL_KEY_DESC_IEEE80211) ||
 	    (ni->ni_rsnprotos == IEEE80211_PROTO_WPA &&
-	     key->desc != EAPOL_KEY_DESC_WPA))
+         key->desc != EAPOL_KEY_DESC_WPA)) {
+        XYLog("%s %d error, ni->ni_rsnprotos=%d, key->desc=%d\n", __FUNCTION__, __LINE__, ni->ni_rsnprotos, key->desc);
 		goto done;
+    }
 
 	/* check packet body length */
 	bodylen = BE_READ_2(key->len);
 	totlen = 4 + bodylen;
-	if (mbuf_pkthdr_len(m) < totlen || totlen > MCLBYTES)
+    if (mbuf_pkthdr_len(m) < totlen || totlen > MCLBYTES) {
+        XYLog("%s %d error, totlen=%d, pkt_hdr_len=%d\n", __FUNCTION__, __LINE__, totlen, mbuf_pkthdr_len(m));
 		goto done;
+    }
 
 	/* check key data length */
 	paylen = BE_READ_2(key->paylen);
-	if (paylen > totlen - sizeof(*key))
+    if (paylen > totlen - sizeof(*key)) {
+        XYLog("%s %d error, paylen=%d, key->paylen=%d\n", __FUNCTION__, __LINE__, paylen, key->paylen);
 		goto done;
+    }
 
 	info = BE_READ_2(key->info);
 
 	/* discard EAPOL-Key frames with an unknown descriptor version */
 	desc = info & EAPOL_KEY_VERSION_MASK;
-	if (desc < EAPOL_KEY_DESC_V1 || desc > EAPOL_KEY_DESC_V3)
+    if (desc < EAPOL_KEY_DESC_V1 || desc > EAPOL_KEY_DESC_V3) {
+        XYLog("%s %d error, desc=%d, info=%d\n", __FUNCTION__, __LINE__, desc, info);
 		goto done;
+    }
 
 	if (ieee80211_is_sha256_akm((enum ieee80211_akm)ni->ni_rsnakms)) {
-		if (desc != EAPOL_KEY_DESC_V3)
+        if (desc != EAPOL_KEY_DESC_V3) {
+            XYLog("%s %d error, desc=%d, info=%d\n", __FUNCTION__, __LINE__, desc, info);
 			goto done;
+        }
 	} else if (ni->ni_rsncipher == IEEE80211_CIPHER_CCMP ||
 	     ni->ni_rsngroupcipher == IEEE80211_CIPHER_CCMP) {
-		if (desc != EAPOL_KEY_DESC_V2)
+        if (desc != EAPOL_KEY_DESC_V2) {
+            XYLog("%s %d error, desc=%d, info=%d\n", __FUNCTION__, __LINE__, desc, info);
 			goto done;
+        }
 	}
 
 	/* make sure the key data field is contiguous */
 	if (mbuf_len(m) < totlen && mbuf_pullup(&m, totlen)) {
+        XYLog("%s %d error, mbuf_len(m)=%d\n", __FUNCTION__, __LINE__, mbuf_len(m));
 		ic->ic_stats.is_rx_nombuf++;
 		goto done;
 	}
 	key = mtod(m, struct ieee80211_eapol_key *);
 
+    XYLog("%s %d info=%d\n", __FUNCTION__, __LINE__, info);
+    
 	/* determine message type (see 8.5.3.7) */
 	if (info & EAPOL_KEY_REQUEST) {
 #ifndef IEEE80211_STA_ONLY

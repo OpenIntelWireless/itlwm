@@ -1,4 +1,18 @@
 /* add your code here */
+
+/*
+* Copyright (C) 2020  钟先耀
+*
+* This program is free software; you can redistribute it and/or modify
+* it under the terms of the GNU General Public License as published by
+* the Free Software Foundation; either version 2 of the License, or
+* (at your option) any later version.
+*
+* This program is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+* GNU General Public License for more details.
+*/
 #include "compat.h"
 #include "itlhdr.h"
 #include "kernel.h"
@@ -55,8 +69,8 @@ public:
     void wakeupOn(void* ident);
     static bool intrFilter(OSObject *object, IOFilterInterruptEventSource *src);
     static IOReturn _iwm_start_task(OSObject *target, void *arg0, void *arg1, void *arg2, void *arg3);
-    virtual bool createWorkLoop() override;
-    virtual IOWorkLoop* getWorkLoop() const override;
+//    virtual bool createWorkLoop() override;
+//    virtual IOWorkLoop* getWorkLoop() const override;
     
     bool createMediumTables(const IONetworkMedium **primary);
     IOReturn getPacketFilters(const OSSymbol *group, UInt32 *filters) const override;

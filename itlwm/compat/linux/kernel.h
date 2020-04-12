@@ -1,10 +1,4 @@
-//
-//  kernel.h
-//  AppleIntelWifiAdapter
-//
-//  Created by qcwap on 2020/1/5.
-//  Copyright © 2020 钟先耀. All rights reserved.
-//
+/* SPDX-License-Identifier: GPL-2.0 */
 
 #ifndef kernel_h
 #define kernel_h

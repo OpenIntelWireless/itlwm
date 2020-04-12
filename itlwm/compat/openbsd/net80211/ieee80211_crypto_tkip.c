@@ -1,3 +1,16 @@
+/*
+* Copyright (C) 2020  钟先耀
+*
+* This program is free software; you can redistribute it and/or modify
+* it under the terms of the GNU General Public License as published by
+* the Free Software Foundation; either version 2 of the License, or
+* (at your option) any later version.
+*
+* This program is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+* GNU General Public License for more details.
+*/
 /*	$OpenBSD: ieee80211_crypto_tkip.c,v 1.30 2018/11/09 14:14:31 claudio Exp $	*/
 
 /*-
@@ -197,6 +210,10 @@ ieee80211_tkip_encrypt(struct ieee80211com *ic, mbuf_t m0,
     unsigned int max_chunks = 1;
     struct ifnet *ifp = &ic->ic_ac.ac_if;
 
+    if (m0 == NULL) {
+        XYLog("%s, m0==NULL\n", __FUNCTION__);
+        return NULL;
+    }
 //    mbuf_get(MBUF_DONTWAIT, mbuf_type(m0), &n0);
     mbuf_allocpacket(MBUF_DONTWAIT, mbuf_get_mlen(), &max_chunks, &n0);
 	if (n0 == NULL)

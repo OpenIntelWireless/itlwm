@@ -1,3 +1,16 @@
+/*
+* Copyright (C) 2020  钟先耀
+*
+* This program is free software; you can redistribute it and/or modify
+* it under the terms of the GNU General Public License as published by
+* the Free Software Foundation; either version 2 of the License, or
+* (at your option) any later version.
+*
+* This program is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+* GNU General Public License for more details.
+*/
 /*	$OpenBSD: ieee80211_crypto_ccmp.c,v 1.21 2018/11/09 14:14:31 claudio Exp $	*/
 
 /*-
@@ -178,6 +191,10 @@ ieee80211_ccmp_encrypt(struct ieee80211com *ic, mbuf_t m0,
     mbuf_t temp;
     unsigned int max_chunks = 1;
 
+    if (m0 == NULL) {
+        XYLog("%s, m0==NULL\n", __FUNCTION__);
+        return NULL;
+    }
     mbuf_allocpacket(MBUF_DONTWAIT, mbuf_get_mhlen(), &max_chunks, &n0);
 	if (n0 == NULL)
 		goto nospace;

@@ -1,10 +1,123 @@
-//
-//  rx.cpp
-//  itlwm
-//
-//  Created by 钟先耀 on 2020/2/19.
-//  Copyright © 2020 钟先耀. All rights reserved.
-//
+/*
+* Copyright (C) 2020  钟先耀
+*
+* This program is free software; you can redistribute it and/or modify
+* it under the terms of the GNU General Public License as published by
+* the Free Software Foundation; either version 2 of the License, or
+* (at your option) any later version.
+*
+* This program is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+* GNU General Public License for more details.
+*/
+/*    $OpenBSD: if_iwm.c,v 1.307 2020/04/09 21:36:50 stsp Exp $    */
+
+/*
+ * Copyright (c) 2014, 2016 genua gmbh <info@genua.de>
+ *   Author: Stefan Sperling <stsp@openbsd.org>
+ * Copyright (c) 2014 Fixup Software Ltd.
+ * Copyright (c) 2017 Stefan Sperling <stsp@openbsd.org>
+ *
+ * Permission to use, copy, modify, and distribute this software for any
+ * purpose with or without fee is hereby granted, provided that the above
+ * copyright notice and this permission notice appear in all copies.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+ * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+ * MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+ * ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+ * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+ */
+
+/*-
+ * Based on BSD-licensed source modules in the Linux iwlwifi driver,
+ * which were used as the reference documentation for this implementation.
+ *
+ ***********************************************************************
+ *
+ * This file is provided under a dual BSD/GPLv2 license.  When using or
+ * redistributing this file, you may do so under either license.
+ *
+ * GPL LICENSE SUMMARY
+ *
+ * Copyright(c) 2007 - 2013 Intel Corporation. All rights reserved.
+ * Copyright(c) 2013 - 2015 Intel Mobile Communications GmbH
+ * Copyright(c) 2016 Intel Deutschland GmbH
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of version 2 of the GNU General Public License as
+ * published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110,
+ * USA
+ *
+ * The full GNU General Public License is included in this distribution
+ * in the file called COPYING.
+ *
+ * Contact Information:
+ *  Intel Linux Wireless <ilw@linux.intel.com>
+ * Intel Corporation, 5200 N.E. Elam Young Parkway, Hillsboro, OR 97124-6497
+ *
+ *
+ * BSD LICENSE
+ *
+ * Copyright(c) 2005 - 2013 Intel Corporation. All rights reserved.
+ * Copyright(c) 2013 - 2015 Intel Mobile Communications GmbH
+ * Copyright(c) 2016 Intel Deutschland GmbH
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ *
+ *  * Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ *  * Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
+ *    the documentation and/or other materials provided with the
+ *    distribution.
+ *  * Neither the name Intel Corporation nor the names of its
+ *    contributors may be used to endorse or promote products derived
+ *    from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+
+/*-
+ * Copyright (c) 2007-2010 Damien Bergamini <damien.bergamini@free.fr>
+ *
+ * Permission to use, copy, modify, and distribute this software for any
+ * purpose with or without fee is hereby granted, provided that the above
+ * copyright notice and this permission notice appear in all copies.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+ * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+ * MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+ * ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+ * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+ */
 
 #include "itlwm.hpp"
 
@@ -156,37 +269,40 @@ iwm_rx_addbuf(struct iwm_softc *sc, int size, int idx)
     int err;
     int fatal = 0;
     unsigned int maxChunks = 1;
+    IOPhysicalSegment seg;
     
-    m = allocatePacket(IWM_RBUF_SIZE);
+//    mbuf_allocpacket(MBUF_WAITOK, size, NULL, &m);
     
+    m = allocatePacket(size);
+//
     if (m == NULL) {
         XYLog("%s allocatePacket==NULL\n", __FUNCTION__);
         return ENOMEM;
     }
-    //    mbuf_gethdr(MBUF_DONTWAIT, MT_DATA, &m);
-    //    if (m == NULL)
-    //        return ENOBUFS;
-    //
-    //    if (size <= MCLBYTES) {
-    //        mbuf_mclget(MBUF_DONTWAIT, MT_DATA, &m);
-    //    } else {
-    //        mbuf_getcluster(MBUF_DONTWAIT, MT_DATA, IWM_RBUF_SIZE, &m);
-    //    }
-    //    if ((mbuf_flags(m) & MBUF_EXT) == 0) {
-    //        mbuf_freem(m);
-    //        return ENOBUFS;
-    //    }
-    //
-    //    if (data->m != NULL) {
-    ////        bus_dmamap_unload(sc->sc_dmat, data->map);
-    //        fatal = 1;
-    //    }
-    //
-    //    mbuf_setlen(m, mbuf_maxlen(m));
-    //    mbuf_pkthdr_setlen(m, mbuf_maxlen(m));
+//        mbuf_gethdr(MBUF_DONTWAIT, MT_DATA, &m);
+//        if (m == NULL)
+//            return ENOBUFS;
+//
+//        if (size <= MCLBYTES) {
+//            mbuf_mclget(MBUF_DONTWAIT, MT_DATA, &m);
+//        } else {
+//            mbuf_getcluster(MBUF_DONTWAIT, MT_DATA, IWM_RBUF_SIZE, &m);
+//        }
+//        if ((mbuf_flags(m) & MBUF_EXT) == 0) {
+//            mbuf_freem(m);
+//            return ENOBUFS;
+//        }
+//
+//        if (data->m != NULL) {
+//    //        bus_dmamap_unload(sc->sc_dmat, data->map);
+//            fatal = 1;
+//        }
+    
+//        mbuf_setlen(m, size);
+//        mbuf_pkthdr_setlen(m, size);
     //    m->m_len = m->m_pkthdr.len = m->m_ext.ext_size;
 //    err = bus_dmamap_load(data->map, m);
-    data->map->dm_nsegs = data->map->cursor->getPhysicalSegments(m, &data->map->dm_segs[0], 1);
+    data->map->dm_nsegs = data->map->cursor->getPhysicalSegments(m, &seg, 1);
     XYLog("map rx dm_nsegs=%d\n", data->map->dm_nsegs);
     if (data->map->dm_nsegs == 0) {
         XYLog("RX Map new address FAIL!!!!\n");
@@ -202,13 +318,13 @@ iwm_rx_addbuf(struct iwm_softc *sc, int size, int idx)
     /* Update RX descriptor. */
     if (sc->sc_mqrx_supported) {
         ((uint64_t *)ring->desc)[idx] =
-        htole64(data->map->dm_segs[0].location);
+        htole64(seg.location);
         //        bus_dmamap_sync(sc->sc_dmat, ring->free_desc_dma.map,
         //            idx * sizeof(uint64_t), sizeof(uint64_t),
         //            BUS_DMASYNC_PREWRITE);
     } else {
         ((uint32_t *)ring->desc)[idx] =
-        htole32(data->map->dm_segs[0].location >> 8);
+        htole32(seg.location >> 8);
         //        bus_dmamap_sync(sc->sc_dmat, ring->free_desc_dma.map,
         //            idx * sizeof(uint32_t), sizeof(uint32_t),
         //            BUS_DMASYNC_PREWRITE);
