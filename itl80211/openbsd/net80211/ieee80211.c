@@ -274,8 +274,8 @@ ieee80211_chan2ieee(struct ieee80211com *ic, const struct ieee80211_channel *c)
     else if (c == IEEE80211_CHAN_ANYC)
         return IEEE80211_CHAN_ANY;
     
-    panic("%s: bogus channel pointer", ifp->if_xname);
-    return 0;
+    DPRINTF(("严重%s: bogus channel pointer", ifp->if_xname));
+    return IEEE80211_CHAN_ANY;
 }
 
 /*

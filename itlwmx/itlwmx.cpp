@@ -95,7 +95,6 @@ bool itlwmx::createMediumTables(const IONetworkMedium **primary)
 bool itlwmx::start(IOService *provider)
 {
     ifnet *ifp;
-    thread_t new_thread;
     
     if (!super::start(provider)) {
         return false;
@@ -202,12 +201,43 @@ void itlwmx::free()
     super::free();
 }
 
+ieee80211_wpaparams wpa;
+ieee80211_wpapsk psk;
+ieee80211_nwkey nwkey;
+ieee80211_join join;
+const char *ssid_name = "ssdt";
+const char *ssid_pwd = "zxyssdt112233";
+
+#include "sha1.h"
+
 IOReturn itlwmx::enable(IONetworkInterface *netif)
 {
     XYLog("%s\n", __FUNCTION__);
     super::enable(netif);
     fCommandGate->enable();
     setLinkStatus(kIONetworkLinkValid | kIONetworkLinkActive, getCurrentMedium());
+    memset(&wpa, 0, sizeof(ieee80211_wpaparams));
+    wpa.i_enabled = 1;
+    wpa.i_ciphers = IEEE80211_WPA_CIPHER_CCMP | IEEE80211_WPA_CIPHER_TKIP;
+    wpa.i_groupcipher = IEEE80211_WPA_CIPHER_CCMP | IEEE80211_WPA_CIPHER_TKIP;
+    wpa.i_protos = IEEE80211_WPA_PROTO_WPA1 | IEEE80211_WPA_PROTO_WPA2;
+    wpa.i_akms = IEEE80211_WPA_AKM_PSK | IEEE80211_WPA_AKM_8021X | IEEE80211_WPA_AKM_SHA256_PSK | IEEE80211_WPA_AKM_SHA256_8021X;
+    memcpy(wpa.i_name, "zxy", strlen("zxy"));
+    memset(&psk, 0, sizeof(ieee80211_wpapsk));
+    memcpy(psk.i_name, "zxy", strlen("zxy"));
+    psk.i_enabled = 1;
+    pbkdf2_sha1(ssid_pwd, (const uint8_t*)ssid_name, strlen(ssid_name),
+                4096, psk.i_psk , 32);
+    memset(&nwkey, 0, sizeof(ieee80211_nwkey));
+    nwkey.i_wepon = 0;
+    nwkey.i_defkid = 0;
+    memset(&join, 0, sizeof(ieee80211_join));
+    join.i_wpaparams = wpa;
+    join.i_wpapsk = psk;
+    join.i_flags = IEEE80211_JOIN_WPAPSK | IEEE80211_JOIN_ANY | IEEE80211_JOIN_WPA | IEEE80211_JOIN_8021X;
+    join.i_nwkey = nwkey;
+    join.i_len = strlen(ssid_name);
+    memcpy(join.i_nwid, ssid_name, join.i_len);
     return kIOReturnSuccess;
 }
 

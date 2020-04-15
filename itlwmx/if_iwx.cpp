@@ -308,7 +308,7 @@ iwx_ctxt_info_free_paging(struct iwx_softc *sc)
 	for (i = 0; i < dram->paging_cnt; i++)
 		iwx_dma_contig_free(dram->paging);
 
-	free(dram->paging);
+	IOFree(dram->paging, dram->paging_cnt * sizeof(*dram->paging));
 	dram->paging_cnt = 0;
 	dram->paging = NULL;
 }
@@ -343,10 +343,10 @@ iwx_init_fw_sec(struct iwx_softc *sc, const struct iwx_fw_sects *fws,
 	/* add 2 due to separators */
 	paging_cnt = iwx_get_num_sections(fws, lmac_cnt + umac_cnt + 2);
 
-	dram->fw = (struct iwx_dma_info *)mallocarray(umac_cnt + lmac_cnt, sizeof(*dram->fw), 0, M_ZERO | M_NOWAIT);
+	dram->fw = (struct iwx_dma_info *)kcalloc(umac_cnt + lmac_cnt, sizeof(*dram->fw));
 	if (!dram->fw)
 		return ENOMEM;
-	dram->paging = (struct iwx_dma_info *)mallocarray(paging_cnt, sizeof(*dram->paging), 0, M_ZERO | M_NOWAIT);
+	dram->paging = (struct iwx_dma_info *)kcalloc(paging_cnt, sizeof(*dram->paging));
 	if (!dram->paging)
 		return ENOMEM;
 
@@ -549,6 +549,7 @@ monitor:
 int itlwmx::
 iwx_ctxt_info_init(struct iwx_softc *sc, const struct iwx_fw_sects *fws)
 {
+    XYLog("%s\n", __FUNCTION__);
 	struct iwx_context_info *ctxt_info;
 	struct iwx_context_info_rbd_cfg *rx_cfg;
 	uint32_t control_flags = 0, rb_size;
@@ -633,7 +634,7 @@ iwx_ctxt_info_free_fw_img(struct iwx_softc *sc)
 	for (i = 0; i < dram->fw_cnt; i++)
 		iwx_dma_contig_free(&dram->fw[i]);
 
-	free(dram->fw);
+	IOFree(dram->fw, dram->fw_cnt * sizeof(*dram->fw));
 	dram->fw_cnt = 0;
 	dram->fw = NULL;
 }
@@ -1103,8 +1104,9 @@ iwx_read_firmware(struct iwx_softc *sc)
 			break;
 
 		default:
-			err = EINVAL;
-			goto parse_out;
+//			err = EINVAL;
+//			goto parse_out;
+            break;
 		}
 
 		len -= roundup(tlv_len, 4);
@@ -1296,7 +1298,7 @@ iwx_clear_bits_prph(struct iwx_softc *sc, uint32_t reg, uint32_t bits)
 }
 
 IOBufferMemoryDescriptor* allocDmaMemory
-( size_t size, int alignment, void** vaddr, uint64_t* paddr )
+( struct iwx_dma_info *dma, size_t size, int alignment )
 {
     size_t        reqsize;
     uint64_t    phymask;
@@ -1319,28 +1321,30 @@ IOBufferMemoryDescriptor* allocDmaMemory
         return 0;
     }
     mem->prepare();
-    *paddr = mem->getPhysicalAddress();
-    *vaddr = mem->getBytesNoCopy();
+    dma->paddr = mem->getPhysicalAddress();
+    dma->vaddr = mem->getBytesNoCopy();
     
-    /*
-     * Check the alignment and increment by 4096 until we get the
-     * requested alignment. Fail if can't obtain the alignment
-     * we requested.
-     */
-    if ((*paddr & (alignment - 1)) != 0) {
-        for (i = 0; i < alignment / 4096; i++) {
-            if ((*paddr & (alignment - 1 )) == 0)
-                break;
-            *paddr += 4096;
-            *vaddr = ((uint8_t*) *vaddr) + 4096;
-        }
-        if (i == alignment / 4096) {
-            XYLog("Memory alloc alignment requirement %d was not satisfied\n", alignment);
-            mem->complete();
-            mem->release();
-            return 0;
-        }
-    }
+//    /*
+//     * Check the alignment and increment by 4096 until we get the
+//     * requested alignment. Fail if can't obtain the alignment
+//     * we requested.
+//     */
+//    if ((dma->paddr & (alignment - 1)) != 0) {
+//        for (i = 0; i < alignment / 4096; i++) {
+//            if ((dma->paddr & (alignment - 1 )) == 0)
+//                break;
+//            dma->paddr += 4096;
+//            dma->vaddr = ((uint8_t*) dma->vaddr) + 4096;
+//        }
+//        if (i == alignment / 4096) {
+//            XYLog("Memory alloc alignment requirement %d was not satisfied\n", alignment);
+//            mem->complete();
+//            mem->release();
+//            return 0;
+//        }
+//    }
+    dma->buffer = mem;
+    dma->size = size;
     return mem;
 }
 
@@ -1396,7 +1400,7 @@ iwx_dma_contig_alloc(bus_dma_tag_t tag, struct iwx_dma_info *dma,
 //	if (err)
 //		goto fail;
 //
-//	err = bus_dmamem_map(tag, &dma->seg, 1, size, &va,
+//	err = bus_dmamem_map(tag, &dma->seg, 1, size, (void**)&va,
 //	    BUS_DMA_NOWAIT);
 //	if (err)
 //		goto fail;
@@ -1409,10 +1413,15 @@ iwx_dma_contig_alloc(bus_dma_tag_t tag, struct iwx_dma_info *dma,
 //
 //	memset(dma->vaddr, 0, size);
 //	bus_dmamap_sync(tag, dma->map, 0, size, BUS_DMASYNC_PREWRITE);
-//	dma->paddr = dma->map->dm_segs[0].ds_addr;
-    if (!allocDmaMemory2(dma, (size_t)size, (int)alignment))
+//	dma->paddr = dma->map->dm_segs[0].location;
+    if (!allocDmaMemory2(dma, (size_t)size, (int)alignment)) {
         return 1;
-
+    }
+    memset(dma->vaddr, 0, size);
+    
+//    dma->buffer = allocDmaMemory(size, alignment, &dma->vaddr, &dma->paddr);
+//    dma->size = size;
+//    memset(dma->vaddr, 0, size);
 	return 0;
 
 fail:	iwx_dma_contig_free(dma);
@@ -1427,13 +1436,14 @@ iwx_dma_contig_free(struct iwx_dma_info *dma)
 //			bus_dmamap_sync(dma->tag, dma->map, 0, dma->size,
 //			    BUS_DMASYNC_POSTREAD | BUS_DMASYNC_POSTWRITE);
 //			bus_dmamap_unload(dma->tag, dma->map);
-//			bus_dmamem_unmap(dma->tag, dma->vaddr, dma->size);
+//			bus_dmamem_unmap(dma->seg);
 //			bus_dmamem_free(dma->tag, &dma->seg, 1);
 //			dma->vaddr = NULL;
 //		}
 //		bus_dmamap_destroy(dma->tag, dma->map);
 //		dma->map = NULL;
 //	}
+    
     if (dma == NULL || dma->cmd == NULL)
         return;
     if (dma->vaddr == NULL)
@@ -1446,6 +1456,18 @@ iwx_dma_contig_free(struct iwx_dma_info *dma)
     dma->buffer = NULL;
     dma->vaddr = NULL;
     dma->paddr = NULL;
+    
+//    if (dma == NULL)
+//        return;
+//    if (dma->vaddr == NULL)
+//        return;
+//    if (dma->buffer) {
+//        dma->buffer->complete();
+//        dma->buffer->release();
+//        dma->buffer = 0;
+//    }
+//    dma->vaddr = 0;
+//    dma->paddr = 0;
 }
 
 int itlwmx::
@@ -1780,6 +1802,8 @@ iwx_enable_interrupts(struct iwx_softc *sc)
 void itlwmx::
 iwx_enable_fwload_interrupt(struct iwx_softc *sc)
 {
+    
+    XYLog("%s\n", __FUNCTION__);
 	if (!sc->sc_msix) {
 		sc->sc_intmask = IWX_CSR_INT_BIT_ALIVE | IWX_CSR_INT_BIT_FH_RX;
 		IWX_WRITE(sc, IWX_CSR_INT_MASK, sc->sc_intmask);
@@ -1870,6 +1894,7 @@ iwx_set_hw_ready(struct iwx_softc *sc)
 int itlwmx::
 iwx_prepare_card_hw(struct iwx_softc *sc)
 {
+    XYLog("%s\n", __FUNCTION__);
 	int t = 0;
 
 	if (iwx_set_hw_ready(sc))
@@ -2268,6 +2293,8 @@ int itlwmx::
 iwx_enable_txq(struct iwx_softc *sc, int sta_id, int qid, int tid,
     int num_slots)
 {
+    
+    XYLog("%s\n", __FUNCTION__);
 	struct iwx_tx_queue_cfg_cmd cmd;
 	struct iwx_rx_packet *pkt;
 	struct iwx_tx_queue_cfg_rsp *resp;
@@ -2336,6 +2363,8 @@ out:
 void itlwmx::
 iwx_post_alive(struct iwx_softc *sc)
 {
+    
+    XYLog("%s\n", __FUNCTION__);
 	iwx_ict_reset(sc);
 	iwx_ctxt_info_free(sc);
 }
@@ -2459,7 +2488,7 @@ const int iwx_nvm_to_read[] = {
 	IWX_NVM_SECTION_TYPE_CALIBRATION,
 	IWX_NVM_SECTION_TYPE_PRODUCTION,
 	IWX_NVM_SECTION_TYPE_REGULATORY_SDP,
-	IWX_NVM_SECTION_TYPE_HW_8000,
+//	IWX_NVM_SECTION_TYPE_HW_8000,
 	IWX_NVM_SECTION_TYPE_MAC_OVERRIDE,
 	IWX_NVM_SECTION_TYPE_PHY_SKU,
 };
@@ -2473,6 +2502,7 @@ int itlwmx::
 iwx_nvm_read_chunk(struct iwx_softc *sc, uint16_t section, uint16_t offset,
     uint16_t length, uint8_t *data, uint16_t *len)
 {
+    XYLog("%s\n", __FUNCTION__);
 	offset = 0;
 	struct iwx_nvm_access_cmd nvm_access_cmd = {
 		.offset = htole16(offset),
@@ -2536,6 +2566,24 @@ iwx_nvm_read_chunk(struct iwx_softc *sc, uint16_t section, uint16_t offset,
 	return err;
 }
 
+#define    ANT_A        BIT(0)
+#define    ANT_B        BIT(1)
+
+static void iwl_nvm_fixups(u32 hw_id, unsigned int section, u8 *data,
+            unsigned int len)
+{
+#define IWL_4165_DEVICE_ID    0x5501
+#define NVM_SKU_CAP_MIMO_DISABLE BIT(5)
+
+    if (section == IWX_NVM_SECTION_TYPE_PHY_SKU &&
+        hw_id == IWL_4165_DEVICE_ID && data && len >= 5 &&
+        (data[4] & NVM_SKU_CAP_MIMO_DISABLE))
+        /* OTP 0x52 bug work around: it's a 1x1 device */
+        data[3] = ANT_B | (ANT_B << 4);
+}
+
+#define OTP_LOW_IMAGE_SIZE_32K        (32 * 512 * sizeof(uint16_t)) /* 32 KB */
+
 /*
  * Reads an NVM section completely.
  * NICs prior to 7000 family doesn't have a real NVM, but just read
@@ -2557,11 +2605,17 @@ iwx_nvm_read_section(struct iwx_softc *sc, uint16_t section, uint8_t *data,
 	while (seglen == chunklen && *len < max_len) {
 		err = iwx_nvm_read_chunk(sc,
 		    section, *len, chunklen, data, &seglen);
-		if (err)
+        if (err) {
+            XYLog("Cannot read NVM from section %d offset %d, length %d\n", section, *len, chunklen);
 			return err;
+        }
 
 		*len += seglen;
 	}
+    
+    iwl_nvm_fixups(sc->sc_hw_id, section, data, *len);
+    
+    XYLog("NVM section %d read completed\n", section);
 
 	return err;
 }
@@ -2936,16 +2990,19 @@ iwx_parse_nvm_sections(struct iwx_softc *sc, struct iwx_nvm_section *sections)
 	/* SW and REGULATORY sections are mandatory */
 	if (!sections[IWX_NVM_SECTION_TYPE_SW].data ||
 	    !sections[IWX_NVM_SECTION_TYPE_REGULATORY].data) {
+        XYLog("Can't parse empty family 8000 OTP/NVM sections\n");
 		return ENOENT;
 	}
 	/* MAC_OVERRIDE or at least HW section must exist */
 	if (!sections[IWX_NVM_SECTION_TYPE_HW_8000].data &&
 	    !sections[IWX_NVM_SECTION_TYPE_MAC_OVERRIDE].data) {
+        XYLog("Can't parse mac_address, empty sections\n");
 		return ENOENT;
 	}
 
 	/* PHY_SKU section is mandatory in B0 */
 	if (!sections[IWX_NVM_SECTION_TYPE_PHY_SKU].data) {
+        XYLog("Can't parse phy_sku in B0, empty sections\n");
 		return ENOENT;
 	}
 
@@ -2973,7 +3030,7 @@ int itlwmx::
 iwx_nvm_init(struct iwx_softc *sc)
 {
 	struct iwx_nvm_section nvm_sections[IWX_NVM_NUM_OF_SECTIONS];
-	int i, section, err;
+	int i, section, err = 0;
 	uint16_t len;
 	uint8_t *buf;
 	const size_t bufsz = sc->sc_nvm_max_section_size;
@@ -2984,12 +3041,13 @@ iwx_nvm_init(struct iwx_softc *sc)
 	if (buf == NULL)
 		return ENOMEM;
 
-	for (i = 0; i < nitems(iwx_nvm_to_read); i++) {
-		section = iwx_nvm_to_read[i];
+	for (i = 0; i < IWX_NVM_NUM_OF_SECTIONS; i++) {
+		section = i;
 		KASSERT(section <= nitems(nvm_sections), "section <= nitems(nvm_sections)");
-
+        XYLog("Reading section %d\n", section);
 		err = iwx_nvm_read_section(sc, section, buf, &len, bufsz);
 		if (err) {
+            XYLog("Reading section failed err=%d\n", err);
 			err = 0;
 			continue;
 		}
@@ -3002,9 +3060,12 @@ iwx_nvm_init(struct iwx_softc *sc)
 		nvm_sections[section].length = len;
 	}
 	free(buf);
-	if (err == 0)
+    if (err == 0) {
+        XYLog("Parsing section\n");
 		err = iwx_parse_nvm_sections(sc, nvm_sections);
+    }
 
+    XYLog("Free section\n");
 	for (i = 0; i < IWX_NVM_NUM_OF_SECTIONS; i++) {
 		if (nvm_sections[i].data != NULL)
 			free(nvm_sections[i].data);
@@ -3016,6 +3077,7 @@ iwx_nvm_init(struct iwx_softc *sc)
 int itlwmx::
 iwx_load_firmware(struct iwx_softc *sc)
 {
+    XYLog("%s\n", __FUNCTION__);
 	struct iwx_fw_sects *fws;
 	int err, w;
 
@@ -3037,12 +3099,16 @@ iwx_load_firmware(struct iwx_softc *sc)
 	if (!sc->sc_uc.uc_ok)
 		return EINVAL;
 
+    XYLog("%s: load firmware ok\n", DEVNAME(sc));
+    
 	return err;
 }
 
 int itlwmx::
 iwx_start_fw(struct iwx_softc *sc)
 {
+    
+    XYLog("%s\n", __FUNCTION__);
 	int err;
 
 	IWX_WRITE(sc, IWX_CSR_INT, ~0);
@@ -3805,7 +3871,6 @@ iwx_send_cmd(struct iwx_softc *sc, struct iwx_host_cmd *hcmd)
 	uint8_t *data;
 	int generation = sc->sc_generation;
     unsigned int maxChunks = 1;
-    IOPhysicalSegment seg;
 
 	code = hcmd->id;
 	async = hcmd->flags & IWX_CMD_ASYNC;
@@ -3857,7 +3922,8 @@ iwx_send_cmd(struct iwx_softc *sc, struct iwx_host_cmd *hcmd)
 			err = EINVAL;
 			goto out;
 		}
-        mbuf_allocpacket(MBUF_WAITOK, totlen, &maxChunks, &m);
+//        mbuf_allocpacket(MBUF_WAITOK, totlen, &maxChunks, &m);
+        m = allocatePacket(totlen);
 //		m = MCLGETI(NULL, M_DONTWAIT, NULL, totlen);
 		if (m == NULL) {
 			XYLog("%s: could not get fw cmd mbuf (%zd bytes)\n",
@@ -3870,7 +3936,7 @@ iwx_send_cmd(struct iwx_softc *sc, struct iwx_host_cmd *hcmd)
 		cmd = mtod(m, struct iwx_device_cmd *);
 //		err = bus_dmamap_load(sc->sc_dmat, txdata->map, cmd,
 //		    totlen, NULL, BUS_DMA_NOWAIT | BUS_DMA_WRITE);
-        txdata->map->dm_nsegs = txdata->map->cursor->getPhysicalSegmentsWithCoalesce(m, &seg, 1);
+        txdata->map->dm_nsegs = txdata->map->cursor->getPhysicalSegmentsWithCoalesce(m, &txdata->map->dm_segs[0], 1);
 		if (txdata->map->dm_nsegs == 0) {
 			XYLog("%s: could not load fw cmd mbuf (%zd bytes)\n",
 			    DEVNAME(sc), totlen);
@@ -4003,6 +4069,8 @@ int itlwmx::
 iwx_send_cmd_pdu_status(struct iwx_softc *sc, uint32_t id, uint16_t len,
     const void *data, uint32_t *status)
 {
+    
+    XYLog("%s\n", __FUNCTION__);
 	struct iwx_host_cmd cmd = {
 		.id = id,
 		.len = { len, },
@@ -4249,7 +4317,7 @@ iwx_tx(struct iwx_softc *sc, mbuf_t m, struct ieee80211_node *ni, int ac)
 
 //	err = bus_dmamap_load_mbuf(sc->sc_dmat, data->map, m,
 //	    BUS_DMA_NOWAIT | BUS_DMA_WRITE);
-    data->map->dm_nsegs = data->map->cursor->getPhysicalSegmentsWithCoalesce(m, data->map->dm_segs, 18);
+    data->map->dm_nsegs = data->map->cursor->getPhysicalSegmentsWithCoalesce(m, data->map->dm_segs, IWX_TFH_NUM_TBS - 2);
 //	if (err && err != EFBIG) {
 //		XYLog("%s: can't map mbuf (error %d)\n", DEVNAME(sc), err);
 //		mbuf_freem(m);
@@ -4550,6 +4618,8 @@ iwx_add_sta_cmd(struct iwx_softc *sc, struct iwx_node *in, int update)
 int itlwmx::
 iwx_add_aux_sta(struct iwx_softc *sc)
 {
+    
+    XYLog("%s\n", __FUNCTION__);
 	struct iwx_add_sta_cmd cmd;
 	int err, qid = IWX_DQA_AUX_QUEUE;
 	uint32_t status;
@@ -6310,6 +6380,7 @@ iwx_init_hw(struct iwx_softc *sc)
 		 * For now use the first channel we have.
 		 */
 		sc->sc_phyctxt[i].channel = &ic->ic_channels[1];
+        XYLog("init channel=%dMHz\n", sc->sc_phyctxt[i].channel->ic_freq);
 		err = iwx_phy_ctxt_cmd(sc, &sc->sc_phyctxt[i], 1, 1,
 		    IWX_FW_CTXT_ACTION_ADD, 0);
 		if (err) {
@@ -6956,7 +7027,7 @@ iwx_rx_pkt(struct iwx_softc *sc, struct iwx_rx_data *data, struct mbuf_list *ml)
 		if (!iwx_rx_pkt_valid(pkt))
 			break;
         
-        XYLog("%s code=%d\n", __FUNCTION__, code);
+        XYLog("%s code=0x%02x\n", __FUNCTION__, code);
 
 		len = sizeof(pkt->len_n_flags) + iwx_rx_packet_len(pkt);
 		if (len < sizeof(pkt->hdr) ||
@@ -7093,8 +7164,8 @@ iwx_rx_pkt(struct iwx_softc *sc, struct iwx_rx_data *data, struct mbuf_list *ml)
 			if (sc->sc_cmd_resp_pkt[idx] == NULL)
 				break;
 
-			bus_dmamap_sync(sc->sc_dmat, data->map, 0,
-			    sizeof(*pkt), BUS_DMASYNC_POSTREAD);
+//			bus_dmamap_sync(sc->sc_dmat, data->map, 0,
+//			    sizeof(*pkt), BUS_DMASYNC_POSTREAD);
 
 			pkt_len = sizeof(pkt->len_n_flags) +
 			    iwx_rx_packet_len(pkt);
@@ -7539,10 +7610,10 @@ iwx_preinit(struct iwx_softc *sc)
 	ieee80211_channel_init(ifp);
 
 	/* Configure MAC address. */
-	err = if_setlladdr(ifp, ic->ic_myaddr);
-	if (err)
-		XYLog("%s: could not set MAC address (error %d)\n",
-		    DEVNAME(sc), err);
+//	err = if_setlladdr(ifp, ic->ic_myaddr);
+//	if (err)
+//		XYLog("%s: could not set MAC address (error %d)\n",
+//		    DEVNAME(sc), err);
 
 	ieee80211_media_init(ifp);
 
@@ -7553,8 +7624,6 @@ void itlwmx::
 iwx_attach_hook(struct device *self)
 {
 	struct iwx_softc *sc = (struct iwx_softc *)self;
-
-	KASSERT(!cold, "!cold");
 
 	iwx_preinit(sc);
 }
@@ -7612,9 +7681,9 @@ iwx_attach(struct iwx_softc *sc, struct pci_attach_args *pa)
 		return false;
 	}
 
-	if (0) {
-        //    if (pci_intr_map_msix(pa, 0, &sc->ih) == 0) {
+    if (0) {
         sc->sc_msix = 1;
+        XYLog("msix intr mode\n");
     } else if (pci_intr_map_msi(pa, &sc->ih)) {
         XYLog("%s: can't map interrupt\n", DEVNAME(sc));
         return false;
@@ -7643,7 +7712,7 @@ iwx_attach(struct iwx_softc *sc, struct pci_attach_args *pa)
         sc->sc_ih = IOFilterInterruptEventSource::filterInterruptEventSource(this,
                                                                              (IOInterruptEventSource::Action)&itlwmx::iwx_intr, &itlwmx::intrFilter
                                                                              ,pa->pa_tag, msiIntrIndex);
-    if (sc->sc_ih == NULL || getWorkLoop()->addEventSource(sc->sc_ih) != kIOReturnSuccess) {
+    if (sc->sc_ih == NULL || irqWorkloop->addEventSource(sc->sc_ih) != kIOReturnSuccess) {
         XYLog("%s: can't establish interrupt", DEVNAME(sc));
         return false;
     }
@@ -7655,7 +7724,7 @@ iwx_attach(struct iwx_softc *sc, struct pci_attach_args *pa)
     int pa_id = pa->pa_tag->configRead16(kIOPCIConfigDeviceID);
 	switch (pa_id) {
 	case PCI_PRODUCT_INTEL_WL_22500_1:
-		sc->sc_fwname = "iwx-cc-a0-46";
+		sc->sc_fwname = "iwlwifi-cc-a0-46.ucode";
 		sc->sc_device_family = IWX_DEVICE_FAMILY_22000;
 		sc->sc_fwdmasegsz = IWX_FWDMASEGSZ_8000;
 		sc->sc_nvm_max_section_size = 32768;
@@ -7758,6 +7827,7 @@ iwx_attach(struct iwx_softc *sc, struct pci_attach_args *pa)
 		goto fail4;
 	}
 
+    taskq_init();
 	sc->sc_nswq = taskq_create("iwxns", 1, IPL_NET, 0);
 	if (sc->sc_nswq == NULL)
 		goto fail4;
