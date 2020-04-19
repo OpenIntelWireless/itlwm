@@ -270,13 +270,10 @@ ieee80211_chan2ieee(struct ieee80211com *ic, const struct ieee80211_channel *c)
 {
     struct ifnet *ifp = &ic->ic_if;
     
-    XYLog("%s ic=0x%X, c=0x%X, &ic->ic_channels[1]=0x%X, &ic->ic_channels[0]=0x%X, &ic->ic_channels[IEEE80211_CHAN_MAX]=0x%X", __FUNCTION__, ic, (uint64_t)c, (uint64_t)&ic->ic_channels[1], (uint64_t)&ic->ic_channels[0], (uint64_t)&ic->ic_channels[IEEE80211_CHAN_MAX]);
     if (&ic->ic_channels[0] <= c && c <= &ic->ic_channels[IEEE80211_CHAN_MAX]) {
-        XYLog("Valid channel ic_freq=%dmhz, ic_flags=%d\n", c->ic_freq, c->ic_flags);
         return c - ic->ic_channels;
     }
     else if (c == IEEE80211_CHAN_ANYC) {
-        XYLog("IEEE80211_CHAN_ANY ic_freq=%dmhz, ic_flags=%d\n", c->ic_freq, c->ic_flags);
         return IEEE80211_CHAN_ANY;
     }
     

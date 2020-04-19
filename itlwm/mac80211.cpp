@@ -3510,7 +3510,7 @@ iwm_attach(struct iwm_softc *sc, struct pci_attach_args *pa)
         sc->sc_ih = IOFilterInterruptEventSource::filterInterruptEventSource(this,
                                                                              (IOInterruptEventSource::Action)&itlwm::iwm_intr, &itlwm::intrFilter
                                                                              ,pa->pa_tag, msiIntrIndex);
-    if (sc->sc_ih == NULL || getWorkLoop()->addEventSource(sc->sc_ih) != kIOReturnSuccess) {
+    if (sc->sc_ih == NULL || pa->workloop->addEventSource(sc->sc_ih) != kIOReturnSuccess) {
         XYLog("\n");
         XYLog("%s: can't establish interrupt", DEVNAME(sc));
         if (intrstr != NULL)
@@ -3821,6 +3821,7 @@ iwm_attach(struct iwm_softc *sc, struct pci_attach_args *pa)
      * firmware from disk. Postpone until mountroot is done.
      */
     //    config_mountroot(self, iwm_attach_hook);
+    iwm_preinit(sc);
     
     XYLog("attach succeed.\n");
     
@@ -3982,9 +3983,8 @@ iwm_del_task(struct iwm_softc *sc, struct taskq *taskq, struct task *task)
 }
 
 int itlwm::
-iwm_activate(struct device *self, int act)
+iwm_activate(struct iwm_softc *sc, int act)
 {
-    struct iwm_softc *sc = (struct iwm_softc *)self;
     struct ifnet *ifp = &sc->sc_ic.ic_if;
     int err = 0;
     

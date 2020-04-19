@@ -72,6 +72,8 @@ public:
 //    virtual bool createWorkLoop() override;
 //    virtual IOWorkLoop* getWorkLoop() const override;
     
+    void releaseAll();
+    
     bool createMediumTables(const IONetworkMedium **primary);
     IOReturn getPacketFilters(const OSSymbol *group, UInt32 *filters) const override;
     IOReturn selectMedium(const IONetworkMedium *medium) override;
@@ -354,16 +356,14 @@ public:
     void    iwm_attach_hook(struct device *);
     bool    iwm_attach(struct iwm_softc *, struct pci_attach_args *);
     static void    iwm_init_task(void *);
-    int    iwm_activate(struct device *, int);
+    int    iwm_activate(struct iwm_softc *, int);
     int    iwm_resume(struct iwm_softc *);
     
     
     
 public:
     IOInterruptEventSource* fInterrupt;
-    IOWorkLoop *fWorkloop;
     IOWorkLoop *irqWorkloop;
-    IOCommandGate*        fCommandGate;
     IOCommandGate*        fOutputCommandGate;
     struct pci_attach_args pci;
     struct iwm_softc com;

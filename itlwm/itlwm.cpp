@@ -125,22 +125,9 @@ bool itlwm::createMediumTables(const IONetworkMedium **primary)
     return result;
 }
 
-static void output_thread_task(void *arg)
-{
-    itlwm *that = (itlwm*)arg;
-    while (true) {
-        semaphore_wait(that->outputThreadSignal);
-        that->fCommandGate->runAction(itlwm::_iwm_start_task, &that->com.sc_ic.ic_ac.ac_if);
-//        itlwm::_iwm_start_task(that, &that->com.sc_ic.ic_ac.ac_if, NULL, NULL, NULL);
-        IODelay(1);
-    }
-    thread_terminate(current_thread());
-}
-
 bool itlwm::start(IOService *provider)
 {
     ifnet *ifp;
-    thread_t new_thread;
     
     if (!super::start(provider)) {
         return false;
@@ -154,66 +141,29 @@ bool itlwm::start(IOService *provider)
     device->setMemoryEnable(true);
     device->configWrite8(0x41, 0);
     _fWorkloop = getWorkLoop();
-    irqWorkloop = IOWorkLoop::workLoop();
-    fCommandGate = IOCommandGate::commandGate(this, (IOCommandGate::Action)tsleepHandler);
-    _fCommandGate = fCommandGate;
-    if (fCommandGate == 0) {
+    _fCommandGate = IOCommandGate::commandGate(this, (IOCommandGate::Action)tsleepHandler);
+    if (_fCommandGate == 0) {
         XYLog("No command gate!!\n");
+        releaseAll();
         return false;
     }
-    fCommandGate->retain();
-    _fWorkloop->addEventSource(fCommandGate);
+    _fCommandGate->retain();
+    _fWorkloop->addEventSource(_fCommandGate);
     const IONetworkMedium *primaryMedium;
     if (!createMediumTables(&primaryMedium) ||
         !setCurrentMedium(primaryMedium)) {
+        releaseAll();
         return false;
     }
-//    IONetworkMedium *medium;
-//    OSDictionary *mediumDict = OSDictionary::withCapacity(MEDIUM_INDEX_COUNT + 1);
-//    if (!mediumDict) {
-//        XYLog("start fail, can not create mediumdict\n");
-//        return false;
-//    }
-//    bool result;
-//    for (int i = MEDIUM_INDEX_AUTO; i < MEDIUM_INDEX_COUNT; i++) {
-//        medium = IONetworkMedium::medium(mediumTypeArray[i], mediumSpeedArray[i], 0, i);
-//        if (!medium) {
-//            XYLog("start fail, can not create mediumdict\n");
-//            return false;
-//        }
-//        result = IONetworkMedium::addMedium(mediumDict, medium);
-//        medium->release();
-//        if (!result) {
-//            XYLog("start fail, can not addMedium\n");
-//            return false;
-//        }
-//        mediumTable[i] = medium;
-//        if (i == kIOMediumEthernetAuto) {
-//            autoMedium = medium;
-//        }
-//    }
-//    if (!publishMediumDictionary(mediumDict)) {
-//        XYLog("start fail, can not publish mediumdict\n");
-//        return false;
-//    }
-//    if (!setCurrentMedium(autoMedium)){
-//        XYLog("start fail, can not set current medium\n");
-//        return false;
-//    }
-//    if (!setSelectedMedium(autoMedium)){
-//        XYLog("start fail, can not set current medium\n");
-//        return false;
-//    }
-    pci.workloop = irqWorkloop;
+    pci.workloop = _fWorkloop;
     pci.pa_tag = device;
     if (!iwm_attach(&com, &pci)) {
+        releaseAll();
         return false;
     }
-    ifp = &com.sc_ic.ic_ac.ac_if;
-    ifp->if_flags |= IFF_UP;
-    iwm_init_task(&com);
     if (!attachInterface((IONetworkInterface **)&com.sc_ic.ic_ac.ac_if.iface)) {
         XYLog("attach to interface fail\n");
+        releaseAll();
         return false;
     }
     setLinkStatus(kIONetworkLinkValid);
@@ -255,50 +205,65 @@ void itlwm::stop(IOService *provider)
     IOEthernetInterface *inf = ifp->iface;
     pci_intr_handle *handle = com.ih;
     
+    super::stop(provider);
     setLinkStatus(kIONetworkLinkNoNetworkChange);
-//    taskq_destroy(systq);
-//    taskq_destroy(com.sc_nswq);
     iwm_stop(ifp);
     ieee80211_ifdetach(ifp);
+    releaseAll();
+}
+
+void itlwm::releaseAll()
+{
+    struct ifnet *ifp = &com.sc_ic.ic_ac.ac_if;
+    IOEthernetInterface *inf = ifp->iface;
+    pci_intr_handle *intrHandler = com.ih;
     if (inf) {
+        ieee80211_ifdetach(ifp);
         detachInterface(inf);
         OSSafeReleaseNULL(inf);
     }
-    if (handle) {
-        handle->dev->release();
-        handle->dev = NULL;
-        handle->func = NULL;
-        handle->arg = NULL;
-        handle->intr->disable();
-        fWorkloop->removeEventSource(handle->intr);
-        handle->intr->release();
-        handle->intr = NULL;
-        OSSafeReleaseNULL(handle);
+    if (_fWorkloop) {
+        if (intrHandler) {
+            intrHandler->intr->disable();
+            intrHandler->workloop->removeEventSource(intrHandler->intr);
+            intrHandler->intr->release();
+            intrHandler->intr = NULL;
+            intrHandler->workloop = NULL;
+            intrHandler->arg = NULL;
+            intrHandler->dev = NULL;
+            intrHandler->func = NULL;
+            intrHandler->release();
+            intrHandler = NULL;
+        }
+        if (_fCommandGate) {
+            _fCommandGate->disable();
+            _fWorkloop->removeEventSource(_fCommandGate);
+            _fCommandGate->release();
+            _fCommandGate = NULL;
+        }
+        _fWorkloop->release();
+        _fWorkloop = NULL;
     }
-    if (fCommandGate) {
-        fCommandGate->disable();
-        fWorkloop->removeEventSource(fCommandGate);
-        fCommandGate->release();
-        fCommandGate = NULL;
-    }
-    fWorkloop->release();
-    fWorkloop = NULL;
-    super::stop(provider);
 }
 
 void itlwm::free()
 {
     XYLog("%s\n", __FUNCTION__);
-    IOLockFree(fwLoadLock);
-    fwLoadLock = NULL;
+    if (fwLoadLock) {
+        IOLockFree(fwLoadLock);
+        fwLoadLock = NULL;
+    }
     super::free();
 }
 
 IOReturn itlwm::enable(IONetworkInterface *netif)
 {
     XYLog("%s\n", __FUNCTION__);
+    struct ifnet *ifp = &com.sc_ic.ic_ac.ac_if;
     super::enable(netif);
-    fCommandGate->enable();
+    ifp->if_flags |= IFF_UP;
+    _fCommandGate->enable();
+    iwm_activate(&com, DVACT_WAKEUP);
     setLinkStatus(kIONetworkLinkValid | kIONetworkLinkActive, getCurrentMedium());
     return kIOReturnSuccess;
 }
@@ -307,7 +272,8 @@ IOReturn itlwm::disable(IONetworkInterface *netif)
 {
     XYLog("%s\n", __FUNCTION__);
     super::disable(netif);
-    fCommandGate->disable();
+    iwm_activate(&com, DVACT_QUIESCE);
+    _fCommandGate->disable();
     return kIOReturnSuccess;
 }
 
@@ -353,4 +319,53 @@ IOReturn itlwm::setMulticastMode(IOEnetMulticastMode mode) {
 
 IOReturn itlwm::setMulticastList(IOEthernetAddress* addr, UInt32 len) {
     return kIOReturnSuccess;
+}
+
+void itlwm::wakeupOn(void *ident)
+{
+//    XYLog("%s\n", __FUNCTION__);
+    if (_fCommandGate == 0)
+        return;
+    else
+        _fCommandGate->commandWakeup(ident);
+}
+
+int itlwm::tsleep_nsec(void *ident, int priority, const char *wmesg, int timo)
+{
+//    XYLog("%s %s\n", __FUNCTION__, wmesg);
+    IOReturn ret;
+    if (_fCommandGate == 0) {
+        IOSleep(timo);
+        return 0;
+    }
+    if (timo == 0) {
+        ret = _fCommandGate->runCommand(ident);
+    } else {
+        ret = _fCommandGate->runCommand(ident, &timo);
+    }
+    if (ret == kIOReturnSuccess)
+        return 0;
+    else
+        return 1;
+}
+
+IOReturn itlwm::tsleepHandler(OSObject* owner, void* arg0, void* arg1, void* arg2, void* arg3)
+{
+    itlwm* dev = OSDynamicCast(itlwm, owner);
+    if (dev == 0)
+        return kIOReturnError;
+    
+    if (arg1 == 0) {
+        if (_fCommandGate->commandSleep(arg0, THREAD_INTERRUPTIBLE) == THREAD_AWAKENED)
+            return kIOReturnSuccess;
+        else
+            return kIOReturnTimeout;
+    } else {
+        AbsoluteTime deadline;
+        clock_interval_to_deadline((*(int*)arg1), kMillisecondScale, reinterpret_cast<uint64_t*> (&deadline));
+        if (_fCommandGate->commandSleep(arg0, deadline, THREAD_INTERRUPTIBLE) == THREAD_AWAKENED)
+            return kIOReturnSuccess;
+        else
+            return kIOReturnTimeout;
+    }
 }
