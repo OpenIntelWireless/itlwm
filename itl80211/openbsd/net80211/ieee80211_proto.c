@@ -987,7 +987,6 @@ int
 ieee80211_newstate(struct ieee80211com *ic, enum ieee80211_state nstate,
     int mgt)
 {
-    XYLog("%s\n nstate=%d", __FUNCTION__, nstate);
 	struct ifnet *ifp = &ic->ic_if;
 	struct ieee80211_node *ni;
 	enum ieee80211_state ostate;
@@ -997,8 +996,7 @@ ieee80211_newstate(struct ieee80211com *ic, enum ieee80211_state nstate,
 #endif
 
 	ostate = ic->ic_state;
-	if (ifp->if_flags & IFF_DEBUG)
-		XYLog("%s: %s -> %s\n", ifp->if_xname,
+    XYLog("%s: %s -> %s\n", ifp->if_xname,
 		    ieee80211_state_name[ostate], ieee80211_state_name[nstate]);
 	ic->ic_state = nstate;			/* state transition */
 	ni = ic->ic_bss;			/* NB: no reference held */
@@ -1270,7 +1268,7 @@ justcleanup:
 			}
 			ic->ic_mgt_timer = 0;
 			ieee80211_set_beacon_miss_threshold(ic);
-			ifp->if_start(ifp);
+			(*ifp->if_start)(ifp);
 //            ifp->output_queue->start();
 			break;
 		}
@@ -1282,9 +1280,25 @@ justcleanup:
 void
 ieee80211_set_link_state(struct ieee80211com *ic, int nstate)
 {
-    XYLog("%s\n nstate=%d", __FUNCTION__, nstate);
 	struct ifnet *ifp = &ic->ic_if;
-
+    int link_state;
+    XYLog("%s nstate=%d, old_state=%d\n", __FUNCTION__, nstate, ifp->if_link_state);
+    
+    if (nstate == IEEE80211_S_RUN) {
+        link_state = LINK_STATE_UP;
+    } else {
+        link_state = LINK_STATE_DOWN;
+    }
+    if (link_state != ifp->if_link_state) {
+        if (link_state == LINK_STATE_UP) {
+            XYLog("%s LINK_STATE_IS_UP\n", __FUNCTION__);
+            ifp->controller->setLinkStatus(kIONetworkLinkValid | kIONetworkLinkActive, ifp->controller->getCurrentMedium());
+        } else {
+            XYLog("%s LINK_STATE_IS_DOWN\n", __FUNCTION__);
+            ifp->controller->setLinkStatus(kIONetworkLinkValid);
+        }
+        ifp->if_link_state = link_state;
+    }
 	switch (ic->ic_opmode) {
 #ifndef IEEE80211_STA_ONLY
 	case IEEE80211_M_IBSS:

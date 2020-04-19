@@ -218,9 +218,6 @@ bool itlwm::start(IOService *provider)
     }
     setLinkStatus(kIONetworkLinkValid);
     registerService();
-//    semaphore_create(current_task(), &outputThreadSignal, 0, 1);
-//    kernel_thread_start((thread_continue_t)output_thread_task, this, &new_thread);
-//    thread_deallocate(new_thread);
     return true;
 }
 
@@ -333,7 +330,7 @@ UInt32 itlwm::outputPacket(mbuf_t m, void *param)
         return kIOReturnOutputDropped;
     }
     ifp->if_snd->lockEnqueue(m);
-    ifp->if_start(ifp);
+    (*ifp->if_start)(ifp);
     
     return kIOReturnOutputSuccess;
 }

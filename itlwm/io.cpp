@@ -304,6 +304,7 @@ IOBufferMemoryDescriptor* allocDmaMemory
     IOBufferMemoryDescriptor* mem = 0;
     mem = IOBufferMemoryDescriptor::inTaskWithPhysicalMask(kernel_task, kIOMemoryPhysicallyContiguous | kIODirectionInOut | kIOMapInhibitCache,
                                    reqsize, phymask);
+    mem->map();
     if (!mem) {
         XYLog("Could not allocate DMA memory\n");
         return 0;
@@ -381,7 +382,7 @@ int itlwm::
 iwm_dma_contig_alloc(bus_dma_tag_t tag, struct iwm_dma_info *dma, void **kvap,
              bus_size_t size, bus_size_t alignment)
 {
-    dma->buffer = allocDmaMemory2((size_t)size, (int)alignment, (void**)&dma->vaddr, &dma->paddr);
+    dma->buffer = allocDmaMemory((size_t)size, (int)alignment, (void**)&dma->vaddr, &dma->paddr);
     if (dma->buffer == NULL)
         return 1;
     

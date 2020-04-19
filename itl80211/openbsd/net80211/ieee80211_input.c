@@ -303,7 +303,7 @@ ieee80211_inputm(struct ifnet *ifp, mbuf_t m, struct ieee80211_node *ni,
                 //				if_start(ifp);
                 //                ifp->output_queue->start();
                 mq_enqueue(&ic->ic_pwrsaveq, m);
-                ifp->if_start(ifp);
+                (*ifp->if_start)(ifp);
             }
         }
     }
@@ -3105,7 +3105,7 @@ ieee80211_recv_pspoll(struct ieee80211com *ic, mbuf_t m,
     }
     //    ifp->output_queue->enqueue(m, &TX_TYPE_FRAME);
     mq_enqueue(&ic->ic_pwrsaveq, m);
-    ifp->if_start(ifp);
+    (*ifp->if_start)(ifp);
     //	mq_enqueue(&ic->ic_pwrsaveq, m);
     //	if_start(ifp);
     //    ifp->output_queue->start();

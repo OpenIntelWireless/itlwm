@@ -554,7 +554,7 @@ iwm_send_cmd(struct iwm_softc *sc, struct iwm_host_cmd *hcmd)
             mbuf_freem(m);
             goto out;
         }
-        XYLog("map fw cmd dm_nsegs=%d\n", txdata->map->dm_nsegs);
+//        XYLog("map fw cmd dm_nsegs=%d\n", txdata->map->dm_nsegs);
         txdata->m = m; /* mbuf will be freed in iwm_cmd_done() */
         paddr = seg.location;
     } else {

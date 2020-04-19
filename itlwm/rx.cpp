@@ -303,7 +303,7 @@ iwm_rx_addbuf(struct iwm_softc *sc, int size, int idx)
     //    m->m_len = m->m_pkthdr.len = m->m_ext.ext_size;
 //    err = bus_dmamap_load(data->map, m);
     data->map->dm_nsegs = data->map->cursor->getPhysicalSegments(m, &seg, 1);
-    XYLog("map rx dm_nsegs=%d\n", data->map->dm_nsegs);
+//    XYLog("map rx dm_nsegs=%d\n", data->map->dm_nsegs);
     if (data->map->dm_nsegs == 0) {
         XYLog("RX Map new address FAIL!!!!\n");
         /* XXX */

@@ -147,7 +147,7 @@ ieee80211_send_eapol_key(struct ieee80211com *ic, mbuf_t m,
 //    IFQ_ENQUEUE(&ifp->if_snd, m, error);
 //    if (error)
 //        return (error);
-    ifp->if_start(ifp);
+    (*ifp->if_start)(ifp);
 //    ifp->output_queue->start();
     return 0;
 }

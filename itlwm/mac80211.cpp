@@ -989,7 +989,7 @@ iwm_tx(struct iwm_softc *sc, mbuf_t m, struct ieee80211_node *ni, int ac)
     mbuf_adj(m, hdrlen);
     
     data->map->dm_nsegs = data->map->cursor->getPhysicalSegmentsWithCoalesce(m, data->map->dm_segs, 18);
-    XYLog("map frame dm_nsegs=%d\n", data->map->dm_nsegs);
+//    XYLog("map frame dm_nsegs=%d\n", data->map->dm_nsegs);
     if (data->map->dm_nsegs == 0) {
         XYLog("%s: can't map mbuf (error %d)\n", DEVNAME(sc), data->map->dm_nsegs);
         mbuf_freem(m);
@@ -3788,6 +3788,7 @@ iwm_attach(struct iwm_softc *sc, struct pci_attach_args *pa)
     memcpy(ifp->if_xname, DEVNAME(sc), IFNAMSIZ);
     ifp->if_flags = IFF_DEBUG;
     
+    if_attach(ifp);
     ieee80211_ifattach(ifp);
     ieee80211_media_init(ifp);
     

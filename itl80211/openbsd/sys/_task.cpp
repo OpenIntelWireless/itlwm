@@ -135,7 +135,7 @@ taskq_thread(void *xtq)
 //        WITNESS_LOCK(&tq->tq_lock_object, 0);
         IOLog("itlwm: taskq worker thread=%lld work=%lld\n", thread_tid(current_thread()), &work);
         (*work.t_func)(work.t_arg);
-//        IOLog("itlwm: taskq worker thread=%lld work=%lld done", thread_tid(current_thread()), &work);
+        IOLog("itlwm: taskq worker thread=%lld work=%lld done", thread_tid(current_thread()), &work);
 //        _fCommandGate->runAction(taskq_run, tq, &work);
 //        WITNESS_UNLOCK(&tq->tq_lock_object, 0);
 //        sched_pause(yield);

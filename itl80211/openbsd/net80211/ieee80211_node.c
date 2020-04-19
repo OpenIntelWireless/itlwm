@@ -212,6 +212,10 @@ ieee80211_del_ess(struct ieee80211com *ic, char *nwid, int len, int all)
 	struct ieee80211_ess *ess, *next;
 
 	TAILQ_FOREACH_SAFE(ess, &ic->ic_ess, ess_next, next) {
+        if (ess == NULL) {
+            XYLog("%s: ess == NULL!!!\n", __FUNCTION__);
+            continue;
+        }
 		if (all == 1 || (ess->esslen == len &&
 		    memcmp(ess->essid, nwid, len) == 0)) {
 			TAILQ_REMOVE(&ic->ic_ess, ess, ess_next);
@@ -2948,7 +2952,7 @@ ieee80211_notify_dtim(struct ieee80211com *ic)
 		}
 //        ifp->output_queue->enqueue(m, &TX_TYPE_MGMT);
 		mq_enqueue(&ic->ic_pwrsaveq, m);
-		ifp->if_start(ifp);
+		(*ifp->if_start)(ifp);
 //        ifp->output_queue->start();
 	}
 	/* XXX assumes everything has been sent */

@@ -163,6 +163,7 @@ struct ifnet {                /* and the entries */
     IOEthernetInterface *iface;
     IOOutputQueue* output_queue;
     IOEthernetController* controller;
+    int if_link_state;
     void *if_softc;
 //    struct    refcnt if_refcnt;
     int if_hdrlen;
@@ -268,13 +269,15 @@ static inline u_int8_t etheranyaddr[ETHER_ADDR_LEN] =
 static inline int
 if_setlladdr(struct ifnet *ifp, const uint8_t *lladdr)
 {
-//    if (ifp->if_sadl == NULL)
-//        return (EINVAL);
-
     memcpy(((struct arpcom *)ifp)->ac_enaddr, lladdr, ETHER_ADDR_LEN);
-//    memcpy(LLADDR(ifp->if_sadl), lladdr, ETHER_ADDR_LEN);
-
     return (0);
+}
+
+static inline int
+if_attach(struct ifnet *ifp)
+{
+    ifp->if_link_state = -1;
+    return 0;
 }
 
 #endif /* _if_ether_h */
