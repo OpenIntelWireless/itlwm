@@ -1007,6 +1007,7 @@ struct ifmedia_status_description {
 /* Delete all media for a given media instance */
 static inline void ifmedia_delete_instance(struct ifmedia *ifm, uint64_t inst)
 {
+    XYLog("%s\n", __FUNCTION__);
     struct ifmedia_entry *ife, *nife;
     
     TAILQ_FOREACH_SAFE(ife, &ifm->ifm_list, ifm_list, nife) {

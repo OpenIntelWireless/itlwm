@@ -232,6 +232,7 @@
 		F8D6CD6E2442F20C00D2A454 /* if_iwxreg.h in Headers */ = {isa = PBXBuildFile; fileRef = F8D6CD6C2442F20C00D2A454 /* if_iwxreg.h */; };
 		F8D6CD6F2442F20C00D2A454 /* if_iwxvar.h in Headers */ = {isa = PBXBuildFile; fileRef = F8D6CD6D2442F20C00D2A454 /* if_iwxvar.h */; };
 		F8D6CD712442F22D00D2A454 /* if_iwx.cpp in Sources */ = {isa = PBXBuildFile; fileRef = F8D6CD702442F22D00D2A454 /* if_iwx.cpp */; };
+		F8D76362244F21BB00DEA040 /* pm.cpp in Sources */ = {isa = PBXBuildFile; fileRef = F8D76361244F21BB00DEA040 /* pm.cpp */; };
 		F8F9257D240974EF0088B8D5 /* cfg80211.h in Headers */ = {isa = PBXBuildFile; fileRef = F8F92572240974ED0088B8D5 /* cfg80211.h */; };
 		F8F9257E240974EF0088B8D5 /* bitfield.h in Headers */ = {isa = PBXBuildFile; fileRef = F8F92573240974EE0088B8D5 /* bitfield.h */; };
 		F8F9257F240974EF0088B8D5 /* kernel.h in Headers */ = {isa = PBXBuildFile; fileRef = F8F92574240974EE0088B8D5 /* kernel.h */; };
@@ -395,6 +396,7 @@
 		F8D6CD6C2442F20C00D2A454 /* if_iwxreg.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = if_iwxreg.h; sourceTree = "<group>"; };
 		F8D6CD6D2442F20C00D2A454 /* if_iwxvar.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = if_iwxvar.h; sourceTree = "<group>"; };
 		F8D6CD702442F22D00D2A454 /* if_iwx.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = if_iwx.cpp; sourceTree = "<group>"; };
+		F8D76361244F21BB00DEA040 /* pm.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = pm.cpp; sourceTree = "<group>"; };
 		F8EE4D1924177FEE002FA666 /* fw_gen.sh */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; path = fw_gen.sh; sourceTree = "<group>"; };
 		F8EE4D1A241786B0002FA666 /* FwData.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = FwData.h; sourceTree = "<group>"; };
 		F8F92572240974ED0088B8D5 /* cfg80211.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = cfg80211.h; sourceTree = "<group>"; };
@@ -476,6 +478,7 @@
 				024A08D323FCF3E6009FBA6C /* power.cpp */,
 				024A08D523FCF4D7009FBA6C /* scan.cpp */,
 				F8EE4D1A241786B0002FA666 /* FwData.h */,
+				F8D76361244F21BB00DEA040 /* pm.cpp */,
 			);
 			path = itlwm;
 			sourceTree = "<group>";
@@ -1023,6 +1026,7 @@
 				F8C2EC592408031A007A9422 /* ieee80211_mira.c in Sources */,
 				024A083223FCBC6C009FBA6C /* ecb3_enc.c in Sources */,
 				024A08D023FCEE88009FBA6C /* ctxt.cpp in Sources */,
+				F8D76362244F21BB00DEA040 /* pm.cpp in Sources */,
 				024A08C023FCD4E2009FBA6C /* utils.cpp in Sources */,
 				024A08D223FCF395009FBA6C /* led.cpp in Sources */,
 				F8C2EC542408031A007A9422 /* ieee80211_rssadapt.c in Sources */,

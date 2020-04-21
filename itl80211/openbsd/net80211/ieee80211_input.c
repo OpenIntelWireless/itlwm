@@ -979,7 +979,8 @@ ieee80211_decap(struct ieee80211com *ic, mbuf_t m,
         mbuf_adj(m, hdrlen - ETHER_HDR_LEN);
     }
     memcpy(mtod(m, caddr_t), &eh, ETHER_HDR_LEN);
-    if (!ALIGNED_POINTER((mtod(m, caddr_t) + ETHER_HDR_LEN), u_int32_t)) {
+//    if (!ALIGNED_POINTER((mtod(m, caddr_t) + ETHER_HDR_LEN), u_int32_t)) {
+    if ((unsigned long)((uint8_t*)mbuf_data(m) + ETHER_HDR_LEN) & sizeof(u_int32_t) - 1) {
         XYLog("%s %d\n", __FUNCTION__, __LINE__);
         mbuf_t m0 = m;
         //        mbuf_dup(m0, M_NOWAIT, &m);

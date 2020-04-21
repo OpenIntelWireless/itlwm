@@ -121,6 +121,7 @@ ieee80211_proto_attach(struct ifnet *ifp)
 void
 ieee80211_proto_detach(struct ifnet *ifp)
 {
+    XYLog("%s\n", __FUNCTION__);
 	struct ieee80211com *ic = (struct ieee80211com *)ifp;
 
 	mq_purge(&ic->ic_mgtq);
@@ -996,7 +997,8 @@ ieee80211_newstate(struct ieee80211com *ic, enum ieee80211_state nstate,
 #endif
 
 	ostate = ic->ic_state;
-    XYLog("%s: %s -> %s\n", ifp->if_xname,
+	if (ifp->if_flags & IFF_DEBUG)
+		XYLog("%s: %s -> %s\n", ifp->if_xname,
 		    ieee80211_state_name[ostate], ieee80211_state_name[nstate]);
 	ic->ic_state = nstate;			/* state transition */
 	ni = ic->ic_bss;			/* NB: no reference held */

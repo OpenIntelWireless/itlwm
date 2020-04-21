@@ -32,6 +32,7 @@ struct task {
     void        (*t_func)(void *);
     void        *t_arg;
     unsigned int    t_flags;
+    char name[256];
 };
 
 #define TASK_ONQUEUE        1
@@ -54,7 +55,7 @@ void         taskq_barrier(struct taskq *);
 
 void         taskq_del_barrier(struct taskq *, struct task *);
 
-void         task_set(struct task *, void (*)(void *), void *);
+void         task_set(struct task *, void (*)(void *), void *, const char *);
 int         task_add(struct taskq *, struct task *);
 int         task_del(struct taskq *, struct task *);
 

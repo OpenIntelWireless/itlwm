@@ -225,7 +225,7 @@ ieee80211_ifattach(struct ifnet *ifp)
 void
 ieee80211_ifdetach(struct ifnet *ifp)
 {
-    IOLog("ieee80211_ifdetach\n");
+    XYLog("%s\n", __FUNCTION__);
     struct ieee80211com *ic = (struct ieee80211com *)ifp;
     
     timeout_del(&ic->ic_bgscan_timeout);

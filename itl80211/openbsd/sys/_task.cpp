@@ -42,10 +42,8 @@ struct taskq {
     unsigned int         tq_flags;
     const char        *tq_name;
 
-    lck_grp_t         *tq_grp;
-    lck_grp_attr_t    *tq_grp_attr;
-    lck_attr_t        *tq_attr;
-    lck_mtx_t         *tq_mtx;
+    semaphore_t tq_sig;
+    IOLock *tq_mtx;
     struct task_list     tq_worklist;
 };
 
@@ -77,33 +75,16 @@ int
 taskq_next_work(struct taskq *tq, struct task *work)
 {
     struct task *next;
-
-    lck_mtx_lock(tq->tq_mtx);
-retry:
+    
     while ((next = TAILQ_FIRST(&tq->tq_worklist)) == NULL) {
         if (tq->tq_state != TQ_S_RUNNING) {
-            lck_mtx_unlock(tq->tq_mtx);
             return (0);
         }
-
-        tq->tq_waiting++;
-        msleep(tq, tq->tq_mtx, PWAIT, "bored", 0);
-        tq->tq_waiting--;
+        semaphore_wait(tq->tq_sig);
     }
-
-    if (ISSET(next->t_flags, TASK_BARRIER)) {
-        /*
-         * Make sure all other threads are sleeping before we
-         * proceed and run the barrier task.
-         */
-        if (++tq->tq_waiting == tq->tq_nthreads) {
-            tq->tq_waiting--;
-        } else {
-            msleep(tq, tq->tq_mtx, PWAIT, "tqblk", 0);
-            tq->tq_waiting--;
-            goto retry;
-        }
-    }
+    
+    IOLog("itlwm: taskq %s lock\n", __FUNCTION__);
+    IOLockLock(tq->tq_mtx);
 
     TAILQ_REMOVE(&tq->tq_worklist, next, t_entry);
     CLR(next->t_flags, TASK_ONQUEUE);
@@ -111,10 +92,11 @@ retry:
     *work = *next; /* copy to caller to avoid races */
 
     next = TAILQ_FIRST(&tq->tq_worklist);
-    lck_mtx_unlock(tq->tq_mtx);
+    IOLockUnlock(tq->tq_mtx);
+    IOLog("itlwm: taskq %s unlock\n", __FUNCTION__);
 
     if (next != NULL && tq->tq_nthreads > 1)
-        wakeup_one((caddr_t)tq);
+        semaphore_signal(tq->tq_sig);
 
     return (1);
 }
@@ -130,27 +112,33 @@ taskq_thread(void *xtq)
 //        KERNEL_UNLOCK();
 
 //    WITNESS_CHECKORDER(&tq->tq_lock_object, LOP_NEWORDER, NULL);
+    
+    IOLog("itlwm: taskq %s schedule task\n", __FUNCTION__);
 
     while (taskq_next_work(tq, &work)) {
 //        WITNESS_LOCK(&tq->tq_lock_object, 0);
-        IOLog("itlwm: taskq worker thread=%lld work=%lld\n", thread_tid(current_thread()), &work);
+        IOLog("itlwm: taskq worker thread=%lld work=%s\n", thread_tid(current_thread()), work.name);
         (*work.t_func)(work.t_arg);
-        IOLog("itlwm: taskq worker thread=%lld work=%lld done", thread_tid(current_thread()), &work);
+        IOLog("itlwm: taskq worker thread=%lld work=%s done", thread_tid(current_thread()), work.name);
 //        _fCommandGate->runAction(taskq_run, tq, &work);
 //        WITNESS_UNLOCK(&tq->tq_lock_object, 0);
 //        sched_pause(yield);
-        IODelay(1);
+        IOSleep(1);
     }
+    
+    IOLog("itlwm: taskq %s schedule task done\n", __FUNCTION__);
 
-    lck_mtx_lock(tq->tq_mtx);
+    IOLockLock(tq->tq_mtx);
     last = (--tq->tq_running == 0);
-    lck_mtx_unlock(tq->tq_mtx);
+    IOLockUnlock(tq->tq_mtx);
 
 //    if (ISSET(tq->tq_flags, TASKQ_MPSAFE))
 //        KERNEL_LOCK();
 
-    if (last)
-        wakeup_one((caddr_t)&tq->tq_running);
+    if (last) {
+        IOLog("itlwm: taskq %s schedule task wakeup\n", __FUNCTION__);
+        semaphore_signal(tq->tq_sig);
+    }
 
 //    kthread_exit(0);
     thread_terminate(current_thread());
@@ -160,10 +148,12 @@ void taskq_create_thread(void *arg)
 {
     struct taskq *tq = (struct taskq *)arg;
     int rv;
-    lck_mtx_lock(tq->tq_mtx);
+    IOLog("itlwm: taskq %s lock\n", __FUNCTION__);
+    IOLockLock(tq->tq_mtx);
     switch (tq->tq_state) {
         case TQ_S_DESTROYED:
-            lck_mtx_unlock(tq->tq_mtx);
+        IOLog("itlwm: taskq %s unlock\n", __FUNCTION__);
+            IOLockUnlock(tq->tq_mtx);
             IOFree(tq, sizeof(*tq));
             return;
 
@@ -177,39 +167,41 @@ void taskq_create_thread(void *arg)
 
     do {
         tq->tq_running++;
-        lck_mtx_unlock(tq->tq_mtx);
+        IOLog("itlwm: taskq %s unlock\n", __FUNCTION__);
+        IOLockUnlock(tq->tq_mtx);
 
         thread_t new_thread;
         rv = kernel_thread_start((thread_continue_t)taskq_thread, tq, &new_thread);
-//        rv = kthread_create(taskq_thread, tq, NULL, tq->tq_name);
+        thread_deallocate(new_thread);
 
-        lck_mtx_lock(tq->tq_mtx);
+        IOLog("itlwm: taskq %s lock\n", __FUNCTION__);
+        IOLockLock(tq->tq_mtx);
         if (rv != KERN_SUCCESS) {
-            printf("unable to create thread for \"%s\" taskq\n",
+            IOLog("itlwm: tasq unable to create thread for \"%s\" taskq\n",
                    tq->tq_name);
 
             tq->tq_running--;
             /* could have been destroyed during kthread_create */
             if (tq->tq_state == TQ_S_DESTROYED &&
                 tq->tq_running == 0)
-                wakeup_one((caddr_t)&tq->tq_running);
+                semaphore_signal(tq->tq_sig);
             break;
         }
     } while (tq->tq_running < tq->tq_nthreads);
-
-    lck_mtx_unlock(tq->tq_mtx);
+    
+    IOLog("itlwm: taskq %s unlock\n", __FUNCTION__);
+    IOLockUnlock(tq->tq_mtx);
 }
 
 void
 taskq_init(void)
 {
-    systq->tq_attr = lck_attr_alloc_init();
-    systq->tq_grp_attr = lck_grp_attr_alloc_init();
-    systq->tq_grp = lck_grp_alloc_init("systq", systq->tq_grp_attr);
-    systq->tq_mtx = lck_mtx_alloc_init(systq->tq_grp, systq->tq_attr);
+    systq->tq_mtx = IOLockAlloc();
+    semaphore_create(kernel_task, &systq->tq_sig, 0, 1);
     TAILQ_INIT(&systq->tq_worklist);
     thread_t new_thread;
     kernel_thread_start((thread_continue_t)taskq_create_thread, systq, &new_thread);
+    thread_deallocate(new_thread);
 }
 
 struct taskq *
@@ -228,17 +220,15 @@ taskq_create(const char *name, unsigned int nthreads, int ipl,
     tq->tq_nthreads = nthreads;
     tq->tq_name = name;
     tq->tq_flags = flags;
-    tq->tq_attr = lck_attr_alloc_init();
-    tq->tq_grp_attr = lck_grp_attr_alloc_init();
-    tq->tq_grp = lck_grp_alloc_init("taskq", tq->tq_grp_attr);
-    tq->tq_mtx = lck_mtx_alloc_init(tq->tq_grp, tq->tq_attr);
+    tq->tq_mtx = IOLockAlloc();
+    semaphore_create(kernel_task, &tq->tq_sig, 0, 1);
 
     //    mtx_init_flags(&tq->tq_mtx, ipl, name, 0);
     TAILQ_INIT(&tq->tq_worklist);
     thread_t new_thread;
     /* try to create a thread to guarantee that tasks will be serviced */
     kernel_thread_start((thread_continue_t)taskq_create_thread, tq, &new_thread);
-
+    thread_deallocate(new_thread);
     return (tq);
 }
 
@@ -248,12 +238,10 @@ taskq_destroy(struct taskq *tq)
     if (!tq) {
         return;
     }
-    lck_mtx_lock(tq->tq_mtx);
     switch (tq->tq_state) {
         case TQ_S_CREATED:
             /* tq is still referenced by taskq_create_thread */
             tq->tq_state = TQ_S_DESTROYED;
-            lck_mtx_unlock(tq->tq_mtx);
             return;
 
         case TQ_S_RUNNING:
@@ -265,15 +253,12 @@ taskq_destroy(struct taskq *tq)
     }
 
     while (tq->tq_running > 0) {
-        wakeup(tq);
-        msleep(&tq->tq_running, tq->tq_mtx, PWAIT, "tqdestroy", 0);
+        semaphore_signal(tq->tq_sig);
+        semaphore_wait(tq->tq_sig);
     }
-    lck_mtx_unlock(tq->tq_mtx);
 
-    lck_mtx_free(tq->tq_mtx, tq->tq_grp);
-    lck_grp_attr_free(tq->tq_grp_attr);
-    lck_attr_free(tq->tq_attr);
-    lck_grp_free(tq->tq_grp);
+    IOLockFree(tq->tq_mtx);
+    semaphore_destroy(kernel_task, tq->tq_sig);
     if (tq != systq) {
         IOFree(tq, sizeof(*tq));
     }
@@ -281,34 +266,37 @@ taskq_destroy(struct taskq *tq)
 }
 
 void
-task_set(struct task *t, void (*fn)(void *), void *arg)
+task_set(struct task *t, void (*fn)(void *), void *arg, const char *name)
 {
     t->t_func = fn;
     t->t_arg = arg;
     t->t_flags = 0;
+    memcpy(t->name, name, sizeof(t->name));
 }
 
 int
 task_add(struct taskq *tq, struct task *w)
 {
     int rv = 0;
-//    IOLog("itlwm: taskq task_add task=%lld\n", w);
+    IOLog("itlwm: taskq task_add %s\n", w->name);
+
+    IOLockLock(tq->tq_mtx);
     if (ISSET(w->t_flags, TASK_ONQUEUE)) {
-        IOLog("itlwm: taskq task_add is already on /queue\n");
+        IOLog("itlwm: taskq task_add %s is already on queue\n", w->name);
+        IOLockUnlock(tq->tq_mtx);
+        semaphore_signal(tq->tq_sig);
         return (0);
     }
-
-    lck_mtx_lock(tq->tq_mtx);
     if (!ISSET(w->t_flags, TASK_ONQUEUE)) {
-//        IOLog("itlwm: taskq task_add add to queue\n");
+        IOLog("itlwm: taskq task_add %s add to queue\n", w->name);
         rv = 1;
         SET(w->t_flags, TASK_ONQUEUE);
         TAILQ_INSERT_TAIL(&tq->tq_worklist, w, t_entry);
     }
-    lck_mtx_unlock(tq->tq_mtx);
+    IOLockUnlock(tq->tq_mtx);
 
     if (rv)
-        wakeup_one((caddr_t)tq);
+        semaphore_signal(tq->tq_sig);
 
     return (rv);
 }
@@ -317,17 +305,15 @@ int
 task_del(struct taskq *tq, struct task *w)
 {
     int rv = 0;
-//    IOLog("itlwm: taskq task_del task=%lld\n", w);
-    if (!ISSET(w->t_flags, TASK_ONQUEUE))
-        return (0);
+    IOLog("itlwm: taskq task_del %s\n", w->name);
 
-    lck_mtx_lock(tq->tq_mtx);
+    IOLockLock(tq->tq_mtx);
     if (ISSET(w->t_flags, TASK_ONQUEUE)) {
         rv = 1;
         CLR(w->t_flags, TASK_ONQUEUE);
         TAILQ_REMOVE(&tq->tq_worklist, w, t_entry);
     }
-    lck_mtx_unlock(tq->tq_mtx);
+    IOLockUnlock(tq->tq_mtx);
 
     return (rv);
 }

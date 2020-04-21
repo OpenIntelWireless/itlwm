@@ -2567,6 +2567,7 @@ _iwm_start_task(OSObject *target, void *arg0, void *arg1, void *arg2, void *arg3
         }
         
         m = ifp->if_snd->lockDequeue();
+        XYLog("%s if_snd->lockDequeue\n", __FUNCTION__);
         if (!m) {
             break;
         }
@@ -2585,6 +2586,7 @@ _iwm_start_task(OSObject *target, void *arg0, void *arg1, void *arg2, void *arg3
             ifp->netStat->outputErrors++;
             continue;
         }
+        XYLog("%s if_snd->send\n", __FUNCTION__);
         
     sendit:
 #if NBPFILTER > 0
@@ -3797,11 +3799,11 @@ iwm_attach(struct iwm_softc *sc, struct pci_attach_args *pa)
 #endif
     timeout_set(&sc->sc_calib_to, iwm_calib_timeout, sc);
     timeout_set(&sc->sc_led_blink_to, iwm_led_blink_timeout, sc);
-    task_set(&sc->init_task, iwm_init_task, sc);
-    task_set(&sc->newstate_task, iwm_newstate_task, sc);
-    task_set(&sc->setrates_task, iwm_setrates_task, sc);
-    task_set(&sc->ba_task, iwm_ba_task, sc);
-    task_set(&sc->htprot_task, iwm_htprot_task, sc);
+    task_set(&sc->init_task, iwm_init_task, sc, "init_task");
+    task_set(&sc->newstate_task, iwm_newstate_task, sc, "newstate_task");
+    task_set(&sc->setrates_task, iwm_setrates_task, sc, "setrates_task");
+    task_set(&sc->ba_task, iwm_ba_task, sc, "ba_task");
+    task_set(&sc->htprot_task, iwm_htprot_task, sc, "htprot_task");
     
     ic->ic_node_alloc = iwm_node_alloc;
     ic->ic_bgscan_start = iwm_bgscan;

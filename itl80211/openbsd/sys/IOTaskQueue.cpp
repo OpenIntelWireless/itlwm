@@ -55,7 +55,7 @@ bool IOTaskQueue::checkForWork()
         currentTask = TAILQ_FIRST(&tq_worklist);
         if (currentTask == NULL) {
             IOLog("itlwm: IOTaskQueue::%s TAILQ_FIRST currentTask == NULL\n", __FUNCTION__);
-            return true;
+            return false;
         }
     } else {
         currentTask = TAILQ_NEXT(currentTask, entry_t);

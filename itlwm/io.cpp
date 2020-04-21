@@ -387,6 +387,7 @@ iwm_dma_contig_alloc(bus_dma_tag_t tag, struct iwm_dma_info *dma, void **kvap,
         return 1;
     
     dma->size = size;
+    memset(dma->vaddr, 0, dma->size);
     if (kvap != NULL)
         *kvap = dma->vaddr;
     

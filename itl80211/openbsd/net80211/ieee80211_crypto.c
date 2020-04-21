@@ -90,6 +90,7 @@ ieee80211_crypto_attach(struct ifnet *ifp)
 void
 ieee80211_crypto_detach(struct ifnet *ifp)
 {
+    XYLog("%s\n", __FUNCTION__);
 	struct ieee80211com *ic = (struct ieee80211com *)ifp;
 	struct ieee80211_pmk *pmk;
 

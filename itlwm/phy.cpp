@@ -520,6 +520,7 @@ iwm_send_cmd(struct iwm_softc *sc, struct iwm_host_cmd *hcmd)
     }
     
     if (paylen > datasz) {
+        XYLog("large command paylen=%u len0=%u\n", paylen, hcmd->len[0]);
         /* Command is too large to fit in pre-allocated space. */
         size_t totlen = hdrlen + paylen;
         if (paylen > IWM_MAX_CMD_PAYLOAD_SIZE) {
@@ -528,8 +529,11 @@ iwm_send_cmd(struct iwm_softc *sc, struct iwm_host_cmd *hcmd)
             err = EINVAL;
             goto out;
         }
+//        m = allocatePacket(totlen);
         mbuf_allocpacket(MBUF_WAITOK, totlen, &max_chunks, &m);
-        //        mbuf_gethdr(MBUF_DONTWAIT, MT_DATA, &m);
+//        mbuf_get(MBUF_WAITOK, MBUF_TYPE_DATA, &m);
+//        mbuf_getpacket(MBUF_WAITOK, &m);
+//                mbuf_gethdr(MBUF_DONTWAIT, MT_DATA, &m);
         ////        m = MCLGETI(NULL, M_DONTWAIT, NULL, totlen);
         if (m == NULL) {
             XYLog("%s: could not get fw cmd mbuf (%zd bytes)\n",
@@ -537,15 +541,15 @@ iwm_send_cmd(struct iwm_softc *sc, struct iwm_host_cmd *hcmd)
             err = ENOMEM;
             goto out;
         }
-        mbuf_setlen(m, totlen);
-        mbuf_pkthdr_setlen(m, totlen);
-        //        if (totlen > mbuf_get_mhlen()) {
-        //            mbuf_getcluster(MBUF_DONTWAIT, MT_DATA, MCLBYTES, &m);
-        //            if (!(mbuf_flags(m) & MBUF_EXT)) {
-        //                mbuf_freem(m);
-        //                return ENOMEM;
-        //            }
-        //        }
+//                        if (totlen > mbuf_get_mhlen()) {
+//                            mbuf_mclget(MBUF_DONTWAIT, MT_DATA, &m);
+//                            if (!(mbuf_flags(m) & MBUF_EXT)) {
+//                                mbuf_freem(m);
+//                                return ENOMEM;
+//                            }
+//                        }
+        mbuf_setlen(m, paylen);
+        mbuf_pkthdr_setlen(m, hdrlen);
         cmd = mtod(m, struct iwm_device_cmd *);
         txdata->map->dm_nsegs = txdata->map->cursor->getPhysicalSegmentsWithCoalesce(m, &seg, 1);
         if (txdata->map->dm_nsegs == 0) {

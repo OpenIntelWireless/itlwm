@@ -23,7 +23,9 @@ malloc(vm_size_t len, int type, int how)
         return NULL;
     }
     *((vm_size_t*) addr) = len;
-    return (void*)((uint8_t*)addr + sizeof(vm_size_t));
+    void *ret = (void*)((uint8_t*)addr + sizeof(vm_size_t));
+    bzero(ret, len);
+    return ret;
 }
 
 void itlwm::

@@ -420,36 +420,39 @@ static inline mbuf_t
 m_dup_pkt(mbuf_t m0, unsigned int adj, int wait)
 {
     mbuf_t m;
-    int len;
-
-    len = mbuf_pkthdr_len(m0) + adj;
-    
-    IOLog("itlwm: m_dup_pkt start, len=%lu\n", len);
-    
-    if (len > MAXMCLBYTES) /* XXX */
-        return (NULL);
-
-    mbuf_get((mbuf_how_t)wait, mbuf_type(m0), &m);
-    if (m == NULL)
-        return (NULL);
-
-    if (m_dup_pkthdr(m, m0, wait) != 0)
-        goto fail;
-
-    if (len > mbuf_get_mhlen()) {
-//        MCLGETI(m, wait, NULL, len);
-        mbuf_mclget(wait, MBUF_TYPE_DATA, &m);
-        if (!ISSET(mbuf_flags(m), MBUF_EXT))
-            goto fail;
-    }
-
-    mbuf_setlen(m, len);
-    mbuf_pkthdr_setlen(m, len);
-//    m->m_len = m->m_pkthdr.len = len;
-    mbuf_adj(m, adj);
-    mbuf_copydata(m0, 0, mbuf_pkthdr_len(m0), mtod(m, caddr_t));
-
-    return (m);
+    mbuf_dup(m0, wait, &m);
+    return m;
+//    mbuf_t m;
+//    int len;
+//
+//    len = mbuf_pkthdr_len(m0) + adj;
+//
+//    IOLog("itlwm: m_dup_pkt start, len=%lu\n", len);
+//
+//    if (len > MAXMCLBYTES) /* XXX */
+//        return (NULL);
+//
+//    mbuf_get((mbuf_how_t)wait, mbuf_type(m0), &m);
+//    if (m == NULL)
+//        return (NULL);
+//
+//    if (m_dup_pkthdr(m, m0, wait) != 0)
+//        goto fail;
+//
+//    if (len > mbuf_get_mhlen()) {
+////        MCLGETI(m, wait, NULL, len);
+//        mbuf_mclget(wait, MBUF_TYPE_DATA, &m);
+//        if (!ISSET(mbuf_flags(m), MBUF_EXT))
+//            goto fail;
+//    }
+//
+//    mbuf_setlen(m, len);
+//    mbuf_pkthdr_setlen(m, len);
+////    m->m_len = m->m_pkthdr.len = len;
+//    mbuf_adj(m, adj);
+//    mbuf_copydata(m0, 0, mbuf_pkthdr_len(m0), mtod(m, caddr_t));
+//
+//    return (m);
 
 fail:
     IOLog("itlwm: m_dup_pkt fail!!!!\n");
@@ -463,25 +466,21 @@ static inline int if_input(struct ifnet *ifq, struct mbuf_list *ml)
 {
     mbuf_t m;
     uint64_t packets;
-    bool isEmpty = false;
+    bool isEmpty = true;
     
     IORecursiveLockLock(inputLock);
-    isEmpty = ml_empty(ml);
-    if (isEmpty) {
-        IORecursiveLockUnlock(inputLock);
-        return (0);
-    }
     MBUF_LIST_FOREACH(ml, m) {
         if (ifq->iface == NULL) {
-            XYLog("%s ifq->iface == NULL!!!\n", __FUNCTION__);
+            panic("%s ifq->iface == NULL!!!\n");
             break;
         }
         if (m == NULL) {
-            XYLog("%s m == NULL!!!\n", __FUNCTION__);
+            panic("%s m == NULL!!!\n");
             continue;
         }
         XYLog("%s %d 啊啊啊啊 ifq->iface->inputPacket(m)\n", __FUNCTION__, __LINE__);
-        ifq->iface->inputPacket(m);
+        isEmpty = false;
+        ifq->iface->inputPacket(m, 0, IONetworkInterface::kInputOptionQueuePacket);
         if (ifq->netStat != NULL) {
             ifq->netStat->inputPackets++;
         }

@@ -30,6 +30,13 @@
 
 enum
 {
+    kPowerStateOff = 0,
+    kPowerStateOn,
+    kPowerStateCount
+};
+
+enum
+{
     MEDIUM_INDEX_AUTO = 0,
     MEDIUM_INDEX_10HD,
     MEDIUM_INDEX_10FD,
@@ -71,8 +78,22 @@ public:
     static IOReturn _iwm_start_task(OSObject *target, void *arg0, void *arg1, void *arg2, void *arg3);
 //    virtual bool createWorkLoop() override;
 //    virtual IOWorkLoop* getWorkLoop() const override;
+    mbuf_t mergePacket(mbuf_t m);
     
     void releaseAll();
+    
+    bool initPCIPowerManagment(IOPCIDevice *provider);
+    
+    //-----------------------------------------------------------------------
+    // Power management support.
+    //-----------------------------------------------------------------------
+    virtual IOReturn registerWithPolicyMaker( IOService * policyMaker ) override;
+    virtual IOReturn setPowerState( unsigned long powerStateOrdinal,
+                                    IOService *   policyMaker) override;
+    virtual IOReturn setWakeOnMagicPacket( bool active ) override;
+    void setPowerStateOff(void);
+    void setPowerStateOn(void);
+    void unregistPM();
     
     bool createMediumTables(const IONetworkMedium **primary);
     IOReturn getPacketFilters(const OSSymbol *group, UInt32 *filters) const override;
@@ -365,6 +386,7 @@ public:
     IOInterruptEventSource* fInterrupt;
     IOWorkLoop *irqWorkloop;
     IOCommandGate*        fOutputCommandGate;
+    IOPCIDevice *pciNub;
     struct pci_attach_args pci;
     struct iwm_softc com;
     IONetworkMedium *autoMedium;
@@ -373,6 +395,15 @@ public:
     
     IOLock *fwLoadLock;
     semaphore_t outputThreadSignal;
+    
+    //pm
+    thread_call_t powerOnThreadCall;
+    thread_call_t powerOffThreadCall;
+    UInt32 pmPowerState;
+    IOService *pmPolicyMaker;
+    UInt8 pmPCICapPtr;
+    bool magicPacketEnabled;
+    bool magicPacketSupported;
 };
 
 struct ResourceCallbackContext

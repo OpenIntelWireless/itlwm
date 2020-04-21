@@ -531,7 +531,7 @@ iwm_rx_pkt(struct iwm_softc *sc, struct iwm_rx_data *data, struct mbuf_list *ml)
     struct ifnet *ifp = IC2IFP(&sc->sc_ic);
     struct iwm_rx_packet *pkt, *nextpkt;
     uint32_t offset = 0, nextoff = 0, nmpdu = 0, len;
-    mbuf_t m0, m;
+    mbuf_t m0, m = NULL;
     const size_t minsz = sizeof(pkt->len_n_flags) + sizeof(pkt->hdr);
     size_t remain = IWM_RBUF_SIZE;
     int qid, idx, code, handled = 1;

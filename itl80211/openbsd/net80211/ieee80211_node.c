@@ -768,6 +768,7 @@ ieee80211_node_lateattach(struct ifnet *ifp)
 void
 ieee80211_node_detach(struct ifnet *ifp)
 {
+    XYLog("%s\n", __FUNCTION__);
 	struct ieee80211com *ic = (struct ieee80211com *)ifp;
 
 	if (ic->ic_bss != NULL) {
