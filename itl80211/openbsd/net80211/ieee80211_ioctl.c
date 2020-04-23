@@ -87,7 +87,8 @@ ieee80211_node2req(struct ieee80211com *ic, const struct ieee80211_node *ni,
 
 	/* Channel and rates */
 	nr->nr_channel = ieee80211_chan2ieee(ic, ni->ni_chan);
-	nr->nr_chan_flags = ni->ni_chan->ic_flags;
+	if (ni->ni_chan != IEEE80211_CHAN_ANYC)
+        nr->nr_chan_flags = ni->ni_chan->ic_flags;
 	if (ic->ic_curmode != IEEE80211_MODE_11N)
 		nr->nr_chan_flags &= ~IEEE80211_CHAN_HT;
 	nr->nr_nrates = ni->ni_rates.rs_nrates;
@@ -553,6 +554,18 @@ ieee80211_ioctl(struct ifnet *ifp, u_long cmd, caddr_t data)
 				error = ENETRESET;
 			}
 		} else {
+            if (ic->ic_des_esslen == join.i_len &&
+                memcmp(join.i_nwid, ic->ic_des_essid,
+                       join.i_len) == 0) {
+                struct ieee80211_node *ni;
+                
+                ieee80211_deselect_ess(ic);
+                ni = ieee80211_find_node(ic,
+                    ic->ic_bss->ni_bssid);
+                if (ni != NULL)
+                    ieee80211_free_node(ic, ni);
+                error = ENETRESET;
+            }
 			/* save nwid for auto-join */
 			if (ieee80211_add_ess(ic, &join) == 0)
 				ic->ic_flags |= IEEE80211_F_AUTO_JOIN;

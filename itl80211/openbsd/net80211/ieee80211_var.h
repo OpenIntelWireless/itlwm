@@ -232,6 +232,19 @@ static void array_sprintf(char *output, uint8_t output_size, const uint8_t *arra
 
 #define IEEE80211_BGSCAN_FAIL_MAX		360	/* units of 500 msec */
 
+/*
+ * Missed beacon threshold: An access point has disappeared if this amount
+ * of consecutive beacons have been missed.
+ * This value needs to be high enough to avoid frequent re-connects to APs
+ * which suffer from occasional packet loss, and low enough to avoid a long
+ * delay before we start scanning when an AP has actually disappeared.
+ *
+ * The beacon interval is variable, but generally in the order of 100ms.
+ * So 30 beacons implies a grace period of about 3 seconds before we start
+ * searching for a new AP.
+ */
+#define IEEE80211_BEACON_MISS_THRES        30    /* units of beacons */
+
 enum ieee80211_phytype {
 	IEEE80211_T_DS,			/* direct sequence spread spectrum */
 	IEEE80211_T_OFDM,		/* frequency division multiplexing */
@@ -630,6 +643,7 @@ int	ieee80211_add_ess(struct ieee80211com *, struct ieee80211_join *);
 void	ieee80211_del_ess(struct ieee80211com *, char *, int, int);
 void	ieee80211_set_ess(struct ieee80211com *, struct ieee80211_ess *,
 	    struct ieee80211_node *);
+void    ieee80211_deselect_ess(struct ieee80211com *);
 struct ieee80211_ess *ieee80211_get_ess(struct ieee80211com *, const char *, int);
 
 extern	int ieee80211_cache_size;

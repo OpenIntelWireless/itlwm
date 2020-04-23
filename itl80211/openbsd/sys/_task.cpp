@@ -72,7 +72,7 @@ taskq_next_work(struct taskq *tq, struct task *work)
         semaphore_wait(tq->tq_sig);
     }
     
-    IOLog("itlwm: taskq %s lock\n", __FUNCTION__);
+//    IOLog("itlwm: taskq %s lock\n", __FUNCTION__);
     IOLockLock(tq->tq_mtx);
 
     TAILQ_REMOVE(&tq->tq_worklist, next, t_entry);
@@ -82,7 +82,7 @@ taskq_next_work(struct taskq *tq, struct task *work)
 
     next = TAILQ_FIRST(&tq->tq_worklist);
     IOLockUnlock(tq->tq_mtx);
-    IOLog("itlwm: taskq %s unlock\n", __FUNCTION__);
+//    IOLog("itlwm: taskq %s unlock\n", __FUNCTION__);
 
     if (next != NULL && tq->tq_nthreads > 1)
         semaphore_signal(tq->tq_sig);
@@ -106,9 +106,9 @@ taskq_thread(void *xtq)
 
     while (taskq_next_work(tq, &work)) {
 //        WITNESS_LOCK(&tq->tq_lock_object, 0);
-        IOLog("itlwm: taskq worker thread=%lld work=%s\n", thread_tid(current_thread()), work.name);
+//        IOLog("itlwm: taskq worker thread=%lld work=%s\n", thread_tid(current_thread()), work.name);
         (*work.t_func)(work.t_arg);
-        IOLog("itlwm: taskq worker thread=%lld work=%s done", thread_tid(current_thread()), work.name);
+//        IOLog("itlwm: taskq worker thread=%lld work=%s done", thread_tid(current_thread()), work.name);
 //        _fCommandGate->runAction(taskq_run, tq, &work);
 //        WITNESS_UNLOCK(&tq->tq_lock_object, 0);
 //        sched_pause(yield);
@@ -267,7 +267,7 @@ int
 task_add(struct taskq *tq, struct task *w)
 {
     int rv = 0;
-    IOLog("itlwm: taskq task_add %s\n", w->name);
+//    IOLog("itlwm: taskq task_add %s\n", w->name);
 
     IOLockLock(tq->tq_mtx);
     if (ISSET(w->t_flags, TASK_ONQUEUE)) {
@@ -294,7 +294,7 @@ int
 task_del(struct taskq *tq, struct task *w)
 {
     int rv = 0;
-    IOLog("itlwm: taskq task_del %s\n", w->name);
+//    IOLog("itlwm: taskq task_del %s\n", w->name);
 
     IOLockLock(tq->tq_mtx);
     if (ISSET(w->t_flags, TASK_ONQUEUE)) {

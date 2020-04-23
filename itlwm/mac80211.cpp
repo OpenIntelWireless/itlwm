@@ -2524,11 +2524,11 @@ _iwm_start_task(OSObject *target, void *arg0, void *arg1, void *arg2, void *arg3
             bpf_mtap(ifp->if_bpf, m, BPF_DIRECTION_OUT);
 #endif
         if ((m = ieee80211_encap(ifp, m, &ni)) == NULL) {
-            XYLog("%s %d OUTPUT_ERROR\n", __FUNCTION__, __LINE__);
+            XYLog("%s %d ieee80211_encap OUTPUT_ERROR\n", __FUNCTION__, __LINE__);
             ifp->netStat->outputErrors++;
             continue;
         }
-        XYLog("%s if_snd->send\n", __FUNCTION__);
+//        XYLog("%s if_snd->send\n", __FUNCTION__);
         
     sendit:
 #if NBPFILTER > 0
@@ -2536,8 +2536,8 @@ _iwm_start_task(OSObject *target, void *arg0, void *arg1, void *arg2, void *arg3
             bpf_mtap(ic->ic_rawbpf, m, BPF_DIRECTION_OUT);
 #endif
         if (that->iwm_tx(sc, m, ni, ac) != 0) {
+            XYLog("%s %d iwm_tx OUTPUT_ERROR\n", __FUNCTION__, __LINE__);
             ieee80211_release_node(ic, ni);
-            XYLog("%s %d OUTPUT_ERROR\n", __FUNCTION__, __LINE__);
             ifp->netStat->outputErrors++;
             continue;
         }

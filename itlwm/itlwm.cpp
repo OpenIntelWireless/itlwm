@@ -406,7 +406,7 @@ copy_packet:
 
 UInt32 itlwm::outputPacket(mbuf_t m, void *param)
 {
-    XYLog("%s\n", __FUNCTION__);
+//    XYLog("%s\n", __FUNCTION__);
     ifnet *ifp = &com.sc_ic.ic_ac.ac_if;
     
     if (com.sc_ic.ic_state != IEEE80211_S_RUN || ifp == NULL || ifp->if_snd == NULL) {

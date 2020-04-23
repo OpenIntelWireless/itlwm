@@ -541,6 +541,7 @@ void ieee80211_create_ibss(struct ieee80211com* ,
 		struct ieee80211_channel *);
 void ieee80211_notify_dtim(struct ieee80211com *);
 void ieee80211_set_tim(struct ieee80211com *, int, int);
+void ieee80211_free_node(struct ieee80211com *, struct ieee80211_node *);
 
 int ieee80211_node_cmp(const struct ieee80211_node *,
 		const struct ieee80211_node *);

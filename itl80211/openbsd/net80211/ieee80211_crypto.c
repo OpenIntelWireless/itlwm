@@ -309,19 +309,19 @@ ieee80211_decrypt(struct ieee80211com *ic, mbuf_t m0,
 	switch (k->k_cipher) {
 	case IEEE80211_CIPHER_WEP40:
 	case IEEE80211_CIPHER_WEP104:
-        XYLog("%s %d ieee80211_wep_decrypt\n", __FUNCTION__, __LINE__);
+//        XYLog("%s %d ieee80211_wep_decrypt\n", __FUNCTION__, __LINE__);
 		m0 = ieee80211_wep_decrypt(ic, m0, k);
 		break;
 	case IEEE80211_CIPHER_TKIP:
-        XYLog("%s %d ieee80211_tkip_decrypt\n", __FUNCTION__, __LINE__);
+//        XYLog("%s %d ieee80211_tkip_decrypt\n", __FUNCTION__, __LINE__);
 		m0 = ieee80211_tkip_decrypt(ic, m0, k);
 		break;
 	case IEEE80211_CIPHER_CCMP:
-        XYLog("%s %d ieee80211_ccmp_decrypt\n", __FUNCTION__, __LINE__);
+//        XYLog("%s %d ieee80211_ccmp_decrypt\n", __FUNCTION__, __LINE__);
 		m0 = ieee80211_ccmp_decrypt(ic, m0, k);
 		break;
 	case IEEE80211_CIPHER_BIP:
-        XYLog("%s %d ieee80211_bip_decap\n", __FUNCTION__, __LINE__);
+//        XYLog("%s %d ieee80211_bip_decap\n", __FUNCTION__, __LINE__);
 		m0 = ieee80211_bip_decap(ic, m0, k);
 		break;
 	default:

@@ -927,10 +927,11 @@ ieee80211_set_beacon_miss_threshold(struct ieee80211com *ic)
 
 	/*
 	 * Scale the missed beacon counter threshold to the AP's actual
-	 * beacon interval. Give the AP at least 700 ms to time out and
-	 * round up to ensure that at least one beacon may be missed.
+     * beacon interval.
 	 */
-	int btimeout = MIN(7 * ic->ic_bss->ni_intval, 700);
+	int btimeout = MIN(IEEE80211_BEACON_MISS_THRES * ic->ic_bss->ni_intval,
+         IEEE80211_BEACON_MISS_THRES * (IEEE80211_DUR_TU / 10));
+    /* Ensure that at least one beacon may be missed. */
 	btimeout = MAX(btimeout, 2 * ic->ic_bss->ni_intval);
 	if (ic->ic_bss->ni_intval > 0) /* don't crash if interval is bogus */
 		ic->ic_bmissthres = btimeout / ic->ic_bss->ni_intval;

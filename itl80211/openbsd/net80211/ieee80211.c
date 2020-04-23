@@ -1,16 +1,16 @@
 /*
-* Copyright (C) 2020  钟先耀
-*
-* This program is free software; you can redistribute it and/or modify
-* it under the terms of the GNU General Public License as published by
-* the Free Software Foundation; either version 2 of the License, or
-* (at your option) any later version.
-*
-* This program is distributed in the hope that it will be useful,
-* but WITHOUT ANY WARRANTY; without even the implied warranty of
-* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-* GNU General Public License for more details.
-*/
+ * Copyright (C) 2020  钟先耀
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
 /*	$OpenBSD: ieee80211.c,v 1.78 2019/09/02 12:50:12 stsp Exp $	*/
 /*	$NetBSD: ieee80211.c,v 1.19 2004/06/06 05:45:29 dyoung Exp $	*/
 
@@ -103,6 +103,9 @@ ieee80211_begin_bgscan(struct ifnet *ifp)
         ic->ic_state != IEEE80211_S_RUN || ic->ic_mgt_timer != 0)
         return;
     
+    if ((ic->ic_flags & IEEE80211_F_RSNON) && !ic->ic_bss->ni_port_valid)
+        return;
+    
     if (ic->ic_bgscan_start != NULL && ic->ic_bgscan_start(ic) == 0) {
         /*
          * Free the nodes table to ensure we get an up-to-date view
@@ -152,9 +155,9 @@ ieee80211_channel_init(struct ifnet *ifp)
              */
             if (i != ieee80211_chan2ieee(ic, c)) {
                 XYLog("%s: bad channel ignored; "
-                       "freq %u flags %x number %u\n",
-                       ifp->if_xname, c->ic_freq, c->ic_flags,
-                       i);
+                      "freq %u flags %x number %u\n",
+                      ifp->if_xname, c->ic_freq, c->ic_flags,
+                      i);
                 c->ic_flags = 0;	/* NB: remove */
                 continue;
             }
@@ -208,7 +211,7 @@ ieee80211_ifattach(struct ifnet *ifp)
     
     if (ic->ic_lintval == 0)
         ic->ic_lintval = 100;		/* default sleep */
-    ic->ic_bmissthres = 7;	/* default 7 beacons */
+    ic->ic_bmissthres = IEEE80211_BEACON_MISS_THRES;
     ic->ic_dtim_period = 1;	/* all TIMs are DTIMs */
     
     ieee80211_node_attach(ifp);
@@ -333,8 +336,8 @@ ieee80211_media_init(struct ifnet *ifp)
 {
     XYLog("%s\n", __FUNCTION__);
 #define    ADD(_ic, _s, _o) \
-    ifmedia_add(&(_ic)->ic_media, \
-        IFM_MAKEWORD(IFM_IEEE80211, (_s), (_o), 0), 0, NULL)
+ifmedia_add(&(_ic)->ic_media, \
+IFM_MAKEWORD(IFM_IEEE80211, (_s), (_o), 0), 0, NULL)
     struct ieee80211com *ic = (struct ieee80211com *)ifp;
     struct ifmediareq imr;
     int i, j, mode, rate, maxrate, r;
@@ -759,6 +762,12 @@ ieee80211_media_status(struct ifnet *ifp, struct ifmediareq *imr)
                 ic->ic_curmode == IEEE80211_MODE_11AC)
                 imr->ifm_active |= ieee80211_mcs2media(ic,
                                                        ni->ni_txmcs, (enum ieee80211_phymode)ic->ic_curmode);
+            else if (ni->ni_flags & IEEE80211_NODE_VHT) /* in MODE_AUTO */
+                imr->ifm_active |= ieee80211_mcs2media(ic,
+                                                       ni->ni_txmcs, IEEE80211_MODE_11AC);
+            else if (ni->ni_flags & IEEE80211_NODE_HT) /* in MODE_AUTO */
+                imr->ifm_active |= ieee80211_mcs2media(ic,
+                                                       ni->ni_txmcs, IEEE80211_MODE_11N);
             else
             /* calculate rate subtype */
                 imr->ifm_active |= ieee80211_rate2media(ic,
@@ -806,8 +815,25 @@ ieee80211_watchdog(struct ifnet *ifp)
 {
     struct ieee80211com *ic = (struct ieee80211com *)ifp;
     
-    if (ic->ic_mgt_timer && --ic->ic_mgt_timer == 0)
+    if (ic->ic_mgt_timer && --ic->ic_mgt_timer == 0) {
+        if (ic->ic_opmode == IEEE80211_M_STA &&
+            (ic->ic_state == IEEE80211_S_AUTH ||
+             ic->ic_state == IEEE80211_S_ASSOC)) {
+            struct ieee80211_node *ni;
+            if (ifp->if_flags & IFF_DEBUG)
+                printf("%s: %s timed out for %s\n",
+                       ifp->if_xname,
+                       ic->ic_state == IEEE80211_S_ASSOC ?
+                       "association" : "authentication",
+                       ether_sprintf(ic->ic_bss->ni_macaddr));
+            ni = ieee80211_find_node(ic, ic->ic_bss->ni_macaddr);
+            if (ni)
+                ni->ni_fails++;
+            if (ISSET(ic->ic_flags, IEEE80211_F_AUTO_JOIN))
+                ieee80211_deselect_ess(ic);
+        }
         ieee80211_new_state(ic, IEEE80211_S_SCAN, -1);
+    }
     
     if (ic->ic_mgt_timer != 0)
         ifp->if_timer = 1;
@@ -880,7 +906,7 @@ const struct ieee80211_vht_rateset ieee80211_std_ratesets_11ac[] = {
     { 10, { 65, 130, 195, 260, 390, 520, 585, 650, 780, 867 }, 1, 1 },
     
     /* MCS 0-9, 2 SS, 80MHz channel, no SGI */
-    { 10, { 117, 234, 351, 468, 702, 936, 1053, 1404, 1560 }, 2, 0 }, 
+    { 10, { 117, 234, 351, 468, 702, 936, 1053, 1404, 1560 }, 2, 0 },
     
     /* MCS 0-9, 2 SS, 80MHz channel, SGI */
     { 10, { 130, 260, 390, 520, 780, 1040, 1170, 1300, 1560, 1734 }, 2, 1 },
@@ -1090,13 +1116,13 @@ ieee80211_next_mode(struct ifnet *ifp)
      * supported channel gets scanned.
      */
     for (mode = ic->ic_curmode + 1; mode <= IEEE80211_MODE_MAX; mode++) {
-        /* 
+        /*
          * Skip over 11n mode. Its set of channels is the superset
          * of all channels supported by the other modes.
          */
         if (mode == IEEE80211_MODE_11N)
             continue;
-        /* 
+        /*
          * Skip over 11ac mode. Its set of channels is the set
          * of all channels supported by 11a.
          */

@@ -178,7 +178,8 @@ ieee80211_inputm(struct ifnet *ifp, mbuf_t m, struct ieee80211_node *ni,
             ic->ic_stats.is_rx_tooshort++;
             goto err;
         }
-    }
+    } else
+        hdrlen = 0;
     if ((hasqos = ieee80211_has_qos(wh))) {
         qos = ieee80211_get_qos(wh);
         tid = qos & IEEE80211_QOS_TID;
@@ -755,7 +756,10 @@ ieee80211_input_ba_seq(struct ieee80211com *ic, struct ieee80211_node *ni,
         } else
             ic->ic_stats.is_ht_rx_ba_frame_lost++;
         ba->ba_head = (ba->ba_head + 1) % IEEE80211_BA_MAX_WINSZ;
+        /* move window forward */
+        ba->ba_winstart = (ba->ba_winstart + 1) & 0xfff;
     }
+    ba->ba_winend = (ba->ba_winstart + ba->ba_winsize - 1) & 0xfff;
 }
 
 /* Flush a consecutive sequence of frames from the reorder buffer. */
@@ -981,7 +985,7 @@ ieee80211_decap(struct ieee80211com *ic, mbuf_t m,
     memcpy(mtod(m, caddr_t), &eh, ETHER_HDR_LEN);
 //    if (!ALIGNED_POINTER((mtod(m, caddr_t) + ETHER_HDR_LEN), u_int32_t)) {
     if ((unsigned long)((uint8_t*)mbuf_data(m) + ETHER_HDR_LEN) & sizeof(u_int32_t) - 1) {
-        XYLog("%s %d\n", __FUNCTION__, __LINE__);
+//        XYLog("%s %d\n", __FUNCTION__, __LINE__);
         mbuf_t m0 = m;
         //        mbuf_dup(m0, M_NOWAIT, &m);
         //        if (m) {
@@ -989,7 +993,7 @@ ieee80211_decap(struct ieee80211com *ic, mbuf_t m,
         //            mbuf_adj(m, ETHER_ALIGN);
         //        }
         m = m_dup_pkt(m0, ETHER_ALIGN, M_NOWAIT);
-        XYLog("%s %d\n", __FUNCTION__, __LINE__);
+//        XYLog("%s %d\n", __FUNCTION__, __LINE__);
         mbuf_freem(m0);
         if (m == NULL) {
             ic->ic_stats.is_rx_decap++;
@@ -2554,6 +2558,11 @@ ieee80211_recv_addba_req(struct ieee80211com *ic, mbuf_t m,
         DPRINTF(("frame too short\n"));
         return;
     }
+    
+    /* No point in starting block-ack before the WPA handshake is done. */
+    if ((ic->ic_flags & IEEE80211_F_RSNON) && !ni->ni_port_valid)
+        return;
+    
     /* MLME-ADDBA.indication */
     wh = mtod(m, struct ieee80211_frame *);
     frm = (const u_int8_t *)&wh[1];
