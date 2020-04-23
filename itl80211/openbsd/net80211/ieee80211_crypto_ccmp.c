@@ -259,7 +259,7 @@ ieee80211_ccmp_encrypt(struct ieee80211com *ic, mbuf_t m0,
 				goto nospace;
             mbuf_setnext(n, temp);
 			n = mbuf_next(n);
-            mbuf_setlen(n, mbuf_get_mhlen());
+            mbuf_setlen(n, mbuf_get_mlen());
 			if (left >= mbuf_get_minclsize() - IEEE80211_CCMP_MICLEN) {
                 mbuf_getcluster(MBUF_DONTWAIT, mbuf_type(n), 4096, &n);
 				if (mbuf_flags(n) & MBUF_EXT)

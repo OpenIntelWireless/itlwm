@@ -948,7 +948,7 @@ iwm_tx(struct iwm_softc *sc, mbuf_t m, struct ieee80211_node *ni, int ac)
     /* Trim 802.11 header. */
     mbuf_adj(m, hdrlen);
     
-    data->map->dm_nsegs = data->map->cursor->getPhysicalSegmentsWithCoalesce(m, data->map->dm_segs, 18);
+    data->map->dm_nsegs = data->map->cursor->getPhysicalSegmentsWithCoalesce(m, &data->map->dm_segs[0], 18);
 //    XYLog("map frame dm_nsegs=%d\n", data->map->dm_nsegs);
     if (data->map->dm_nsegs == 0) {
         XYLog("%s: can't map mbuf (error %d)\n", DEVNAME(sc), data->map->dm_nsegs);
