@@ -75,6 +75,7 @@ public:
     int tsleep_nsec(void *ident, int priority, const char *wmesg, int timo);
     void wakeupOn(void* ident);
     static bool intrFilter(OSObject *object, IOFilterInterruptEventSource *src);
+    void watchdogAction(IOTimerEventSource *timer);
     static IOReturn _iwm_start_task(OSObject *target, void *arg0, void *arg1, void *arg2, void *arg3);
 //    virtual bool createWorkLoop() override;
 //    virtual IOWorkLoop* getWorkLoop() const override;
@@ -248,9 +249,8 @@ public:
     int    iwm_get_noise(const struct iwm_statistics_rx_non_phy *);
     void    iwm_rx_frame(struct iwm_softc *, mbuf_t, int, int, int, uint32_t,
     struct ieee80211_rxinfo *, struct mbuf_list *);
-    void    iwm_enable_ht_cck_fallback(struct iwm_softc *, struct iwm_node *);
     void    iwm_rx_tx_cmd_single(struct iwm_softc *, struct iwm_rx_packet *,
-            struct iwm_node *);
+            struct iwm_node *, int, int);
     void    iwm_rx_tx_cmd(struct iwm_softc *, struct iwm_rx_packet *,
             struct iwm_rx_data *);
     void
@@ -336,8 +336,7 @@ public:
     int    iwm_run_stop(struct iwm_softc *);
     static struct ieee80211_node *iwm_node_alloc(struct ieee80211com *);
     static void    iwm_calib_timeout(void *);
-    static void    iwm_setrates_task(void *);
-    void    iwm_setrates(struct iwm_node *);
+    void    iwm_setrates(struct iwm_node *, int);
     int    iwm_media_change(struct ifnet *);
     static void    iwm_newstate_task(void *);
     static int    iwm_newstate(struct ieee80211com *, enum ieee80211_state, int);
@@ -386,6 +385,7 @@ public:
     IOInterruptEventSource* fInterrupt;
     IOWorkLoop *irqWorkloop;
     IOCommandGate*        fOutputCommandGate;
+    IOTimerEventSource *watchdogTimer;
     IOPCIDevice *pciNub;
     struct pci_attach_args pci;
     struct iwm_softc com;

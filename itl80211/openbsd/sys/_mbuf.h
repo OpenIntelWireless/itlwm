@@ -451,8 +451,8 @@ m_dup_pkt(mbuf_t m0, unsigned int adj, int wait)
 ////    m->m_len = m->m_pkthdr.len = len;
 //    mbuf_adj(m, adj);
 //    mbuf_copydata(m0, 0, mbuf_pkthdr_len(m0), mtod(m, caddr_t));
-//
-//    return (m);
+
+    return (m);
 
 fail:
     IOLog("itlwm: m_dup_pkt fail!!!!\n");

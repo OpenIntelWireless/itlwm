@@ -16,6 +16,7 @@
 #define FwData_h
 
 #include <string.h>
+#include <libkern/c++/OSData.h>
 
 struct FwDesc {
     const char *name;

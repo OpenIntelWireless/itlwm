@@ -49,5 +49,7 @@
 		<key>com.apple.kpi.mach</key>
 		<string>16.7</string>
 	</dict>
+	<key>OSBundleRequired</key>
+	<string>Network-Root</string>
 </dict>
 </plist>

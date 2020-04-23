@@ -60,17 +60,6 @@ struct taskq taskq_sys = {
 
 struct taskq *const systq = &taskq_sys;
 
-IOReturn
-taskq_run(OSObject *target, void *arg0, void *arg1, void *arg2, void *arg3)
-{
-    struct taskq *tq = (struct taskq *)arg0;
-    struct task *work = (struct task *)arg1;
-    
-    (*work->t_func)(work->t_arg);
-    
-    return kIOReturnSuccess;
-}
-
 int
 taskq_next_work(struct taskq *tq, struct task *work)
 {

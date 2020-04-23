@@ -68,6 +68,7 @@
 		024A08D223FCF395009FBA6C /* led.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 024A08D123FCF395009FBA6C /* led.cpp */; };
 		024A08D423FCF3E6009FBA6C /* power.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 024A08D323FCF3E6009FBA6C /* power.cpp */; };
 		024A08D623FCF4D7009FBA6C /* scan.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 024A08D523FCF4D7009FBA6C /* scan.cpp */; };
+		F81C64A62450832800509FCC /* FwBinary.cpp in Sources */ = {isa = PBXBuildFile; fileRef = F81C64A52450832800509FCC /* FwBinary.cpp */; };
 		F852107924473ED400A545C3 /* iwlwifi-cc-a0-46.ucode in Resources */ = {isa = PBXBuildFile; fileRef = F852107824473ED400A545C3 /* iwlwifi-cc-a0-46.ucode */; };
 		F88D2B3D2414E64000BBE700 /* sha1-pbkdf2.c in Sources */ = {isa = PBXBuildFile; fileRef = F88D2B3B2414E64000BBE700 /* sha1-pbkdf2.c */; };
 		F8A33574244AED060039DA12 /* IOTaskQueue.cpp in Sources */ = {isa = PBXBuildFile; fileRef = F8A33572244AED060039DA12 /* IOTaskQueue.cpp */; };
@@ -118,16 +119,6 @@
 		F8C2EC9924080557007A9422 /* _null.h in Headers */ = {isa = PBXBuildFile; fileRef = F8C2EC8F24080556007A9422 /* _null.h */; };
 		F8C2EC9A24080557007A9422 /* timeout.h in Headers */ = {isa = PBXBuildFile; fileRef = F8C2EC9024080556007A9422 /* timeout.h */; };
 		F8C2EC9C2408062D007A9422 /* pcireg.h in Headers */ = {isa = PBXBuildFile; fileRef = F8C2EC9B2408062D007A9422 /* pcireg.h */; };
-		F8C4BF932420FAED007F410E /* iwm-3160-17 in Resources */ = {isa = PBXBuildFile; fileRef = F8C4BF822420FAEB007F410E /* iwm-3160-17 */; };
-		F8C4BF952420FAED007F410E /* iwm-8000C-34 in Resources */ = {isa = PBXBuildFile; fileRef = F8C4BF842420FAEB007F410E /* iwm-8000C-34 */; };
-		F8C4BF992420FAED007F410E /* iwm-8265-34 in Resources */ = {isa = PBXBuildFile; fileRef = F8C4BF882420FAEC007F410E /* iwm-8265-34 */; };
-		F8C4BF9A2420FAED007F410E /* iwm-9000-34 in Resources */ = {isa = PBXBuildFile; fileRef = F8C4BF892420FAEC007F410E /* iwm-9000-34 */; };
-		F8C4BF9B2420FAED007F410E /* iwm-3168-29 in Resources */ = {isa = PBXBuildFile; fileRef = F8C4BF8A2420FAEC007F410E /* iwm-3168-29 */; };
-		F8C4BF9C2420FAED007F410E /* iwm-9260-34 in Resources */ = {isa = PBXBuildFile; fileRef = F8C4BF8B2420FAED007F410E /* iwm-9260-34 */; };
-		F8C4BF9D2420FAED007F410E /* iwm-7265-17 in Resources */ = {isa = PBXBuildFile; fileRef = F8C4BF8C2420FAED007F410E /* iwm-7265-17 */; };
-		F8C4BF9E2420FAED007F410E /* iwm-license in Resources */ = {isa = PBXBuildFile; fileRef = F8C4BF8D2420FAED007F410E /* iwm-license */; };
-		F8C4BF9F2420FAED007F410E /* iwm-7260-16 in Resources */ = {isa = PBXBuildFile; fileRef = F8C4BF8E2420FAED007F410E /* iwm-7260-16 */; };
-		F8C4BFA02420FAED007F410E /* iwm-7260-17 in Resources */ = {isa = PBXBuildFile; fileRef = F8C4BF8F2420FAED007F410E /* iwm-7260-17 */; };
 		F8C772922443439A00A1B8A0 /* compat.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 024A07BA23FCBC6C009FBA6C /* compat.cpp */; };
 		F8C772A42443444500A1B8A0 /* _task.cpp in Sources */ = {isa = PBXBuildFile; fileRef = F8F9EDE0240B7415009CB8E7 /* _task.cpp */; };
 		F8C772A62443444500A1B8A0 /* ieee80211_proto.c in Sources */ = {isa = PBXBuildFile; fileRef = F8C2EC2F24080319007A9422 /* ieee80211_proto.c */; };
@@ -242,6 +233,13 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
+		F8CC2BCD245080C3008EA16B /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 024A07A323FCBC3C009FBA6C /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = F8EE4D1B24178BF0002FA666;
+			remoteInfo = fwgen;
+		};
 		F8D6CD592442E28500D2A454 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 024A07A323FCBC3C009FBA6C /* Project object */;
@@ -325,6 +323,7 @@
 		024A08D123FCF395009FBA6C /* led.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = led.cpp; sourceTree = "<group>"; };
 		024A08D323FCF3E6009FBA6C /* power.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = power.cpp; sourceTree = "<group>"; };
 		024A08D523FCF4D7009FBA6C /* scan.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = scan.cpp; sourceTree = "<group>"; };
+		F81C64A52450832800509FCC /* FwBinary.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = FwBinary.cpp; path = itlwm/FwBinary.cpp; sourceTree = "<group>"; };
 		F852107824473ED400A545C3 /* iwlwifi-cc-a0-46.ucode */ = {isa = PBXFileReference; lastKnownFileType = file; path = "iwlwifi-cc-a0-46.ucode"; sourceTree = "<group>"; };
 		F88D2B3B2414E64000BBE700 /* sha1-pbkdf2.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "sha1-pbkdf2.c"; sourceTree = "<group>"; };
 		F8A33572244AED060039DA12 /* IOTaskQueue.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = IOTaskQueue.cpp; sourceTree = "<group>"; };
@@ -382,7 +381,6 @@
 		F8C4BF8A2420FAEC007F410E /* iwm-3168-29 */ = {isa = PBXFileReference; lastKnownFileType = file; path = "iwm-3168-29"; sourceTree = "<group>"; };
 		F8C4BF8B2420FAED007F410E /* iwm-9260-34 */ = {isa = PBXFileReference; lastKnownFileType = file; path = "iwm-9260-34"; sourceTree = "<group>"; };
 		F8C4BF8C2420FAED007F410E /* iwm-7265-17 */ = {isa = PBXFileReference; lastKnownFileType = file; path = "iwm-7265-17"; sourceTree = "<group>"; };
-		F8C4BF8D2420FAED007F410E /* iwm-license */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = "iwm-license"; sourceTree = "<group>"; };
 		F8C4BF8E2420FAED007F410E /* iwm-7260-16 */ = {isa = PBXFileReference; lastKnownFileType = file; path = "iwm-7260-16"; sourceTree = "<group>"; };
 		F8C4BF8F2420FAED007F410E /* iwm-7260-17 */ = {isa = PBXFileReference; lastKnownFileType = file; path = "iwm-7260-17"; sourceTree = "<group>"; };
 		F8D6CD4E2442E0D100D2A454 /* itl80211.kext */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = itl80211.kext; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -436,6 +434,7 @@
 		024A07A223FCBC3C009FBA6C = {
 			isa = PBXGroup;
 			children = (
+				F81C64A52450832800509FCC /* FwBinary.cpp */,
 				F8EE4D1924177FEE002FA666 /* fw_gen.sh */,
 				024A07AE23FCBC3C009FBA6C /* itlwm */,
 				F8D6CD4F2442E0D100D2A454 /* itl80211 */,
@@ -557,7 +556,6 @@
 				F8C4BF882420FAEC007F410E /* iwm-8265-34 */,
 				F8C4BF892420FAEC007F410E /* iwm-9000-34 */,
 				F8C4BF8B2420FAED007F410E /* iwm-9260-34 */,
-				F8C4BF8D2420FAED007F410E /* iwm-license */,
 			);
 			path = firmware;
 			sourceTree = "<group>";
@@ -845,6 +843,7 @@
 			buildRules = (
 			);
 			dependencies = (
+				F8CC2BCE245080C3008EA16B /* PBXTargetDependency */,
 				F8D6CD5A2442E28500D2A454 /* PBXTargetDependency */,
 			);
 			name = itlwm;
@@ -940,16 +939,6 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				F8C4BF992420FAED007F410E /* iwm-8265-34 in Resources */,
-				F8C4BF9F2420FAED007F410E /* iwm-7260-16 in Resources */,
-				F8C4BF9E2420FAED007F410E /* iwm-license in Resources */,
-				F8C4BF9D2420FAED007F410E /* iwm-7265-17 in Resources */,
-				F8C4BF9A2420FAED007F410E /* iwm-9000-34 in Resources */,
-				F8C4BFA02420FAED007F410E /* iwm-7260-17 in Resources */,
-				F8C4BF952420FAED007F410E /* iwm-8000C-34 in Resources */,
-				F8C4BF9B2420FAED007F410E /* iwm-3168-29 in Resources */,
-				F8C4BF932420FAED007F410E /* iwm-3160-17 in Resources */,
-				F8C4BF9C2420FAED007F410E /* iwm-9260-34 in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -976,6 +965,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				F81C64A62450832800509FCC /* FwBinary.cpp in Sources */,
 				F8C772922443439A00A1B8A0 /* compat.cpp in Sources */,
 				024A085223FCBC6C009FBA6C /* poly1305.c in Sources */,
 				024A083023FCBC6C009FBA6C /* sha2.c in Sources */,
@@ -1101,6 +1091,11 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
+		F8CC2BCE245080C3008EA16B /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = F8EE4D1B24178BF0002FA666 /* fwgen */;
+			targetProxy = F8CC2BCD245080C3008EA16B /* PBXContainerItemProxy */;
+		};
 		F8D6CD5A2442E28500D2A454 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = F8D6CD4D2442E0D100D2A454 /* itl80211 */;

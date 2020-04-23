@@ -173,9 +173,22 @@ bool itlwm::start(IOService *provider)
         releaseAll();
         return false;
     }
+    watchdogTimer = IOTimerEventSource::timerEventSource(this, OSMemberFunctionCast(IOTimerEventSource::Action, this, &itlwm::watchdogAction));
+    if (!watchdogTimer) {
+        XYLog("init watchdog fail\n");
+        releaseAll();
+        return false;
+    }
+    _fWorkloop->addEventSource(watchdogTimer);
+    watchdogTimer->enable();
     setLinkStatus(kIONetworkLinkValid);
     registerService();
     return true;
+}
+
+void itlwm::watchdogAction(IOTimerEventSource *timer)
+{
+    iwm_watchdog(&com.sc_ic.ic_ac.ac_if);
 }
 
 bool itlwm::initPCIPowerManagment(IOPCIDevice *provider)
@@ -263,14 +276,20 @@ void itlwm::releaseAll()
             _fCommandGate->release();
             _fCommandGate = NULL;
         }
+        if (watchdogTimer) {
+            watchdogTimer->cancelTimeout();
+            _fWorkloop->removeEventSource(watchdogTimer);
+            watchdogTimer->release();
+            watchdogTimer = NULL;
+        }
         _fWorkloop->release();
         _fWorkloop = NULL;
     }
     unregistPM();
-//    if (pciNub) {
-//        pciNub->release();
-//        pciNub = NULL;
-//    }
+    if (pciNub) {
+        pciNub->release();
+        pciNub = NULL;
+    }
 }
 
 void itlwm::free()

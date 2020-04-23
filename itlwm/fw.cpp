@@ -243,7 +243,7 @@ iwm_read_firmware(struct iwm_softc *sc, enum iwm_ucode_type ucode_type)
     uint32_t paging_mem_size;
     uint32_t tlv_type;
     uint8_t *data;
-    int err;
+    int err = 0;
     size_t len;
     OSData *fwData = NULL;
     
@@ -261,31 +261,32 @@ iwm_read_firmware(struct iwm_softc *sc, enum iwm_ucode_type ucode_type)
     //TODO
     //    err = loadfirmware(sc->sc_fwname,
     //        (u_char **)&fw->fw_rawdata, &fw->fw_rawsize);
-    IOLockLock(fwLoadLock);
-    ResourceCallbackContext context =
-    {
-        .context = this,
-        .resource = NULL
-    };
-    
-    //here leaks
-    IOReturn ret = OSKextRequestResource(OSKextGetCurrentIdentifier(), sc->sc_fwname, onLoadFW, &context, NULL);
-    IOLockSleep(fwLoadLock, this, 0);
-    IOLockUnlock(fwLoadLock);
-    if (context.resource == NULL) {
+//    IOLockLock(fwLoadLock);
+//    ResourceCallbackContext context =
+//    {
+//        .context = this,
+//        .resource = NULL
+//    };
+//
+//    //here leaks
+//    IOReturn ret = OSKextRequestResource(OSKextGetCurrentIdentifier(), sc->sc_fwname, onLoadFW, &context, NULL);
+//    IOLockSleep(fwLoadLock, this, 0);
+//    IOLockUnlock(fwLoadLock);
+//    if (context.resource == NULL) {
+//        XYLog("%s resource load fail.\n", sc->sc_fwname);
+//        goto out;
+//    }
+//    fw->fw_rawdata = malloc(context.resource->getLength(), 1, 1);
+//    memcpy(fw->fw_rawdata, context.resource->getBytesNoCopy(), context.resource->getLength());
+//    fw->fw_rawsize = context.resource->getLength();
+    fwData = getFWDescByName(sc->sc_fwname);
+    if (fwData == NULL) {
         XYLog("%s resource load fail.\n", sc->sc_fwname);
         goto out;
     }
-    fw->fw_rawdata = malloc(context.resource->getLength(), 1, 1);
-    memcpy(fw->fw_rawdata, context.resource->getBytesNoCopy(), context.resource->getLength());
-    fw->fw_rawsize = context.resource->getLength();
-    //    fwData = getFWDescByName(sc->sc_fwname);
-    //    if (fwData == NULL) {
-    //        XYLog("%s resource load fail.\n", sc->sc_fwname);
-    //        goto out;
-    //    }
-    //    fw->fw_rawdata = (u_char*)fwData->getBytesNoCopy();
-    //    fw->fw_rawsize = fwData->getLength();
+    fw->fw_rawdata = malloc(fwData->getLength(), 1, 1);
+    memcpy(fw->fw_rawdata, (u_char*)fwData->getBytesNoCopy(), fwData->getLength());
+    fw->fw_rawsize = fwData->getLength();
     XYLog("load firmware done\n");
     sc->sc_capaflags = 0;
     sc->sc_capa_n_scan_channels = IWM_DEFAULT_SCAN_CHANNELS;

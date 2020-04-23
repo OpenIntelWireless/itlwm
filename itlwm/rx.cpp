@@ -535,6 +535,7 @@ iwm_rx_pkt(struct iwm_softc *sc, struct iwm_rx_data *data, struct mbuf_list *ml)
     const size_t minsz = sizeof(pkt->len_n_flags) + sizeof(pkt->hdr);
     size_t remain = IWM_RBUF_SIZE;
     int qid, idx, code, handled = 1;
+    bool replaced = false;
     
     //    bus_dmamap_sync(sc->sc_dmat, data->map, 0, IWM_RBUF_SIZE,
     //        BUS_DMASYNC_POSTREAD);
@@ -556,12 +557,39 @@ iwm_rx_pkt(struct iwm_softc *sc, struct iwm_rx_data *data, struct mbuf_list *ml)
         
         if (code == IWM_REPLY_RX_MPDU_CMD && ++nmpdu == 1) {
             /* Take mbuf m0 off the RX ring. */
+//            mbuf_t mm;
+//            mm = replaceOrCopyPacket(&m0, IWM_RBUF_SIZE, &replaced);
+//            if (!mm) {
+//                XYLog("%s replaceOrCopyPacket fail\n", __FUNCTION__);
+//                ifp->netStat->inputErrors++;
+//                break;
+//            }
+//            if (replaced) {
+//                struct iwm_rx_ring *ring = &sc->rxq;
+//                struct iwm_rx_data *data = &ring->data[sc->rxq.cur];
+//                data->map->dm_nsegs = data->map->cursor->getPhysicalSegments(mm, &data->map->dm_segs[0], 1);
+//                if (data->map->dm_nsegs == 0) {
+//                    XYLog("%s data->map->dm_nsegs == 0\n", __FUNCTION__);
+//                    freePacket(mm);
+//                    ifp->netStat->inputErrors++;
+//                    break;
+//                }
+//                if (sc->sc_mqrx_supported) {
+//                    ((uint64_t *)ring->desc)[sc->rxq.cur] =
+//                    htole64(data->map->dm_segs[0].location);
+//                } else {
+//                    ((uint32_t *)ring->desc)[sc->rxq.cur] =
+//                    htole32(data->map->dm_segs[0].location >> 8);
+//                }
+//                mbuf_setlen(mm, IWM_RBUF_SIZE);
+//                data->m = mm;
+//            }
             if (iwm_rx_addbuf(sc, IWM_RBUF_SIZE, sc->rxq.cur)) {
                 ifp->netStat->inputErrors++;
                 break;
             }
             
-            KASSERT(data->m != m0, "data->m != m0");
+//            KASSERT(data->m != m0, "data->m != m0");
         }
         
         switch (code) {

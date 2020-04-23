@@ -1,16 +1,16 @@
 /*
-* Copyright (C) 2020  钟先耀
-*
-* This program is free software; you can redistribute it and/or modify
-* it under the terms of the GNU General Public License as published by
-* the Free Software Foundation; either version 2 of the License, or
-* (at your option) any later version.
-*
-* This program is distributed in the hope that it will be useful,
-* but WITHOUT ANY WARRANTY; without even the implied warranty of
-* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-* GNU General Public License for more details.
-*/
+ * Copyright (C) 2020  钟先耀
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
 /*    $OpenBSD: if_iwm.c,v 1.307 2020/04/09 21:36:50 stsp Exp $    */
 
 /*
@@ -310,6 +310,16 @@ iwm_add_sta_cmd(struct iwm_softc *sc, struct iwm_node *in, int update)
         add_sta_cmd.station_flags_msk
         |= htole32(IWM_STA_FLG_MAX_AGG_SIZE_MSK |
                    IWM_STA_FLG_AGG_MPDU_DENS_MSK);
+        if (!sc->sc_nvm.sku_cap_mimo_disable) {
+            if (in->in_ni.ni_rxmcs[1] != 0) {
+                add_sta_cmd.station_flags |=
+                htole32(IWM_STA_FLG_MIMO_EN_MIMO2);
+            }
+            if (in->in_ni.ni_rxmcs[2] != 0) {
+                add_sta_cmd.station_flags |=
+                htole32(IWM_STA_FLG_MIMO_EN_MIMO3);
+            }
+        }
         
         add_sta_cmd.station_flags
         |= htole32(IWM_STA_FLG_MAX_AGG_SIZE_64K);

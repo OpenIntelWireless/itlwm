@@ -6,7 +6,7 @@
 #  Created by qcwap on 2020/3/10.
 #  Copyright © 2020 钟先耀. All rights reserved.
 target_file="${PROJECT_DIR}/itlwm/FwBinary.cpp"
-fw_files=${PROJECT_DIR}/itlwm/firmware/*.*
+fw_files=${PROJECT_DIR}/itlwm/firmware/*
 
 rm -rf $target_file
 
