@@ -105,19 +105,11 @@
  */
 #ifndef _IF_IWXVAR_H
 #define _IF_IWXVAR_H
-#include "types.h"
-#include "kernel.h"
 #include "if_iwxreg.h"
-#include "ieee80211_var.h"
-#include "ieee80211_amrr.h"
-#include "ieee80211_mira.h"
-#include "ieee80211_radiotap.h"
-#include "compat.h"
-#include <sys/param.h>
-#include <sys/kpi_mbuf.h>
-#include <sys/mbuf.h>
 
+#include "compat.h"
 #include <IOKit/network/IOMbufMemoryCursor.h>
+#include <IOKit/IOBufferMemoryDescriptor.h>
 
 struct iwx_rx_radiotap_header {
 	struct ieee80211_radiotap_header wr_ihdr;
@@ -407,19 +399,19 @@ struct iwx_softc {
 
 	struct task		init_task; /* NB: not reference-counted */
 //	struct refcnt		task_refs;
-	struct task		newstate_task;
+	struct task newstate_task;
 	enum ieee80211_state	ns_nstate;
 	int			ns_arg;
 
 	/* Task for firmware BlockAck setup/teardown and its arguments. */
-	struct task		ba_task;
+	struct task	ba_task;
 	int			ba_start;
 	int			ba_tid;
 	uint16_t		ba_ssn;
 	uint16_t		ba_winsize;
 
 	/* Task for HT protection updates. */
-	struct task		htprot_task;
+	struct task	htprot_task;
 
 	bus_space_tag_t sc_st;
 	bus_space_handle_t sc_sh;

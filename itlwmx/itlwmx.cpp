@@ -1,16 +1,16 @@
 /*
-* Copyright (C) 2020  钟先耀
-*
-* This program is free software; you can redistribute it and/or modify
-* it under the terms of the GNU General Public License as published by
-* the Free Software Foundation; either version 2 of the License, or
-* (at your option) any later version.
-*
-* This program is distributed in the hope that it will be useful,
-* but WITHOUT ANY WARRANTY; without even the implied warranty of
-* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-* GNU General Public License for more details.
-*/
+ * Copyright (C) 2020  钟先耀
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
 
 #include "itlwmx.hpp"
 #include "types.h"
@@ -31,7 +31,7 @@ IOCommandGate *_fCommandGate;
 bool itlwmx::init(OSDictionary *properties)
 {
     super::init(properties);
-    fwLoadLock = IOLockAlloc();
+    _fwLoadLock = IOLockAlloc();
     return true;
 }
 
@@ -85,7 +85,7 @@ bool itlwmx::createMediumTables(const IONetworkMedium **primary)
     if (!result) {
         XYLog("Cannot publish medium dictionary!\n");
     }
-
+    
     // Per comment for 'publishMediumDictionary' in NetworkController.h, the
     // medium dictionary is copied and may be safely relseased after the call.
     mediumDict->release();
@@ -108,7 +108,7 @@ bool itlwmx::start(IOService *provider)
     device->setMemoryEnable(true);
     device->configWrite8(0x41, 0);
     _fWorkloop = getWorkLoop();
-    irqWorkloop = IOWorkLoop::workLoop();
+    irqWorkloop = _fWorkloop;
     fCommandGate = IOCommandGate::commandGate(this, (IOCommandGate::Action)tsleepHandler);
     _fCommandGate = fCommandGate;
     if (fCommandGate == 0) {
@@ -128,8 +128,6 @@ bool itlwmx::start(IOService *provider)
         return false;
     }
     ifp = &com.sc_ic.ic_ac.ac_if;
-    ifp->if_flags |= IFF_UP;
-    iwx_init(ifp);
     if (!attachInterface((IONetworkInterface **)&com.sc_ic.ic_ac.ac_if.iface)) {
         XYLog("attach to interface fail\n");
         return false;
@@ -146,7 +144,7 @@ IOReturn itlwmx::getPacketFilters(const OSSymbol *group, UInt32 *filters) const 
     } else {
         rtn = super::getPacketFilters(group, filters);
     }
-
+    
     return rtn;
 }
 
@@ -162,42 +160,45 @@ void itlwmx::stop(IOService *provider)
     IOEthernetInterface *inf = ifp->iface;
     pci_intr_handle *handle = com.ih;
     
-    setLinkStatus(kIONetworkLinkNoNetworkChange);
-//    taskq_destroy(systq);
-//    taskq_destroy(com.sc_nswq);
-    iwx_stop(ifp);
-    ieee80211_ifdetach(ifp);
+    super::stop(provider);
+    setLinkStatus(kIONetworkLinkValid);
     if (inf) {
+        //        taskq_destroy(systq);
+        //        taskq_destroy(com.sc_nswq);
+        ieee80211_ifdetach(ifp);
         detachInterface(inf);
         OSSafeReleaseNULL(inf);
     }
-    if (handle) {
+    if (handle && _fWorkloop) {
         handle->dev->release();
         handle->dev = NULL;
         handle->func = NULL;
         handle->arg = NULL;
         handle->intr->disable();
-        fWorkloop->removeEventSource(handle->intr);
+        _fWorkloop->removeEventSource(handle->intr);
         handle->intr->release();
         handle->intr = NULL;
         OSSafeReleaseNULL(handle);
     }
-    if (fCommandGate) {
+    if (fCommandGate && _fWorkloop) {
         fCommandGate->disable();
-        fWorkloop->removeEventSource(fCommandGate);
+        _fWorkloop->removeEventSource(fCommandGate);
         fCommandGate->release();
         fCommandGate = NULL;
     }
-    fWorkloop->release();
-    fWorkloop = NULL;
-    super::stop(provider);
+    if (_fWorkloop) {
+        _fWorkloop->release();
+        _fWorkloop = NULL;
+    }
 }
 
 void itlwmx::free()
 {
     XYLog("%s\n", __FUNCTION__);
-    IOLockFree(fwLoadLock);
-    fwLoadLock = NULL;
+    if (_fwLoadLock) {
+        IOLockFree(_fwLoadLock);
+        _fwLoadLock = NULL;
+    }
     super::free();
 }
 
@@ -213,9 +214,9 @@ const char *ssid_pwd = "zxyssdt112233";
 IOReturn itlwmx::enable(IONetworkInterface *netif)
 {
     XYLog("%s\n", __FUNCTION__);
+    struct ifnet *ifp = &com.sc_ic.ic_ac.ac_if;
     super::enable(netif);
     fCommandGate->enable();
-    setLinkStatus(kIONetworkLinkValid | kIONetworkLinkActive, getCurrentMedium());
     memset(&wpa, 0, sizeof(ieee80211_wpaparams));
     wpa.i_enabled = 1;
     wpa.i_ciphers = IEEE80211_WPA_CIPHER_CCMP | IEEE80211_WPA_CIPHER_TKIP;
@@ -238,24 +239,31 @@ IOReturn itlwmx::enable(IONetworkInterface *netif)
     join.i_nwkey = nwkey;
     join.i_len = strlen(ssid_name);
     memcpy(join.i_nwid, ssid_name, join.i_len);
+    ifp->if_flags |= IFF_UP;
+    iwx_activate(&com, DVACT_WAKEUP);
     return kIOReturnSuccess;
 }
 
 IOReturn itlwmx::disable(IONetworkInterface *netif)
 {
     XYLog("%s\n", __FUNCTION__);
+    struct ifnet *ifp = &com.sc_ic.ic_ac.ac_if;
     super::disable(netif);
-    fCommandGate->disable();
+    wakeupOn(&com);
+    iwx_activate(&com, DVACT_QUIESCE);
     return kIOReturnSuccess;
 }
 
 IOReturn itlwmx::getHardwareAddress(IOEthernetAddress *addrP) {
-    if (IEEE80211_ADDR_EQ(etheranyaddr, com.sc_ic.ic_myaddr)) {
-        return kIOReturnError;
-    } else {
-        IEEE80211_ADDR_COPY(addrP, com.sc_ic.ic_myaddr);
-        return kIOReturnSuccess;
-    }
+    addrP->bytes[0] = com.sc_nvm.hw_addr[0];
+    addrP->bytes[1] = com.sc_nvm.hw_addr[1];
+    addrP->bytes[2] = com.sc_nvm.hw_addr[2];
+    addrP->bytes[3] = com.sc_nvm.hw_addr[3];
+    addrP->bytes[4] = com.sc_nvm.hw_addr[4];
+    addrP->bytes[5] = com.sc_nvm.hw_addr[5];
+    XYLog("%s %02x, %02x, %02x, %02x, %02x, %02x\n", __FUNCTION__, addrP->bytes[0], addrP->bytes[1], addrP->bytes[2], addrP->bytes[3], addrP->bytes[4], addrP->bytes[5]);
+    XYLog("%s %02x, %02x, %02x, %02x, %02x, %02x\n", __FUNCTION__, com.sc_ic.ic_myaddr[0], com.sc_ic.ic_myaddr[1], com.sc_ic.ic_myaddr[2], com.sc_ic.ic_myaddr[3], com.sc_ic.ic_myaddr[4], com.sc_ic.ic_myaddr[5]);
+    return kIOReturnSuccess;
 }
 
 UInt32 itlwmx::outputPacket(mbuf_t m, void *param)
@@ -268,7 +276,7 @@ UInt32 itlwmx::outputPacket(mbuf_t m, void *param)
         return kIOReturnOutputDropped;
     }
     ifp->if_snd->lockEnqueue(m);
-    ifp->if_start(ifp);
+    (*ifp->if_start)(ifp);
     
     return kIOReturnOutputSuccess;
 }

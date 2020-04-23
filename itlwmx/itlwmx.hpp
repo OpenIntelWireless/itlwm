@@ -11,8 +11,6 @@
 * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 * GNU General Public License for more details.
 */
-#include "compat.h"
-#include "kernel.h"
 #include "if_iwxvar.h"
 
 #include <IOKit/network/IOEthernetController.h>
@@ -25,6 +23,8 @@
 #include <libkern/OSKextLib.h>
 #include <libkern/c++/OSMetaClass.h>
 #include <IOKit/IOFilterInterruptEventSource.h>
+
+static void    iwx_start(struct ifnet *);
 
 class itlwmx : public IOEthernetController {
     OSDeclareDefaultStructors(itlwmx)
@@ -274,7 +274,6 @@ public:
     int    iwx_send_update_mcc_cmd(struct iwx_softc *, const char *);
     int    iwx_init_hw(struct iwx_softc *);
     int    iwx_init(struct ifnet *);
-    static void    iwx_start(struct ifnet *);
     void    iwx_stop(struct ifnet *);
     static void    iwx_watchdog(struct ifnet *);
     static int    iwx_ioctl(struct ifnet *, u_long, caddr_t);
@@ -292,12 +291,11 @@ public:
     void    iwx_attach_hook(struct device *);
     bool    iwx_attach(struct iwx_softc *, struct pci_attach_args *);
     static void    iwx_init_task(void *);
-    int    iwx_activate(struct device *, int);
+    int    iwx_activate(struct iwx_softc *, int);
     int    iwx_resume(struct iwx_softc *);
     
 public:
     IOInterruptEventSource* fInterrupt;
-    IOWorkLoop *fWorkloop;
     IOWorkLoop *irqWorkloop;
     IOCommandGate*        fCommandGate;
     IOCommandGate*        fOutputCommandGate;
@@ -305,7 +303,7 @@ public:
     struct iwx_softc com;
     IONetworkStats *fpNetStats;
     
-    IOLock *fwLoadLock;
+    IOLock *_fwLoadLock;
 };
 
 struct ResourceCallbackContext

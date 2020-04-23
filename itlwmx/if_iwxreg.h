@@ -72,8 +72,10 @@
  */
 #ifndef _IF_IWXREG_H
 #define _IF_IWXREG_H
+
 #include "types.h"
-#include <libkern/libkern.h>
+#include "kernel.h"
+
 #include "ieee80211_var.h"
 #include "ieee80211_amrr.h"
 #include "ieee80211_mira.h"
