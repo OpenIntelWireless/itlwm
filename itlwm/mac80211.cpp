@@ -2511,7 +2511,7 @@ _iwm_start_task(OSObject *target, void *arg0, void *arg1, void *arg2, void *arg3
         }
         
         m = ifp->if_snd->lockDequeue();
-        XYLog("%s if_snd->lockDequeue\n", __FUNCTION__);
+//        XYLog("%s if_snd->lockDequeue\n", __FUNCTION__);
         if (!m) {
             break;
         }
@@ -3726,12 +3726,11 @@ iwm_attach(struct iwm_softc *sc, struct pci_attach_args *pa)
     ifp->controller = this;
     ifp->if_snd = IOPacketQueue::withCapacity(4096);
     ifp->if_softc = sc;
-    ifp->if_flags = IFF_BROADCAST | IFF_SIMPLEX | IFF_MULTICAST;
+    ifp->if_flags = IFF_BROADCAST | IFF_SIMPLEX | IFF_MULTICAST | IFF_DEBUG;
     ifp->if_ioctl = iwm_ioctl;
     ifp->if_start = iwm_start;
     ifp->if_watchdog = iwm_watchdog;
     memcpy(ifp->if_xname, DEVNAME(sc), IFNAMSIZ);
-    ifp->if_flags = IFF_DEBUG;
     
     if_attach(ifp);
     ieee80211_ifattach(ifp);

@@ -70,17 +70,6 @@
  *
  *****************************************************************************
  */
-#ifndef _IF_IWXREG_H
-#define _IF_IWXREG_H
-
-#include "types.h"
-#include "kernel.h"
-
-#include "ieee80211_var.h"
-#include "ieee80211_amrr.h"
-#include "ieee80211_mira.h"
-#include "ieee80211_radiotap.h"
-
 /* maximmum number of DRAM map entries supported by FW */
 #define IWX_MAX_DRAM_ENTRY	64
 #define IWX_CSR_CTXT_INFO_BA	0x40
@@ -6254,5 +6243,3 @@ iwx_rx_packet_payload_len(const struct iwx_rx_packet *pkt)
 #define IWX_BARRIER_READ_WRITE(sc)					\
 	bus_space_barrier((sc)->sc_st, (sc)->sc_sh, 0, (sc)->sc_sz,	\
 	    BUS_SPACE_BARRIER_READ | BUS_SPACE_BARRIER_WRITE)
-
-#endif

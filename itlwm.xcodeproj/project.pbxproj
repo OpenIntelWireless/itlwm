@@ -75,7 +75,6 @@
 		F8A33576244AED060039DA12 /* IOTaskQueue.cpp in Sources */ = {isa = PBXBuildFile; fileRef = F8A33572244AED060039DA12 /* IOTaskQueue.cpp */; };
 		F8A33577244AED060039DA12 /* IOTaskQueue.hpp in Headers */ = {isa = PBXBuildFile; fileRef = F8A33573244AED060039DA12 /* IOTaskQueue.hpp */; };
 		F8A33579244AED060039DA12 /* IOTaskQueue.hpp in Headers */ = {isa = PBXBuildFile; fileRef = F8A33573244AED060039DA12 /* IOTaskQueue.hpp */; };
-		F8B0899B2443523E002C84B3 /* iwx-license in Resources */ = {isa = PBXBuildFile; fileRef = F8B0899A2443523E002C84B3 /* iwx-license */; };
 		F8C2EC4F2408031A007A9422 /* ieee80211_proto.c in Sources */ = {isa = PBXBuildFile; fileRef = F8C2EC2F24080319007A9422 /* ieee80211_proto.c */; };
 		F8C2EC502408031A007A9422 /* _string.c in Sources */ = {isa = PBXBuildFile; fileRef = F8C2EC3024080319007A9422 /* _string.c */; };
 		F8C2EC512408031A007A9422 /* ieee80211_amrr.h in Headers */ = {isa = PBXBuildFile; fileRef = F8C2EC3124080319007A9422 /* ieee80211_amrr.h */; };
@@ -222,7 +221,6 @@
 		F8D6CD652442E8F200D2A454 /* itlwmx.cpp in Sources */ = {isa = PBXBuildFile; fileRef = F8D6CD642442E8F200D2A454 /* itlwmx.cpp */; };
 		F8D6CD6E2442F20C00D2A454 /* if_iwxreg.h in Headers */ = {isa = PBXBuildFile; fileRef = F8D6CD6C2442F20C00D2A454 /* if_iwxreg.h */; };
 		F8D6CD6F2442F20C00D2A454 /* if_iwxvar.h in Headers */ = {isa = PBXBuildFile; fileRef = F8D6CD6D2442F20C00D2A454 /* if_iwxvar.h */; };
-		F8D6CD712442F22D00D2A454 /* if_iwx.cpp in Sources */ = {isa = PBXBuildFile; fileRef = F8D6CD702442F22D00D2A454 /* if_iwx.cpp */; };
 		F8D76362244F21BB00DEA040 /* pm.cpp in Sources */ = {isa = PBXBuildFile; fileRef = F8D76361244F21BB00DEA040 /* pm.cpp */; };
 		F8F9257D240974EF0088B8D5 /* cfg80211.h in Headers */ = {isa = PBXBuildFile; fileRef = F8F92572240974ED0088B8D5 /* cfg80211.h */; };
 		F8F9257E240974EF0088B8D5 /* bitfield.h in Headers */ = {isa = PBXBuildFile; fileRef = F8F92573240974EE0088B8D5 /* bitfield.h */; };
@@ -328,7 +326,6 @@
 		F88D2B3B2414E64000BBE700 /* sha1-pbkdf2.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "sha1-pbkdf2.c"; sourceTree = "<group>"; };
 		F8A33572244AED060039DA12 /* IOTaskQueue.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = IOTaskQueue.cpp; sourceTree = "<group>"; };
 		F8A33573244AED060039DA12 /* IOTaskQueue.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = IOTaskQueue.hpp; sourceTree = "<group>"; };
-		F8B0899A2443523E002C84B3 /* iwx-license */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = "iwx-license"; sourceTree = "<group>"; };
 		F8B783AF240B9F87004C9777 /* _ifq.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = _ifq.h; sourceTree = "<group>"; };
 		F8C2EC2F24080319007A9422 /* ieee80211_proto.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = ieee80211_proto.c; sourceTree = "<group>"; };
 		F8C2EC3024080319007A9422 /* _string.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = _string.c; sourceTree = "<group>"; };
@@ -393,7 +390,6 @@
 		F8D6CD662442E8F200D2A454 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		F8D6CD6C2442F20C00D2A454 /* if_iwxreg.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = if_iwxreg.h; sourceTree = "<group>"; };
 		F8D6CD6D2442F20C00D2A454 /* if_iwxvar.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = if_iwxvar.h; sourceTree = "<group>"; };
-		F8D6CD702442F22D00D2A454 /* if_iwx.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = if_iwx.cpp; sourceTree = "<group>"; };
 		F8D76361244F21BB00DEA040 /* pm.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = pm.cpp; sourceTree = "<group>"; };
 		F8EE4D1924177FEE002FA666 /* fw_gen.sh */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; path = fw_gen.sh; sourceTree = "<group>"; };
 		F8EE4D1A241786B0002FA666 /* FwData.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = FwData.h; sourceTree = "<group>"; };
@@ -626,7 +622,6 @@
 			isa = PBXGroup;
 			children = (
 				F852107824473ED400A545C3 /* iwlwifi-cc-a0-46.ucode */,
-				F8B0899A2443523E002C84B3 /* iwx-license */,
 			);
 			path = firmware;
 			sourceTree = "<group>";
@@ -650,7 +645,6 @@
 			isa = PBXGroup;
 			children = (
 				F8C7721324433E6500A1B8A0 /* firmware */,
-				F8D6CD702442F22D00D2A454 /* if_iwx.cpp */,
 				F8D6CD6C2442F20C00D2A454 /* if_iwxreg.h */,
 				F8D6CD6D2442F20C00D2A454 /* if_iwxvar.h */,
 				F8D6CD622442E8F200D2A454 /* itlwmx.hpp */,
@@ -954,7 +948,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				F852107924473ED400A545C3 /* iwlwifi-cc-a0-46.ucode in Resources */,
-				F8B0899B2443523E002C84B3 /* iwx-license in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1084,7 +1077,6 @@
 				F8C772F22443444600A1B8A0 /* idgen.c in Sources */,
 				F8C772F32443444600A1B8A0 /* compat.cpp in Sources */,
 				F8D6CD652442E8F200D2A454 /* itlwmx.cpp in Sources */,
-				F8D6CD712442F22D00D2A454 /* if_iwx.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1328,7 +1320,11 @@
 				DEVELOPMENT_TEAM = YXX7XALBVX;
 				GCC_INPUT_FILETYPE = sourcecode.cpp.cpp;
 				INFOPLIST_FILE = itlwmx/Info.plist;
-				LIBRARY_SEARCH_PATHS = "$(PROJECT_DIR)/itl80211";
+				LIBRARY_SEARCH_PATHS = (
+					"$(PROJECT_DIR)/itl80211",
+					"$(PROJECT_DIR)/itl80211/openbsd",
+					"$(PROJECT_DIR)/itl80211/linux",
+				);
 				MODULE_NAME = com.zxystd.itlwmx;
 				MODULE_VERSION = 1.0.0d1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.zxystd.itlwmx;
@@ -1348,7 +1344,11 @@
 				DEVELOPMENT_TEAM = YXX7XALBVX;
 				GCC_INPUT_FILETYPE = sourcecode.cpp.cpp;
 				INFOPLIST_FILE = itlwmx/Info.plist;
-				LIBRARY_SEARCH_PATHS = "$(PROJECT_DIR)/itl80211";
+				LIBRARY_SEARCH_PATHS = (
+					"$(PROJECT_DIR)/itl80211",
+					"$(PROJECT_DIR)/itl80211/openbsd",
+					"$(PROJECT_DIR)/itl80211/linux",
+				);
 				MODULE_NAME = com.zxystd.itlwmx;
 				MODULE_VERSION = 1.0.0d1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.zxystd.itlwmx;

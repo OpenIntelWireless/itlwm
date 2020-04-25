@@ -103,13 +103,13 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#ifndef _IF_IWXVAR_H
-#define _IF_IWXVAR_H
-#include "if_iwxreg.h"
+#include "ieee80211_var.h"
+#include "ieee80211_amrr.h"
+#include "ieee80211_mira.h"
+#include "ieee80211_radiotap.h"
 
-#include "compat.h"
 #include <IOKit/network/IOMbufMemoryCursor.h>
-#include <IOKit/IOBufferMemoryDescriptor.h>
+#include <IOKit/IODMACommand.h>
 
 struct iwx_rx_radiotap_header {
 	struct ieee80211_radiotap_header wr_ihdr;
@@ -586,5 +586,3 @@ pci_matchbyid(int vid, int pid, const struct pci_matchid *ids, int nent)
             return (1);
     return (0);
 }
-
-#endif

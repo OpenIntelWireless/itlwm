@@ -11,7 +11,26 @@
 * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 * GNU General Public License for more details.
 */
+#ifndef _ITLWMX_H
+#define _ITLWMX_H
+#include "compat.h"
+#include "kernel.h"
+
+#include <sys/param.h>
+#include <sys/conf.h>
+#include <sys/kernel.h>
+#include <sys/malloc.h>
+#include <sys/mbuf.h>
+#include <sys/proc.h>
+#include <sys/socket.h>
+#include <sys/sockio.h>
+#include <sys/systm.h>
+#include <sys/endian.h>
+#include <sys/kpi_mbuf.h>
+
+#include "if_iwxreg.h"
 #include "if_iwxvar.h"
+#include <sys/pcireg.h>
 
 #include <IOKit/network/IOEthernetController.h>
 #include <IOKit/IOWorkLoop.h>
@@ -23,8 +42,6 @@
 #include <libkern/OSKextLib.h>
 #include <libkern/c++/OSMetaClass.h>
 #include <IOKit/IOFilterInterruptEventSource.h>
-
-static void    iwx_start(struct ifnet *);
 
 class itlwmx : public IOEthernetController {
     OSDeclareDefaultStructors(itlwmx)
@@ -274,6 +291,7 @@ public:
     int    iwx_send_update_mcc_cmd(struct iwx_softc *, const char *);
     int    iwx_init_hw(struct iwx_softc *);
     int    iwx_init(struct ifnet *);
+    static void    iwx_start(struct ifnet *);
     void    iwx_stop(struct ifnet *);
     static void    iwx_watchdog(struct ifnet *);
     static int    iwx_ioctl(struct ifnet *, u_long, caddr_t);
@@ -311,3 +329,5 @@ struct ResourceCallbackContext
     itlwmx* context;
     OSData* resource;
 };
+
+#endif

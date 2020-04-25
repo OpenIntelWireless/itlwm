@@ -26,8 +26,14 @@
 			<string>com.zxystd.itlwm</string>
 			<key>IOClass</key>
 			<string>itlwm</string>
-			<key>IOPCIPrimaryMatch</key>
-			<string>0x00008086&amp;0x0000ffff</string>
+			<key>IOMatchCategory</key>
+			<string>IODefaultMatchCategory</string>
+			<key>IONameMatch</key>
+			<array>
+				<string>pci8086,2526</string>
+			</array>
+			<key>IOProbeScore</key>
+			<integer>2000</integer>
 			<key>IOProviderClass</key>
 			<string>IOPCIDevice</string>
 		</dict>

@@ -34,6 +34,8 @@
 #ifndef _DEV_PCI_PCIREG_H_
 #define	_DEV_PCI_PCIREG_H_
 
+#include "types.h"
+
 /*
  * Standardized PCI configuration information
  *
