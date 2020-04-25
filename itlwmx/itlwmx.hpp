@@ -268,7 +268,7 @@ public:
     void    iwx_add_task(struct iwx_softc *, struct taskq *, struct task *);
     void    iwx_del_task(struct iwx_softc *, struct taskq *, struct task *);
     int    iwx_scan(struct iwx_softc *);
-    int    iwx_bgscan(struct ieee80211com *);
+    static int    iwx_bgscan(struct ieee80211com *);
     int    iwx_umac_scan_abort(struct iwx_softc *);
     int    iwx_scan_abort(struct iwx_softc *);
     int    iwx_enable_data_tx_queues(struct iwx_softc *);

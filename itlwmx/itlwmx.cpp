@@ -3790,9 +3790,9 @@ iwx_rx_mpdu_mq(struct iwx_softc *sc, mbuf_t m, void *pktdata,
     
     //    m->m_data = pktdata + sizeof(*desc);
     //    m->m_pkthdr.len = m->m_len = len;
-    mbuf_setdata(m, (uint8_t*)pktdata + sizeof(*desc), mbuf_len(m) - sizeof(*desc));
+    mbuf_setdata(m, (uint8_t*)pktdata + sizeof(*desc), len);
     mbuf_pkthdr_setlen(m, len);
-    mbuf_pkthdr_setlen(m, len);
+    mbuf_setlen(m, len);
     
     /* Account for padding following the frame header. */
     if (desc->mac_flags2 & IWX_RX_MPDU_MFLG2_PAD) {
@@ -4619,7 +4619,7 @@ iwx_tx(struct iwx_softc *sc, mbuf_t m, struct ieee80211_node *ni, int ac)
     
     //    err = bus_dmamap_load_mbuf(sc->sc_dmat, data->map, m,
     //        BUS_DMA_NOWAIT | BUS_DMA_WRITE);
-    data->map->dm_nsegs = data->map->cursor->getPhysicalSegmentsWithCoalesce(m, data->map->dm_segs, IWX_TFH_NUM_TBS - 2);
+    data->map->dm_nsegs = data->map->cursor->getPhysicalSegmentsWithCoalesce(m, &data->map->dm_segs[0], IWX_TFH_NUM_TBS - 2);
     //    if (err && err != EFBIG) {
     //        XYLog("%s: can't map mbuf (error %d)\n", DEVNAME(sc), err);
     //        mbuf_freem(m);
@@ -5833,12 +5833,13 @@ iwx_bgscan(struct ieee80211com *ic)
 {
     XYLog("%s\n", __FUNCTION__);
     struct iwx_softc *sc = (struct iwx_softc *)IC2IFP(ic)->if_softc;
+    itlwmx *that = container_of(sc, itlwmx, com);
     int err;
     
     if (sc->sc_flags & IWX_FLAG_SCANNING)
         return 0;
     
-    err = iwx_umac_scan(sc, 1);
+    err = that->iwx_umac_scan(sc, 1);
     if (err) {
         XYLog("%s: could not initiate scan\n", DEVNAME(sc));
         return err;
