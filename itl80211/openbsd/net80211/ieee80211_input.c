@@ -983,23 +983,6 @@ ieee80211_decap(struct ieee80211com *ic, mbuf_t m,
         mbuf_adj(m, hdrlen - ETHER_HDR_LEN);
     }
     memcpy(mtod(m, caddr_t), &eh, ETHER_HDR_LEN);
-//    if (!ALIGNED_POINTER((mtod(m, caddr_t) + ETHER_HDR_LEN), u_int32_t)) {
-    if ((unsigned long)((uint8_t*)mbuf_data(m) + ETHER_HDR_LEN) & sizeof(u_int32_t) - 1) {
-//        XYLog("%s %d\n", __FUNCTION__, __LINE__);
-        mbuf_t m0 = m;
-        //        mbuf_dup(m0, M_NOWAIT, &m);
-        //        if (m) {
-        //            XYLog("%s %d\n", __FUNCTION__, __LINE__);
-        //            mbuf_adj(m, ETHER_ALIGN);
-        //        }
-        m = m_dup_pkt(m0, ETHER_ALIGN, M_NOWAIT);
-//        XYLog("%s %d\n", __FUNCTION__, __LINE__);
-        mbuf_freem(m0);
-        if (m == NULL) {
-            ic->ic_stats.is_rx_decap++;
-            return;
-        }
-    }
     ieee80211_enqueue_data(ic, m, ni, mcast, ml);
 }
 

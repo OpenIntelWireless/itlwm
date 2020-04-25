@@ -180,7 +180,6 @@ bool itlwm::start(IOService *provider)
         return false;
     }
     _fWorkloop->addEventSource(watchdogTimer);
-    watchdogTimer->enable();
     setLinkStatus(kIONetworkLinkValid);
     registerService();
     return true;
@@ -311,6 +310,7 @@ IOReturn itlwm::enable(IONetworkInterface *netif)
     _fCommandGate->enable();
     iwm_activate(&com, DVACT_WAKEUP);
     setLinkStatus(kIONetworkLinkValid | kIONetworkLinkActive, getCurrentMedium());
+    watchdogTimer->enable();
     return kIOReturnSuccess;
 }
 
@@ -329,79 +329,6 @@ IOReturn itlwm::getHardwareAddress(IOEthernetAddress *addrP) {
         IEEE80211_ADDR_COPY(addrP, com.sc_ic.ic_myaddr);
         return kIOReturnSuccess;
     }
-}
-
-static void *skb_put_mbuf( mbuf_t mb, unsigned int len) {
-
-    void *data = (UInt8*)mbuf_data(mb) + mbuf_len(mb);
-    if(mbuf_trailingspace(mb) > len ){
-        mbuf_setlen(mb, mbuf_len(mb)+len);
-        if(mbuf_flags(mb) & MBUF_PKTHDR)
-            mbuf_pkthdr_setlen(mb, mbuf_pkthdr_len(mb)+len);
-    }
-    return data;
-}
-
-mbuf_t itlwm::mergePacket(mbuf_t m)
-{
-    mbuf_t nm,nm2;
-    int offset;
-    if(!mbuf_next(m))
-    {
-        //offset = (4 - ((int)(mbuf_data(m)) & 3)) % 4;    //packet needs to be 4 byte aligned
-        offset = (1 - ((int)(*(int*)mbuf_data(m)) & 3)) % 1;
-        if (offset==0) return m;
-        IOLog("this packet dont have mbuf_next, merge  is not required\n");
-        goto copy_packet;
-    }
-
-    /* allocate and Initialize New mbuf */
-    nm = allocatePacket(mbuf_pkthdr_len(m));
-    if (nm==0) return NULL;
-    //if (mbuf_getpacket(MBUF_WAITOK, &nm)!=0) return NULL;
-    mbuf_setlen(nm,0);
-    mbuf_pkthdr_setlen(nm,0);
-    if( mbuf_next(nm)) IOLog("merged mbuf_next\n");
-    
-    /* merging chains to single mbuf */
-    for (nm2 = m; nm2;  nm2 = mbuf_next(nm2)) {
-        bcopy (mbuf_data(nm2), skb_put_mbuf(nm, mbuf_len(nm2)), mbuf_len(nm2));
-        //skb_put (nm, mbuf_len(nm2));
-        //mbuf_copyback(nm, mbuf_len(nm), mbuf_len(nm2), mbuf_data(nm2), MBUF_WAITOK);
-    }
-    /* checking if merged or not. */
-    if( mbuf_len(nm) == mbuf_pkthdr_len(m) )
-    {
-        if (m!=NULL)
-        if (!(mbuf_type(m) == MBUF_TYPE_FREE)) freePacket(m);
-        m=NULL;
-        return nm;
-    }
-    /* merging is not completed. */
-    IOLog("mergePacket is failed: data copy dont work collectly\n");
-    IOLog("orig_len %d orig_pktlen %d new_len  %d new_pktlen  %d\n",
-                    mbuf_len(m),mbuf_pkthdr_len(m),
-                    mbuf_len(nm),mbuf_pkthdr_len(nm) );
-    if (m!=NULL)
-    if (!(mbuf_type(m) == MBUF_TYPE_FREE)) freePacket(m);
-    m=NULL;
-    if (nm!=NULL)
-    if (!(mbuf_type(nm) == MBUF_TYPE_FREE) ) freePacket(nm);
-    nm=NULL;
-    return NULL;
-
-copy_packet:
-        if (mbuf_dup(m, MBUF_WAITOK , &nm)!=0)
-        {
-            if (m!=NULL)
-            if (!(mbuf_type(m) == MBUF_TYPE_FREE)) freePacket(m);
-            m=NULL;
-            return NULL;
-        }
-        if (m!=NULL)
-        if (!(mbuf_type(m) == MBUF_TYPE_FREE) ) freePacket(m);
-        m=NULL;
-        return nm;
 }
 
 UInt32 itlwm::outputPacket(mbuf_t m, void *param)
@@ -428,16 +355,6 @@ UInt32 itlwm::outputPacket(mbuf_t m, void *param)
         ifp->netStat->outputErrors++;
         return kIOReturnOutputDropped;
     }
-//    if (mbuf_next(m)) {
-//        XYLog("%s mbuf need to be merge\n", __FUNCTION__);
-//        mbuf_t mm = mergePacket(m);
-//        if (mm == NULL) {
-//            XYLog("%s mbuf merge FAIL!!\n", __FUNCTION__);
-//            ifp->netStat->outputErrors++;
-//            return kIOReturnOutputDropped;
-//        }
-//        m = mm;
-//    }
     ifp->if_snd->lockEnqueue(m);
     (*ifp->if_start)(ifp);
     

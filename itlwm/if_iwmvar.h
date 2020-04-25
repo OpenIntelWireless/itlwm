@@ -122,6 +122,7 @@
 #include "ieee80211_radiotap.h"
 
 #include <IOKit/network/IOMbufMemoryCursor.h>
+#include <IOKit/IODMACommand.h>
 
 struct iwm_rx_radiotap_header {
     struct ieee80211_radiotap_header wr_ihdr;
@@ -257,7 +258,8 @@ struct iwm_dma_info {
 	IOBufferMemoryDescriptor* buffer;
     bus_addr_t        paddr;
     void             *vaddr;
-    bus_size_t        size;
+    size_t        size;
+    IODMACommand *cmd;
 };
 
 /**

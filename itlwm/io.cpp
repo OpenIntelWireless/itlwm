@@ -304,7 +304,6 @@ IOBufferMemoryDescriptor* allocDmaMemory
     IOBufferMemoryDescriptor* mem = 0;
     mem = IOBufferMemoryDescriptor::inTaskWithPhysicalMask(kernel_task, kIOMemoryPhysicallyContiguous | kIODirectionInOut | kIOMapInhibitCache,
                                    reqsize, phymask);
-    mem->map();
     if (!mem) {
         XYLog("Could not allocate DMA memory\n");
         return 0;
@@ -335,13 +334,12 @@ IOBufferMemoryDescriptor* allocDmaMemory
     return mem;
 }
 
-IOBufferMemoryDescriptor* allocDmaMemory2(size_t size, int alignment, void** vaddr, uint64_t* paddr)
+bool allocDmaMemory2(struct iwm_dma_info *dma, size_t size, int alignment)
 {
     IOBufferMemoryDescriptor *bmd;
     IODMACommand::Segment64 seg;
     UInt64 ofs = 0;
     UInt32 numSegs = 1;
-    int        i;
     
     bmd = IOBufferMemoryDescriptor::inTaskWithPhysicalMask(kernel_task, kIODirectionInOut | kIOMemoryPhysicallyContiguous | kIOMapInhibitCache, size, DMA_BIT_MASK(36));
     
@@ -356,40 +354,42 @@ IOBufferMemoryDescriptor* allocDmaMemory2(size_t size, int alignment, void** vad
         bmd->complete();
         bmd->release();
         bmd = NULL;
-        return NULL;
+        return false;
     }
-    *paddr = seg.fIOVMAddr;
-    *vaddr = bmd->getBytesNoCopy();
-    return bmd;
+    bmd->prepare();
+    dma->paddr = seg.fIOVMAddr;
+    dma->vaddr = bmd->getBytesNoCopy();
+    dma->buffer = bmd;
+    dma->size = size;
+    dma->cmd = cmd;
+    return true;
 }
 
 void itlwm::
 iwm_dma_contig_free(struct iwm_dma_info *dma)
 {
-    if (dma == NULL)
+    if (dma == NULL || dma->cmd == NULL)
         return;
     if (dma->vaddr == NULL)
         return;
+    dma->cmd->complete();
+    dma->cmd->release();
+    dma->cmd = NULL;
     dma->buffer->complete();
     dma->buffer->release();
-    dma->buffer = 0;
-    dma->vaddr = 0;
-    dma->paddr = 0;
-    return;
+    dma->buffer = NULL;
+    dma->vaddr = NULL;
+    dma->paddr = NULL;
 }
 
 int itlwm::
 iwm_dma_contig_alloc(bus_dma_tag_t tag, struct iwm_dma_info *dma, void **kvap,
              bus_size_t size, bus_size_t alignment)
 {
-    dma->buffer = allocDmaMemory((size_t)size, (int)alignment, (void**)&dma->vaddr, &dma->paddr);
-    if (dma->buffer == NULL)
+    if (!allocDmaMemory2(dma, (size_t)size, (int)alignment)) {
         return 1;
-    
-    dma->size = size;
-    memset(dma->vaddr, 0, dma->size);
-    if (kvap != NULL)
-        *kvap = dma->vaddr;
+    }
+    memset(dma->vaddr, 0, size);
     
     return 0;
 }

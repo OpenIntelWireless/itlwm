@@ -258,9 +258,8 @@ ieee80211_mgmt_output(struct ifnet *ifp, struct ieee80211_node *ni,
 //    ifp->output_queue->enqueue(m, &TX_TYPE_MGMT);
 	mq_enqueue(&ic->ic_mgtq, m);
 	ifp->if_timer = 1;
-    XYLog("%s Enqueue MGMT data %d\n", __FUNCTION__, __LINE__);
     (*ifp->if_start)(ifp);
-    XYLog("%s Enqueue MGMT data %d\n", __FUNCTION__, __LINE__);
+    DPRINTF(("%s Enqueue MGMT data %d\n", __FUNCTION__, __LINE__));
 //    ifp->output_queue->service();
 	return 0;
 }
@@ -572,6 +571,7 @@ ieee80211_encap(struct ifnet *ifp, mbuf_t m, struct ieee80211_node **pni)
 	if (mbuf_len(m) < sizeof(struct ether_header)) {
         mbuf_pullup(&m, sizeof(struct ether_header));
 		if (m == NULL) {
+            XYLog("%s mbuf_len(m) < sizeof(struct ether_header)\n", __FUNCTION__);
 			ic->ic_stats.is_tx_nombuf++;
 			goto bad;
 		}
@@ -580,8 +580,8 @@ ieee80211_encap(struct ifnet *ifp, mbuf_t m, struct ieee80211_node **pni)
 
 	ni = ieee80211_find_txnode(ic, eh.ether_dhost);
 	if (ni == NULL) {
-		DPRINTF(("no node for dst %s, discard frame\n",
-		    ether_sprintf(eh.ether_dhost)));
+		XYLog("%s, no node for dst %s, discard frame\n",
+		    __FUNCTION__, ether_sprintf(eh.ether_dhost));
 		ic->ic_stats.is_tx_nonode++;
 		goto bad;
 	}
@@ -591,8 +591,8 @@ ieee80211_encap(struct ifnet *ifp, mbuf_t m, struct ieee80211_node **pni)
 	if ((ic->ic_flags & IEEE80211_F_RSNON) &&
 	    !ni->ni_port_valid &&
 	    eh.ether_type != htons(ETHERTYPE_PAE)) {
-		DPRINTF(("port not valid: %s\n",
-		    ether_sprintf(eh.ether_dhost)));
+		XYLog("%s port not valid: %s\n",
+		    __FUNCTION__, ether_sprintf(eh.ether_dhost));
 		ic->ic_stats.is_tx_noauth++;
 		goto bad;
 	}
@@ -635,6 +635,7 @@ ieee80211_encap(struct ifnet *ifp, mbuf_t m, struct ieee80211_node **pni)
 	llc->llc_snap.ether_type = eh.ether_type;
     mbuf_prepend(&m, hdrlen, MBUF_DONTWAIT);
 	if (m == NULL) {
+        XYLog("%s, %d m == NULL\n", __FUNCTION__, __LINE__);
 		ic->ic_stats.is_tx_nombuf++;
 		goto bad;
 	}

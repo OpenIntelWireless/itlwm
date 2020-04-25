@@ -60,6 +60,17 @@ struct taskq taskq_sys = {
 
 struct taskq *const systq = &taskq_sys;
 
+IOReturn
+taskq_run(OSObject *target, void *arg0, void *arg1, void *arg2, void *arg3)
+{
+    struct taskq *tq = (struct taskq *)arg0;
+    struct task *work = (struct task *)arg1;
+    
+    (*work->t_func)(work->t_arg);
+    
+    return kIOReturnSuccess;
+}
+
 int
 taskq_next_work(struct taskq *tq, struct task *work)
 {
@@ -108,8 +119,8 @@ taskq_thread(void *xtq)
 //        WITNESS_LOCK(&tq->tq_lock_object, 0);
 //        IOLog("itlwm: taskq worker thread=%lld work=%s\n", thread_tid(current_thread()), work.name);
         (*work.t_func)(work.t_arg);
-//        IOLog("itlwm: taskq worker thread=%lld work=%s done", thread_tid(current_thread()), work.name);
 //        _fCommandGate->runAction(taskq_run, tq, &work);
+//        IOLog("itlwm: taskq worker thread=%lld work=%s done", thread_tid(current_thread()), work.name);
 //        WITNESS_UNLOCK(&tq->tq_lock_object, 0);
 //        sched_pause(yield);
         IOSleep(1);

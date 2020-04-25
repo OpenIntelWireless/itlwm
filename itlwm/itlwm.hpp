@@ -79,7 +79,6 @@ public:
     static IOReturn _iwm_start_task(OSObject *target, void *arg0, void *arg1, void *arg2, void *arg3);
 //    virtual bool createWorkLoop() override;
 //    virtual IOWorkLoop* getWorkLoop() const override;
-    mbuf_t mergePacket(mbuf_t m);
     
     void releaseAll();
     

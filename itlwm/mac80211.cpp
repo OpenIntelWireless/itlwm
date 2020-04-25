@@ -121,6 +121,10 @@
 
 #include "itlwm.hpp"
 #include <net/ethernet.h>
+#include <IOKit/IOCommandGate.h>
+
+IORecursiveLock *_outputLock = IORecursiveLockAlloc();
+extern IOCommandGate *_fCommandGate;;
 
 int itlwm::
 iwm_is_valid_channel(uint16_t ch_id)
@@ -599,14 +603,14 @@ iwm_rx_tx_cmd_single(struct iwm_softc *sc, struct iwm_rx_packet *pkt,
             best_mcs = ieee80211_mira_get_best_mcs(&in->in_mn);
             if (best_mcs != in->chosen_txmcs) {
                 in->chosen_txmcs = best_mcs;
-                XYLog("iwm_add_task best_mcs=%d\n", best_mcs);
+                XYLog("iwm_setrates best_mcs=%d\n", best_mcs);
                 iwm_setrates(in, 1);
             }
         }
     }
     
     if (txfail) {
-        XYLog("%s %d OUTPUT_ERROR\n", __FUNCTION__, __LINE__);
+        XYLog("%s %d OUTPUT_ERROR status=%d\n", __FUNCTION__, __LINE__, status);
         ifp->netStat->outputErrors++;
     }
 }
@@ -948,7 +952,7 @@ iwm_tx(struct iwm_softc *sc, mbuf_t m, struct ieee80211_node *ni, int ac)
     /* Trim 802.11 header. */
     mbuf_adj(m, hdrlen);
     
-    data->map->dm_nsegs = data->map->cursor->getPhysicalSegmentsWithCoalesce(m, &data->map->dm_segs[0], 18);
+    data->map->dm_nsegs = data->map->cursor->getPhysicalSegmentsWithCoalesce(m, &data->map->dm_segs[0], IWM_NUM_OF_TBS - 2);
 //    XYLog("map frame dm_nsegs=%d\n", data->map->dm_nsegs);
     if (data->map->dm_nsegs == 0) {
         XYLog("%s: can't map mbuf (error %d)\n", DEVNAME(sc), data->map->dm_nsegs);
@@ -999,6 +1003,7 @@ iwm_tx(struct iwm_softc *sc, mbuf_t m, struct ieee80211_node *ni, int ac)
     
     /* Mark TX ring as full if we reach a certain threshold. */
     if (++ring->queued > IWM_TX_RING_HIMARK) {
+        XYLog("%s sc->qfullmsk is FULL\n", __FUNCTION__);
         sc->qfullmsk |= 1 << ring->qid;
     }
     
@@ -1629,7 +1634,6 @@ iwm_setrates(struct iwm_node *in, int async)
         .id = IWM_LQ_CMD,
         .len = { sizeof(lqcmd), },
     };
-    XYLog("%s\n", __FUNCTION__);
     
     cmd.flags = async ? IWM_CMD_ASYNC : 0;
     
@@ -2466,8 +2470,6 @@ iwm_init(struct ifnet *ifp)
     
     return 0;
 }
-
-IORecursiveLock *_outputLock = IORecursiveLockAlloc();
 
 IOReturn itlwm::
 _iwm_start_task(OSObject *target, void *arg0, void *arg1, void *arg2, void *arg3)

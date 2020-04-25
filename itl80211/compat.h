@@ -70,7 +70,7 @@ typedef IOBufferMemoryDescriptor*	bus_dma_segment_t;
 typedef caddr_t				bus_space_handle_t; // pointer to device memory
 typedef int				pci_chipset_tag_t;
 typedef mach_vm_address_t		bus_addr_t;
-typedef uint32_t			bus_size_t;
+typedef u_int32_t			bus_size_t;
 typedef IOMemoryMap*			bus_space_tag_t;
 typedef IOPCIDevice*			pcitag_t;
 typedef uint32_t			pcireg_t;
