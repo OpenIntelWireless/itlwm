@@ -177,6 +177,7 @@ iwm_alloc_tx_ring(iwm_softc *sc, struct iwm_tx_ring *ring, int qid)
     bus_addr_t paddr;
     bus_size_t size;
     int i, err;
+    int nsegments;
     
     ring->qid = qid;
     ring->queued = 0;
@@ -234,13 +235,15 @@ iwm_alloc_tx_ring(iwm_softc *sc, struct iwm_tx_ring *ring, int qid)
         paddr += sizeof(struct iwm_device_cmd);
         
         /* FW commands may require more mapped space than packets. */
-        if (qid == IWM_CMD_QUEUE || qid == IWM_DQA_CMD_QUEUE)
-            mapsize = (sizeof(struct iwm_cmd_header) +
-                       IWM_MAX_CMD_PAYLOAD_SIZE);
-        else
+        if (qid == IWM_CMD_QUEUE) {
+            mapsize = IWM_RBUF_SIZE;
+            nsegments = 1;
+        } else {
             mapsize = MCLBYTES;
+            nsegments = IWM_NUM_OF_TBS - 2;
+        }
         err = bus_dmamap_create(sc->sc_dmat, mapsize,
-                                IWM_NUM_OF_TBS - 2, mapsize, 0, BUS_DMA_NOWAIT,
+                                nsegments, mapsize, 0, BUS_DMA_NOWAIT,
                                 &data->map);
         if (err) {
             XYLog("%s: could not create TX buf DMA map\n",

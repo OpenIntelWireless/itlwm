@@ -346,7 +346,7 @@ bool allocDmaMemory2(struct iwm_dma_info *dma, size_t size, int alignment)
     IODMACommand *cmd = IODMACommand::withSpecification(kIODMACommandOutputHost64, 64, 0, IODMACommand::kMapped, 0, 1);
     cmd->setMemoryDescriptor(bmd);
     cmd->prepare();
-    
+
     if (cmd->gen64IOVMSegments(&ofs, &seg, &numSegs) != kIOReturnSuccess) {
         cmd->complete();
         cmd->release();
@@ -386,7 +386,7 @@ int itlwm::
 iwm_dma_contig_alloc(bus_dma_tag_t tag, struct iwm_dma_info *dma, void **kvap,
              bus_size_t size, bus_size_t alignment)
 {
-    if (!allocDmaMemory2(dma, (size_t)size, (int)alignment)) {
+    if (!allocDmaMemory2(dma, size, alignment)) {
         return 1;
     }
     memset(dma->vaddr, 0, size);

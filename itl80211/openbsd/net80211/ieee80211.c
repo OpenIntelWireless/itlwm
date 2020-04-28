@@ -821,7 +821,7 @@ ieee80211_watchdog(struct ifnet *ifp)
              ic->ic_state == IEEE80211_S_ASSOC)) {
             struct ieee80211_node *ni;
             if (ifp->if_flags & IFF_DEBUG)
-                printf("%s: %s timed out for %s\n",
+                XYLog("%s: %s timed out for %s\n",
                        ifp->if_xname,
                        ic->ic_state == IEEE80211_S_ASSOC ?
                        "association" : "authentication",
@@ -832,6 +832,7 @@ ieee80211_watchdog(struct ifnet *ifp)
             if (ISSET(ic->ic_flags, IEEE80211_F_AUTO_JOIN))
                 ieee80211_deselect_ess(ic);
         }
+        XYLog("%s ieee80211_new_state\n", __FUNCTION__);
         ieee80211_new_state(ic, IEEE80211_S_SCAN, -1);
     }
     

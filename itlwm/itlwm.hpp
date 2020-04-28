@@ -77,8 +77,10 @@ public:
     static bool intrFilter(OSObject *object, IOFilterInterruptEventSource *src);
     void watchdogAction(IOTimerEventSource *timer);
     static IOReturn _iwm_start_task(OSObject *target, void *arg0, void *arg1, void *arg2, void *arg3);
-//    virtual bool createWorkLoop() override;
-//    virtual IOWorkLoop* getWorkLoop() const override;
+    virtual bool createWorkLoop() override;
+    virtual IOWorkLoop* getWorkLoop() const override;
+    virtual const OSString * newVendorString() const override;
+    virtual const OSString * newModelString() const override;
     
     void releaseAll();
     

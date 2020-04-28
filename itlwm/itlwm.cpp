@@ -188,6 +188,17 @@ bool itlwm::start(IOService *provider)
 void itlwm::watchdogAction(IOTimerEventSource *timer)
 {
     iwm_watchdog(&com.sc_ic.ic_ac.ac_if);
+    watchdogTimer->setTimeoutMS(1000);
+}
+
+const OSString * itlwm::newVendorString() const
+{
+    return OSString::withCString("Apple");
+}
+
+const OSString * itlwm::newModelString() const
+{
+    return OSString::withCString("Intel wireless card");
 }
 
 bool itlwm::initPCIPowerManagment(IOPCIDevice *provider)
@@ -216,16 +227,16 @@ bool itlwm::initPCIPowerManagment(IOPCIDevice *provider)
     return true;
 }
 
-//bool itlwm::createWorkLoop()
-//{
-//    fWorkloop = IOWorkLoop::workLoop();
-//    return fWorkloop ? true : false;
-//}
-//
-//IOWorkLoop* itlwm::getWorkLoop() const
-//{
-//    return fWorkloop;
-//}
+bool itlwm::createWorkLoop()
+{
+    _fWorkloop = IOWorkLoop::workLoop();
+    return _fWorkloop != 0;
+}
+
+IOWorkLoop *itlwm::getWorkLoop() const
+{
+    return _fWorkloop;
+}
 
 IOReturn itlwm::selectMedium(const IONetworkMedium *medium) {
     setSelectedMedium(medium);
@@ -258,9 +269,11 @@ void itlwm::releaseAll()
     }
     if (_fWorkloop) {
         if (intrHandler) {
-            intrHandler->intr->disable();
-            intrHandler->workloop->removeEventSource(intrHandler->intr);
-            intrHandler->intr->release();
+            if (intrHandler->intr) {
+                intrHandler->intr->disable();
+                intrHandler->workloop->removeEventSource(intrHandler->intr);
+                intrHandler->intr->release();
+            }
             intrHandler->intr = NULL;
             intrHandler->workloop = NULL;
             intrHandler->arg = NULL;
@@ -310,6 +323,7 @@ IOReturn itlwm::enable(IONetworkInterface *netif)
     _fCommandGate->enable();
     iwm_activate(&com, DVACT_WAKEUP);
     setLinkStatus(kIONetworkLinkValid | kIONetworkLinkActive, getCurrentMedium());
+    watchdogTimer->setTimeoutMS(1000);
     watchdogTimer->enable();
     return kIOReturnSuccess;
 }
@@ -318,6 +332,8 @@ IOReturn itlwm::disable(IONetworkInterface *netif)
 {
     XYLog("%s\n", __FUNCTION__);
     super::disable(netif);
+    watchdogTimer->cancelTimeout();
+    watchdogTimer->disable();
     iwm_activate(&com, DVACT_QUIESCE);
     return kIOReturnSuccess;
 }

@@ -35,6 +35,19 @@
 			<key>IOProviderClass</key>
 			<string>IOPCIDevice</string>
 		</dict>
+		<key>itlwm - 3165</key>
+		<dict>
+			<key>CFBundleIdentifier</key>
+			<string>com.zxystd.itlwm</string>
+			<key>IOClass</key>
+			<string>itlwm</string>
+			<key>IOPCIMatch</key>
+			<string>0x31658086</string>
+			<key>IOProbeScore</key>
+			<integer>3000</integer>
+			<key>IOProviderClass</key>
+			<string>IOPCIDevice</string>
+		</dict>
 	</dict>
 	<key>NSHumanReadableCopyright</key>
 	<string>Copyright © 2020 钟先耀. All rights reserved.</string>

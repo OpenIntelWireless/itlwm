@@ -498,7 +498,6 @@ iwm_send_cmd(struct iwm_softc *sc, struct iwm_host_cmd *hcmd)
                                      M_NOWAIT | M_ZERO);
         if (resp_buf == NULL)
             return ENOMEM;
-        bzero(resp_buf, hcmd->resp_pkt_len);
         sc->sc_cmd_resp_pkt[idx] = resp_buf;
         sc->sc_cmd_resp_len[idx] = hcmd->resp_pkt_len;
     } else {
@@ -735,7 +734,7 @@ iwm_cmd_done(struct iwm_softc *sc, int qid, int idx, int code)
         //        bus_dmamap_sync(sc->sc_dmat, data->map, 0,
         //            data->map->dm_mapsize, BUS_DMASYNC_POSTWRITE);
         //        bus_dmamap_unload(sc->sc_dmat, data->map);
-        mbuf_freem(data->m);
+        freePacket(data->m);
         data->m = NULL;
     }
     wakeupOn(&ring->desc[idx]);

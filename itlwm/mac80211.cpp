@@ -624,7 +624,7 @@ iwm_txd_done(struct iwm_softc *sc, struct iwm_tx_data *txd)
     //        BUS_DMASYNC_POSTWRITE);
     //    bus_dmamap_unload(sc->sc_dmat, txd->map);
     if (txd->m) {
-        mbuf_freem(txd->m);
+        freePacket(txd->m);
         txd->m = NULL;
     }
     
@@ -843,7 +843,6 @@ iwm_tx(struct iwm_softc *sc, mbuf_t m, struct ieee80211_node *ni, int ac)
     else
         ring = &sc->txq[ac];
     desc = &ring->desc[ring->cur];
-    memset(desc, 0, sizeof(*desc));
     data = &ring->data[ring->cur];
     
     cmd = &ring->cmd[ring->cur];
@@ -964,7 +963,14 @@ iwm_tx(struct iwm_softc *sc, mbuf_t m, struct ieee80211_node *ni, int ac)
     data->txmcs = ni->ni_txmcs;
     data->txrate = ni->ni_txrate;
     
+    XYLog("sending data: 嘤嘤嘤 qid=%d idx=%d len=%d nsegs=%d txflags=0x%08x rate_n_flags=0x%08x rateidx=%u txmcs=%d ni_txrate=%d\n",
+    ring->qid, ring->cur, totlen, data->map->dm_nsegs, le32toh(tx->tx_flags),
+          le32toh(tx->rate_n_flags), tx->initial_rate_index,
+          data->txmcs,
+          data->txrate);
+    
     /* Fill TX descriptor. */
+    memset(desc, 0, sizeof(*desc));
     desc->num_tbs = 2 + data->map->dm_nsegs;
     
     desc->tbs[0].lo = htole32(data->cmd_paddr);
@@ -2561,9 +2567,9 @@ iwm_start(struct ifnet *ifp)
 {
     struct iwm_softc *sc = (struct iwm_softc*)ifp->if_softc;
     itlwm *that = container_of(sc, itlwm, com);
-    //    if (that->outputThreadSignal) {
-    //        semaphore_signal(that->outputThreadSignal);
-    //    }
+//        if (that->outputThreadSignal) {
+//            semaphore_signal(that->outputThreadSignal);
+//        }
     _iwm_start_task(that, &that->com.sc_ic.ic_ac.ac_if, NULL, NULL, NULL);
 }
 
