@@ -1234,7 +1234,7 @@
 				MODULE_VERSION = 1.0.0d1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.zxystd.itlwm;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = macosx10.13;
+				SDKROOT = macosx;
 				SYSTEM_HEADER_SEARCH_PATHS = itl80211/openbsd;
 				WRAPPER_EXTENSION = kext;
 			};
@@ -1263,7 +1263,7 @@
 				MODULE_VERSION = 1.0.0d1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.zxystd.itlwm;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = macosx10.13;
+				SDKROOT = macosx;
 				SYSTEM_HEADER_SEARCH_PATHS = itl80211/openbsd;
 				WRAPPER_EXTENSION = kext;
 			};
@@ -1283,7 +1283,7 @@
 				MODULE_VERSION = 1.0.0d1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.zxystd.itl80211;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = macosx10.13;
+				SDKROOT = macosx;
 				SYSTEM_HEADER_SEARCH_PATHS = itl80211/openbsd;
 				USER_HEADER_SEARCH_PATHS = "";
 				WRAPPER_EXTENSION = kext;
@@ -1304,7 +1304,7 @@
 				MODULE_VERSION = 1.0.0d1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.zxystd.itl80211;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = macosx10.13;
+				SDKROOT = macosx;
 				SYSTEM_HEADER_SEARCH_PATHS = itl80211/openbsd;
 				USER_HEADER_SEARCH_PATHS = "";
 				WRAPPER_EXTENSION = kext;
