@@ -225,12 +225,14 @@ struct ieee80211_tx_ba {
 	uint64_t		ba_bitmap;
 };
 
+struct ieee80211_ba_buf {
+    mbuf_t m;
+    struct ieee80211_rxinfo    rxi;
+};
+
 struct ieee80211_rx_ba {
 	struct ieee80211_node	*ba_ni;	/* backpointer for callbacks */
-	struct {
-		mbuf_t m;
-		struct ieee80211_rxinfo	rxi;
-	}			*ba_buf;
+	struct ieee80211_ba_buf	*ba_buf;
 	CTimeout*		ba_to;
 	int			ba_timeout_val;
 	int			ba_state;

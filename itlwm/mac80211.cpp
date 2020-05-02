@@ -951,7 +951,7 @@ iwm_tx(struct iwm_softc *sc, mbuf_t m, struct ieee80211_node *ni, int ac)
     /* Trim 802.11 header. */
     mbuf_adj(m, hdrlen);
     
-    data->map->dm_nsegs = data->map->cursor->getPhysicalSegmentsWithCoalesce(m, &data->map->dm_segs[0], IWM_NUM_OF_TBS - 2);
+    data->map->dm_nsegs = data->map->cursor->getPhysicalSegmentsWithCoalesce(m, data->map->dm_segs, IWM_NUM_OF_TBS - 2);
 //    XYLog("map frame dm_nsegs=%d\n", data->map->dm_nsegs);
     if (data->map->dm_nsegs == 0) {
         XYLog("%s: can't map mbuf (error %d)\n", DEVNAME(sc), data->map->dm_nsegs);
@@ -985,10 +985,12 @@ iwm_tx(struct iwm_softc *sc, mbuf_t m, struct ieee80211_node *ni, int ac)
     for (i = 0; i < data->map->dm_nsegs; i++) {
         seg = &data->map->dm_segs[i];
         desc->tbs[i+2].lo = htole32(seg->location);
-        desc->tbs[i+2].hi_n_len = \
+        desc->tbs[i+2].hi_n_len =
         htole16(iwm_get_dma_hi_addr(seg->location)
                 | ((seg->length) << 4));
+        XYLog("DMA segments index=%d location=0x%llx length=%llu", i, seg->location, seg->length);
     }
+    XYLog("----------end sending data------\n");
     
     //        bus_dmamap_sync(sc->sc_dmat, data->map, 0, data->map->dm_mapsize,
     //            BUS_DMASYNC_PREWRITE);

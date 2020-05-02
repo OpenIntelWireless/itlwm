@@ -80,9 +80,9 @@ ieee80211_send_eapol_key(struct ieee80211com *ic, mbuf_t m,
     struct ether_header *eh;
     struct ieee80211_eapol_key *key;
     u_int16_t info;
-    int len, error;
+    int len, error = 0;
     
-    mbuf_prepend(&m, sizeof(struct ether_header), (mbuf_how_t)MBUF_DONTWAIT);
+    mbuf_prepend(&m, sizeof(struct ether_header), MBUF_DONTWAIT);
     if (m == NULL)
         return ENOMEM;
     /* no need to m_pullup here (ok by construction) */
@@ -124,7 +124,7 @@ ieee80211_send_eapol_key(struct ieee80211com *ic, mbuf_t m,
         
         if ((info & EAPOL_KEY_VERSION_MASK) != EAPOL_KEY_DESC_V1) {
             /* AES Key Wrap adds 8 bytes + padding */
-            int l = sizeof(*eh) + 4 + BE_READ_2(key->len);
+            size_t l = sizeof(*eh) + 4 + BE_READ_2(key->len);
             mbuf_pkthdr_setlen(m, l);
             mbuf_setlen(m, l);
         }
@@ -139,16 +139,11 @@ ieee80211_send_eapol_key(struct ieee80211com *ic, mbuf_t m,
         timeout_add_msec(&ni->ni_eapol_to, 100);
 #endif
     
-//    ifp->output_queue->enqueue(m, &TX_TYPE_MGMT);
     if (!ifp->if_snd->lockEnqueue(m)) {
         XYLog("%s 啊啊啊啊 enqueue fail!!\n", __FUNCTION__);
         return -1;
     }
-//    IFQ_ENQUEUE(&ifp->if_snd, m, error);
-//    if (error)
-//        return (error);
     (*ifp->if_start)(ifp);
-//    ifp->output_queue->start();
     return 0;
 }
 
@@ -163,27 +158,27 @@ ieee80211_eapol_timeout(void *arg)
     struct ieee80211com *ic = ni->ni_ic;
     int s;
     
-    XYLog("no answer from station %s in state %d\n",
-             ether_sprintf(ni->ni_macaddr), ni->ni_rsn_state);
-    
+    DPRINTF(("no answer from station %s in state %d\n",
+        ether_sprintf(ni->ni_macaddr), ni->ni_rsn_state));
+
     s = splnet();
-    
+
     switch (ni->ni_rsn_state) {
-        case RSNA_PTKSTART:
-        case RSNA_PTKCALCNEGOTIATING:
-            (void)ieee80211_send_4way_msg1(ic, ni);
-            break;
-        case RSNA_PTKINITNEGOTIATING:
-            (void)ieee80211_send_4way_msg3(ic, ni);
-            break;
+    case RSNA_PTKSTART:
+    case RSNA_PTKCALCNEGOTIATING:
+        (void)ieee80211_send_4way_msg1(ic, ni);
+        break;
+    case RSNA_PTKINITNEGOTIATING:
+        (void)ieee80211_send_4way_msg3(ic, ni);
+        break;
     }
-    
+
     switch (ni->ni_rsn_gstate) {
-        case RSNA_REKEYNEGOTIATING:
-            (void)ieee80211_send_group_msg1(ic, ni);
-            break;
+    case RSNA_REKEYNEGOTIATING:
+        (void)ieee80211_send_group_msg1(ic, ni);
+        break;
     }
-    
+
     splx(s);
 }
 
@@ -206,9 +201,9 @@ ieee80211_add_gtk_kde(u_int8_t *frm, struct ieee80211_node *ni,
      * the pairwise key is used for data encryption/integrity or not.
      */
     if (ni->ni_rsncipher == IEEE80211_CIPHER_USEGROUP)
-        *frm |= 1 << 2;	/* set the Tx bit */
+        *frm |= 1 << 2;    /* set the Tx bit */
     frm++;
-    *frm++ = 0;	/* reserved */
+    *frm++ = 0;    /* reserved */
     memcpy(frm, k->k_key, k->k_len);
     return frm + k->k_len;
 }
@@ -240,7 +235,7 @@ ieee80211_add_igtk_kde(u_int8_t *frm, const struct ieee80211_key *k)
     memcpy(frm, IEEE80211_OUI, 3); frm += 3;
     *frm++ = IEEE80211_KDE_IGTK;
     LE_WRITE_2(frm, k->k_id); frm += 2;
-    LE_WRITE_6(frm, k->k_tsc); frm += 6;	/* IPN */
+    LE_WRITE_6(frm, k->k_tsc); frm += 6;    /* IPN */
     memcpy(frm, k->k_key, 16);
     return frm + 16;
 }
@@ -268,7 +263,7 @@ ieee80211_get_eapol_key(int flags, int type, u_int pktlen)
     mbuf_setdata(m, (char*)mbuf_data(m) +
                  sizeof(struct ieee80211_frame) +
                  LLC_SNAPFRAMELEN, mbuf_len(m)
-                 - sizeof(struct ieee80211_frame) + LLC_SNAPFRAMELEN);
+                 - sizeof(struct ieee80211_frame) - LLC_SNAPFRAMELEN);
     return m;
 }
 

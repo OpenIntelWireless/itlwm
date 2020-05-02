@@ -11,7 +11,7 @@
 * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 * GNU General Public License for more details.
 */
-/*	$OpenBSD: ieee80211_crypto.c,v 1.75 2019/08/16 19:53:32 procter Exp $	*/
+/*    $OpenBSD: ieee80211_crypto.c,v 1.75 2019/08/16 19:53:32 procter Exp $    */
 
 /*-
  * Copyright (c) 2008 Damien Bergamini <damien.bergamini@free.fr>
@@ -59,31 +59,31 @@
 #include <crypto/cmac.h>
 #include <crypto/key_wrap.h>
 
-void	ieee80211_prf(const u_int8_t *, size_t, const u_int8_t *, size_t,
-	    const u_int8_t *, size_t, u_int8_t *, size_t);
-void	ieee80211_kdf(const u_int8_t *, size_t, const u_int8_t *, size_t,
-	    const u_int8_t *, size_t, u_int8_t *, size_t);
-void	ieee80211_derive_pmkid(enum ieee80211_akm, const u_int8_t *,
-	    const u_int8_t *, const u_int8_t *, u_int8_t *);
+void    ieee80211_prf(const u_int8_t *, size_t, const u_int8_t *, size_t,
+        const u_int8_t *, size_t, u_int8_t *, size_t);
+void    ieee80211_kdf(const u_int8_t *, size_t, const u_int8_t *, size_t,
+        const u_int8_t *, size_t, u_int8_t *, size_t);
+void    ieee80211_derive_pmkid(enum ieee80211_akm, const u_int8_t *,
+        const u_int8_t *, const u_int8_t *, u_int8_t *);
 
 void
 ieee80211_crypto_attach(struct ifnet *ifp)
 {
-	struct ieee80211com *ic = (struct ieee80211com *)ifp;
+    struct ieee80211com *ic = (struct ieee80211com *)ifp;
 
-	TAILQ_INIT(&ic->ic_pmksa);
-	if (ic->ic_caps & IEEE80211_C_RSN) {
-		ic->ic_rsnprotos = IEEE80211_PROTO_RSN;
-		ic->ic_rsnakms = IEEE80211_AKM_PSK;
-		ic->ic_rsnciphers = IEEE80211_CIPHER_CCMP;
-		ic->ic_rsngroupcipher = IEEE80211_CIPHER_CCMP;
-		ic->ic_rsngroupmgmtcipher = IEEE80211_CIPHER_BIP;
-	}
-	ic->ic_set_key = ieee80211_set_key;
-	ic->ic_delete_key = ieee80211_delete_key;
+    TAILQ_INIT(&ic->ic_pmksa);
+    if (ic->ic_caps & IEEE80211_C_RSN) {
+        ic->ic_rsnprotos = IEEE80211_PROTO_RSN;
+        ic->ic_rsnakms = IEEE80211_AKM_PSK;
+        ic->ic_rsnciphers = IEEE80211_CIPHER_CCMP;
+        ic->ic_rsngroupcipher = IEEE80211_CIPHER_CCMP;
+        ic->ic_rsngroupmgmtcipher = IEEE80211_CIPHER_BIP;
+    }
+    ic->ic_set_key = ieee80211_set_key;
+    ic->ic_delete_key = ieee80211_delete_key;
 #ifndef IEEE80211_STA_ONLY
-	timeout_set(&ic->ic_tkip_micfail_timeout,
-	    ieee80211_michael_mic_failure_timeout, ic);
+    timeout_set(&ic->ic_tkip_micfail_timeout,
+        ieee80211_michael_mic_failure_timeout, ic);
 #endif
 }
 
@@ -118,11 +118,11 @@ ieee80211_crypto_clear_groupkeys(struct ieee80211com *ic)
 	int i;
 
 	for (i = 0; i < IEEE80211_GROUP_NKID; i++) {
-		struct ieee80211_key *k = &ic->ic_nw_keys[i];
-		if (k->k_cipher != IEEE80211_CIPHER_NONE)
-			(*ic->ic_delete_key)(ic, NULL, k);
-		explicit_bzero(k, sizeof(*k));
-	}
+        struct ieee80211_key *k = &ic->ic_nw_keys[i];
+        if (k->k_cipher != IEEE80211_CIPHER_NONE)
+            (*ic->ic_delete_key)(ic, NULL, k);
+        explicit_bzero(k, sizeof(*k));
+    }
 }
 
 /*
@@ -154,28 +154,28 @@ ieee80211_set_key(struct ieee80211com *ic, struct ieee80211_node *ni,
 	int error;
 
 	switch (k->k_cipher) {
-	case IEEE80211_CIPHER_WEP40:
-	case IEEE80211_CIPHER_WEP104:
-		error = ieee80211_wep_set_key(ic, k);
-		break;
-	case IEEE80211_CIPHER_TKIP:
-		error = ieee80211_tkip_set_key(ic, k);
-		break;
-	case IEEE80211_CIPHER_CCMP:
-		error = ieee80211_ccmp_set_key(ic, k);
-		break;
-	case IEEE80211_CIPHER_BIP:
-		error = ieee80211_bip_set_key(ic, k);
-		break;
-	default:
-		/* should not get there */
-		error = EINVAL;
-	}
+    case IEEE80211_CIPHER_WEP40:
+    case IEEE80211_CIPHER_WEP104:
+        error = ieee80211_wep_set_key(ic, k);
+        break;
+    case IEEE80211_CIPHER_TKIP:
+        error = ieee80211_tkip_set_key(ic, k);
+        break;
+    case IEEE80211_CIPHER_CCMP:
+        error = ieee80211_ccmp_set_key(ic, k);
+        break;
+    case IEEE80211_CIPHER_BIP:
+        error = ieee80211_bip_set_key(ic, k);
+        break;
+    default:
+        /* should not get there */
+        error = EINVAL;
+    }
 
-	if (error == 0)
-		k->k_flags |= IEEE80211_KEY_SWCRYPTO;
+    if (error == 0)
+        k->k_flags |= IEEE80211_KEY_SWCRYPTO;
 
-	return error;
+    return error;
 }
 
 void
@@ -183,24 +183,24 @@ ieee80211_delete_key(struct ieee80211com *ic, struct ieee80211_node *ni,
     struct ieee80211_key *k)
 {
 	switch (k->k_cipher) {
-	case IEEE80211_CIPHER_WEP40:
-	case IEEE80211_CIPHER_WEP104:
-		ieee80211_wep_delete_key(ic, k);
-		break;
-	case IEEE80211_CIPHER_TKIP:
-		ieee80211_tkip_delete_key(ic, k);
-		break;
-	case IEEE80211_CIPHER_CCMP:
-		ieee80211_ccmp_delete_key(ic, k);
-		break;
-	case IEEE80211_CIPHER_BIP:
-		ieee80211_bip_delete_key(ic, k);
-		break;
-	default:
-		/* should not get there */
-		break;
-	}
-	explicit_bzero(k, sizeof(*k));
+    case IEEE80211_CIPHER_WEP40:
+    case IEEE80211_CIPHER_WEP104:
+        ieee80211_wep_delete_key(ic, k);
+        break;
+    case IEEE80211_CIPHER_TKIP:
+        ieee80211_tkip_delete_key(ic, k);
+        break;
+    case IEEE80211_CIPHER_CCMP:
+        ieee80211_ccmp_delete_key(ic, k);
+        break;
+    case IEEE80211_CIPHER_BIP:
+        ieee80211_bip_delete_key(ic, k);
+        break;
+    default:
+        /* should not get there */
+        break;
+    }
+    explicit_bzero(k, sizeof(*k));
 }
 
 struct ieee80211_key *
@@ -210,17 +210,17 @@ ieee80211_get_txkey(struct ieee80211com *ic, const struct ieee80211_frame *wh,
 	int kid;
 
 	if ((ic->ic_flags & IEEE80211_F_RSNON) &&
-	    !IEEE80211_IS_MULTICAST(wh->i_addr1) &&
-	    ni->ni_rsncipher != IEEE80211_CIPHER_USEGROUP)
-		return &ni->ni_pairwise_key;
+        !IEEE80211_IS_MULTICAST(wh->i_addr1) &&
+        ni->ni_rsncipher != IEEE80211_CIPHER_USEGROUP)
+        return &ni->ni_pairwise_key;
 
-	/* All other cases (including WEP) use a group key. */
-	if (ni->ni_flags & IEEE80211_NODE_MFP)
-		kid = ic->ic_igtk_kid;
-	else
-		kid = ic->ic_def_txkey;
+    /* All other cases (including WEP) use a group key. */
+    if (ni->ni_flags & IEEE80211_NODE_MFP)
+        kid = ic->ic_igtk_kid;
+    else
+        kid = ic->ic_def_txkey;
 
-	return &ic->ic_nw_keys[kid];
+    return &ic->ic_nw_keys[kid];
 }
 
 mbuf_t
@@ -262,75 +262,71 @@ ieee80211_decrypt(struct ieee80211com *ic, mbuf_t m0,
 	int hdrlen;
 
 	/* find key for decryption */
-	wh = mtod(m0, struct ieee80211_frame *);
-	if ((ic->ic_flags & IEEE80211_F_RSNON) &&
-	    !IEEE80211_IS_MULTICAST(wh->i_addr1) &&
-	    ni->ni_rsncipher != IEEE80211_CIPHER_USEGROUP) {
-		k = &ni->ni_pairwise_key;
+    wh = mtod(m0, struct ieee80211_frame *);
+    if ((ic->ic_flags & IEEE80211_F_RSNON) &&
+        !IEEE80211_IS_MULTICAST(wh->i_addr1) &&
+        ni->ni_rsncipher != IEEE80211_CIPHER_USEGROUP) {
+        k = &ni->ni_pairwise_key;
 
-	} else if (!IEEE80211_IS_MULTICAST(wh->i_addr1) ||
-	    (wh->i_fc[0] & IEEE80211_FC0_TYPE_MASK) !=
-	    IEEE80211_FC0_TYPE_MGT) {
-		/* retrieve group data key id from IV field */
-		hdrlen = ieee80211_get_hdrlen(wh);
-		/* check that IV field is present */
-		if (mbuf_len(m0) < hdrlen + 4) {
-			mbuf_freem(m0);
-			return NULL;
-		}
-		ivp = (u_int8_t *)wh + hdrlen;
-		kid = ivp[3] >> 6;
-		k = &ic->ic_nw_keys[kid];
-	} else {
-		/* retrieve integrity group key id from MMIE */
-		if (mbuf_len(m0) < sizeof(*wh) + IEEE80211_MMIE_LEN) {
-			mbuf_freem(m0);
-			return NULL;
-		}
-		/* it is assumed management frames are contiguous */
-		mmie = (u_int8_t *)wh + mbuf_len(m0) - IEEE80211_MMIE_LEN;
-		/* check that MMIE is valid */
-		if (mmie[0] != IEEE80211_ELEMID_MMIE || mmie[1] != 16) {
-			mbuf_freem(m0);
-			return NULL;
-		}
-		kid = LE_READ_2(&mmie[2]);
-		if (kid != 4 && kid != 5) {
-			mbuf_freem(m0);
-			return NULL;
-		}
-		k = &ic->ic_nw_keys[kid];
-	}
+    } else if (!IEEE80211_IS_MULTICAST(wh->i_addr1) ||
+        (wh->i_fc[0] & IEEE80211_FC0_TYPE_MASK) !=
+        IEEE80211_FC0_TYPE_MGT) {
+        /* retrieve group data key id from IV field */
+        hdrlen = ieee80211_get_hdrlen(wh);
+        /* check that IV field is present */
+        if (mbuf_len(m0) < hdrlen + 4) {
+            mbuf_freem(m0);
+            return NULL;
+        }
+        ivp = (u_int8_t *)wh + hdrlen;
+        kid = ivp[3] >> 6;
+        k = &ic->ic_nw_keys[kid];
+    } else {
+        /* retrieve integrity group key id from MMIE */
+        if (mbuf_len(m0) < sizeof(*wh) + IEEE80211_MMIE_LEN) {
+            mbuf_freem(m0);
+            return NULL;
+        }
+        /* it is assumed management frames are contiguous */
+        mmie = (u_int8_t *)wh + mbuf_len(m0) - IEEE80211_MMIE_LEN;
+        /* check that MMIE is valid */
+        if (mmie[0] != IEEE80211_ELEMID_MMIE || mmie[1] != 16) {
+            mbuf_freem(m0);
+            return NULL;
+        }
+        kid = LE_READ_2(&mmie[2]);
+        if (kid != 4 && kid != 5) {
+            mbuf_freem(m0);
+            return NULL;
+        }
+        k = &ic->ic_nw_keys[kid];
+    }
 
-	if ((k->k_flags & IEEE80211_KEY_SWCRYPTO) == 0) {
-		mbuf_free(m0);
-		return NULL;
-	}
-	switch (k->k_cipher) {
-	case IEEE80211_CIPHER_WEP40:
-	case IEEE80211_CIPHER_WEP104:
-//        XYLog("%s %d ieee80211_wep_decrypt\n", __FUNCTION__, __LINE__);
-		m0 = ieee80211_wep_decrypt(ic, m0, k);
-		break;
-	case IEEE80211_CIPHER_TKIP:
-//        XYLog("%s %d ieee80211_tkip_decrypt\n", __FUNCTION__, __LINE__);
-		m0 = ieee80211_tkip_decrypt(ic, m0, k);
-		break;
-	case IEEE80211_CIPHER_CCMP:
-//        XYLog("%s %d ieee80211_ccmp_decrypt\n", __FUNCTION__, __LINE__);
-		m0 = ieee80211_ccmp_decrypt(ic, m0, k);
-		break;
-	case IEEE80211_CIPHER_BIP:
-//        XYLog("%s %d ieee80211_bip_decap\n", __FUNCTION__, __LINE__);
-		m0 = ieee80211_bip_decap(ic, m0, k);
-		break;
-	default:
-		/* key not defined */
-        XYLog("%s %d key not defined\n", __FUNCTION__, __LINE__);
-		mbuf_freem(m0);
-		m0 = NULL;
-	}
-	return m0;
+    if ((k->k_flags & IEEE80211_KEY_SWCRYPTO) == 0) {
+        mbuf_free(m0);
+        return NULL;
+    }
+
+    switch (k->k_cipher) {
+    case IEEE80211_CIPHER_WEP40:
+    case IEEE80211_CIPHER_WEP104:
+        m0 = ieee80211_wep_decrypt(ic, m0, k);
+        break;
+    case IEEE80211_CIPHER_TKIP:
+        m0 = ieee80211_tkip_decrypt(ic, m0, k);
+        break;
+    case IEEE80211_CIPHER_CCMP:
+        m0 = ieee80211_ccmp_decrypt(ic, m0, k);
+        break;
+    case IEEE80211_CIPHER_BIP:
+        m0 = ieee80211_bip_decap(ic, m0, k);
+        break;
+    default:
+        /* key not defined */
+        mbuf_freem(m0);
+        m0 = NULL;
+    }
+    return m0;
 }
 
 /*
@@ -342,24 +338,24 @@ ieee80211_prf(const u_int8_t *key, size_t key_len, const u_int8_t *label,
     u_int8_t *output, size_t len)
 {
 	HMAC_SHA1_CTX ctx;
-	u_int8_t digest[SHA1_DIGEST_LENGTH];
-	u_int8_t count;
+    u_int8_t digest[SHA1_DIGEST_LENGTH];
+    u_int8_t count;
 
-	for (count = 0; len != 0; count++) {
-		HMAC_SHA1_Init(&ctx, key, key_len);
-		HMAC_SHA1_Update(&ctx, label, label_len);
-		HMAC_SHA1_Update(&ctx, context, context_len);
-		HMAC_SHA1_Update(&ctx, &count, 1);
-		if (len < SHA1_DIGEST_LENGTH) {
-			HMAC_SHA1_Final(digest, &ctx);
-			/* truncate HMAC-SHA1 to len bytes */
-			memcpy(output, digest, len);
-			break;
-		}
-		HMAC_SHA1_Final(output, &ctx);
-		output += SHA1_DIGEST_LENGTH;
-		len -= SHA1_DIGEST_LENGTH;
-	}
+    for (count = 0; len != 0; count++) {
+        HMAC_SHA1_Init(&ctx, key, key_len);
+        HMAC_SHA1_Update(&ctx, label, label_len);
+        HMAC_SHA1_Update(&ctx, context, context_len);
+        HMAC_SHA1_Update(&ctx, &count, 1);
+        if (len < SHA1_DIGEST_LENGTH) {
+            HMAC_SHA1_Final(digest, &ctx);
+            /* truncate HMAC-SHA1 to len bytes */
+            memcpy(output, digest, len);
+            break;
+        }
+        HMAC_SHA1_Final(output, &ctx);
+        output += SHA1_DIGEST_LENGTH;
+        len -= SHA1_DIGEST_LENGTH;
+    }
 }
 
 /*
@@ -371,27 +367,27 @@ ieee80211_kdf(const u_int8_t *key, size_t key_len, const u_int8_t *label,
     u_int8_t *output, size_t len)
 {
 	HMAC_SHA256_CTX ctx;
-	u_int8_t digest[SHA256_DIGEST_LENGTH];
-	u_int16_t i, iter, length;
+    u_int8_t digest[SHA256_DIGEST_LENGTH];
+    u_int16_t i, iter, length;
 
-	length = htole16(len * NBBY);
-	for (i = 1; len != 0; i++) {
-		HMAC_SHA256_Init(&ctx, key, key_len);
-		iter = htole16(i);
-		HMAC_SHA256_Update(&ctx, (u_int8_t *)&iter, sizeof iter);
-		HMAC_SHA256_Update(&ctx, label, label_len);
-		HMAC_SHA256_Update(&ctx, context, context_len);
-		HMAC_SHA256_Update(&ctx, (u_int8_t *)&length, sizeof length);
-		if (len < SHA256_DIGEST_LENGTH) {
-			HMAC_SHA256_Final(digest, &ctx);
-			/* truncate HMAC-SHA-256 to len bytes */
-			memcpy(output, digest, len);
-			break;
-		}
-		HMAC_SHA256_Final(output, &ctx);
-		output += SHA256_DIGEST_LENGTH;
-		len -= SHA256_DIGEST_LENGTH;
-	}
+    length = htole16(len * NBBY);
+    for (i = 1; len != 0; i++) {
+        HMAC_SHA256_Init(&ctx, key, key_len);
+        iter = htole16(i);
+        HMAC_SHA256_Update(&ctx, (u_int8_t *)&iter, sizeof iter);
+        HMAC_SHA256_Update(&ctx, label, label_len);
+        HMAC_SHA256_Update(&ctx, context, context_len);
+        HMAC_SHA256_Update(&ctx, (u_int8_t *)&length, sizeof length);
+        if (len < SHA256_DIGEST_LENGTH) {
+            HMAC_SHA256_Final(digest, &ctx);
+            /* truncate HMAC-SHA-256 to len bytes */
+            memcpy(output, digest, len);
+            break;
+        }
+        HMAC_SHA256_Final(output, &ctx);
+        output += SHA256_DIGEST_LENGTH;
+        len -= SHA256_DIGEST_LENGTH;
+    }
 }
 
 /*
@@ -403,23 +399,23 @@ ieee80211_derive_ptk(enum ieee80211_akm akm, const u_int8_t *pmk,
     const u_int8_t *snonce, struct ieee80211_ptk *ptk)
 {
 	void (*kdf)(const u_int8_t *, size_t, const u_int8_t *, size_t,
-	    const u_int8_t *, size_t, u_int8_t *, size_t);
-	u_int8_t buf[2 * IEEE80211_ADDR_LEN + 2 * EAPOL_KEY_NONCE_LEN];
-	int ret;
+        const u_int8_t *, size_t, u_int8_t *, size_t);
+    u_int8_t buf[2 * IEEE80211_ADDR_LEN + 2 * EAPOL_KEY_NONCE_LEN];
+    int ret;
 
-	/* Min(AA,SPA) || Max(AA,SPA) */
-	ret = memcmp(aa, spa, IEEE80211_ADDR_LEN) < 0;
-	memcpy(&buf[ 0], ret ? aa : spa, IEEE80211_ADDR_LEN);
-	memcpy(&buf[ 6], ret ? spa : aa, IEEE80211_ADDR_LEN);
+    /* Min(AA,SPA) || Max(AA,SPA) */
+    ret = memcmp(aa, spa, IEEE80211_ADDR_LEN) < 0;
+    memcpy(&buf[ 0], ret ? aa : spa, IEEE80211_ADDR_LEN);
+    memcpy(&buf[ 6], ret ? spa : aa, IEEE80211_ADDR_LEN);
 
-	/* Min(ANonce,SNonce) || Max(ANonce,SNonce) */
-	ret = memcmp(anonce, snonce, EAPOL_KEY_NONCE_LEN) < 0;
-	memcpy(&buf[12], ret ? anonce : snonce, EAPOL_KEY_NONCE_LEN);
-	memcpy(&buf[44], ret ? snonce : anonce, EAPOL_KEY_NONCE_LEN);
+    /* Min(ANonce,SNonce) || Max(ANonce,SNonce) */
+    ret = memcmp(anonce, snonce, EAPOL_KEY_NONCE_LEN) < 0;
+    memcpy(&buf[12], ret ? anonce : snonce, EAPOL_KEY_NONCE_LEN);
+    memcpy(&buf[44], ret ? snonce : anonce, EAPOL_KEY_NONCE_LEN);
 
-	kdf = ieee80211_is_sha256_akm(akm) ? ieee80211_kdf : ieee80211_prf;
-	(*kdf)(pmk, IEEE80211_PMK_LEN, (const u_int8_t *)"Pairwise key expansion", 23,
-	    buf, sizeof buf, (u_int8_t *)ptk, sizeof(*ptk));
+    kdf = ieee80211_is_sha256_akm(akm) ? ieee80211_kdf : ieee80211_prf;
+    (*kdf)(pmk, IEEE80211_PMK_LEN, (const u_int8_t *)"Pairwise key expansion", 23,
+        buf, sizeof buf, (u_int8_t *)ptk, sizeof(*ptk));
 }
 
 static void
@@ -488,26 +484,26 @@ ieee80211_eapol_key_mic(struct ieee80211_eapol_key *key, const u_int8_t *kck)
 
 	len = BE_READ_2(key->len) + 4;
 
-	switch (BE_READ_2(key->info) & EAPOL_KEY_VERSION_MASK) {
-	case EAPOL_KEY_DESC_V1:
-		HMAC_MD5_Init(&ctx.md5, kck, 16);
-		HMAC_MD5_Update(&ctx.md5, (u_int8_t *)key, len);
-		HMAC_MD5_Final(key->mic, &ctx.md5);
-		break;
-	case EAPOL_KEY_DESC_V2:
-		HMAC_SHA1_Init(&ctx.sha1, kck, 16);
-		HMAC_SHA1_Update(&ctx.sha1, (u_int8_t *)key, len);
-		HMAC_SHA1_Final(digest, &ctx.sha1);
-		/* truncate HMAC-SHA1 to its 128 MSBs */
-		memcpy(key->mic, digest, EAPOL_KEY_MIC_LEN);
-		break;
-	case EAPOL_KEY_DESC_V3:
-		AES_CMAC_Init(&ctx.cmac);
-		AES_CMAC_SetKey(&ctx.cmac, kck);
-		AES_CMAC_Update(&ctx.cmac, (u_int8_t *)key, len);
-		AES_CMAC_Final(key->mic, &ctx.cmac);
-		break;
-	}
+    switch (BE_READ_2(key->info) & EAPOL_KEY_VERSION_MASK) {
+    case EAPOL_KEY_DESC_V1:
+        HMAC_MD5_Init(&ctx.md5, kck, 16);
+        HMAC_MD5_Update(&ctx.md5, (u_int8_t *)key, len);
+        HMAC_MD5_Final(key->mic, &ctx.md5);
+        break;
+    case EAPOL_KEY_DESC_V2:
+        HMAC_SHA1_Init(&ctx.sha1, kck, 16);
+        HMAC_SHA1_Update(&ctx.sha1, (u_int8_t *)key, len);
+        HMAC_SHA1_Final(digest, &ctx.sha1);
+        /* truncate HMAC-SHA1 to its 128 MSBs */
+        memcpy(key->mic, digest, EAPOL_KEY_MIC_LEN);
+        break;
+    case EAPOL_KEY_DESC_V3:
+        AES_CMAC_Init(&ctx.cmac);
+        AES_CMAC_SetKey(&ctx.cmac, kck);
+        AES_CMAC_Update(&ctx.cmac, (u_int8_t *)key, len);
+        AES_CMAC_Final(key->mic, &ctx.cmac);
+        break;
+    }
 }
 
 /*
@@ -520,11 +516,11 @@ ieee80211_eapol_key_check_mic(struct ieee80211_eapol_key *key,
 {
 	u_int8_t mic[EAPOL_KEY_MIC_LEN];
 
-	memcpy(mic, key->mic, EAPOL_KEY_MIC_LEN);
-	memset(key->mic, 0, EAPOL_KEY_MIC_LEN);
-	ieee80211_eapol_key_mic(key, kck);
+    memcpy(mic, key->mic, EAPOL_KEY_MIC_LEN);
+    memset(key->mic, 0, EAPOL_KEY_MIC_LEN);
+    ieee80211_eapol_key_mic(key, kck);
 
-	return timingsafe_bcmp(key->mic, mic, EAPOL_KEY_MIC_LEN) != 0;
+    return timingsafe_bcmp(key->mic, mic, EAPOL_KEY_MIC_LEN) != 0;
 }
 
 #ifndef IEEE80211_STA_ONLY
@@ -547,43 +543,43 @@ ieee80211_eapol_key_encrypt(struct ieee80211com *ic,
 	int n;
 
 	len  = BE_READ_2(key->paylen);
-	info = BE_READ_2(key->info);
-	data = (u_int8_t *)(key + 1);
+    info = BE_READ_2(key->info);
+    data = (u_int8_t *)(key + 1);
 
-	switch (info & EAPOL_KEY_VERSION_MASK) {
-	case EAPOL_KEY_DESC_V1:
-		/* set IV to the lower 16 octets of our global key counter */
-		memcpy(key->iv, ic->ic_globalcnt + 16, 16);
-		/* increment our global key counter (256-bit, big-endian) */
-		for (n = 31; n >= 0 && ++ic->ic_globalcnt[n] == 0; n--);
+    switch (info & EAPOL_KEY_VERSION_MASK) {
+    case EAPOL_KEY_DESC_V1:
+        /* set IV to the lower 16 octets of our global key counter */
+        memcpy(key->iv, ic->ic_globalcnt + 16, 16);
+        /* increment our global key counter (256-bit, big-endian) */
+        for (n = 31; n >= 0 && ++ic->ic_globalcnt[n] == 0; n--);
 
-		/* concatenate the EAPOL-Key IV field and the KEK */
-		memcpy(keybuf, key->iv, EAPOL_KEY_IV_LEN);
-		memcpy(keybuf + EAPOL_KEY_IV_LEN, kek, 16);
+        /* concatenate the EAPOL-Key IV field and the KEK */
+        memcpy(keybuf, key->iv, EAPOL_KEY_IV_LEN);
+        memcpy(keybuf + EAPOL_KEY_IV_LEN, kek, 16);
 
-		rc4_keysetup(&ctx.rc4, keybuf, sizeof keybuf);
-		/* discard the first 256 octets of the ARC4 key stream */
-		rc4_skip(&ctx.rc4, RC4STATE);
-		rc4_crypt(&ctx.rc4, data, data, len);
-		break;
-	case EAPOL_KEY_DESC_V2:
-	case EAPOL_KEY_DESC_V3:
-		if (len < 16 || (len & 7) != 0) {
-			/* insert padding */
-			n = (len < 16) ? 16 - len : 8 - (len & 7);
-			data[len++] = IEEE80211_ELEMID_VENDOR;
-			memset(&data[len], 0, n - 1);
-			len += n - 1;
-		}
-		aes_key_wrap_set_key_wrap_only(&ctx.aes, kek, 16);
-		aes_key_wrap(&ctx.aes, data, len / 8, data);
-		len += 8;	/* AES Key Wrap adds 8 bytes */
-		/* update key data length */
-		BE_WRITE_2(key->paylen, len);
-		/* update packet body length */
-		BE_WRITE_2(key->len, sizeof(*key) + len - 4);
-		break;
-	}
+        rc4_keysetup(&ctx.rc4, keybuf, sizeof keybuf);
+        /* discard the first 256 octets of the ARC4 key stream */
+        rc4_skip(&ctx.rc4, RC4STATE);
+        rc4_crypt(&ctx.rc4, data, data, len);
+        break;
+    case EAPOL_KEY_DESC_V2:
+    case EAPOL_KEY_DESC_V3:
+        if (len < 16 || (len & 7) != 0) {
+            /* insert padding */
+            n = (len < 16) ? 16 - len : 8 - (len & 7);
+            data[len++] = IEEE80211_ELEMID_VENDOR;
+            memset(&data[len], 0, n - 1);
+            len += n - 1;
+        }
+        aes_key_wrap_set_key_wrap_only(&ctx.aes, kek, 16);
+        aes_key_wrap(&ctx.aes, data, len / 8, data);
+        len += 8;    /* AES Key Wrap adds 8 bytes */
+        /* update key data length */
+        BE_WRITE_2(key->paylen, len);
+        /* update packet body length */
+        BE_WRITE_2(key->len, sizeof(*key) + len - 4);
+        break;
+    }
 }
 #endif	/* IEEE80211_STA_ONLY */
 
@@ -597,39 +593,39 @@ ieee80211_eapol_key_decrypt(struct ieee80211_eapol_key *key,
     const u_int8_t *kek)
 {
 	union {
-		struct rc4_ctx rc4;
-		aes_key_wrap_ctx aes;
-	} ctx;	/* XXX off stack? */
-	u_int8_t keybuf[EAPOL_KEY_IV_LEN + 16];
-	u_int16_t len, info;
-	u_int8_t *data;
+        struct rc4_ctx rc4;
+        aes_key_wrap_ctx aes;
+    } ctx;    /* XXX off stack? */
+    u_int8_t keybuf[EAPOL_KEY_IV_LEN + 16];
+    u_int16_t len, info;
+    u_int8_t *data;
 
-	len  = BE_READ_2(key->paylen);
-	info = BE_READ_2(key->info);
-	data = (u_int8_t *)(key + 1);
+    len  = BE_READ_2(key->paylen);
+    info = BE_READ_2(key->info);
+    data = (u_int8_t *)(key + 1);
 
-	switch (info & EAPOL_KEY_VERSION_MASK) {
-	case EAPOL_KEY_DESC_V1:
-		/* concatenate the EAPOL-Key IV field and the KEK */
-		memcpy(keybuf, key->iv, EAPOL_KEY_IV_LEN);
-		memcpy(keybuf + EAPOL_KEY_IV_LEN, kek, 16);
+    switch (info & EAPOL_KEY_VERSION_MASK) {
+    case EAPOL_KEY_DESC_V1:
+        /* concatenate the EAPOL-Key IV field and the KEK */
+        memcpy(keybuf, key->iv, EAPOL_KEY_IV_LEN);
+        memcpy(keybuf + EAPOL_KEY_IV_LEN, kek, 16);
 
-		rc4_keysetup(&ctx.rc4, keybuf, sizeof keybuf);
-		/* discard the first 256 octets of the ARC4 key stream */
-		rc4_skip(&ctx.rc4, RC4STATE);
-		rc4_crypt(&ctx.rc4, data, data, len);
-		return 0;
-	case EAPOL_KEY_DESC_V2:
-	case EAPOL_KEY_DESC_V3:
-		/* Key Data Length must be a multiple of 8 */
-		if (len < 16 + 8 || (len & 7) != 0)
-			return 1;
-		len -= 8;	/* AES Key Wrap adds 8 bytes */
-		aes_key_wrap_set_key(&ctx.aes, kek, 16);
-		return aes_key_unwrap(&ctx.aes, data, data, len / 8);
-	}
+        rc4_keysetup(&ctx.rc4, keybuf, sizeof keybuf);
+        /* discard the first 256 octets of the ARC4 key stream */
+        rc4_skip(&ctx.rc4, RC4STATE);
+        rc4_crypt(&ctx.rc4, data, data, len);
+        return 0;
+    case EAPOL_KEY_DESC_V2:
+    case EAPOL_KEY_DESC_V3:
+        /* Key Data Length must be a multiple of 8 */
+        if (len < 16 + 8 || (len & 7) != 0)
+            return 1;
+        len -= 8;    /* AES Key Wrap adds 8 bytes */
+        aes_key_wrap_set_key(&ctx.aes, kek, 16);
+        return aes_key_unwrap(&ctx.aes, data, data, len / 8);
+    }
 
-	return 1;	/* unknown Key Descriptor Version */
+    return 1;    /* unknown Key Descriptor Version */
 }
 
 /*
@@ -649,7 +645,7 @@ ieee80211_pmksa_add(struct ieee80211com *ic, enum ieee80211_akm akm,
 	}
 	if (pmk == NULL) {
 		/* allocate a new PMKSA entry */
-		if ((pmk = (struct ieee80211_pmk *)IOMalloc(sizeof(*pmk))) == NULL)
+		if ((pmk = (struct ieee80211_pmk *)_MallocZero(sizeof(*pmk))) == NULL)
 			return NULL;
 		pmk->pmk_akm = akm;
 		IEEE80211_ADDR_COPY(pmk->pmk_macaddr, macaddr);
@@ -680,11 +676,11 @@ ieee80211_pmksa_find(struct ieee80211com *ic, struct ieee80211_node *ni,
 	struct ieee80211_pmk *pmk;
 
 	TAILQ_FOREACH(pmk, &ic->ic_pmksa, pmk_next) {
-		if (pmk->pmk_akm == ni->ni_rsnakms &&
-		    IEEE80211_ADDR_EQ(pmk->pmk_macaddr, ni->ni_macaddr) &&
-		    (pmkid == NULL ||
-		     memcmp(pmk->pmk_pmkid, pmkid, IEEE80211_PMKID_LEN) == 0))
-			break;
-	}
+        if (pmk->pmk_akm == ni->ni_rsnakms &&
+            IEEE80211_ADDR_EQ(pmk->pmk_macaddr, ni->ni_macaddr) &&
+            (pmkid == NULL ||
+             memcmp(pmk->pmk_pmkid, pmkid, IEEE80211_PMKID_LEN) == 0))
+            break;
+    }
 	return pmk;
 }
