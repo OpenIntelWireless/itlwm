@@ -524,9 +524,7 @@ ieee80211_encap(struct ifnet *ifp, mbuf_t m, struct ieee80211_node **pni)
 	mbuf_tag_id_t mtag;
 	u_int8_t *addr;
 	u_int dlt, hdrlen;
-	int addqos, tid;
-    uint8_t tag_data[1024];
-    size_t tag_len;
+	int addqos, tid = 0;
 
 	/* Handle raw frames if mbuf is tagged as 802.11 */
     if (0) {
@@ -567,151 +565,144 @@ ieee80211_encap(struct ifnet *ifp, mbuf_t m, struct ieee80211_node **pni)
 		return (m);
 	}
 
- fallback:
-	if (mbuf_len(m) < sizeof(struct ether_header)) {
+fallback:
+    if (mbuf_len(m) < sizeof(struct ether_header)) {
         mbuf_pullup(&m, sizeof(struct ether_header));
-		if (m == NULL) {
-            XYLog("%s mbuf_len(m) < sizeof(struct ether_header)\n", __FUNCTION__);
-			ic->ic_stats.is_tx_nombuf++;
-			goto bad;
-		}
-	}
-	memcpy(&eh, mtod(m, caddr_t), sizeof(struct ether_header));
-
-	ni = ieee80211_find_txnode(ic, eh.ether_dhost);
-	if (ni == NULL) {
-		XYLog("%s, no node for dst %s, discard frame\n",
-		    __FUNCTION__, ether_sprintf(eh.ether_dhost));
-		ic->ic_stats.is_tx_nonode++;
-		goto bad;
-	}
+        if (m == NULL) {
+            ic->ic_stats.is_tx_nombuf++;
+            goto bad;
+        }
+    }
+    memcpy(&eh, mtod(m, caddr_t), sizeof(struct ether_header));
     
-//    XYLog("sending to port %s\n", ether_sprintf(ni->ni_macaddr));
-
-	if ((ic->ic_flags & IEEE80211_F_RSNON) &&
-	    !ni->ni_port_valid &&
-	    eh.ether_type != htons(ETHERTYPE_PAE)) {
-		XYLog("%s port not valid: %s\n",
-		    __FUNCTION__, ether_sprintf(eh.ether_dhost));
-		ic->ic_stats.is_tx_noauth++;
-		goto bad;
-	}
-
-	if ((ic->ic_flags & IEEE80211_F_COUNTERM) &&
-	    ni->ni_rsncipher == IEEE80211_CIPHER_TKIP)
-		/* XXX TKIP countermeasures! */;
-
-	ni->ni_inact = 0;
-
-	if ((ic->ic_flags & IEEE80211_F_QOS) &&
-	    (ni->ni_flags & IEEE80211_NODE_QOS) &&
-	    /* do not QoS-encapsulate EAPOL frames */
-	    eh.ether_type != htons(ETHERTYPE_PAE)) {
-		struct ieee80211_tx_ba *ba;
-		tid = ieee80211_classify(ic, m);
-		ba = &ni->ni_tx_ba[tid];
-		/*
-		 * Don't use TID's sequence number space while an ADDBA
-		 * request is in progress.
-		 */
-		if (ba->ba_state == IEEE80211_BA_REQUESTED) {
-			hdrlen = sizeof(struct ieee80211_frame);
-			addqos = 0;
-		} else {
-			hdrlen = sizeof(struct ieee80211_qosframe);
-			addqos = 1;
-		}
-	} else {
-		hdrlen = sizeof(struct ieee80211_frame);
-		addqos = 0;
-	}
-	mbuf_adj(m, sizeof(struct ether_header) - LLC_SNAPFRAMELEN);
-	llc = mtod(m, struct llc *);
-	llc->llc_dsap = llc->llc_ssap = LLC_SNAP_LSAP;
-	llc->llc_control = LLC_UI;
-	llc->llc_snap.org_code[0] = 0;
-	llc->llc_snap.org_code[1] = 0;
-	llc->llc_snap.org_code[2] = 0;
-	llc->llc_snap.ether_type = eh.ether_type;
+    ni = ieee80211_find_txnode(ic, eh.ether_dhost);
+    if (ni == NULL) {
+        DPRINTF(("no node for dst %s, discard frame\n",
+                 ether_sprintf(eh.ether_dhost)));
+        ic->ic_stats.is_tx_nonode++;
+        goto bad;
+    }
+    
+    if ((ic->ic_flags & IEEE80211_F_RSNON) &&
+        !ni->ni_port_valid &&
+        eh.ether_type != htons(ETHERTYPE_PAE)) {
+        DPRINTF(("port not valid: %s\n",
+                 ether_sprintf(eh.ether_dhost)));
+        ic->ic_stats.is_tx_noauth++;
+        goto bad;
+    }
+    
+    if ((ic->ic_flags & IEEE80211_F_COUNTERM) &&
+        ni->ni_rsncipher == IEEE80211_CIPHER_TKIP)
+    /* XXX TKIP countermeasures! */;
+    
+    ni->ni_inact = 0;
+    
+    if ((ic->ic_flags & IEEE80211_F_QOS) &&
+        (ni->ni_flags & IEEE80211_NODE_QOS) &&
+        /* do not QoS-encapsulate EAPOL frames */
+        eh.ether_type != htons(ETHERTYPE_PAE)) {
+        struct ieee80211_tx_ba *ba;
+        tid = ieee80211_classify(ic, m);
+        ba = &ni->ni_tx_ba[tid];
+        /* We use QoS data frames for aggregation only. */
+        if (ba->ba_state != IEEE80211_BA_AGREED) {
+            hdrlen = sizeof(struct ieee80211_frame);
+            addqos = 0;
+            if (ieee80211_can_use_ampdu(ic, ni))
+                ieee80211_node_trigger_addba_req(ni, tid);
+        } else {
+            hdrlen = sizeof(struct ieee80211_qosframe);
+            addqos = 1;
+        }
+    } else {
+        hdrlen = sizeof(struct ieee80211_frame);
+        addqos = 0;
+    }
+    mbuf_adj(m, sizeof(struct ether_header) - LLC_SNAPFRAMELEN);
+    llc = mtod(m, struct llc *);
+    llc->llc_dsap = llc->llc_ssap = LLC_SNAP_LSAP;
+    llc->llc_control = LLC_UI;
+    llc->llc_snap.org_code[0] = 0;
+    llc->llc_snap.org_code[1] = 0;
+    llc->llc_snap.org_code[2] = 0;
+    llc->llc_snap.ether_type = eh.ether_type;
     mbuf_prepend(&m, hdrlen, MBUF_DONTWAIT);
-	if (m == NULL) {
-        XYLog("%s, %d m == NULL\n", __FUNCTION__, __LINE__);
-		ic->ic_stats.is_tx_nombuf++;
-		goto bad;
-	}
-	wh = mtod(m, struct ieee80211_frame *);
-	wh->i_fc[0] = IEEE80211_FC0_VERSION_0 | IEEE80211_FC0_TYPE_DATA;
-	*(u_int16_t *)&wh->i_dur[0] = 0;
-	if (addqos) {
-		struct ieee80211_qosframe *qwh =
-		    (struct ieee80211_qosframe *)wh;
-		u_int16_t qos = tid;
-		struct ieee80211_tx_ba *ba = &ni->ni_tx_ba[tid];
-
-		if (ic->ic_tid_noack & (1 << tid))
-			qos |= IEEE80211_QOS_ACK_POLICY_NOACK;
-		else if (ba->ba_state == IEEE80211_BA_AGREED) {
-			/* Use HT immediate block-ack. */
-			qos |= IEEE80211_QOS_ACK_POLICY_NORMAL;
-		} else if (ieee80211_can_use_ampdu(ic, ni))
-			ieee80211_node_trigger_addba_req(ni, tid);
-		qwh->i_fc[0] |= IEEE80211_FC0_SUBTYPE_QOS;
-		*(u_int16_t *)qwh->i_qos = htole16(qos);
-		*(u_int16_t *)qwh->i_seq =
-		    htole16(ni->ni_qos_txseqs[tid] << IEEE80211_SEQ_SEQ_SHIFT);
-		ni->ni_qos_txseqs[tid]++;
-	} else {
-		*(u_int16_t *)&wh->i_seq[0] =
-		    htole16(ni->ni_txseq << IEEE80211_SEQ_SEQ_SHIFT);
-		ni->ni_txseq++;
-	}
-	switch (ic->ic_opmode) {
-	case IEEE80211_M_STA:
-		wh->i_fc[1] = IEEE80211_FC1_DIR_TODS;
-		IEEE80211_ADDR_COPY(wh->i_addr1, ni->ni_bssid);
-		IEEE80211_ADDR_COPY(wh->i_addr2, eh.ether_shost);
-		IEEE80211_ADDR_COPY(wh->i_addr3, eh.ether_dhost);
-		break;
+    if (m == NULL) {
+        ic->ic_stats.is_tx_nombuf++;
+        goto bad;
+    }
+    wh = mtod(m, struct ieee80211_frame *);
+    wh->i_fc[0] = IEEE80211_FC0_VERSION_0 | IEEE80211_FC0_TYPE_DATA;
+    *(u_int16_t *)&wh->i_dur[0] = 0;
+    if (addqos) {
+        struct ieee80211_qosframe *qwh =
+        (struct ieee80211_qosframe *)wh;
+        u_int16_t qos = tid;
+        
+        if (ic->ic_tid_noack & (1 << tid))
+            qos |= IEEE80211_QOS_ACK_POLICY_NOACK;
+        else {
+            /* Use HT immediate block-ack. */
+            qos |= IEEE80211_QOS_ACK_POLICY_NORMAL;
+        }
+        qwh->i_fc[0] |= IEEE80211_FC0_SUBTYPE_QOS;
+        *(u_int16_t *)qwh->i_qos = htole16(qos);
+        *(u_int16_t *)qwh->i_seq =
+        htole16(ni->ni_qos_txseqs[tid] << IEEE80211_SEQ_SEQ_SHIFT);
+        ni->ni_qos_txseqs[tid] = (ni->ni_qos_txseqs[tid] + 1) & 0xfff;
+    } else {
+        *(u_int16_t *)&wh->i_seq[0] =
+        htole16(ni->ni_txseq << IEEE80211_SEQ_SEQ_SHIFT);
+        ni->ni_txseq = (ni->ni_txseq + 1) & 0xfff;
+    }
+    switch (ic->ic_opmode) {
+        case IEEE80211_M_STA:
+            wh->i_fc[1] = IEEE80211_FC1_DIR_TODS;
+            IEEE80211_ADDR_COPY(wh->i_addr1, ni->ni_bssid);
+            IEEE80211_ADDR_COPY(wh->i_addr2, eh.ether_shost);
+            IEEE80211_ADDR_COPY(wh->i_addr3, eh.ether_dhost);
+            break;
 #ifndef IEEE80211_STA_ONLY
-	case IEEE80211_M_IBSS:
-	case IEEE80211_M_AHDEMO:
-		wh->i_fc[1] = IEEE80211_FC1_DIR_NODS;
-		IEEE80211_ADDR_COPY(wh->i_addr1, eh.ether_dhost);
-		IEEE80211_ADDR_COPY(wh->i_addr2, eh.ether_shost);
-		IEEE80211_ADDR_COPY(wh->i_addr3, ic->ic_bss->ni_bssid);
-		break;
-	case IEEE80211_M_HOSTAP:
-		wh->i_fc[1] = IEEE80211_FC1_DIR_FROMDS;
-		IEEE80211_ADDR_COPY(wh->i_addr1, eh.ether_dhost);
-		IEEE80211_ADDR_COPY(wh->i_addr2, ni->ni_bssid);
-		IEEE80211_ADDR_COPY(wh->i_addr3, eh.ether_shost);
-		break;
+        case IEEE80211_M_IBSS:
+        case IEEE80211_M_AHDEMO:
+            wh->i_fc[1] = IEEE80211_FC1_DIR_NODS;
+            IEEE80211_ADDR_COPY(wh->i_addr1, eh.ether_dhost);
+            IEEE80211_ADDR_COPY(wh->i_addr2, eh.ether_shost);
+            IEEE80211_ADDR_COPY(wh->i_addr3, ic->ic_bss->ni_bssid);
+            break;
+        case IEEE80211_M_HOSTAP:
+            wh->i_fc[1] = IEEE80211_FC1_DIR_FROMDS;
+            IEEE80211_ADDR_COPY(wh->i_addr1, eh.ether_dhost);
+            IEEE80211_ADDR_COPY(wh->i_addr2, ni->ni_bssid);
+            IEEE80211_ADDR_COPY(wh->i_addr3, eh.ether_shost);
+            break;
 #endif
-	default:
-		/* should not get there */
-		goto bad;
-	}
-
-	if ((ic->ic_flags & IEEE80211_F_WEPON) ||
-	    ((ic->ic_flags & IEEE80211_F_RSNON) &&
-	     (ni->ni_flags & IEEE80211_NODE_TXPROT)))
-		wh->i_fc[1] |= IEEE80211_FC1_PROTECTED;
-
+        default:
+            /* should not get there */
+            goto bad;
+    }
+    
+    if ((ic->ic_flags & IEEE80211_F_WEPON) ||
+        ((ic->ic_flags & IEEE80211_F_RSNON) &&
+         (ni->ni_flags & IEEE80211_NODE_TXPROT)))
+        wh->i_fc[1] |= IEEE80211_FC1_PROTECTED;
+    
 #ifndef IEEE80211_STA_ONLY
-	if (ic->ic_opmode == IEEE80211_M_HOSTAP &&
-	    ieee80211_pwrsave(ic, m, ni) != 0) {
-		*pni = NULL;
-		return NULL;
-	}
+    if (ic->ic_opmode == IEEE80211_M_HOSTAP &&
+        ieee80211_pwrsave(ic, m, ni) != 0) {
+        *pni = NULL;
+        return NULL;
+    }
 #endif
-	*pni = ni;
-	return m;
+    *pni = ni;
+    return m;
 bad:
-	mbuf_freem(m);
-	if (ni != NULL)
-		ieee80211_release_node(ic, ni);
-	*pni = NULL;
-	return NULL;
+    mbuf_freem(m);
+    if (ni != NULL)
+        ieee80211_release_node(ic, ni);
+    *pni = NULL;
+    return NULL;
 }
 
 /*

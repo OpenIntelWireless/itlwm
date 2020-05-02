@@ -35,6 +35,7 @@ void CTimeout::timeoutOccurred(OSObject* owner, IOTimerEventSource* timer)
     }
     //callback
     tm->to_func(tm->to_arg);
+    tm->isPending = false;
 }
 
 IOReturn CTimeout::timeout_add_msec(OSObject *target, void *arg0, void *arg1, void *arg2, void *arg3)
@@ -49,6 +50,7 @@ IOReturn CTimeout::timeout_add_msec(OSObject *target, void *arg0, void *arg1, vo
         }
         wl->addEventSource(cto->tm);
     }
+    cto->isPending = true;
     cto->tm->enable();
     cto->tm->setTimeoutMS(msecs);
     return kIOReturnSuccess;
@@ -60,5 +62,6 @@ IOReturn CTimeout::timeout_del(OSObject *target, void *arg0, void *arg1, void *a
     if (cto->tm) {
         cto->tm->cancelTimeout();
     }
+    cto->isPending = false;
     return kIOReturnSuccess;
 }

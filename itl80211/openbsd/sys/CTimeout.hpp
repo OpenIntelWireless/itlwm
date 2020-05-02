@@ -40,6 +40,7 @@ public:
     IOTimerEventSource* tm;
     void (*to_func)(void *);        /* function to call */
     void *to_arg;                /* function argument */
+    bool isPending;
 };
 
 #endif /* CTimeout_h */

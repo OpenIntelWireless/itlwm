@@ -46,6 +46,7 @@ void timeout_set(CTimeout **t, void (*fn)(void *), void *arg)
 {
     if (*t == NULL) {
         *t = new CTimeout();
+        (*t)->isPending = false;
     }
     ((CTimeout*)*t)->to_func = fn;
     ((CTimeout*)*t)->to_arg = arg;
@@ -54,7 +55,7 @@ void timeout_set(CTimeout **t, void (*fn)(void *), void *arg)
 int timeout_add_msec(CTimeout **to, int msecs)
 {
     if (*to == NULL) {
-        *to = new CTimeout();
+        return 0;
     }
     return _fCommandGate->runAction(&CTimeout::timeout_add_msec, *to, _fWorkloop, &msecs) == kIOReturnSuccess ? 1 : 0;
 }
@@ -80,7 +81,7 @@ int timeout_del(CTimeout **to)
 
 int timeout_pending(CTimeout **to)
 {
-    if (!((CTimeout*)*to) || !((CTimeout*)*to)->tm || !((CTimeout*)*to)->tm->isEnabled()) {
+    if (*to == NULL || !(*to)->isPending) {
         return 0;
     }
     return 1;
