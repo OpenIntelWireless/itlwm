@@ -137,8 +137,7 @@ public:
             uint32_t);
     void    iwm_set_bits_prph(struct iwm_softc *, uint32_t, uint32_t);
     void    iwm_clear_bits_prph(struct iwm_softc *, uint32_t, uint32_t);
-    int    iwm_dma_contig_alloc(bus_dma_tag_t, struct iwm_dma_info *, void**, bus_size_t,
-            bus_size_t);
+    int    iwm_dma_contig_alloc(bus_dma_tag_t, struct iwm_dma_info *, bus_size_t, bus_size_t);
     void    iwm_dma_contig_free(struct iwm_dma_info *);
     int    iwm_alloc_rx_ring(struct iwm_softc *, struct iwm_rx_ring *);
     void    iwm_disable_rx_dma(struct iwm_softc *);

@@ -340,15 +340,24 @@ bool allocDmaMemory2(struct iwm_dma_info *dma, size_t size, int alignment)
     IODMACommand::Segment64 seg;
     UInt64 ofs = 0;
     UInt32 numSegs = 1;
+    size_t        reqsize;
+    uint64_t    phymask;
     
-    bmd = IOBufferMemoryDescriptor::inTaskWithPhysicalMask(kernel_task, kIODirectionInOut | kIOMemoryPhysicallyContiguous | kIOMapInhibitCache, size, DMA_BIT_MASK(36));
+    if (alignment <= PAGE_SIZE) {
+        reqsize = size;
+        phymask = 0x00000000ffffffffull & (~(alignment - 1));
+    } else {
+        reqsize = size + alignment;
+        phymask = 0x00000000fffff000ull; /* page-aligned */
+    }
     
-    IODMACommand *cmd = IODMACommand::withSpecification(kIODMACommandOutputHost64, 64, 0, IODMACommand::kMapped, 0, 1);
+    bmd = IOBufferMemoryDescriptor::inTaskWithPhysicalMask(kernel_task, kIODirectionInOut | kIOMemoryPhysicallyContiguous | kIOMapInhibitCache, reqsize, phymask);
+    
+    bmd->prepare();
+    IODMACommand *cmd = IODMACommand::withSpecification(kIODMACommandOutputHost64, 64, 0, IODMACommand::kMapped, 0, alignment);
     cmd->setMemoryDescriptor(bmd);
-    cmd->prepare();
 
     if (cmd->gen64IOVMSegments(&ofs, &seg, &numSegs) != kIOReturnSuccess) {
-        cmd->complete();
         cmd->release();
         cmd = NULL;
         bmd->complete();
@@ -356,12 +365,12 @@ bool allocDmaMemory2(struct iwm_dma_info *dma, size_t size, int alignment)
         bmd = NULL;
         return false;
     }
-    bmd->prepare();
     dma->paddr = seg.fIOVMAddr;
     dma->vaddr = bmd->getBytesNoCopy();
+    dma->size = bmd->getLength();
     dma->buffer = bmd;
-    dma->size = size;
     dma->cmd = cmd;
+    memset(dma->vaddr, 0, dma->size);
     return true;
 }
 
@@ -372,7 +381,6 @@ iwm_dma_contig_free(struct iwm_dma_info *dma)
         return;
     if (dma->vaddr == NULL)
         return;
-    dma->cmd->complete();
     dma->cmd->release();
     dma->cmd = NULL;
     dma->buffer->complete();
@@ -383,13 +391,11 @@ iwm_dma_contig_free(struct iwm_dma_info *dma)
 }
 
 int itlwm::
-iwm_dma_contig_alloc(bus_dma_tag_t tag, struct iwm_dma_info *dma, void **kvap,
-             bus_size_t size, bus_size_t alignment)
+iwm_dma_contig_alloc(bus_dma_tag_t tag, struct iwm_dma_info *dma, bus_size_t size, bus_size_t alignment)
 {
     if (!allocDmaMemory2(dma, size, alignment)) {
         return 1;
     }
-    memset(dma->vaddr, 0, size);
     
     return 0;
 }

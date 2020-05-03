@@ -208,31 +208,31 @@ iwm_alloc_rx_ring(struct iwm_softc *sc, struct iwm_rx_ring *ring)
     
     /* Allocate RX descriptors (256-byte aligned). */
     size = count * descsz;
-    err = iwm_dma_contig_alloc(sc->sc_dmat, &ring->free_desc_dma, NULL, size, 256);
+    err = iwm_dma_contig_alloc(sc->sc_dmat, &ring->free_desc_dma, size, 256);
     if (err) {
         XYLog("%s: could not allocate RX ring DMA memory\n",
-              DEVNAME(sc));
+            DEVNAME(sc));
         goto fail;
     }
     ring->desc = ring->free_desc_dma.vaddr;
-    
+
     /* Allocate RX status area (16-byte aligned). */
-    err = iwm_dma_contig_alloc(sc->sc_dmat, &ring->stat_dma, NULL,
-                               sizeof(*ring->stat), 16);
+    err = iwm_dma_contig_alloc(sc->sc_dmat, &ring->stat_dma,
+        sizeof(*ring->stat), 16);
     if (err) {
         XYLog("%s: could not allocate RX status DMA memory\n",
-              DEVNAME(sc));
+            DEVNAME(sc));
         goto fail;
     }
-    ring->stat = (struct iwm_rb_status*)ring->stat_dma.vaddr;
-    
+    ring->stat = (struct iwm_rb_status *)ring->stat_dma.vaddr;
+
     if (sc->sc_mqrx_supported) {
         size = count * sizeof(uint32_t);
-        err = iwm_dma_contig_alloc(sc->sc_dmat, &ring->used_desc_dma, NULL,
-                                   size, 256);
+        err = iwm_dma_contig_alloc(sc->sc_dmat, &ring->used_desc_dma,
+            size, 256);
         if (err) {
             XYLog("%s: could not allocate RX ring DMA memory\n",
-                  DEVNAME(sc));
+                DEVNAME(sc));
             goto fail;
         }
     }

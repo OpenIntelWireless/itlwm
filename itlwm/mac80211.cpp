@@ -739,10 +739,10 @@ iwm_tx_fill_cmd(struct iwm_softc *sc, struct iwm_node *in,
     int type = wh->i_fc[0] & IEEE80211_FC0_TYPE_MASK;
     int min_ridx = iwm_rval2ridx(ieee80211_min_basic_rate(ic));
     int ridx, rate_flags;
-    
+
     tx->rts_retry_limit = IWM_RTS_DFAULT_RETRY_LIMIT;
     tx->data_retry_limit = IWM_LOW_RETRY_LIMIT;
-    
+
     if (IEEE80211_IS_MULTICAST(wh->i_addr1) ||
         type != IEEE80211_FC0_TYPE_DATA) {
         /* for non-data, use the lowest supported rate */
@@ -753,10 +753,10 @@ iwm_tx_fill_cmd(struct iwm_softc *sc, struct iwm_node *in,
     } else if (ic->ic_fixed_rate != -1) {
         ridx = sc->sc_fixed_ridx;
     } else if ((ni->ni_flags & IEEE80211_NODE_HT) &&
-               ieee80211_mira_is_probing(&in->in_mn)) {
+        ieee80211_mira_is_probing(&in->in_mn)) {
         /* Keep Tx rate constant while mira is probing. */
         ridx = iwm_mcs2ridx[ni->ni_txmcs];
-    } else {
+     } else {
         int i;
         /* Use firmware rateset retry table. */
         tx->initial_rate_index = 0;
@@ -766,17 +766,17 @@ iwm_tx_fill_cmd(struct iwm_softc *sc, struct iwm_node *in,
             return &iwm_rates[ridx];
         }
         ridx = (IEEE80211_IS_CHAN_5GHZ(ni->ni_chan)) ?
-        IWM_RIDX_OFDM : IWM_RIDX_CCK;
+            IWM_RIDX_OFDM : IWM_RIDX_CCK;
         for (i = 0; i < ni->ni_rates.rs_nrates; i++) {
             if (iwm_rates[i].rate == (ni->ni_txrate &
-                                      IEEE80211_RATE_VAL)) {
+                IEEE80211_RATE_VAL)) {
                 ridx = i;
                 break;
             }
         }
         return &iwm_rates[ridx];
     }
-    
+
     rinfo = &iwm_rates[ridx];
     if (iwm_is_mimo_ht_plcp(rinfo->ht_plcp))
         rate_flags = IWM_RATE_MCS_ANT_AB_MSK;
@@ -792,7 +792,7 @@ iwm_tx_fill_cmd(struct iwm_softc *sc, struct iwm_node *in,
         tx->rate_n_flags = htole32(rate_flags | rinfo->ht_plcp);
     } else
         tx->rate_n_flags = htole32(rate_flags | rinfo->plcp);
-    
+
     return rinfo;
 }
 
@@ -1007,7 +1007,7 @@ iwm_tx(struct iwm_softc *sc, mbuf_t m, struct ieee80211_node *ni, int ac)
     
     /* Mark TX ring as full if we reach a certain threshold. */
     if (++ring->queued > IWM_TX_RING_HIMARK) {
-        XYLog("%s sc->qfullmsk is FULL\n", __FUNCTION__);
+        XYLog("%s sc->qfullmsk is FULL ring->cur=%d ring->queued=%d\n", __FUNCTION__, ring->cur, ring->queued);
         sc->qfullmsk |= 1 << ring->qid;
     }
     
@@ -1990,12 +1990,12 @@ iwm_endscan(struct iwm_softc *sc)
 {
     int error;
     
-        static const char *ssid_name = "Redmi";
-        static const char *ssid_pwd = "zxyssdt112233";
+//        static const char *ssid_name = "Redmi";
+//        static const char *ssid_pwd = "zxyssdt112233";
 //            static const char *ssid_name = "CMCC-KtG6";
 //            static const char *ssid_pwd = "9utc5c5f";
-//    static const char *ssid_name = "ssdt";
-//    static const char *ssid_pwd = "zxyssdt112233";
+    static const char *ssid_name = "ssdt";
+    static const char *ssid_pwd = "zxyssdt112233";
     
     struct ieee80211_node *ni, *nextbs;
     struct ieee80211com *ic = &sc->sc_ic;
@@ -2043,28 +2043,28 @@ iwm_endscan(struct iwm_softc *sc)
     join.i_len = strlen(ssid_name);
     join.i_flags = IEEE80211_JOIN_NWKEY;
     
-//    memset(&wpa, 0, sizeof(ieee80211_wpaparams));
-//    wpa.i_enabled = 1;
-//    wpa.i_ciphers = IEEE80211_WPA_CIPHER_CCMP | IEEE80211_WPA_CIPHER_TKIP;
-//    wpa.i_groupcipher = IEEE80211_WPA_CIPHER_CCMP | IEEE80211_WPA_CIPHER_TKIP;
-//    wpa.i_protos = IEEE80211_WPA_PROTO_WPA1 | IEEE80211_WPA_PROTO_WPA2;
-//    wpa.i_akms = IEEE80211_WPA_AKM_PSK | IEEE80211_WPA_AKM_8021X | IEEE80211_WPA_AKM_SHA256_PSK | IEEE80211_WPA_AKM_SHA256_8021X;
-//    memcpy(wpa.i_name, "zxy", strlen("zxy"));
-//    memset(&psk, 0, sizeof(ieee80211_wpapsk));
-//    memcpy(psk.i_name, "zxy", strlen("zxy"));
-//    psk.i_enabled = 1;
-//    pbkdf2_sha1(ssid_pwd, (const uint8_t*)ssid_name, strlen(ssid_name),
-//                4096, psk.i_psk , 32);
-//    memset(&nwkey, 0, sizeof(ieee80211_nwkey));
-//    nwkey.i_wepon = 0;
-//    nwkey.i_defkid = 0;
-//    memset(&join, 0, sizeof(ieee80211_join));
-//    join.i_wpaparams = wpa;
-//    join.i_wpapsk = psk;
-//    join.i_flags = IEEE80211_JOIN_WPAPSK | IEEE80211_JOIN_ANY | IEEE80211_JOIN_WPA | IEEE80211_JOIN_8021X;
-//    join.i_nwkey = nwkey;
-//    join.i_len = strlen(ssid_name);
-//    memcpy(join.i_nwid, ssid_name, join.i_len);
+    memset(&wpa, 0, sizeof(ieee80211_wpaparams));
+    wpa.i_enabled = 1;
+    wpa.i_ciphers = IEEE80211_WPA_CIPHER_CCMP | IEEE80211_WPA_CIPHER_TKIP;
+    wpa.i_groupcipher = IEEE80211_WPA_CIPHER_CCMP | IEEE80211_WPA_CIPHER_TKIP;
+    wpa.i_protos = IEEE80211_WPA_PROTO_WPA1 | IEEE80211_WPA_PROTO_WPA2;
+    wpa.i_akms = IEEE80211_WPA_AKM_PSK | IEEE80211_WPA_AKM_8021X | IEEE80211_WPA_AKM_SHA256_PSK | IEEE80211_WPA_AKM_SHA256_8021X;
+    memcpy(wpa.i_name, "zxy", strlen("zxy"));
+    memset(&psk, 0, sizeof(ieee80211_wpapsk));
+    memcpy(psk.i_name, "zxy", strlen("zxy"));
+    psk.i_enabled = 1;
+    pbkdf2_sha1(ssid_pwd, (const uint8_t*)ssid_name, strlen(ssid_name),
+                4096, psk.i_psk , 32);
+    memset(&nwkey, 0, sizeof(ieee80211_nwkey));
+    nwkey.i_wepon = 0;
+    nwkey.i_defkid = 0;
+    memset(&join, 0, sizeof(ieee80211_join));
+    join.i_wpaparams = wpa;
+    join.i_wpapsk = psk;
+    join.i_flags = IEEE80211_JOIN_WPAPSK | IEEE80211_JOIN_ANY | IEEE80211_JOIN_WPA | IEEE80211_JOIN_8021X;
+    join.i_nwkey = nwkey;
+    join.i_len = strlen(ssid_name);
+    memcpy(join.i_nwid, ssid_name, join.i_len);
     
     //    ieee80211_nwid nwid;
     ////    nwid.i_len = 6;
@@ -2568,7 +2568,8 @@ iwm_start(struct ifnet *ifp)
 //        if (that->outputThreadSignal) {
 //            semaphore_signal(that->outputThreadSignal);
 //        }
-    _iwm_start_task(that, &that->com.sc_ic.ic_ac.ac_if, NULL, NULL, NULL);
+    _fCommandGate->runAction(_iwm_start_task, &that->com.sc_ic.ic_ac.ac_if);
+//    _iwm_start_task(that, &that->com.sc_ic.ic_ac.ac_if, NULL, NULL, NULL);
 }
 
 void itlwm::
@@ -3628,51 +3629,47 @@ iwm_attach(struct iwm_softc *sc, struct pci_attach_args *pa)
      * Allocate DMA memory for firmware transfers.
      * Must be aligned on a 16-byte boundary.
      */
-    err = iwm_dma_contig_alloc(sc->sc_dmat, &sc->fw_dma, NULL,
-                               sc->sc_fwdmasegsz, 16);
+    err = iwm_dma_contig_alloc(sc->sc_dmat, &sc->fw_dma,
+        sc->sc_fwdmasegsz, 16);
     if (err) {
         XYLog("%s: could not allocate memory for firmware\n",
-              DEVNAME(sc));
+            DEVNAME(sc));
         return false;
     }
-    
+
     /* Allocate "Keep Warm" page, used internally by the card. */
-    err = iwm_dma_contig_alloc(sc->sc_dmat, &sc->kw_dma, NULL, 4096, 4096);
+    err = iwm_dma_contig_alloc(sc->sc_dmat, &sc->kw_dma, 4096, 4096);
     if (err) {
-        XYLog("%s: could not allocate keep warm page\n", DEVNAME(sc));
+        printf("%s: could not allocate keep warm page\n", DEVNAME(sc));
         goto fail1;
     }
-    
+
     /* Allocate interrupt cause table (ICT).*/
-    err = iwm_dma_contig_alloc(sc->sc_dmat, &sc->ict_dma, NULL,
-                               IWM_ICT_SIZE, 1<<IWM_ICT_PADDR_SHIFT);
+    err = iwm_dma_contig_alloc(sc->sc_dmat, &sc->ict_dma,
+        IWM_ICT_SIZE, 1<<IWM_ICT_PADDR_SHIFT);
     if (err) {
         XYLog("%s: could not allocate ICT table\n", DEVNAME(sc));
         goto fail2;
     }
-    
+
     /* TX scheduler rings must be aligned on a 1KB boundary. */
-    err = iwm_dma_contig_alloc(sc->sc_dmat, &sc->sched_dma, NULL,
-                               nitems(sc->txq) * sizeof(struct iwm_agn_scd_bc_tbl), 1024);
+    err = iwm_dma_contig_alloc(sc->sc_dmat, &sc->sched_dma,
+        nitems(sc->txq) * sizeof(struct iwm_agn_scd_bc_tbl), 1024);
     if (err) {
         XYLog("%s: could not allocate TX scheduler rings\n",
-              DEVNAME(sc));
+            DEVNAME(sc));
         goto fail3;
     }
-    
-    XYLog("allocate TX ring\n");
-    
+
     for (txq_i = 0; txq_i < nitems(sc->txq); txq_i++) {
         err = iwm_alloc_tx_ring(sc, &sc->txq[txq_i], txq_i);
         if (err) {
             XYLog("%s: could not allocate TX ring %d\n",
-                  DEVNAME(sc), txq_i);
+                DEVNAME(sc), txq_i);
             goto fail4;
         }
     }
-    
-    XYLog("iwm_alloc_rx_ring\n");
-    
+
     err = iwm_alloc_rx_ring(sc, &sc->rxq);
     if (err) {
         XYLog("%s: could not allocate RX ring\n", DEVNAME(sc));

@@ -4996,8 +4996,8 @@ struct iwm_tx_path_flush_cmd {
  */
 static inline uint32_t iwm_get_scd_ssn(struct iwm_tx_resp *tx_resp)
 {
-	return le32_to_cpup((uint32_t *)&tx_resp->status +
-                        tx_resp->frame_count) & 0xfff;
+    return le32_to_cpup((uint32_t *)&tx_resp->status +
+                tx_resp->frame_count) & 0xfff;
 }
 
 /**

@@ -147,19 +147,19 @@ iwm_reset_tx_ring(struct iwm_softc *sc, struct iwm_tx_ring *ring)
     
     for (i = 0; i < IWM_TX_RING_COUNT; i++) {
         struct iwm_tx_data *data = &ring->data[i];
-        
+
         if (data->m != NULL) {
-            //            bus_dmamap_sync(sc->sc_dmat, data->map, 0,
-            //                data->map->dm_mapsize, BUS_DMASYNC_POSTWRITE);
-            //            bus_dmamap_unload(sc->sc_dmat, data->map);
+//            bus_dmamap_sync(sc->sc_dmat, data->map, 0,
+//                data->map->dm_mapsize, BUS_DMASYNC_POSTWRITE);
+//            bus_dmamap_unload(sc->sc_dmat, data->map);
             mbuf_freem(data->m);
             data->m = NULL;
         }
     }
     /* Clear TX descriptors. */
     memset(ring->desc, 0, ring->desc_dma.size);
-    //    bus_dmamap_sync(sc->sc_dmat, ring->desc_dma.map, 0,
-    //        ring->desc_dma.size, BUS_DMASYNC_PREWRITE);
+//    bus_dmamap_sync(sc->sc_dmat, ring->desc_dma.map, 0,
+//        ring->desc_dma.size, BUS_DMASYNC_PREWRITE);
     sc->qfullmsk &= ~(1 << ring->qid);
     /* 7000 family NICs are locked while commands are in progress. */
     if (ring->qid == sc->cmdqid && ring->queued > 0) {
@@ -186,7 +186,7 @@ iwm_alloc_tx_ring(iwm_softc *sc, struct iwm_tx_ring *ring, int qid)
     
     /* Allocate TX descriptors (256-byte aligned). */
     size = IWM_TX_RING_COUNT * sizeof (struct iwm_tfd);
-    err = iwm_dma_contig_alloc(sc->sc_dmat, &ring->desc_dma, NULL, size, 256);
+    err = iwm_dma_contig_alloc(sc->sc_dmat, &ring->desc_dma, size, 256);
     if (err) {
         XYLog("%s: could not allocate TX ring DMA memory\n",
               DEVNAME(sc));
@@ -217,7 +217,7 @@ iwm_alloc_tx_ring(iwm_softc *sc, struct iwm_tx_ring *ring, int qid)
         return 0;
     
     size = IWM_TX_RING_COUNT * sizeof(struct iwm_device_cmd);
-    err = iwm_dma_contig_alloc(sc->sc_dmat, &ring->cmd_dma, NULL, size, 4);
+    err = iwm_dma_contig_alloc(sc->sc_dmat, &ring->cmd_dma, size, 4);
     if (err) {
         XYLog("%s: could not allocate cmd DMA memory\n", DEVNAME(sc));
         goto fail;
@@ -228,14 +228,14 @@ iwm_alloc_tx_ring(iwm_softc *sc, struct iwm_tx_ring *ring, int qid)
     for (i = 0; i < IWM_TX_RING_COUNT; i++) {
         struct iwm_tx_data *data = &ring->data[i];
         size_t mapsize;
-        
+
         data->cmd_paddr = paddr;
         data->scratch_paddr = paddr + sizeof(struct iwm_cmd_header)
-        + offsetof(struct iwm_tx_cmd, scratch);
+            + offsetof(struct iwm_tx_cmd, scratch);
         paddr += sizeof(struct iwm_device_cmd);
-        
+
         /* FW commands may require more mapped space than packets. */
-        if (qid == IWM_CMD_QUEUE) {
+        if (qid == IWM_CMD_QUEUE || qid == IWM_DQA_CMD_QUEUE) {
             mapsize = IWM_RBUF_SIZE;
             nsegments = 1;
         } else {
@@ -510,32 +510,32 @@ iwm_alloc_fw_paging_mem(struct iwm_softc *sc, const struct iwm_fw_sects *image)
     
     num_of_pages = image->paging_mem_size / IWM_FW_PAGING_SIZE;
     sc->num_of_paging_blk =
-    ((num_of_pages - 1) / IWM_NUM_OF_PAGE_PER_GROUP) + 1;
-    
+        ((num_of_pages - 1) / IWM_NUM_OF_PAGE_PER_GROUP) + 1;
+
     sc->num_of_pages_in_last_blk =
-    num_of_pages -
-    IWM_NUM_OF_PAGE_PER_GROUP * (sc->num_of_paging_blk - 1);
-    
+        num_of_pages -
+        IWM_NUM_OF_PAGE_PER_GROUP * (sc->num_of_paging_blk - 1);
+
     XYLog("%s: Paging: allocating mem for %d paging blocks, each block"
-          " holds 8 pages, last block holds %d pages\n", DEVNAME(sc),
-          sc->num_of_paging_blk,
-          sc->num_of_pages_in_last_blk);
-    
+        " holds 8 pages, last block holds %d pages\n", DEVNAME(sc),
+        sc->num_of_paging_blk,
+        sc->num_of_pages_in_last_blk);
+
     /* allocate block of 4Kbytes for paging CSS */
     error = iwm_dma_contig_alloc(sc->sc_dmat,
-                                 &sc->fw_paging_db[blk_idx].fw_paging_block, NULL, IWM_FW_PAGING_SIZE,
-                                 4096);
+        &sc->fw_paging_db[blk_idx].fw_paging_block, IWM_FW_PAGING_SIZE,
+        4096);
     if (error) {
         /* free all the previous pages since we failed */
         iwm_free_fw_paging(sc);
         return ENOMEM;
     }
-    
+
     sc->fw_paging_db[blk_idx].fw_paging_size = IWM_FW_PAGING_SIZE;
-    
+
     XYLog("%s: Paging: allocated 4K(CSS) bytes for firmware paging.\n",
-          DEVNAME(sc));
-    
+        DEVNAME(sc));
+
     /*
      * allocate blocks in dram.
      * since that CSS allocated in fw_paging_db[0] loop start from index 1
@@ -544,22 +544,22 @@ iwm_alloc_fw_paging_mem(struct iwm_softc *sc, const struct iwm_fw_sects *image)
         /* allocate block of IWM_PAGING_BLOCK_SIZE (32K) */
         /* XXX Use iwm_dma_contig_alloc for allocating */
         error = iwm_dma_contig_alloc(sc->sc_dmat,
-                                     &sc->fw_paging_db[blk_idx].fw_paging_block, NULL,
-                                     IWM_PAGING_BLOCK_SIZE, 4096);
+             &sc->fw_paging_db[blk_idx].fw_paging_block,
+            IWM_PAGING_BLOCK_SIZE, 4096);
         if (error) {
             /* free all the previous pages since we failed */
             iwm_free_fw_paging(sc);
             return ENOMEM;
         }
-        
+
         sc->fw_paging_db[blk_idx].fw_paging_size =
-        IWM_PAGING_BLOCK_SIZE;
-        
+            IWM_PAGING_BLOCK_SIZE;
+
         XYLog(
-              "%s: Paging: allocated 32K bytes for firmware paging.\n",
-              DEVNAME(sc));
+            "%s: Paging: allocated 32K bytes for firmware paging.\n",
+            DEVNAME(sc));
     }
-    
+
     return 0;
 }
 

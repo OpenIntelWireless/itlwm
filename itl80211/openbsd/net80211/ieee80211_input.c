@@ -708,6 +708,13 @@ ieee80211_input_ba(struct ieee80211com *ic, mbuf_t m,
         mbuf_freem(m);	/* discard the MPDU */
         return;
     }
+    if (ba->ba_buf == NULL) {
+        XYLog("SEVERE !!!! %s %d ba->ba_buf == NULL\n", __FUNCTION__, __LINE__);
+        ifp->netStat->inputErrors++;
+        ic->ic_stats.is_ht_rx_ba_no_buf++;
+        mbuf_freem(m);
+        return;
+    }
     if (SEQ_LT(ba->ba_winend, sn)) {	/* WinEndB < SN */
         ic->ic_stats.is_ht_rx_frame_above_ba_winend++;
         count = (sn - ba->ba_winend) & 0xfff;
@@ -746,13 +753,6 @@ ieee80211_input_ba(struct ieee80211com *ic, mbuf_t m,
     idx = (sn - ba->ba_winstart) & 0xfff;
     idx = (ba->ba_head + idx) % IEEE80211_BA_MAX_WINSZ;
     /* store the received MPDU in the buffer */
-    if (ba->ba_buf == NULL) {
-        XYLog("SEVERE !!!! %s %d ba->ba_buf == NULL, idx=%d\n", __FUNCTION__, __LINE__, idx);
-        ifp->netStat->inputErrors++;
-        ic->ic_stats.is_ht_rx_ba_no_buf++;
-        mbuf_freem(m);
-        return;
-    }
     if (ba->ba_buf[idx].m != NULL) {
         ifp->netStat->inputErrors++;
         ic->ic_stats.is_ht_rx_ba_no_buf++;
