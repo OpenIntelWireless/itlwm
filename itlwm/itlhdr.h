@@ -50,9 +50,6 @@
 
 #define    INFSLP    UINT64_MAX
 
-#define le16_to_cpup(_a_) (le16toh(*(const uint16_t *)(_a_)))
-#define le32_to_cpup(_a_) (le32toh(*(const uint32_t *)(_a_)))
-
 #define IC2IFP(_ic_) (&(_ic_)->ic_if)
 #define LLADDR(s) ((caddr_t)((s)->sdl_data + (s)->sdl_nlen))
 

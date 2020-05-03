@@ -815,15 +815,11 @@ iwm_tx(struct iwm_softc *sc, mbuf_t m, struct ieee80211_node *ni, int ac)
     IOPhysicalSegment *seg;
     uint8_t tid, type;
     int i, totlen, err, pad;
-    int hdrlen2, rtsthres = ic->ic_rtsthreshold;
+    int rtsthres = ic->ic_rtsthreshold;
     
     wh = mtod(m, struct ieee80211_frame *);
     hdrlen = ieee80211_get_hdrlen(wh);
     type = wh->i_fc[0] & IEEE80211_FC0_TYPE_MASK;
-    
-    hdrlen2 = (ieee80211_has_qos(wh)) ?
-    sizeof (struct ieee80211_qosframe) :
-    sizeof (struct ieee80211_frame);
     
     tid = 0;
     
@@ -1994,12 +1990,12 @@ iwm_endscan(struct iwm_softc *sc)
 {
     int error;
     
-//        static const char *ssid_name = "Redmi";
-//        static const char *ssid_pwd = "zxyssdt112233";
+        static const char *ssid_name = "Redmi";
+        static const char *ssid_pwd = "zxyssdt112233";
 //            static const char *ssid_name = "CMCC-KtG6";
 //            static const char *ssid_pwd = "9utc5c5f";
-    static const char *ssid_name = "ssdt";
-    static const char *ssid_pwd = "zxyssdt112233";
+//    static const char *ssid_name = "ssdt";
+//    static const char *ssid_pwd = "zxyssdt112233";
     
     struct ieee80211_node *ni, *nextbs;
     struct ieee80211com *ic = &sc->sc_ic;
@@ -2047,28 +2043,28 @@ iwm_endscan(struct iwm_softc *sc)
     join.i_len = strlen(ssid_name);
     join.i_flags = IEEE80211_JOIN_NWKEY;
     
-    memset(&wpa, 0, sizeof(ieee80211_wpaparams));
-    wpa.i_enabled = 1;
-    wpa.i_ciphers = IEEE80211_WPA_CIPHER_CCMP | IEEE80211_WPA_CIPHER_TKIP;
-    wpa.i_groupcipher = IEEE80211_WPA_CIPHER_CCMP | IEEE80211_WPA_CIPHER_TKIP;
-    wpa.i_protos = IEEE80211_WPA_PROTO_WPA1 | IEEE80211_WPA_PROTO_WPA2;
-    wpa.i_akms = IEEE80211_WPA_AKM_PSK | IEEE80211_WPA_AKM_8021X | IEEE80211_WPA_AKM_SHA256_PSK | IEEE80211_WPA_AKM_SHA256_8021X;
-    memcpy(wpa.i_name, "zxy", strlen("zxy"));
-    memset(&psk, 0, sizeof(ieee80211_wpapsk));
-    memcpy(psk.i_name, "zxy", strlen("zxy"));
-    psk.i_enabled = 1;
-    pbkdf2_sha1(ssid_pwd, (const uint8_t*)ssid_name, strlen(ssid_name),
-                4096, psk.i_psk , 32);
-    memset(&nwkey, 0, sizeof(ieee80211_nwkey));
-    nwkey.i_wepon = 0;
-    nwkey.i_defkid = 0;
-    memset(&join, 0, sizeof(ieee80211_join));
-    join.i_wpaparams = wpa;
-    join.i_wpapsk = psk;
-    join.i_flags = IEEE80211_JOIN_WPAPSK | IEEE80211_JOIN_ANY | IEEE80211_JOIN_WPA | IEEE80211_JOIN_8021X;
-    join.i_nwkey = nwkey;
-    join.i_len = strlen(ssid_name);
-    memcpy(join.i_nwid, ssid_name, join.i_len);
+//    memset(&wpa, 0, sizeof(ieee80211_wpaparams));
+//    wpa.i_enabled = 1;
+//    wpa.i_ciphers = IEEE80211_WPA_CIPHER_CCMP | IEEE80211_WPA_CIPHER_TKIP;
+//    wpa.i_groupcipher = IEEE80211_WPA_CIPHER_CCMP | IEEE80211_WPA_CIPHER_TKIP;
+//    wpa.i_protos = IEEE80211_WPA_PROTO_WPA1 | IEEE80211_WPA_PROTO_WPA2;
+//    wpa.i_akms = IEEE80211_WPA_AKM_PSK | IEEE80211_WPA_AKM_8021X | IEEE80211_WPA_AKM_SHA256_PSK | IEEE80211_WPA_AKM_SHA256_8021X;
+//    memcpy(wpa.i_name, "zxy", strlen("zxy"));
+//    memset(&psk, 0, sizeof(ieee80211_wpapsk));
+//    memcpy(psk.i_name, "zxy", strlen("zxy"));
+//    psk.i_enabled = 1;
+//    pbkdf2_sha1(ssid_pwd, (const uint8_t*)ssid_name, strlen(ssid_name),
+//                4096, psk.i_psk , 32);
+//    memset(&nwkey, 0, sizeof(ieee80211_nwkey));
+//    nwkey.i_wepon = 0;
+//    nwkey.i_defkid = 0;
+//    memset(&join, 0, sizeof(ieee80211_join));
+//    join.i_wpaparams = wpa;
+//    join.i_wpapsk = psk;
+//    join.i_flags = IEEE80211_JOIN_WPAPSK | IEEE80211_JOIN_ANY | IEEE80211_JOIN_WPA | IEEE80211_JOIN_8021X;
+//    join.i_nwkey = nwkey;
+//    join.i_len = strlen(ssid_name);
+//    memcpy(join.i_nwid, ssid_name, join.i_len);
     
     //    ieee80211_nwid nwid;
     ////    nwid.i_len = 6;

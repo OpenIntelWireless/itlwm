@@ -235,7 +235,7 @@ taskq_create(const char *name, unsigned int nthreads, int ipl,
 void
 taskq_destroy(struct taskq *tq)
 {
-    if (!tq) {
+    if (!tq || !tq->tq_mtx) {
         return;
     }
     switch (tq->tq_state) {

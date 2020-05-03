@@ -895,6 +895,7 @@ iwm_scan(struct iwm_softc *sc)
 int itlwm::
 iwm_bgscan(struct ieee80211com *ic)
 {
+    XYLog("%s\n", __FUNCTION__);
     struct iwm_softc *sc = (struct iwm_softc *)IC2IFP(ic)->if_softc;
     itlwm *that = container_of(sc, itlwm, com);
     int err;

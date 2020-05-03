@@ -216,8 +216,8 @@ static inline __u16 __le16_to_cpup(const __le16 *p)
     return (__force __u16)*p;
 }
 
-#define le32_to_cpup __le32_to_cpup
-#define le16_to_cpup __le16_to_cpup
+#define le16_to_cpup(_a_) ((__uint16_t)(*(const uint16_t *)(_a_)))
+#define le32_to_cpup(_a_) ((__uint32_t)(*(const uint32_t *)(_a_)))
 
 static inline u32 get_unaligned_le32(const void *p)
 {

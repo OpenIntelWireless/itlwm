@@ -48,10 +48,9 @@ IOReturn CTimeout::timeout_add_msec(OSObject *target, void *arg0, void *arg1, vo
         if (cto->tm == NULL) {
             return 0;
         }
+        cto->tm->enable();
         wl->addEventSource(cto->tm);
     }
-    cto->isPending = true;
-    cto->tm->enable();
     cto->tm->setTimeoutMS(msecs);
     return kIOReturnSuccess;
 }

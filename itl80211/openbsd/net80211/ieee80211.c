@@ -236,6 +236,19 @@ ieee80211_ifdetach(struct ifnet *ifp)
     ieee80211_crypto_detach(ifp);
     ieee80211_node_detach(ifp);
     ifmedia_delete_instance(&ic->ic_media, IFM_INST_ANY);
+    if (ifp->if_snd) {
+        ifp->if_snd->flush();
+        ifp->if_snd->release();
+        ifp->if_snd = NULL;
+    }
+    if (ifp->if_slowtimo) {
+        ifp->if_slowtimo->release();
+        ifp->if_slowtimo = NULL;
+    }
+    ifp->netStat = NULL;
+    ifp->controller = NULL;
+    ifp->output_queue = NULL;
+    ifp->iface = NULL;
     //	ether_ifdetach(ifp);
 }
 

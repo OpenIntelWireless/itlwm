@@ -57,6 +57,7 @@ int timeout_add_msec(CTimeout **to, int msecs)
     if (*to == NULL) {
         return 0;
     }
+    (*to)->isPending = true;
     return _fCommandGate->runAction(&CTimeout::timeout_add_msec, *to, _fWorkloop, &msecs) == kIOReturnSuccess ? 1 : 0;
 }
 
@@ -73,7 +74,7 @@ int timeout_add_usec(CTimeout **to, int usecs)
 int timeout_del(CTimeout **to)
 {
     //    IOLog("timeout_del\n");
-    if (((CTimeout*)*to) == NULL) {
+    if ((*to) == NULL) {
         return 0;
     }
     return _fCommandGate->runAction(&CTimeout::timeout_del, *to) == kIOReturnSuccess ? 1 : 0;
@@ -81,10 +82,10 @@ int timeout_del(CTimeout **to)
 
 int timeout_pending(CTimeout **to)
 {
-    if (*to == NULL || !(*to)->isPending) {
-        return 0;
+    if (*to != NULL && (*to)->isPending) {
+        return 1;
     }
-    return 1;
+    return 0;
 }
 
 #endif /* timeout_cpp */

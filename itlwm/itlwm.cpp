@@ -154,7 +154,6 @@ bool itlwm::start(IOService *provider)
         releaseAll();
         return false;
     }
-    _fCommandGate->retain();
     _fWorkloop->addEventSource(_fCommandGate);
     const IONetworkMedium *primaryMedium;
     if (!createMediumTables(&primaryMedium) ||
@@ -249,9 +248,11 @@ void itlwm::stop(IOService *provider)
     struct ifnet *ifp = &com.sc_ic.ic_ac.ac_if;
     
     super::stop(provider);
-    setLinkStatus(kIONetworkLinkNoNetworkChange);
+    setLinkStatus(kIONetworkLinkValid);
     iwm_stop(ifp);
     ieee80211_ifdetach(ifp);
+    detachInterface(ifp->iface);
+    OSSafeReleaseNULL(ifp->iface);
     taskq_destroy(systq);
     taskq_destroy(com.sc_nswq);
     releaseAll();
@@ -262,10 +263,33 @@ void itlwm::releaseAll()
     struct ifnet *ifp = &com.sc_ic.ic_ac.ac_if;
     IOEthernetInterface *inf = ifp->iface;
     pci_intr_handle *intrHandler = com.ih;
-    if (inf) {
-        ieee80211_ifdetach(ifp);
-        detachInterface(inf);
-        OSSafeReleaseNULL(inf);
+    if (_fCommandGate) {
+        wakeupOn(_fCommandGate);
+    }
+    if (com.sc_calib_to) {
+        timeout_del(&com.sc_calib_to);
+        com.sc_calib_to->release();
+        com.sc_calib_to = NULL;
+    }
+    if (com.sc_led_blink_to) {
+        timeout_del(&com.sc_led_blink_to);
+        com.sc_led_blink_to->release();
+        com.sc_led_blink_to = NULL;
+    }
+    if (com.sc_calib_to) {
+        timeout_del(&com.sc_calib_to);
+        com.sc_calib_to->release();
+        com.sc_calib_to = NULL;
+    }
+    if (com.sc_calib_to) {
+        timeout_del(&com.sc_calib_to);
+        com.sc_calib_to->release();
+        com.sc_calib_to = NULL;
+    }
+    if (com.sc_calib_to) {
+        timeout_del(&com.sc_calib_to);
+        com.sc_calib_to->release();
+        com.sc_calib_to = NULL;
     }
     if (_fWorkloop) {
         if (intrHandler) {

@@ -957,7 +957,7 @@ ieee80211_enqueue_data(struct ieee80211com *ic, mbuf_t m,
     if (m != NULL) {
         if ((ic->ic_flags & IEEE80211_F_RSNON) &&
             eh->ether_type == htons(ETHERTYPE_PAE)) {
-            ifp->if_ipackets++;
+            ifp->netStat->inputPackets++;
 #if NBPFILTER > 0
             /*
              * If we forward frame into transmitter of the AP,
