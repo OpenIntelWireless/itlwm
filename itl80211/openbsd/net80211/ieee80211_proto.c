@@ -1287,17 +1287,6 @@ ieee80211_set_link_state(struct ieee80211com *ic, int nstate)
     int link_state;
     XYLog("%s nstate=%d, old_state=%d\n", __FUNCTION__, nstate, ifp->if_link_state);
     
-    link_state = nstate;
-    if (link_state != ifp->if_link_state) {
-        if (link_state == LINK_STATE_UP) {
-            XYLog("%s LINK_STATE_IS_UP\n", __FUNCTION__);
-            ifp->controller->setLinkStatus(kIONetworkLinkValid | kIONetworkLinkActive, ifp->controller->getCurrentMedium());
-        } else {
-            XYLog("%s LINK_STATE_IS_DOWN\n", __FUNCTION__);
-            ifp->controller->setLinkStatus(kIONetworkLinkValid);
-        }
-        ifp->if_link_state = link_state;
-    }
 	switch (ic->ic_opmode) {
 #ifndef IEEE80211_STA_ONLY
 	case IEEE80211_M_IBSS:
@@ -1311,6 +1300,17 @@ ieee80211_set_link_state(struct ieee80211com *ic, int nstate)
 	default:
 		break;
 	}
+    link_state = nstate;
+    if (link_state != ifp->if_link_state) {
+        if (link_state == LINK_STATE_UP) {
+            XYLog("%s LINK_STATE_IS_UP\n", __FUNCTION__);
+            ifp->controller->setLinkStatus(kIONetworkLinkValid | kIONetworkLinkActive, ifp->controller->getCurrentMedium());
+        } else {
+            XYLog("%s LINK_STATE_IS_DOWN\n", __FUNCTION__);
+            ifp->controller->setLinkStatus(kIONetworkLinkValid);
+        }
+        ifp->if_link_state = link_state;
+    }
 //	if (nstate != ifp->if_link_state) {
 //		ifp->if_link_state = nstate;
 //		if (LINK_STATE_IS_UP(nstate)) {
