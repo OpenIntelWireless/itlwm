@@ -375,6 +375,8 @@ UInt32 itlwm::outputPacket(mbuf_t m, void *param)
 {
 //    XYLog("%s\n", __FUNCTION__);
     ifnet *ifp = &com.sc_ic.ic_ac.ac_if;
+    uint32_t pktlen = 0;
+    mbuf_t m0, m1;
     
     if (com.sc_ic.ic_state != IEEE80211_S_RUN || ifp == NULL || ifp->if_snd == NULL) {
         freePacket(m);
@@ -394,6 +396,23 @@ UInt32 itlwm::outputPacket(mbuf_t m, void *param)
         XYLog("%s mbuf is FREE!!\n", __FUNCTION__);
         ifp->netStat->outputErrors++;
         return kIOReturnOutputDropped;
+    }
+    if (mbuf_next(m)) {
+        for (m0 = m; m0; m0 = mbuf_next(m0)) {
+            pktlen += mbuf_len(m0);
+        }
+        m1 = allocatePacket(pktlen);
+        if (m1 == NULL) {
+            XYLog("%s allocatePacket FAIL!!\n", __FUNCTION__);
+            freePacket(m);
+            ifp->netStat->outputErrors++;
+            return kIOReturnOutputDropped;
+        }
+        mbuf_pkthdr_setlen(m1, pktlen);
+        mbuf_setlen(m1, pktlen);
+        mbuf_copydata(m, 0, pktlen, mbuf_data(m1));
+        freePacket(m);
+        m = m1;
     }
     ifp->if_snd->lockEnqueue(m);
     (*ifp->if_start)(ifp);
@@ -419,6 +438,20 @@ IOReturn itlwm::setMulticastMode(IOEnetMulticastMode mode) {
 
 IOReturn itlwm::setMulticastList(IOEthernetAddress* addr, UInt32 len) {
     return kIOReturnSuccess;
+}
+
+IOReturn itlwm::getPacketFilters(const OSSymbol *group, UInt32 *filters) const {
+    IOReturn    rtn = kIOReturnSuccess;
+    if (group == gIOEthernetWakeOnLANFilterGroup && magicPacketSupported) {
+        *filters = kIOEthernetWakeOnMagicPacket;
+    } else if (group == gIONetworkFilterGroup) {
+        *filters = kIOPacketFilterUnicast | kIOPacketFilterBroadcast
+        | kIOPacketFilterPromiscuous | kIOPacketFilterMulticast
+        | kIOPacketFilterMulticastAll;
+    } else {
+        rtn = IOEthernetController::getPacketFilters(group, filters);
+    }
+    return rtn;
 }
 
 void itlwm::wakeupOn(void *ident)

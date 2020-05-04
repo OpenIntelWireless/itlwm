@@ -26,16 +26,6 @@ void itlwm::unregistPM()
     }
 }
 
-IOReturn itlwm::getPacketFilters(const OSSymbol *group, UInt32 *filters) const {
-    IOReturn    rtn = kIOReturnSuccess;
-    if (group == gIOEthernetWakeOnLANFilterGroup && magicPacketSupported) {
-        *filters = kIOEthernetWakeOnMagicPacket;
-    } else {
-        rtn = IOEthernetController::getPacketFilters(group, filters);
-    }
-    return rtn;
-}
-
 IOReturn itlwm::setPowerState(unsigned long powerStateOrdinal, IOService *policyMaker)
 {
     IOReturn result = IOPMAckImplied;

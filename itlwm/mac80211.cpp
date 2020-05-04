@@ -1992,10 +1992,10 @@ iwm_endscan(struct iwm_softc *sc)
     
 //        static const char *ssid_name = "Redmi";
 //        static const char *ssid_pwd = "zxyssdt112233";
-//            static const char *ssid_name = "CMCC-KtG6";
-//            static const char *ssid_pwd = "9utc5c5f";
-    static const char *ssid_name = "ssdt";
-    static const char *ssid_pwd = "zxyssdt112233";
+            static const char *ssid_name = "CMCC-KtG6";
+            static const char *ssid_pwd = "9utc5c5f";
+//    static const char *ssid_name = "ssdt";
+//    static const char *ssid_pwd = "zxyssdt112233";
     
     struct ieee80211_node *ni, *nextbs;
     struct ieee80211com *ic = &sc->sc_ic;
@@ -2568,8 +2568,8 @@ iwm_start(struct ifnet *ifp)
 //        if (that->outputThreadSignal) {
 //            semaphore_signal(that->outputThreadSignal);
 //        }
-    _fCommandGate->runAction(_iwm_start_task, &that->com.sc_ic.ic_ac.ac_if);
-//    _iwm_start_task(that, &that->com.sc_ic.ic_ac.ac_if, NULL, NULL, NULL);
+//    _fCommandGate->runAction(_iwm_start_task, &that->com.sc_ic.ic_ac.ac_if);
+    _iwm_start_task(that, &that->com.sc_ic.ic_ac.ac_if, NULL, NULL, NULL);
 }
 
 void itlwm::
