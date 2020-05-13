@@ -276,21 +276,6 @@ void itlwm::releaseAll()
         com.sc_led_blink_to->release();
         com.sc_led_blink_to = NULL;
     }
-    if (com.sc_calib_to) {
-        timeout_del(&com.sc_calib_to);
-        com.sc_calib_to->release();
-        com.sc_calib_to = NULL;
-    }
-    if (com.sc_calib_to) {
-        timeout_del(&com.sc_calib_to);
-        com.sc_calib_to->release();
-        com.sc_calib_to = NULL;
-    }
-    if (com.sc_calib_to) {
-        timeout_del(&com.sc_calib_to);
-        com.sc_calib_to->release();
-        com.sc_calib_to = NULL;
-    }
     if (_fWorkloop) {
         if (intrHandler) {
             if (intrHandler->intr) {
@@ -397,23 +382,23 @@ UInt32 itlwm::outputPacket(mbuf_t m, void *param)
         ifp->netStat->outputErrors++;
         return kIOReturnOutputDropped;
     }
-    if (mbuf_next(m)) {
-        for (m0 = m; m0; m0 = mbuf_next(m0)) {
-            pktlen += mbuf_len(m0);
-        }
-        m1 = allocatePacket(pktlen);
-        if (m1 == NULL) {
-            XYLog("%s allocatePacket FAIL!!\n", __FUNCTION__);
-            freePacket(m);
-            ifp->netStat->outputErrors++;
-            return kIOReturnOutputDropped;
-        }
-        mbuf_pkthdr_setlen(m1, pktlen);
-        mbuf_setlen(m1, pktlen);
-        mbuf_copydata(m, 0, pktlen, mbuf_data(m1));
-        freePacket(m);
-        m = m1;
-    }
+//    if (mbuf_next(m)) {
+//        for (m0 = m; m0; m0 = mbuf_next(m0)) {
+//            pktlen += mbuf_len(m0);
+//        }
+//        m1 = allocatePacket(pktlen);
+//        if (m1 == NULL) {
+//            XYLog("%s allocatePacket FAIL!!\n", __FUNCTION__);
+//            freePacket(m);
+//            ifp->netStat->outputErrors++;
+//            return kIOReturnOutputDropped;
+//        }
+//        mbuf_pkthdr_setlen(m1, pktlen);
+//        mbuf_setlen(m1, pktlen);
+//        mbuf_copydata(m, 0, pktlen, mbuf_data(m1));
+//        freePacket(m);
+//        m = m1;
+//    }
     ifp->if_snd->lockEnqueue(m);
     (*ifp->if_start)(ifp);
     
@@ -495,7 +480,7 @@ IOReturn itlwm::tsleepHandler(OSObject* owner, void* arg0, void* arg1, void* arg
             return kIOReturnTimeout;
     } else {
         AbsoluteTime deadline;
-        clock_interval_to_deadline((*(int*)arg1), kMillisecondScale, reinterpret_cast<uint64_t*> (&deadline));
+        clock_interval_to_deadline((*(int*)arg1), kNanosecondScale, reinterpret_cast<uint64_t*> (&deadline));
         if (_fCommandGate->commandSleep(arg0, deadline, THREAD_INTERRUPTIBLE) == THREAD_AWAKENED)
             return kIOReturnSuccess;
         else

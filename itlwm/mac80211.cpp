@@ -624,7 +624,7 @@ iwm_txd_done(struct iwm_softc *sc, struct iwm_tx_data *txd)
     //        BUS_DMASYNC_POSTWRITE);
     //    bus_dmamap_unload(sc->sc_dmat, txd->map);
     if (txd->m) {
-        freePacket(txd->m);
+        mbuf_freem(txd->m);
         txd->m = NULL;
     }
     
@@ -657,6 +657,8 @@ iwm_rx_tx_cmd(struct iwm_softc *sc, struct iwm_rx_packet *pkt,
     txd = &ring->data[idx];
     if (txd->m == NULL)
         return;
+    
+    XYLog("%s idx=%d qid=%d txd->txmcs=%d txd->txrate=%d, len=%d\n", __FUNCTION__, idx, qid, txd->txmcs, txd->txrate, ((struct iwm_tx_resp *)pkt->data)->byte_cnt);
     
     iwm_rx_tx_cmd_single(sc, pkt, txd->in, txd->txmcs, txd->txrate);
     iwm_txd_done(sc, txd);

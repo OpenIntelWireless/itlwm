@@ -478,7 +478,7 @@ static inline int if_input(struct ifnet *ifq, struct mbuf_list *ml)
             panic("%s m == NULL!!!\n");
             continue;
         }
-        XYLog("%s %d 啊啊啊啊 ifq->iface->inputPacket(m) hdr_len=%d len=%d\n", __FUNCTION__, __LINE__, mbuf_pkthdr_len(m), mbuf_len(m));
+//        XYLog("%s %d 啊啊啊啊 ifq->iface->inputPacket(m) hdr_len=%d len=%d\n", __FUNCTION__, __LINE__, mbuf_pkthdr_len(m), mbuf_len(m));
         isEmpty = false;
         ifq->iface->inputPacket(m, 0, IONetworkInterface::kInputOptionQueuePacket);
         if (ifq->netStat != NULL) {

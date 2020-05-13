@@ -236,7 +236,7 @@ iwm_alloc_tx_ring(iwm_softc *sc, struct iwm_tx_ring *ring, int qid)
 
         /* FW commands may require more mapped space than packets. */
         if (qid == IWM_CMD_QUEUE || qid == IWM_DQA_CMD_QUEUE) {
-            mapsize = IWM_RBUF_SIZE;
+            mapsize = (sizeof(struct iwm_cmd_header) + IWM_MAX_CMD_PAYLOAD_SIZE);
             nsegments = 1;
         } else {
             mapsize = MCLBYTES;
