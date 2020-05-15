@@ -1235,7 +1235,10 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.zxystd.itlwm;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
-				SYSTEM_HEADER_SEARCH_PATHS = itl80211/openbsd;
+				SYSTEM_HEADER_SEARCH_PATHS = (
+					itl80211/openbsd,
+					itl80211,
+				);
 				WRAPPER_EXTENSION = kext;
 			};
 			name = Debug;
@@ -1264,7 +1267,10 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.zxystd.itlwm;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
-				SYSTEM_HEADER_SEARCH_PATHS = itl80211/openbsd;
+				SYSTEM_HEADER_SEARCH_PATHS = (
+					itl80211/openbsd,
+					itl80211,
+				);
 				WRAPPER_EXTENSION = kext;
 			};
 			name = Release;

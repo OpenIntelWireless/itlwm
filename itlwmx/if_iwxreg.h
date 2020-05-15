@@ -70,6 +70,9 @@
  *
  *****************************************************************************
  */
+
+#include <linux/types.h>
+
 /* maximmum number of DRAM map entries supported by FW */
 #define IWX_MAX_DRAM_ENTRY	64
 #define IWX_CSR_CTXT_INFO_BA	0x40

@@ -48,8 +48,6 @@
 
 #include <sys/endian.h>
 
-#define __packed __attribute__((packed))
-
 #define IEEE80211_ADDR_LEN	6	/* size of 802.11 address */
 /* is 802.11 address multicast/broadcast? */
 #define IEEE80211_IS_MULTICAST(_a)	(*(_a) & 0x01)

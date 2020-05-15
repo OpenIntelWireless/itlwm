@@ -8,7 +8,7 @@
 target_file="${PROJECT_DIR}/itlwm/FwBinary.cpp"
 fw_files=${PROJECT_DIR}/itlwm/firmware/*
 
-if [!-f target_file]; then
+if [[!-f $target_file]]; then
 
 echo "//  itlwm\n\n//  Copyright © 2020 钟先耀. All rights reserved." >$target_file
 echo "#include \"FwData.h\"">>$target_file

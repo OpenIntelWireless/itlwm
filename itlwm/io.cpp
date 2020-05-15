@@ -345,13 +345,13 @@ bool allocDmaMemory2(struct iwm_dma_info *dma, size_t size, int alignment)
     
     if (alignment <= PAGE_SIZE) {
         reqsize = size;
-        phymask = 0x00000000ffffffffull & (~(alignment - 1));
+        phymask = 0xFFFFFFFFFFFFF000ULL & (~(alignment - 1));
     } else {
         reqsize = size + alignment;
-        phymask = 0x00000000fffff000ull; /* page-aligned */
+        phymask = 0xFFFFFFFFFFFFF000ULL; /* page-aligned */
     }
     
-    bmd = IOBufferMemoryDescriptor::inTaskWithPhysicalMask(kernel_task, kIODirectionInOut | kIOMemoryPhysicallyContiguous | kIOMapInhibitCache, reqsize, phymask);
+    bmd = IOBufferMemoryDescriptor::inTaskWithPhysicalMask(kernel_task, kIODirectionInOut | kIOMemoryPhysicallyContiguous | kIOMapInhibitCache, size, phymask);
     
     bmd->prepare();
     IODMACommand *cmd = IODMACommand::withSpecification(kIODMACommandOutputHost64, 64, 0, IODMACommand::kMapped, 0, alignment);
@@ -367,7 +367,7 @@ bool allocDmaMemory2(struct iwm_dma_info *dma, size_t size, int alignment)
     }
     dma->paddr = seg.fIOVMAddr;
     dma->vaddr = bmd->getBytesNoCopy();
-    dma->size = bmd->getLength();
+    dma->size = size;
     dma->buffer = bmd;
     dma->cmd = cmd;
     memset(dma->vaddr, 0, dma->size);
@@ -381,6 +381,7 @@ iwm_dma_contig_free(struct iwm_dma_info *dma)
         return;
     if (dma->vaddr == NULL)
         return;
+    dma->cmd->clearMemoryDescriptor();
     dma->cmd->release();
     dma->cmd = NULL;
     dma->buffer->complete();

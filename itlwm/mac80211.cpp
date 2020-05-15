@@ -894,6 +894,7 @@ iwm_tx(struct iwm_softc *sc, mbuf_t m, struct ieee80211_node *ni, int ac)
     flags = 0;
     if (!IEEE80211_IS_MULTICAST(wh->i_addr1)) {
         flags |= IWM_TX_CMD_FLG_ACK;
+//        XYLog("%s %d flags=0x%x\n", __FUNCTION__, __LINE__, htole32(flags));
     }
     
     if (ni->ni_flags & IEEE80211_NODE_HT)
@@ -903,8 +904,10 @@ iwm_tx(struct iwm_softc *sc, mbuf_t m, struct ieee80211_node *ni, int ac)
     if (type == IEEE80211_FC0_TYPE_DATA &&
         !IEEE80211_IS_MULTICAST(wh->i_addr1) &&
         (totlen + IEEE80211_CRC_LEN > rtsthres ||
-         (ic->ic_flags & IEEE80211_F_USEPROT)))
+         (ic->ic_flags & IEEE80211_F_USEPROT))) {
         flags |= IWM_TX_CMD_FLG_PROT_REQUIRE;
+//        XYLog("%s %d flags=0x%x\n", __FUNCTION__, __LINE__, htole32(flags));
+    }
     
     tx->sta_id = IWM_STATION_ID;
     
@@ -924,6 +927,7 @@ iwm_tx(struct iwm_softc *sc, mbuf_t m, struct ieee80211_node *ni, int ac)
         /* First segment length must be a multiple of 4. */
         flags |= IWM_TX_CMD_FLG_MH_PAD;
         pad = 4 - (hdrlen & 3);
+//        XYLog("%s %d flags=0x%x\n", __FUNCTION__, __LINE__, htole32(flags));
     } else
         pad = 0;
     
@@ -943,8 +947,12 @@ iwm_tx(struct iwm_softc *sc, mbuf_t m, struct ieee80211_node *ni, int ac)
     
     flags |= IWM_TX_CMD_FLG_BT_DIS | IWM_TX_CMD_FLG_SEQ_CTL;
     
+//    XYLog("%s %d flags=0x%x\n", __FUNCTION__, __LINE__, htole32(flags));
+    
     tx->sec_ctl = 0;
+//    XYLog("%s %d tx->tx_flags=0x%x\n", __FUNCTION__, __LINE__, htole32(tx->tx_flags));
     tx->tx_flags |= htole32(flags);
+//    XYLog("%s %d tx->tx_flags=0x%x\n", __FUNCTION__, __LINE__, htole32(tx->tx_flags));
     
     /* Trim 802.11 header. */
     mbuf_adj(m, hdrlen);

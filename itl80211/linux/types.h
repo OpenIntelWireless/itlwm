@@ -37,7 +37,7 @@
 
 #define gfp_t int
 
-#define __packed __attribute__((packed))
+#define __packed __attribute__((packed)) __attribute__((aligned(1)))
 #define __aligned(x)        __attribute__((aligned(x)))
 #define __must_check        __attribute__((warn_unused_result))
 
