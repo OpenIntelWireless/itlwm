@@ -630,7 +630,7 @@ iwm_send_cmd(struct iwm_softc *sc, struct iwm_host_cmd *hcmd)
     IWM_WRITE(sc, IWM_HBUS_TARG_WRPTR, ring->qid << 8 | ring->cur);
     
     if (!async) {
-        err = tsleep_nsec(desc, PCATCH, "iwmcmd", SEC_TO_NSEC(2));=
+        err = tsleep_nsec(desc, PCATCH, "iwmcmd", SEC_TO_NSEC(2));
         if (err == 0) {
             /* if hardware is no longer up, return error */
             if (generation != sc->sc_generation) {
