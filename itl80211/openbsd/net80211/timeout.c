@@ -31,25 +31,16 @@ extern IOCommandGate *_fCommandGate;
 
 int splnet()
 {
-    //    _fWorkloop->disableAllInterrupts();
-    //    _fWorkloop->disableAllEventSources();
     return 1;
 }
 
 void splx(int s)
 {
-    //    _fWorkloop->enableAllInterrupts();
-    //    _fWorkloop->enableAllEventSources();
 }
 
 void timeout_set(CTimeout **t, void (*fn)(void *), void *arg)
 {
-    if (*t == NULL) {
-        *t = new CTimeout();
-        (*t)->isPending = false;
-    }
-    ((CTimeout*)*t)->to_func = fn;
-    ((CTimeout*)*t)->to_arg = arg;
+    _fCommandGate->runAction(&CTimeout::timeout_set, t, (void*)fn, arg);
 }
 
 int timeout_add_msec(CTimeout **to, int msecs)
@@ -57,7 +48,6 @@ int timeout_add_msec(CTimeout **to, int msecs)
     if (*to == NULL) {
         return 0;
     }
-    (*to)->isPending = true;
     return _fCommandGate->runAction(&CTimeout::timeout_add_msec, *to, _fWorkloop, &msecs) == kIOReturnSuccess ? 1 : 0;
 }
 
@@ -77,15 +67,17 @@ int timeout_del(CTimeout **to)
     if ((*to) == NULL) {
         return 0;
     }
-    return _fCommandGate->runAction(&CTimeout::timeout_del, *to) == kIOReturnSuccess ? 1 : 0;
+    return _fCommandGate->runAction(&CTimeout::timeout_del, *to, _fWorkloop) == kIOReturnSuccess ? 1 : 0;
+}
+
+int timeout_free(CTimeout **to)
+{
+    return _fCommandGate->runAction(&CTimeout::timeout_free, to, _fWorkloop) == kIOReturnSuccess ? 1 : 0;
 }
 
 int timeout_pending(CTimeout **to)
 {
-    if (*to != NULL && (*to)->isPending) {
-        return 1;
-    }
-    return 0;
+    return _fCommandGate->runAction(&CTimeout::timeout_pending, to) == kIOReturnSuccess ? 1 : 0;
 }
 
 #endif /* timeout_cpp */

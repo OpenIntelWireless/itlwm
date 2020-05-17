@@ -263,18 +263,14 @@ void itlwm::releaseAll()
     struct ifnet *ifp = &com.sc_ic.ic_ac.ac_if;
     IOEthernetInterface *inf = ifp->iface;
     pci_intr_handle *intrHandler = com.ih;
-    if (_fCommandGate) {
-        wakeupOn(_fCommandGate);
-    }
+    
     if (com.sc_calib_to) {
         timeout_del(&com.sc_calib_to);
-        com.sc_calib_to->release();
-        com.sc_calib_to = NULL;
+        timeout_free(&com.sc_calib_to);
     }
     if (com.sc_led_blink_to) {
         timeout_del(&com.sc_led_blink_to);
-        com.sc_led_blink_to->release();
-        com.sc_led_blink_to = NULL;
+        timeout_free(&com.sc_led_blink_to);
     }
     if (_fWorkloop) {
         if (intrHandler) {
@@ -292,6 +288,9 @@ void itlwm::releaseAll()
             intrHandler = NULL;
         }
         if (_fCommandGate) {
+            if (lastSleepChan) {
+                wakeupOn(lastSleepChan);
+            }
             _fCommandGate->disable();
             _fWorkloop->removeEventSource(_fCommandGate);
             _fCommandGate->release();
@@ -307,10 +306,6 @@ void itlwm::releaseAll()
         _fWorkloop = NULL;
     }
     unregistPM();
-    if (pciNub) {
-        pciNub->release();
-        pciNub = NULL;
-    }
 }
 
 void itlwm::free()
@@ -456,6 +451,7 @@ int itlwm::tsleep_nsec(void *ident, int priority, const char *wmesg, int timo)
         IOSleep(timo);
         return 0;
     }
+    lastSleepChan = ident;
     if (timo == 0) {
         ret = _fCommandGate->runCommand(ident);
     } else {

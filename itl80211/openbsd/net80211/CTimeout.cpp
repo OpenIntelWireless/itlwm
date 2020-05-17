@@ -52,15 +52,70 @@ IOReturn CTimeout::timeout_add_msec(OSObject *target, void *arg0, void *arg1, vo
         wl->addEventSource(cto->tm);
     }
     cto->tm->setTimeoutMS(msecs);
+    cto->isPending = true;
     return kIOReturnSuccess;
 }
 
 IOReturn CTimeout::timeout_del(OSObject *target, void *arg0, void *arg1, void *arg2, void *arg3)
 {
     CTimeout *cto = (CTimeout *)arg0;
-    if (cto->tm) {
+    if (cto == NULL) {
+        return kIOReturnSuccess;
+    }
+    if (cto->tm != NULL) {
         cto->tm->cancelTimeout();
     }
     cto->isPending = false;
     return kIOReturnSuccess;
+}
+
+IOReturn CTimeout::timeout_free(OSObject *target, void *arg0, void *arg1, void *arg2, void *arg3)
+{
+    CTimeout **cto = (CTimeout **)arg0;
+    IOWorkLoop *wl = (IOWorkLoop*)arg1;
+    if (cto == NULL || *cto == NULL) {
+        return 0;
+    }
+    CTimeout *tm = *cto;
+    if (tm->tm != NULL) {
+        wl->removeEventSource(tm->tm);
+        tm->tm->release();
+        tm->tm = NULL;
+    }
+    tm->release();
+    *cto = NULL;
+    return kIOReturnSuccess;
+}
+
+typedef void (*callback)(void *);
+
+IOReturn CTimeout::timeout_set(OSObject *target, void *arg0, void *arg1, void *arg2, void *arg3)
+{
+    CTimeout *tm;
+    CTimeout **cto = (CTimeout **)arg0;
+    if (cto == NULL) {
+        return kIOReturnError;
+    }
+    if ((*cto) == NULL) {
+        *cto = new CTimeout;
+    }
+    tm = *cto;
+    tm->isPending = false;
+    tm->to_func = (callback)arg1;
+    tm->to_arg = arg2;
+    return kIOReturnSuccess;
+}
+
+IOReturn CTimeout::timeout_pending(OSObject *target, void *arg0, void *arg1, void *arg2, void *arg3)
+{
+    CTimeout **cto = (CTimeout **)arg0;
+    CTimeout *tm;
+    if (cto == NULL) {
+        return kIOReturnSuccess;
+    }
+    tm = *cto;
+    if (tm != NULL && tm->isPending) {
+        return kIOReturnSuccess;
+    }
+    return kIOReturnError;
 }

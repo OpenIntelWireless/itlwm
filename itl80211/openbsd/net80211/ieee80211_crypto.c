@@ -109,6 +109,7 @@ ieee80211_crypto_detach(struct ifnet *ifp)
 
 #ifndef IEEE80211_STA_ONLY
 	timeout_del(&ic->ic_tkip_micfail_timeout);
+    timeout_free(&ic->ic_tkip_micfail_timeout);
 #endif
 }
 

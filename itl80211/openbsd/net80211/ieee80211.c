@@ -232,6 +232,7 @@ ieee80211_ifdetach(struct ifnet *ifp)
     struct ieee80211com *ic = (struct ieee80211com *)ifp;
     
     timeout_del(&ic->ic_bgscan_timeout);
+    timeout_free(&ic->ic_bgscan_timeout);
     ieee80211_proto_detach(ifp);
     ieee80211_crypto_detach(ifp);
     ieee80211_node_detach(ifp);

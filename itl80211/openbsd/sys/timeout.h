@@ -66,5 +66,6 @@ int timeout_add_sec(CTimeout **to, int secs);
 int timeout_add_usec(CTimeout **to, int usecs);
 int timeout_del(CTimeout **to);
 int timeout_pending(CTimeout **to);
+int timeout_free(CTimeout **to);
 
 #endif	/* _SYS_TIMEOUT_H_ */

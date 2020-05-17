@@ -794,10 +794,14 @@ ieee80211_node_detach(struct ifnet *ifp)
            howmany(ic->ic_max_aid, 32) * sizeof(u_int32_t));
     IOFree(ic->ic_tim_bitmap, ic->ic_tim_len);
     timeout_del(&ic->ic_inact_timeout);
+    timeout_free(&ic->ic_inact_timeout);
     timeout_del(&ic->ic_node_cache_timeout);
+    timeout_free(&ic->ic_node_cache_timeout);
     timeout_del(&ic->ic_tkip_micfail_timeout);
+    timeout_free(&ic->ic_tkip_micfail_timeout);
 #endif
     timeout_del(&ic->ic_rsn_timeout);
+    timeout_free(&ic->ic_rsn_timeout);
 }
 
 /*
@@ -1673,6 +1677,7 @@ ieee80211_node_set_timeouts(struct ieee80211_node *ni)
 {
     int i;
     
+    memset(ni->ni_addba_req_to, 0, sizeof(ni->ni_addba_req_to) * nitems(ni->ni_addba_req_to));
 #ifndef IEEE80211_STA_ONLY
     timeout_set(&ni->ni_eapol_to, ieee80211_eapol_timeout, ni);
     timeout_set(&ni->ni_sa_query_to, ieee80211_sa_query_timeout, ni);
@@ -2006,6 +2011,27 @@ ieee80211_ba_del(struct ieee80211_node *ni)
     timeout_del(&ni->ni_addba_req_to[EDCA_AC_VO]);
 }
 
+static void ieee80211_ba_free(struct ieee80211_node *ni)
+{
+    int tid;
+    
+    for (tid = 0; tid < nitems(ni->ni_rx_ba); tid++) {
+        struct ieee80211_rx_ba *ba = &ni->ni_rx_ba[tid];
+        timeout_free(&ba->ba_to);
+        timeout_free(&ba->ba_gap_to);
+    }
+    
+    for (tid = 0; tid < nitems(ni->ni_tx_ba); tid++) {
+        struct ieee80211_tx_ba *ba = &ni->ni_tx_ba[tid];
+        timeout_free(&ba->ba_to);
+    }
+    
+    timeout_free(&ni->ni_addba_req_to[EDCA_AC_BE]);
+    timeout_free(&ni->ni_addba_req_to[EDCA_AC_BK]);
+    timeout_free(&ni->ni_addba_req_to[EDCA_AC_VI]);
+    timeout_free(&ni->ni_addba_req_to[EDCA_AC_VO]);
+}
+
 void
 ieee80211_free_node(struct ieee80211com *ic, struct ieee80211_node *ni)
 {
@@ -2018,10 +2044,13 @@ ieee80211_free_node(struct ieee80211com *ic, struct ieee80211_node *ni)
     DPRINTF(("%s, %s\n", __FUNCTION__, ether_sprintf(ni->ni_macaddr)));
 #ifndef IEEE80211_STA_ONLY
     timeout_del(&ni->ni_eapol_to);
+    timeout_free(&ni->ni_eapol_to);
     timeout_del(&ni->ni_sa_query_to);
+    timeout_free(&ni->ni_sa_query_to);
     IEEE80211_AID_CLR(ni->ni_associd, ic->ic_aid_bitmap);
 #endif
     ieee80211_ba_del(ni);
+    ieee80211_ba_free(ni);
     RB_REMOVE(ieee80211_tree, &ic->ic_tree, ni);
     ic->ic_nnodes--;
 #ifndef IEEE80211_STA_ONLY

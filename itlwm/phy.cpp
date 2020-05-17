@@ -462,6 +462,7 @@ iwm_binding_cmd(struct iwm_softc *sc, struct iwm_node *in, uint32_t action)
 int itlwm::
 iwm_send_cmd(struct iwm_softc *sc, struct iwm_host_cmd *hcmd)
 {
+    XYLog("%s\n", __FUNCTION__);
     struct iwm_tx_ring *ring = &sc->txq[sc->cmdqid];
     struct iwm_tfd *desc;
     struct iwm_tx_data *txdata;
@@ -547,8 +548,8 @@ iwm_send_cmd(struct iwm_softc *sc, struct iwm_host_cmd *hcmd)
 //                                return ENOMEM;
 //                            }
 //                        }
-        mbuf_setlen(m, paylen);
-        mbuf_pkthdr_setlen(m, hdrlen);
+        mbuf_setlen(m, totlen);
+        mbuf_pkthdr_setlen(m, totlen);
         cmd = mtod(m, struct iwm_device_cmd *);
         txdata->map->dm_nsegs = txdata->map->cursor->getPhysicalSegmentsWithCoalesce(m, &seg, 1);
         if (txdata->map->dm_nsegs == 0) {
@@ -629,7 +630,7 @@ iwm_send_cmd(struct iwm_softc *sc, struct iwm_host_cmd *hcmd)
     IWM_WRITE(sc, IWM_HBUS_TARG_WRPTR, ring->qid << 8 | ring->cur);
     
     if (!async) {
-        err = tsleep_nsec(desc, PCATCH, "iwmcmd", SEC_TO_NSEC(1));
+        err = tsleep_nsec(desc, PCATCH, "iwmcmd", SEC_TO_NSEC(2));=
         if (err == 0) {
             /* if hardware is no longer up, return error */
             if (generation != sc->sc_generation) {

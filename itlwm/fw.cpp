@@ -537,6 +537,39 @@ iwm_read_firmware(struct iwm_softc *sc, enum iwm_ucode_type ucode_type)
                 
             case IWM_UCODE_TLV_FW_MEM_SEG:
                 break;
+            case 52://IWL_UCODE_TLV_IML
+            case 53://IWL_UCODE_TLV_FW_FMAC_API_VERSION
+            case 54://IWL_UCODE_TLV_UMAC_DEBUG_ADDRS
+            case 55://IWL_UCODE_TLV_LMAC_DEBUG_ADDRS
+            case 57://IWL_UCODE_TLV_FW_RECOVERY_INFO
+            case 58:
+            case 59://IWL_UCODE_TLV_FW_FMAC_RECOVERY_INFO
+                break;
+            case 60: {//IWL_UCODE_TLV_FW_FSEQ_VERSION
+                typedef struct {
+                    u8 version[32];
+                    u8 sha1[20];
+                } SEQVER, *PSEQVER;
+                PSEQVER fseq_ver = (PSEQVER)tlv_data;
+                
+                if (tlv_len != sizeof(SEQVER)) {
+                    err = EINVAL;
+                    goto parse_out;
+                }
+                XYLog("TLV_FW_FSEQ_VERSION: %s\n",
+                         fseq_ver->version);
+            }
+                break;
+        #define IWL_UCODE_TLV_DEBUG_BASE    0x1000005
+            case IWL_UCODE_TLV_DEBUG_BASE + 0://IWL_UCODE_TLV_TYPE_DEBUG_INFO
+            case IWL_UCODE_TLV_DEBUG_BASE + 1://IWL_UCODE_TLV_TYPE_BUFFER_ALLOCATION
+            case IWL_UCODE_TLV_DEBUG_BASE + 2://IWL_UCODE_TLV_TYPE_HCMD
+            case IWL_UCODE_TLV_DEBUG_BASE + 3://IWL_UCODE_TLV_TYPE_REGIONS
+            case IWL_UCODE_TLV_DEBUG_BASE + 4://IWL_UCODE_TLV_TYPE_TRIGGERS
+            /* TLVs 0x1000-0x2000 are for internal driver usage */
+            case 0x1000://IWL_UCODE_TLV_FW_DBG_DUMP_LST
+                
+                break;
                 
             default:
                 err = EINVAL;

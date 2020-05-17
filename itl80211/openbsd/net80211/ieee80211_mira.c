@@ -1262,6 +1262,7 @@ ieee80211_mira_node_init(struct ieee80211_mira_node *mn)
     ieee80211_mira_reset_goodput_stats(mn);
     ieee80211_mira_reset_collision_stats(mn);
     
+    memset(mn->probe_to, 0, sizeof(mn->probe_to) * nitems(mn->probe_to));
     timeout_set(&mn->probe_to[IEEE80211_MIRA_PROBE_TO_UP],
                 ieee80211_mira_probe_timeout_up, mn);
     timeout_set(&mn->probe_to[IEEE80211_MIRA_PROBE_TO_DOWN],
@@ -1273,8 +1274,10 @@ ieee80211_mira_cancel_timeouts(struct ieee80211_mira_node *mn)
 {
     int t;
     
-    for (t = 0; t < nitems(mn->probe_to); t++)
+    for (t = 0; t < nitems(mn->probe_to); t++) {
         timeout_del(&mn->probe_to[t]);
+        timeout_free(&mn->probe_to[t]);
+    }
 }
 
 int

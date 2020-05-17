@@ -83,6 +83,7 @@ public:
     virtual const OSString * newModelString() const override;
     
     void releaseAll();
+    IOReturn releaseAllGated(OSObject *target, void *arg0, void *arg1, void *arg2, void *arg3);
     
     bool initPCIPowerManagment(IOPCIDevice *provider);
     
@@ -392,6 +393,7 @@ public:
     IONetworkMedium *autoMedium;
     IONetworkMedium *mediumTable[MEDIUM_INDEX_COUNT];
     IONetworkStats *fpNetStats;
+    void *lastSleepChan;
     
     IOLock *fwLoadLock;
     semaphore_t outputThreadSignal;
