@@ -191,11 +191,8 @@ ieee80211_ccmp_encrypt(struct ieee80211com *ic, mbuf_t m0,
     mbuf_t temp;
     unsigned int max_chunks = 1;
 
-    if (m0 == NULL) {
-        XYLog("%s, m0==NULL\n", __FUNCTION__);
-        return NULL;
-    }
-    mbuf_allocpacket(MBUF_DONTWAIT, mbuf_get_mhlen(), &max_chunks, &n0);
+    mbuf_get(MBUF_DONTWAIT, mbuf_type(m0), &n0);
+//    mbuf_allocpacket(MBUF_DONTWAIT, mbuf_get_mhlen(), &max_chunks, &n0);
 	if (n0 == NULL)
 		goto nospace;
 	if (m_dup_pkthdr(n0, m0, MBUF_DONTWAIT))
@@ -203,9 +200,9 @@ ieee80211_ccmp_encrypt(struct ieee80211com *ic, mbuf_t m0,
     mbuf_pkthdr_setlen(n0, mbuf_pkthdr_len(n0) + IEEE80211_CCMP_HDRLEN);
     mbuf_setlen(n0, mbuf_get_mhlen());
 	if (mbuf_pkthdr_len(n0) >= mbuf_get_minclsize() - IEEE80211_CCMP_MICLEN) {
-        mbuf_getcluster(MBUF_DONTWAIT, mbuf_type(n0), 4096, &n0);
+        mbuf_mclget(MBUF_DONTWAIT, mbuf_type(n0), &n0);
 		if (mbuf_flags(n0) & MBUF_EXT)
-            mbuf_setlen(n0, 4096);
+            mbuf_setlen(n0, MCLBYTES);
 	}
 	if (mbuf_len(n0) > mbuf_pkthdr_len(n0))
         mbuf_setlen(n0, mbuf_pkthdr_len(n0));
@@ -261,9 +258,9 @@ ieee80211_ccmp_encrypt(struct ieee80211com *ic, mbuf_t m0,
 			n = mbuf_next(n);
             mbuf_setlen(n, mbuf_get_mlen());
 			if (left >= mbuf_get_minclsize() - IEEE80211_CCMP_MICLEN) {
-                mbuf_getcluster(MBUF_DONTWAIT, mbuf_type(n), 4096, &n);
+                mbuf_mclget(MBUF_DONTWAIT, mbuf_type(n), &n);
 				if (mbuf_flags(n) & MBUF_EXT)
-                    mbuf_setlen(n, 4096);
+                    mbuf_setlen(n, MCLBYTES);
 			}
 			if (mbuf_len(n) > left)
                 mbuf_setlen(n, left);
@@ -323,6 +320,45 @@ ieee80211_ccmp_encrypt(struct ieee80211com *ic, mbuf_t m0,
 	return NULL;
 }
 
+int
+ieee80211_ccmp_get_pn(uint64_t *pn, uint64_t **prsc, mbuf_t m,
+    struct ieee80211_key *k)
+{
+   struct ieee80211_frame *wh;
+   int hdrlen;
+   const u_int8_t *ivp;
+
+   wh = mtod(m, struct ieee80211_frame *);
+   hdrlen = ieee80211_get_hdrlen(wh);
+   if (mbuf_pkthdr_len(m) < hdrlen + IEEE80211_CCMP_HDRLEN)
+       return EINVAL;
+
+   ivp = (u_int8_t *)wh + hdrlen;
+
+   /* check that ExtIV bit is set */
+   if (!(ivp[3] & IEEE80211_WEP_EXTIV))
+       return EINVAL;
+
+   /* retrieve last seen packet number for this frame type/priority */
+   if ((wh->i_fc[0] & IEEE80211_FC0_TYPE_MASK) ==
+       IEEE80211_FC0_TYPE_DATA) {
+       u_int8_t tid = ieee80211_has_qos(wh) ?
+           ieee80211_get_qos(wh) & IEEE80211_QOS_TID : 0;
+       *prsc = &k->k_rsc[tid];
+   } else    /* 11w: management frames have their own counters */
+       *prsc = &k->k_mgmt_rsc;
+
+   /* extract the 48-bit PN from the CCMP header */
+   *pn = (u_int64_t)ivp[0]      |
+        (u_int64_t)ivp[1] <<  8 |
+        (u_int64_t)ivp[4] << 16 |
+        (u_int64_t)ivp[5] << 24 |
+        (u_int64_t)ivp[6] << 32 |
+        (u_int64_t)ivp[7] << 40;
+
+   return 0;
+}
+
 mbuf_t
 ieee80211_ccmp_decrypt(struct ieee80211com *ic, mbuf_t m0,
     struct ieee80211_key *k)
@@ -330,7 +366,7 @@ ieee80211_ccmp_decrypt(struct ieee80211com *ic, mbuf_t m0,
 	struct ieee80211_ccmp_ctx *ctx = (struct ieee80211_ccmp_ctx *)k->k_priv;
 	struct ieee80211_frame *wh;
 	u_int64_t pn, *prsc;
-	const u_int8_t *ivp, *src;
+    const u_int8_t *src;
 	u_int8_t *dst;
 	u_int8_t mic0[IEEE80211_CCMP_MICLEN];
 	u_int8_t a[16], b[16], s0[16], s[16];
@@ -342,36 +378,22 @@ ieee80211_ccmp_decrypt(struct ieee80211com *ic, mbuf_t m0,
     unsigned int max_chunks = 1;
 
 	wh = mtod(m0, struct ieee80211_frame *);
-	hdrlen = ieee80211_get_hdrlen(wh);
-	ivp = (u_int8_t *)wh + hdrlen;
+    hdrlen = ieee80211_get_hdrlen(wh);
+    if (mbuf_pkthdr_len(m0) < hdrlen + IEEE80211_CCMP_HDRLEN +
+        IEEE80211_CCMP_MICLEN) {
+        mbuf_freem(m0);
+        return NULL;
+    }
+    
+    /*
+     * Get the frame's Packet Number (PN) and a pointer to our last-seen
+     * Receive Sequence Counter (RSC) which we can use to detect replays.
+     */
+    if (ieee80211_ccmp_get_pn(&pn, &prsc, m0, k) != 0) {
+        mbuf_freem(m0);
+        return NULL;
+    }
 
-	if (mbuf_pkthdr_len(m0) < hdrlen + IEEE80211_CCMP_HDRLEN +
-	    IEEE80211_CCMP_MICLEN) {
-		mbuf_freem(m0);
-		return NULL;
-	}
-	/* check that ExtIV bit is set */
-	if (!(ivp[3] & IEEE80211_WEP_EXTIV)) {
-		mbuf_freem(m0);
-		return NULL;
-	}
-
-	/* retrieve last seen packet number for this frame type/priority */
-	if ((wh->i_fc[0] & IEEE80211_FC0_TYPE_MASK) ==
-	    IEEE80211_FC0_TYPE_DATA) {
-		u_int8_t tid = ieee80211_has_qos(wh) ?
-		    ieee80211_get_qos(wh) & IEEE80211_QOS_TID : 0;
-		prsc = &k->k_rsc[tid];
-	} else	/* 11w: management frames have their own counters */
-		prsc = &k->k_mgmt_rsc;
-
-	/* extract the 48-bit PN from the CCMP header */
-	pn = (u_int64_t)ivp[0]       |
-	     (u_int64_t)ivp[1] <<  8 |
-	     (u_int64_t)ivp[4] << 16 |
-	     (u_int64_t)ivp[5] << 24 |
-	     (u_int64_t)ivp[6] << 32 |
-	     (u_int64_t)ivp[7] << 40;
 	if (pn <= *prsc) {
 		/* replayed frame, discard */
 		ic->ic_stats.is_ccmp_replays++;
@@ -379,8 +401,8 @@ ieee80211_ccmp_decrypt(struct ieee80211com *ic, mbuf_t m0,
 		return NULL;
 	}
 
-//    mbuf_get(MBUF_DONTWAIT, mbuf_type(m0), &n0);
-    mbuf_allocpacket(MBUF_DONTWAIT, mbuf_get_mhlen(), &max_chunks, &n0);
+    mbuf_get(MBUF_DONTWAIT, mbuf_type(m0), &n0);
+//    mbuf_allocpacket(MBUF_DONTWAIT, mbuf_get_mhlen(), &max_chunks, &n0);
 	if (n0 == NULL)
 		goto nospace;
 	if (m_dup_pkthdr(n0, m0, MBUF_DONTWAIT))
@@ -389,9 +411,9 @@ ieee80211_ccmp_decrypt(struct ieee80211com *ic, mbuf_t m0,
     mbuf_pkthdr_setlen(n0, mbuf_pkthdr_len(n0) - (IEEE80211_CCMP_HDRLEN + IEEE80211_CCMP_MICLEN));
     mbuf_setlen(n0, mbuf_get_mhlen());
 	if (mbuf_pkthdr_len(n0) >= mbuf_get_minclsize()) {
-        mbuf_getcluster(MBUF_DONTWAIT, mbuf_type(n0), 4096, &n0);
+        mbuf_mclget(MBUF_DONTWAIT, mbuf_type(n0), &n0);
 		if (mbuf_flags(n0) & MBUF_EXT)
-            mbuf_setlen(n0, 4096);
+            mbuf_setlen(n0, MCLBYTES);
 	}
 	if (mbuf_len(n0) > mbuf_pkthdr_len(n0))
         mbuf_setlen(n0, mbuf_pkthdr_len(n0));
@@ -434,9 +456,9 @@ ieee80211_ccmp_decrypt(struct ieee80211com *ic, mbuf_t m0,
 			n = mbuf_next(n);
             mbuf_setlen(n, mbuf_get_mlen());
 			if (left >= mbuf_get_minclsize()) {
-                mbuf_getcluster(MBUF_DONTWAIT, mbuf_type(n), 4096, &n);
+                mbuf_mclget(MBUF_DONTWAIT, mbuf_type(n), &n);
 				if (mbuf_flags(n) & MBUF_EXT)
-                    mbuf_setlen(n, 4096);
+                    mbuf_setlen(n, MCLBYTES);
 			}
 			if (mbuf_len(n) > left)
                 mbuf_setlen(n, left);

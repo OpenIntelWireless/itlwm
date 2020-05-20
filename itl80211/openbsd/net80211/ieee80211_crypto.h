@@ -175,6 +175,8 @@ void	ieee80211_tkip_delete_key(struct ieee80211com *,
 	    struct ieee80211_key *);
 mbuf_t ieee80211_tkip_encrypt(struct ieee80211com *,
 	    mbuf_t, struct ieee80211_key *);
+int    ieee80211_tkip_get_tsc(uint64_t *, uint64_t **, mbuf_t,
+                              struct ieee80211_key *);
 mbuf_t ieee80211_tkip_decrypt(struct ieee80211com *,
 	    mbuf_t, struct ieee80211_key *);
 void	ieee80211_tkip_mic(mbuf_t, int, const u_int8_t *,
@@ -189,6 +191,8 @@ void	ieee80211_ccmp_delete_key(struct ieee80211com *,
 	    struct ieee80211_key *);
 mbuf_t ieee80211_ccmp_encrypt(struct ieee80211com *, mbuf_t,
 	    struct ieee80211_key *);
+int    ieee80211_ccmp_get_pn(uint64_t *, uint64_t **, mbuf_t,
+                             struct ieee80211_key *);
 mbuf_t ieee80211_ccmp_decrypt(struct ieee80211com *, mbuf_t,
 	    struct ieee80211_key *);
 

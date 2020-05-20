@@ -193,6 +193,15 @@ iwm_channel_id_to_txp(struct iwm_softc *sc, uint16_t ch_id)
     return 0xff;
 }
 
+int itlwm::
+iwm_mimo_enabled(struct iwm_softc *sc)
+{
+   struct ieee80211com *ic = &sc->sc_ic;
+
+   return !sc->sc_nvm.sku_cap_mimo_disable &&
+       (ic->ic_userflags & IEEE80211_F_NOMIMO) == 0;
+}
+
 void itlwm::
 iwm_init_channel_map(struct iwm_softc *sc, const uint16_t * const nvm_ch_flags,
                      const uint8_t *nvm_channels, size_t nchan)
@@ -250,9 +259,10 @@ iwm_setup_ht_rates(struct iwm_softc *sc)
     /* TX is supported with the same MCS as RX. */
     ic->ic_tx_mcs_set = IEEE80211_TX_MCS_SET_DEFINED;
     
+    memset(ic->ic_sup_mcs, 0, sizeof(ic->ic_sup_mcs));
     ic->ic_sup_mcs[0] = 0xff;        /* MCS 0-7 */
     
-    if (sc->sc_nvm.sku_cap_mimo_disable)
+    if (!iwm_mimo_enabled(sc))
         return;
     
     rx_ant = iwm_fw_valid_rx_ant(sc);
@@ -465,16 +475,65 @@ iwm_get_noise(const struct iwm_statistics_rx_non_phy *stats)
     return (nbant == 0) ? -127 : (total / nbant) - 107;
 }
 
+int itlwm::
+iwm_ccmp_decap(struct iwm_softc *sc, mbuf_t m, struct ieee80211_node *ni)
+{
+   struct ieee80211com *ic = &sc->sc_ic;
+   struct ieee80211_key *k = &ni->ni_pairwise_key;
+   struct ieee80211_frame *wh;
+   uint64_t pn, *prsc;
+   uint8_t *ivp;
+   uint8_t tid;
+   int hdrlen, hasqos;
+
+   wh = mtod(m, struct ieee80211_frame *);
+   hdrlen = ieee80211_get_hdrlen(wh);
+   ivp = (uint8_t *)wh + hdrlen;
+
+   /* Check that ExtIV bit is be set. */
+   if (!(ivp[3] & IEEE80211_WEP_EXTIV))
+       return 1;
+
+   hasqos = ieee80211_has_qos(wh);
+   tid = hasqos ? ieee80211_get_qos(wh) & IEEE80211_QOS_TID : 0;
+   prsc = &k->k_rsc[tid];
+
+   /* Extract the 48-bit PN from the CCMP header. */
+   pn = (uint64_t)ivp[0]       |
+        (uint64_t)ivp[1] <<  8 |
+        (uint64_t)ivp[4] << 16 |
+        (uint64_t)ivp[5] << 24 |
+        (uint64_t)ivp[6] << 32 |
+        (uint64_t)ivp[7] << 40;
+   if (pn <= *prsc) {
+       ic->ic_stats.is_ccmp_replays++;
+       return 1;
+   }
+   /* Last seen packet number is updated in ieee80211_inputm(). */
+
+   /*
+    * Some firmware versions strip the MIC, and some don't. It is not
+    * clear which of the capability flags could tell us what to expect.
+    * For now, keep things simple and just leave the MIC in place if
+    * it is present.
+    *
+    * The IV will be stripped by ieee80211_inputm().
+    */
+   return 0;
+}
+
 void itlwm::
 iwm_rx_frame(struct iwm_softc *sc, mbuf_t m, int chanidx,
-             int is_shortpre, int rate_n_flags, uint32_t device_timestamp,
-             struct ieee80211_rxinfo *rxi, struct mbuf_list *ml)
+             uint32_t rx_pkt_status, int is_shortpre, int rate_n_flags,
+             uint32_t device_timestamp, struct ieee80211_rxinfo *rxi,
+             struct mbuf_list *ml)
 {
     struct ieee80211com *ic = &sc->sc_ic;
     struct ieee80211_frame *wh;
     struct ieee80211_node *ni;
     struct ieee80211_channel *bss_chan;
     uint8_t saved_bssid[IEEE80211_ADDR_LEN] = { 0 };
+    struct ifnet *ifp = IC2IFP(ic);
     
     if (chanidx < 0 || chanidx >= nitems(ic->ic_channels))
         chanidx = ieee80211_chan2ieee(ic, ic->ic_ibss_chan);
@@ -490,6 +549,38 @@ iwm_rx_frame(struct iwm_softc *sc, mbuf_t m, int chanidx,
         IEEE80211_ADDR_COPY(&saved_bssid, ni->ni_macaddr);
     }
     ni->ni_chan = &ic->ic_channels[chanidx];
+    
+    /* Handle hardware decryption. */
+    if (((wh->i_fc[0] & IEEE80211_FC0_TYPE_MASK) != IEEE80211_FC0_TYPE_CTL)
+        && (wh->i_fc[1] & IEEE80211_FC1_PROTECTED) &&
+        !IEEE80211_IS_MULTICAST(wh->i_addr1) &&
+        (ni->ni_flags & IEEE80211_NODE_RXPROT) &&
+        ni->ni_pairwise_key.k_cipher == IEEE80211_CIPHER_CCMP) {
+        if ((rx_pkt_status & IWM_RX_MPDU_RES_STATUS_SEC_ENC_MSK) !=
+            IWM_RX_MPDU_RES_STATUS_SEC_CCM_ENC) {
+            ic->ic_stats.is_ccmp_dec_errs++;
+            ifp->netStat->inputErrors++;
+            mbuf_freem(m);
+            return;
+        }
+        /* Check whether decryption was successful or not. */
+        if ((rx_pkt_status &
+             (IWM_RX_MPDU_RES_STATUS_DEC_DONE |
+              IWM_RX_MPDU_RES_STATUS_MIC_OK)) !=
+            (IWM_RX_MPDU_RES_STATUS_DEC_DONE |
+             IWM_RX_MPDU_RES_STATUS_MIC_OK)) {
+            ic->ic_stats.is_ccmp_dec_errs++;
+            ifp->netStat->inputErrors++;
+            mbuf_freem(m);
+            return;
+        }
+        if (iwm_ccmp_decap(sc, m, ni) != 0) {
+            ifp->netStat->inputErrors++;
+            mbuf_freem(m);
+            return;
+        }
+        rxi->rxi_flags |= IEEE80211_RXI_HWDEC;
+    }
     
 #if NBPFILTER > 0
     if (sc->sc_drvbpf != NULL) {
@@ -646,14 +737,11 @@ iwm_rx_tx_cmd(struct iwm_softc *sc, struct iwm_rx_packet *pkt,
     struct iwm_tx_data *txd = &ring->data[idx];
     struct iwm_node *in = txd->in;
     
-    if (txd->m == NULL)
-        return;
-    
     bus_dmamap_sync(sc->sc_dmat, data->map, 0, IWM_RBUF_SIZE,
-                    BUS_DMASYNC_POSTREAD);
-    
+        BUS_DMASYNC_POSTREAD);
+
     sc->sc_tx_timer = 0;
-    
+
     txd = &ring->data[idx];
     if (txd->m == NULL)
         return;
@@ -812,16 +900,23 @@ iwm_tx(struct iwm_softc *sc, mbuf_t m, struct ieee80211_node *ni, int ac)
     struct ieee80211_frame *wh;
     struct ieee80211_key *k = NULL;
     const struct iwm_rate *rinfo;
+    uint8_t *ivp;
     uint32_t flags;
     u_int hdrlen;
     IOPhysicalSegment *seg;
+    IOPhysicalSegment segs[IWM_NUM_OF_TBS - 2];
+    int nsegs = 0;
     uint8_t tid, type;
     int i, totlen, err, pad;
-    int rtsthres = ic->ic_rtsthreshold;
+    int hdrlen2, rtsthres = ic->ic_rtsthreshold;
     
     wh = mtod(m, struct ieee80211_frame *);
     hdrlen = ieee80211_get_hdrlen(wh);
     type = wh->i_fc[0] & IEEE80211_FC0_TYPE_MASK;
+    
+    hdrlen2 = (ieee80211_has_qos(wh)) ?
+    sizeof (struct ieee80211_qosframe) :
+    sizeof (struct ieee80211_frame);
     
     tid = 0;
     
@@ -841,6 +936,7 @@ iwm_tx(struct iwm_softc *sc, mbuf_t m, struct ieee80211_node *ni, int ac)
     else
         ring = &sc->txq[ac];
     desc = &ring->desc[ring->cur];
+    memset(desc, 0, sizeof(*desc));
     data = &ring->data[ring->cur];
     
     cmd = &ring->cmd[ring->cur];
@@ -881,20 +977,27 @@ iwm_tx(struct iwm_softc *sc, mbuf_t m, struct ieee80211_node *ni, int ac)
                      m, BPF_DIRECTION_OUT);
     }
 #endif
+    totlen = mbuf_pkthdr_len(m);
     
     if (wh->i_fc[1] & IEEE80211_FC1_PROTECTED) {
         k = ieee80211_get_txkey(ic, wh, ni);
-        if ((m = ieee80211_encrypt(ic, m, k)) == NULL)
-            return ENOBUFS;
-        /* 802.11 header may have moved. */
-        wh = mtod(m, struct ieee80211_frame *);
+        if ((k->k_flags & IEEE80211_KEY_GROUP) ||
+            (k->k_cipher != IEEE80211_CIPHER_CCMP)) {
+            if ((m = ieee80211_encrypt(ic, m, k)) == NULL)
+                return ENOBUFS;
+            /* 802.11 header may have moved. */
+            wh = mtod(m, struct ieee80211_frame *);
+            totlen = mbuf_pkthdr_len(m);
+            k = NULL; /* skip hardware crypto below */
+        } else {
+            /* HW appends CCMP MIC */
+            totlen += IEEE80211_CCMP_HDRLEN;
+        }
     }
-    totlen = mbuf_pkthdr_len(m);
     
     flags = 0;
     if (!IEEE80211_IS_MULTICAST(wh->i_addr1)) {
         flags |= IWM_TX_CMD_FLG_ACK;
-//        XYLog("%s %d flags=0x%x\n", __FUNCTION__, __LINE__, htole32(flags));
     }
     
     if (ni->ni_flags & IEEE80211_NODE_HT)
@@ -904,10 +1007,8 @@ iwm_tx(struct iwm_softc *sc, mbuf_t m, struct ieee80211_node *ni, int ac)
     if (type == IEEE80211_FC0_TYPE_DATA &&
         !IEEE80211_IS_MULTICAST(wh->i_addr1) &&
         (totlen + IEEE80211_CRC_LEN > rtsthres ||
-         (ic->ic_flags & IEEE80211_F_USEPROT))) {
+         (ic->ic_flags & IEEE80211_F_USEPROT)))
         flags |= IWM_TX_CMD_FLG_PROT_REQUIRE;
-//        XYLog("%s %d flags=0x%x\n", __FUNCTION__, __LINE__, htole32(flags));
-    }
     
     tx->sta_id = IWM_STATION_ID;
     
@@ -927,7 +1028,6 @@ iwm_tx(struct iwm_softc *sc, mbuf_t m, struct ieee80211_node *ni, int ac)
         /* First segment length must be a multiple of 4. */
         flags |= IWM_TX_CMD_FLG_MH_PAD;
         pad = 4 - (hdrlen & 3);
-//        XYLog("%s %d flags=0x%x\n", __FUNCTION__, __LINE__, htole32(flags));
     } else
         pad = 0;
     
@@ -945,21 +1045,36 @@ iwm_tx(struct iwm_softc *sc, mbuf_t m, struct ieee80211_node *ni, int ac)
     /* Copy 802.11 header in TX command. */
     memcpy(((uint8_t *)tx) + sizeof(*tx), wh, hdrlen);
     
+    if  (k != NULL && k->k_cipher == IEEE80211_CIPHER_CCMP) {
+        /* Trim 802.11 header and prepend CCMP IV. */
+        mbuf_adj(m, hdrlen - IEEE80211_CCMP_HDRLEN);
+        ivp = mtod(m, u_int8_t *);
+        k->k_tsc++;    /* increment the 48-bit PN */
+        ivp[0] = k->k_tsc; /* PN0 */
+        ivp[1] = k->k_tsc >> 8; /* PN1 */
+        ivp[2] = 0;        /* Rsvd */
+        ivp[3] = k->k_id << 6 | IEEE80211_WEP_EXTIV;
+        ivp[4] = k->k_tsc >> 16; /* PN2 */
+        ivp[5] = k->k_tsc >> 24; /* PN3 */
+        ivp[6] = k->k_tsc >> 32; /* PN4 */
+        ivp[7] = k->k_tsc >> 40; /* PN5 */
+        
+        tx->sec_ctl = IWM_TX_CMD_SEC_CCM;
+        memcpy(tx->key, k->k_key, MIN(sizeof(tx->key), k->k_len));
+    } else {
+        /* Trim 802.11 header. */
+        mbuf_adj(m, hdrlen);
+        tx->sec_ctl = 0;
+    }
+    
     flags |= IWM_TX_CMD_FLG_BT_DIS | IWM_TX_CMD_FLG_SEQ_CTL;
     
-//    XYLog("%s %d flags=0x%x\n", __FUNCTION__, __LINE__, htole32(flags));
-    
-    tx->sec_ctl = 0;
-//    XYLog("%s %d tx->tx_flags=0x%x\n", __FUNCTION__, __LINE__, htole32(tx->tx_flags));
     tx->tx_flags |= htole32(flags);
-//    XYLog("%s %d tx->tx_flags=0x%x\n", __FUNCTION__, __LINE__, htole32(tx->tx_flags));
     
-    /* Trim 802.11 header. */
-    mbuf_adj(m, hdrlen);
     
-    data->map->dm_nsegs = data->map->cursor->getPhysicalSegmentsWithCoalesce(m, data->map->dm_segs, IWM_NUM_OF_TBS - 2);
-//    XYLog("map frame dm_nsegs=%d\n", data->map->dm_nsegs);
-    if (data->map->dm_nsegs == 0) {
+    nsegs = data->map->cursor->getPhysicalSegmentsWithCoalesce(m, &segs[0], IWM_NUM_OF_TBS - 2);
+    //    XYLog("map frame dm_nsegs=%d\n", data->map->dm_nsegs);
+    if (nsegs == 0) {
         XYLog("%s: can't map mbuf (error %d)\n", DEVNAME(sc), data->map->dm_nsegs);
         mbuf_freem(m);
         return ENOMEM;
@@ -970,14 +1085,13 @@ iwm_tx(struct iwm_softc *sc, mbuf_t m, struct ieee80211_node *ni, int ac)
     data->txrate = ni->ni_txrate;
     
     XYLog("sending data: 嘤嘤嘤 qid=%d idx=%d len=%d nsegs=%d txflags=0x%08x rate_n_flags=0x%08x rateidx=%u txmcs=%d ni_txrate=%d\n",
-    ring->qid, ring->cur, totlen, data->map->dm_nsegs, le32toh(tx->tx_flags),
+          ring->qid, ring->cur, totlen, nsegs, le32toh(tx->tx_flags),
           le32toh(tx->rate_n_flags), tx->initial_rate_index,
           data->txmcs,
           data->txrate);
     
     /* Fill TX descriptor. */
-    memset(desc, 0, sizeof(*desc));
-    desc->num_tbs = 2 + data->map->dm_nsegs;
+    desc->num_tbs = 2 + nsegs;
     
     desc->tbs[0].lo = htole32(data->cmd_paddr);
     desc->tbs[0].hi_n_len = htole16(iwm_get_dma_hi_addr(data->cmd_paddr) |
@@ -988,8 +1102,8 @@ iwm_tx(struct iwm_softc *sc, mbuf_t m, struct ieee80211_node *ni, int ac)
                                       + hdrlen + pad - TB0_SIZE) << 4));
     
     /* Other DMA segments are for data payload. */
-    for (i = 0; i < data->map->dm_nsegs; i++) {
-        seg = &data->map->dm_segs[i];
+    for (i = 0; i < nsegs; i++) {
+        seg = &segs[i];
         desc->tbs[i+2].lo = htole32(seg->location);
         desc->tbs[i+2].hi_n_len =
         htole16(iwm_get_dma_hi_addr(seg->location)
@@ -1454,7 +1568,7 @@ iwm_run(struct iwm_softc *sc)
     /* Configure Rx chains for MIMO. */
     if ((ic->ic_opmode == IEEE80211_M_MONITOR ||
          (in->in_ni.ni_flags & IEEE80211_NODE_HT)) &&
-        !sc->sc_nvm.sku_cap_mimo_disable) {
+        iwm_mimo_enabled(sc)) {
         err = iwm_phy_ctxt_cmd(sc, &sc->sc_phyctxt[0],
                                2, 2, IWM_FW_CTXT_ACTION_MODIFY, 0);
         if (err) {
@@ -1580,7 +1694,7 @@ iwm_run_stop(struct iwm_softc *sc)
     
     /* Reset Tx chains in case MIMO was enabled. */
     if ((in->in_ni.ni_flags & IEEE80211_NODE_HT) &&
-        !sc->sc_nvm.sku_cap_mimo_disable) {
+        iwm_mimo_enabled(sc)) {
         err = iwm_phy_ctxt_cmd(sc, &sc->sc_phyctxt[0], 1, 1,
                                IWM_FW_CTXT_ACTION_MODIFY, 0);
         if (err) {
@@ -1595,11 +1709,118 @@ iwm_run_stop(struct iwm_softc *sc)
 struct ieee80211_node *itlwm::
 iwm_node_alloc(struct ieee80211com *ic)
 {
-    void *buf = malloc(sizeof (struct iwm_node), M_DEVBUF, M_NOWAIT | M_ZERO);
-    if (buf) {
-        bzero(buf, sizeof (struct iwm_node));
+    return (struct ieee80211_node *)malloc(sizeof (struct iwm_node), M_DEVBUF, M_NOWAIT | M_ZERO);
+}
+
+int itlwm::
+iwm_set_key_v1(struct ieee80211com *ic, struct ieee80211_node *ni,
+    struct ieee80211_key *k)
+{
+   struct iwm_softc *sc = (struct iwm_softc *)ic->ic_softc;
+   struct iwm_add_sta_key_cmd_v1 cmd;
+
+   memset(&cmd, 0, sizeof(cmd));
+
+   cmd.common.key_flags = htole16(IWM_STA_KEY_FLG_CCM |
+       IWM_STA_KEY_FLG_WEP_KEY_MAP |
+       ((k->k_id << IWM_STA_KEY_FLG_KEYID_POS) &
+       IWM_STA_KEY_FLG_KEYID_MSK));
+   if (k->k_flags & IEEE80211_KEY_GROUP)
+       cmd.common.key_flags |= htole16(IWM_STA_KEY_MULTICAST);
+
+   memcpy(cmd.common.key, k->k_key, MIN(sizeof(cmd.common.key), k->k_len));
+   cmd.common.key_offset = 0;
+   cmd.common.sta_id = IWM_STATION_ID;
+
+   return iwm_send_cmd_pdu(sc, IWM_ADD_STA_KEY, IWM_CMD_ASYNC,
+       sizeof(cmd), &cmd);
+}
+
+int itlwm::
+iwm_set_key(struct ieee80211com *ic, struct ieee80211_node *ni,
+    struct ieee80211_key *k)
+{
+    struct iwm_softc *sc = (struct iwm_softc *)ic->ic_softc;
+    struct iwm_add_sta_key_cmd cmd;
+    itlwm *that = container_of(sc, itlwm, com);
+    
+    if ((k->k_flags & IEEE80211_KEY_GROUP) ||
+        k->k_cipher != IEEE80211_CIPHER_CCMP)  {
+        /* Fallback to software crypto for other ciphers. */
+        return (ieee80211_set_key(ic, ni, k));
     }
-    return (struct ieee80211_node *)buf;
+    
+    if (!isset(sc->sc_ucode_api, IWM_UCODE_TLV_API_TKIP_MIC_KEYS))
+        return that->iwm_set_key_v1(ic, ni, k);
+    
+    memset(&cmd, 0, sizeof(cmd));
+    
+    cmd.common.key_flags = htole16(IWM_STA_KEY_FLG_CCM |
+                                   IWM_STA_KEY_FLG_WEP_KEY_MAP |
+                                   ((k->k_id << IWM_STA_KEY_FLG_KEYID_POS) &
+                                    IWM_STA_KEY_FLG_KEYID_MSK));
+    if (k->k_flags & IEEE80211_KEY_GROUP)
+        cmd.common.key_flags |= htole16(IWM_STA_KEY_MULTICAST);
+    
+    memcpy(cmd.common.key, k->k_key, MIN(sizeof(cmd.common.key), k->k_len));
+    cmd.common.key_offset = 0;
+    cmd.common.sta_id = IWM_STATION_ID;
+    
+    cmd.transmit_seq_cnt = htole64(k->k_tsc);
+    
+    return that->iwm_send_cmd_pdu(sc, IWM_ADD_STA_KEY, IWM_CMD_ASYNC,
+                                  sizeof(cmd), &cmd);
+}
+
+void itlwm::
+iwm_delete_key_v1(struct ieee80211com *ic, struct ieee80211_node *ni,
+    struct ieee80211_key *k)
+{
+   struct iwm_softc *sc = (struct iwm_softc *)ic->ic_softc;
+   struct iwm_add_sta_key_cmd_v1 cmd;
+
+   memset(&cmd, 0, sizeof(cmd));
+
+   cmd.common.key_flags = htole16(IWM_STA_KEY_NOT_VALID |
+       IWM_STA_KEY_FLG_NO_ENC | IWM_STA_KEY_FLG_WEP_KEY_MAP |
+       ((k->k_id << IWM_STA_KEY_FLG_KEYID_POS) &
+       IWM_STA_KEY_FLG_KEYID_MSK));
+   memcpy(cmd.common.key, k->k_key, MIN(sizeof(cmd.common.key), k->k_len));
+   cmd.common.key_offset = 0;
+   cmd.common.sta_id = IWM_STATION_ID;
+
+   iwm_send_cmd_pdu(sc, IWM_ADD_STA_KEY, IWM_CMD_ASYNC, sizeof(cmd), &cmd);
+}
+
+void itlwm::
+iwm_delete_key(struct ieee80211com *ic, struct ieee80211_node *ni,
+    struct ieee80211_key *k)
+{
+   struct iwm_softc *sc = (struct iwm_softc *)ic->ic_softc;
+   struct iwm_add_sta_key_cmd cmd;
+    itlwm *that = container_of(sc, itlwm, com);
+
+   if ((k->k_flags & IEEE80211_KEY_GROUP) ||
+       (k->k_cipher != IEEE80211_CIPHER_CCMP)) {
+       /* Fallback to software crypto for other ciphers. */
+                ieee80211_delete_key(ic, ni, k);
+       return;
+   }
+
+   if (!isset(sc->sc_ucode_api, IWM_UCODE_TLV_API_TKIP_MIC_KEYS))
+       return that->iwm_delete_key_v1(ic, ni, k);
+
+   memset(&cmd, 0, sizeof(cmd));
+
+   cmd.common.key_flags = htole16(IWM_STA_KEY_NOT_VALID |
+       IWM_STA_KEY_FLG_NO_ENC | IWM_STA_KEY_FLG_WEP_KEY_MAP |
+       ((k->k_id << IWM_STA_KEY_FLG_KEYID_POS) &
+       IWM_STA_KEY_FLG_KEYID_MSK));
+   memcpy(cmd.common.key, k->k_key, MIN(sizeof(cmd.common.key), k->k_len));
+   cmd.common.key_offset = 0;
+   cmd.common.sta_id = IWM_STATION_ID;
+
+   that->iwm_send_cmd_pdu(sc, IWM_ADD_STA_KEY, IWM_CMD_ASYNC, sizeof(cmd), &cmd);
 }
 
 void itlwm::
@@ -2000,12 +2221,12 @@ iwm_endscan(struct iwm_softc *sc)
 {
     int error;
     
-//        static const char *ssid_name = "Redmi";
-//        static const char *ssid_pwd = "zxyssdt112233";
+        static const char *ssid_name = "Redmi";
+        static const char *ssid_pwd = "zxyssdt112233";
 //            static const char *ssid_name = "CMCC-KtG6";
 //            static const char *ssid_pwd = "9utc5c5f";
-    static const char *ssid_name = "ssdt";
-    static const char *ssid_pwd = "zxyssdt112233";
+//    static const char *ssid_name = "ssdt";
+//    static const char *ssid_pwd = "zxyssdt112233";
     
     struct ieee80211_node *ni, *nextbs;
     struct ieee80211com *ic = &sc->sc_ic;
@@ -2456,6 +2677,9 @@ iwm_init(struct ifnet *ifp)
             iwm_stop(ifp);
         return err;
     }
+    
+    if (sc->sc_nvm.sku_cap_11n_enable)
+        iwm_setup_ht_rates(sc);
     
     //        ifq_clr_oactive(&ifp->if_snd);
     ifp->if_snd->flush();
@@ -3546,7 +3770,7 @@ iwm_attach(struct iwm_softc *sc, struct pci_attach_args *pa)
             sc->nvm_type = IWM_NVM_EXT;
             break;
         case PCI_PRODUCT_INTEL_WL_9260_1:
-            sc->sc_fwname = "iwm-9260-34";
+            sc->sc_fwname = "iwlwifi-9260-th-b0-jf-b0-34.ucode";
             sc->host_interrupt_operation_mode = 0;
             sc->sc_device_family = IWM_DEVICE_FAMILY_9000;
             sc->sc_fwdmasegsz = IWM_FWDMASEGSZ_8000;
@@ -3759,6 +3983,8 @@ iwm_attach(struct iwm_softc *sc, struct pci_attach_args *pa)
     
     ic->ic_node_alloc = iwm_node_alloc;
     ic->ic_bgscan_start = iwm_bgscan;
+    ic->ic_set_key = iwm_set_key;
+    ic->ic_delete_key = iwm_delete_key;
     
     /* Override 802.11 state transition machine. */
     sc->sc_newstate = ic->ic_newstate;

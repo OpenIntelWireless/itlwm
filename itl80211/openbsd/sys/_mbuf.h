@@ -385,8 +385,6 @@ m_dup_pkthdr(mbuf_t to, mbuf_t from, int wait)
 {
     int error;
     mbuf_copy_pkthdr(to, from);
-    mbuf_pkthdr_setlen(to, mbuf_pkthdr_len(from));
-    mbuf_setlen(to, mbuf_pkthdr_len(from));
     return (0);
     
 //    int error;

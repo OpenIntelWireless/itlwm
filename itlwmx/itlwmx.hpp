@@ -163,6 +163,7 @@ public:
     void    iwx_init_channel_map(struct iwx_softc *, const uint16_t * const,
             const uint8_t *nvm_channels, int nchan);
     void    iwx_setup_ht_rates(struct iwx_softc *);
+    int    iwx_mimo_enabled(struct iwx_softc *);
     static void    iwx_htprot_task(void *);
     static void    iwx_update_htprot(struct ieee80211com *, struct ieee80211_node *);
     static int    iwx_ampdu_rx_start(struct ieee80211com *, struct ieee80211_node *,
@@ -214,10 +215,8 @@ public:
     void    iwx_rx_bmiss(struct iwx_softc *, struct iwx_rx_packet *,
             struct iwx_rx_data *);
     int    iwx_binding_cmd(struct iwx_softc *, struct iwx_node *, uint32_t);
-    void    iwx_phy_ctxt_cmd_hdr(struct iwx_softc *, struct iwx_phy_ctxt *,
-            struct iwx_phy_context_cmd *, uint32_t, uint32_t);
-    void    iwx_phy_ctxt_cmd_data(struct iwx_softc *, struct iwx_phy_context_cmd *,
-            struct ieee80211_channel *, uint8_t, uint8_t);
+    int    iwx_phy_ctxt_cmd_uhb(struct iwx_softc *, struct iwx_phy_ctxt *, uint8_t,
+                                uint8_t, uint32_t, uint32_t);
     int    iwx_phy_ctxt_cmd(struct iwx_softc *, struct iwx_phy_ctxt *, uint8_t,
             uint8_t, uint32_t, uint32_t);
     int    iwx_send_cmd(struct iwx_softc *, struct iwx_host_cmd *);

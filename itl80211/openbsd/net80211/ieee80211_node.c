@@ -1618,6 +1618,10 @@ ieee80211_node_cleanup(struct ieee80211com *ic, struct ieee80211_node *ni)
     IOFree(ni->ni_unref_arg, ni->ni_unref_arg_size);
     ni->ni_unref_arg = NULL;
     ni->ni_unref_arg_size = 0;
+    
+#ifndef IEEE80211_STA_ONLY
+    mq_purge(&ni->ni_savedq);
+#endif
 }
 
 void
@@ -2098,7 +2102,7 @@ ieee80211_free_allnodes(struct ieee80211com *ic, int clear_ic_bss)
     splx(s);
     
     if (clear_ic_bss && ic->ic_bss != NULL)
-        ieee80211_node_cleanup(ic, ic->ic_bss);	/* for station mode */
+        ieee80211_node_cleanup(ic, ic->ic_bss);
 }
 
 void

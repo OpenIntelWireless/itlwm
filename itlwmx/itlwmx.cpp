@@ -415,7 +415,7 @@ IOReturn itlwmx::tsleepHandler(OSObject* owner, void* arg0, void* arg1, void* ar
             return kIOReturnTimeout;
     } else {
         AbsoluteTime deadline;
-        clock_interval_to_deadline((*(int*)arg1), kMillisecondScale, reinterpret_cast<uint64_t*> (&deadline));
+        clock_interval_to_deadline((*(int*)arg1), kNanosecondScale, reinterpret_cast<uint64_t*> (&deadline));
         if (dev->fCommandGate->commandSleep(arg0, deadline, THREAD_INTERRUPTIBLE) == THREAD_AWAKENED)
             return kIOReturnSuccess;
         else
@@ -1715,7 +1715,6 @@ iwx_dma_contig_free(struct iwx_dma_info *dma)
     dma->buffer->release();
     dma->buffer = NULL;
     dma->vaddr = NULL;
-    dma->paddr = NULL;
     
     //    if (dma == NULL)
     //        return;
@@ -2981,6 +2980,15 @@ iwx_init_channel_map(struct iwx_softc *sc, const uint16_t * const nvm_ch_flags,
     }
 }
 
+int itlwmx::
+iwx_mimo_enabled(struct iwx_softc *sc)
+{
+   struct ieee80211com *ic = &sc->sc_ic;
+
+   return !sc->sc_nvm.sku_cap_mimo_disable &&
+       (ic->ic_userflags & IEEE80211_F_NOMIMO) == 0;
+}
+
 void itlwmx::
 iwx_setup_ht_rates(struct iwx_softc *sc)
 {
@@ -2990,9 +2998,10 @@ iwx_setup_ht_rates(struct iwx_softc *sc)
     /* TX is supported with the same MCS as RX. */
     ic->ic_tx_mcs_set = IEEE80211_TX_MCS_SET_DEFINED;
     
+    memset(ic->ic_sup_mcs, 0, sizeof(ic->ic_sup_mcs));
     ic->ic_sup_mcs[0] = 0xff;        /* MCS 0-7 */
     
-    if (sc->sc_nvm.sku_cap_mimo_disable)
+    if (!iwx_mimo_enabled(sc))
         return;
     
     rx_ant = iwx_fw_valid_rx_ant(sc);
@@ -4067,68 +4076,48 @@ iwx_binding_cmd(struct iwx_softc *sc, struct iwx_node *in, uint32_t action)
     return err;
 }
 
-void itlwmx::
-iwx_phy_ctxt_cmd_hdr(struct iwx_softc *sc, struct iwx_phy_ctxt *ctxt,
-                     struct iwx_phy_context_cmd *cmd, uint32_t action, uint32_t apply_time)
-{
-    memset(cmd, 0, sizeof(struct iwx_phy_context_cmd));
-    XYLog("%s: id=%d, colour=%d, action=%d, apply_time=%d\n",
-          __func__,
-          ctxt->id,
-          ctxt->color,
-          action,
-          apply_time);
-    cmd->id_and_color = htole32(IWX_FW_CMD_ID_AND_COLOR(ctxt->id,
-                                                        ctxt->color));
-    cmd->action = htole32(action);
-    cmd->apply_time = htole32(apply_time);
-}
-
-void itlwmx::
-iwx_phy_ctxt_cmd_data(struct iwx_softc *sc, struct iwx_phy_context_cmd *cmd,
-                      struct ieee80211_channel *chan, uint8_t chains_static,
-                      uint8_t chains_dynamic)
+int itlwmx::
+iwx_phy_ctxt_cmd_uhb(struct iwx_softc *sc, struct iwx_phy_ctxt *ctxt,
+    uint8_t chains_static, uint8_t chains_dynamic, uint32_t action,
+    uint32_t apply_time)
 {
     struct ieee80211com *ic = &sc->sc_ic;
+    struct iwx_phy_context_cmd_uhb cmd;
     uint8_t active_cnt, idle_cnt;
+    struct ieee80211_channel *chan = ctxt->channel;
+    memset(&cmd, 0, sizeof(cmd));
+    cmd.id_and_color = htole32(IWX_FW_CMD_ID_AND_COLOR(ctxt->id,
+                                                       ctxt->color));
+    cmd.action = htole32(action);
+    cmd.apply_time = htole32(apply_time);
+    
+    cmd.ci.band = IEEE80211_IS_CHAN_2GHZ(chan) ?
+    IWX_PHY_BAND_24 : IWX_PHY_BAND_5;
+    cmd.ci.channel = htole32(ieee80211_chan2ieee(ic, chan));
+    cmd.ci.width = IWX_PHY_VHT_CHANNEL_MODE20;
+    cmd.ci.ctrl_pos = IWX_PHY_VHT_CTRL_POS_1_BELOW;
     
     XYLog("%s: 2ghz=%d, channel=%d, chains static=0x%x, dynamic=0x%x, "
-    "rx_ant=0x%x, tx_ant=0x%x, &ic->ic_channels[1]=0x%X\n",
-    __FUNCTION__,
-    !! IEEE80211_IS_CHAN_2GHZ(chan),
-    ieee80211_chan2ieee(ic, chan),
-    chains_static,
-    chains_dynamic,
-    iwx_fw_valid_rx_ant(sc),
-    iwx_fw_valid_tx_ant(sc),
+          "rx_ant=0x%x, tx_ant=0x%x, &ic->ic_channels[1]=0x%X\n",
+          __FUNCTION__,
+          !! IEEE80211_IS_CHAN_2GHZ(chan),
+          ieee80211_chan2ieee(ic, chan),
+          chains_static,
+          chains_dynamic,
+          iwx_fw_valid_rx_ant(sc),
+          iwx_fw_valid_tx_ant(sc),
           (uint64_t)&ic->ic_channels[1]);
     
-    if (isset(sc->sc_enabled_capa, IWX_UCODE_TLV_CAPA_ULTRA_HB_CHANNELS)) {
-        cmd->ci.band = IEEE80211_IS_CHAN_2GHZ(chan) ?
-        IWX_PHY_BAND_24 : IWX_PHY_BAND_5;
-        cmd->ci.channel = htole32(ieee80211_chan2ieee(ic, chan));
-        cmd->ci.width = IWX_PHY_VHT_CHANNEL_MODE20;
-        cmd->ci.ctrl_pos = IWX_PHY_VHT_CTRL_POS_1_BELOW;
-    } else {
-        struct iwx_fw_channel_info_v1 *ci_v1;
-        ci_v1 = (struct iwx_fw_channel_info_v1 *)&cmd->ci;
-        ci_v1->band = IEEE80211_IS_CHAN_2GHZ(chan) ?
-        IWX_PHY_BAND_24 : IWX_PHY_BAND_5;
-        ci_v1->channel = ieee80211_chan2ieee(ic, chan);
-        ci_v1->width = IWX_PHY_VHT_CHANNEL_MODE20;
-        ci_v1->ctrl_pos = IWX_PHY_VHT_CTRL_POS_1_BELOW;
-    }
-    /* Set rx the chains */
     idle_cnt = chains_static;
     active_cnt = chains_dynamic;
     
-    cmd->rxchain_info = htole32(iwx_fw_valid_rx_ant(sc) <<
-                                IWX_PHY_RX_CHAIN_VALID_POS);
-    cmd->rxchain_info |= htole32(idle_cnt << IWX_PHY_RX_CHAIN_CNT_POS);
-    cmd->rxchain_info |= htole32(active_cnt <<
-                                 IWX_PHY_RX_CHAIN_MIMO_CNT_POS);
-    
-    cmd->txchain_info = htole32(iwx_fw_valid_tx_ant(sc));
+    cmd.rxchain_info = htole32(iwx_fw_valid_rx_ant(sc) <<
+                               IWX_PHY_RX_CHAIN_VALID_POS);
+    cmd.rxchain_info |= htole32(idle_cnt << IWX_PHY_RX_CHAIN_CNT_POS);
+    cmd.rxchain_info |= htole32(active_cnt <<
+                                IWX_PHY_RX_CHAIN_MIMO_CNT_POS);
+    cmd.txchain_info = htole32(iwx_fw_valid_tx_ant(sc));
+    return iwx_send_cmd_pdu(sc, IWX_PHY_CONTEXT_CMD, 0, sizeof(cmd), &cmd);
 }
 
 int itlwmx::
@@ -4137,22 +4126,44 @@ iwx_phy_ctxt_cmd(struct iwx_softc *sc, struct iwx_phy_ctxt *ctxt,
                  uint32_t apply_time)
 {
     XYLog("%s\n", __FUNCTION__);
+    struct ieee80211com *ic = &sc->sc_ic;
     struct iwx_phy_context_cmd cmd;
-    size_t len;
-    
-    iwx_phy_ctxt_cmd_hdr(sc, ctxt, &cmd, action, apply_time);
+    uint8_t active_cnt, idle_cnt;
+    struct ieee80211_channel *chan = ctxt->channel;
     
     /*
-     * Intel resized fw_channel_info struct and neglected to resize the
-     * phy_context_cmd struct which contains it; so magic happens with
-     * command length adjustments at run-time... :(
+     * Intel increased the size of the fw_channel_info struct and neglected
+     * to bump the phy_context_cmd struct, which contains an fw_channel_info
+     * member in the middle.
+     * To keep things simple we use a separate function to handle the larger
+     * variant of the phy context command.
      */
-    iwx_phy_ctxt_cmd_data(sc, &cmd, ctxt->channel,
-                          chains_static, chains_dynamic);
-    len = sizeof(struct iwx_phy_context_cmd);
-    if (!isset(sc->sc_enabled_capa, IWX_UCODE_TLV_CAPA_ULTRA_HB_CHANNELS))
-        len -= (sizeof(struct iwx_fw_channel_info) - sizeof(struct iwx_fw_channel_info_v1));
-    return iwx_send_cmd_pdu(sc, IWX_PHY_CONTEXT_CMD, 0, len, &cmd);
+    if (isset(sc->sc_enabled_capa, IWX_UCODE_TLV_CAPA_ULTRA_HB_CHANNELS))
+        return iwx_phy_ctxt_cmd_uhb(sc, ctxt, chains_static,
+                                    chains_dynamic, action, apply_time);
+    
+    memset(&cmd, 0, sizeof(cmd));
+    cmd.id_and_color = htole32(IWX_FW_CMD_ID_AND_COLOR(ctxt->id,
+                                                       ctxt->color));
+    cmd.action = htole32(action);
+    cmd.apply_time = htole32(apply_time);
+    
+    cmd.ci.band = IEEE80211_IS_CHAN_2GHZ(chan) ?
+    IWX_PHY_BAND_24 : IWX_PHY_BAND_5;
+    cmd.ci.channel = ieee80211_chan2ieee(ic, chan);
+    cmd.ci.width = IWX_PHY_VHT_CHANNEL_MODE20;
+    cmd.ci.ctrl_pos = IWX_PHY_VHT_CTRL_POS_1_BELOW;
+    
+    idle_cnt = chains_static;
+    active_cnt = chains_dynamic;
+    cmd.rxchain_info = htole32(iwx_fw_valid_rx_ant(sc) <<
+                               IWX_PHY_RX_CHAIN_VALID_POS);
+    cmd.rxchain_info |= htole32(idle_cnt << IWX_PHY_RX_CHAIN_CNT_POS);
+    cmd.rxchain_info |= htole32(active_cnt <<
+                                IWX_PHY_RX_CHAIN_MIMO_CNT_POS);
+    cmd.txchain_info = htole32(iwx_fw_valid_tx_ant(sc));
+    
+    return iwx_send_cmd_pdu(sc, IWX_PHY_CONTEXT_CMD, 0, sizeof(cmd), &cmd);
 }
 
 int itlwmx::
@@ -6108,7 +6119,7 @@ iwx_run(struct iwx_softc *sc)
     /* Configure Rx chains for MIMO. */
     if ((ic->ic_opmode == IEEE80211_M_MONITOR ||
          (in->in_ni.ni_flags & IEEE80211_NODE_HT)) &&
-        !sc->sc_nvm.sku_cap_mimo_disable) {
+        iwx_mimo_enabled(sc)) {
         err = iwx_phy_ctxt_cmd(sc, &sc->sc_phyctxt[0],
                                2, 2, IWX_FW_CTXT_ACTION_MODIFY, 0);
         if (err) {
@@ -6229,7 +6240,7 @@ iwx_run_stop(struct iwx_softc *sc)
     
     /* Reset Tx chains in case MIMO was enabled. */
     if ((in->in_ni.ni_flags & IEEE80211_NODE_HT) &&
-        !sc->sc_nvm.sku_cap_mimo_disable) {
+        iwx_mimo_enabled(sc)) {
         err = iwx_phy_ctxt_cmd(sc, &sc->sc_phyctxt[0], 1, 1,
                                IWX_FW_CTXT_ACTION_MODIFY, 0);
         if (err) {
@@ -6803,6 +6814,9 @@ iwx_init(struct ifnet *ifp)
             iwx_stop(ifp);
         return err;
     }
+    
+    if (sc->sc_nvm.sku_cap_11n_enable)
+        iwx_setup_ht_rates(sc);
     
     //    ifq_clr_oactive(&ifp->if_snd);
     ifp->if_snd->flush();

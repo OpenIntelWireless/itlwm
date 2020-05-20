@@ -71,7 +71,7 @@
 #include <net80211/ieee80211_priv.h>
 
 #ifdef IEEE80211_DEBUG
-int	ieee80211_debug = 0;
+int	ieee80211_debug = 1;
 #endif
 
 int TX_TYPE_MGMT = 1;

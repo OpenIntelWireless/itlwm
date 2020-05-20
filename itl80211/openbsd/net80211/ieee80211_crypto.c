@@ -224,6 +224,50 @@ ieee80211_get_txkey(struct ieee80211com *ic, const struct ieee80211_frame *wh,
     return &ic->ic_nw_keys[kid];
 }
 
+struct ieee80211_key *
+ieee80211_get_rxkey(struct ieee80211com *ic, mbuf_t m,
+    struct ieee80211_node *ni)
+{
+   struct ieee80211_key *k = NULL;
+   struct ieee80211_frame *wh;
+   u_int16_t kid;
+   u_int8_t *ivp, *mmie;
+   int hdrlen;
+
+   wh = mtod(m, struct ieee80211_frame *);
+   if ((ic->ic_flags & IEEE80211_F_RSNON) &&
+       !IEEE80211_IS_MULTICAST(wh->i_addr1) &&
+       ni->ni_rsncipher != IEEE80211_CIPHER_USEGROUP) {
+       k = &ni->ni_pairwise_key;
+   } else if (!IEEE80211_IS_MULTICAST(wh->i_addr1) ||
+       (wh->i_fc[0] & IEEE80211_FC0_TYPE_MASK) !=
+       IEEE80211_FC0_TYPE_MGT) {
+       /* retrieve group data key id from IV field */
+       hdrlen = ieee80211_get_hdrlen(wh);
+       /* check that IV field is present */
+       if (mbuf_len(m) < hdrlen + 4)
+           return NULL;
+       ivp = (u_int8_t *)wh + hdrlen;
+       kid = ivp[3] >> 6;
+       k = &ic->ic_nw_keys[kid];
+   } else {
+       /* retrieve integrity group key id from MMIE */
+       if (mbuf_len(m) < sizeof(*wh) + IEEE80211_MMIE_LEN)
+           return NULL;
+       /* it is assumed management frames are contiguous */
+       mmie = (u_int8_t *)wh + mbuf_len(m) - IEEE80211_MMIE_LEN;
+       /* check that MMIE is valid */
+       if (mmie[0] != IEEE80211_ELEMID_MMIE || mmie[1] != 16)
+           return NULL;
+       kid = LE_READ_2(&mmie[2]);
+       if (kid != 4 && kid != 5)
+           return NULL;
+       k = &ic->ic_nw_keys[kid];
+   }
+
+   return k;
+}
+
 mbuf_t
 ieee80211_encrypt(struct ieee80211com *ic, mbuf_t m0,
     struct ieee80211_key *k)
@@ -256,54 +300,11 @@ mbuf_t
 ieee80211_decrypt(struct ieee80211com *ic, mbuf_t m0,
     struct ieee80211_node *ni)
 {
-	struct ieee80211_frame *wh;
 	struct ieee80211_key *k;
-	u_int8_t *ivp, *mmie;
-	u_int16_t kid;
-	int hdrlen;
 
 	/* find key for decryption */
-    wh = mtod(m0, struct ieee80211_frame *);
-    if ((ic->ic_flags & IEEE80211_F_RSNON) &&
-        !IEEE80211_IS_MULTICAST(wh->i_addr1) &&
-        ni->ni_rsncipher != IEEE80211_CIPHER_USEGROUP) {
-        k = &ni->ni_pairwise_key;
-
-    } else if (!IEEE80211_IS_MULTICAST(wh->i_addr1) ||
-        (wh->i_fc[0] & IEEE80211_FC0_TYPE_MASK) !=
-        IEEE80211_FC0_TYPE_MGT) {
-        /* retrieve group data key id from IV field */
-        hdrlen = ieee80211_get_hdrlen(wh);
-        /* check that IV field is present */
-        if (mbuf_len(m0) < hdrlen + 4) {
-            mbuf_freem(m0);
-            return NULL;
-        }
-        ivp = (u_int8_t *)wh + hdrlen;
-        kid = ivp[3] >> 6;
-        k = &ic->ic_nw_keys[kid];
-    } else {
-        /* retrieve integrity group key id from MMIE */
-        if (mbuf_len(m0) < sizeof(*wh) + IEEE80211_MMIE_LEN) {
-            mbuf_freem(m0);
-            return NULL;
-        }
-        /* it is assumed management frames are contiguous */
-        mmie = (u_int8_t *)wh + mbuf_len(m0) - IEEE80211_MMIE_LEN;
-        /* check that MMIE is valid */
-        if (mmie[0] != IEEE80211_ELEMID_MMIE || mmie[1] != 16) {
-            mbuf_freem(m0);
-            return NULL;
-        }
-        kid = LE_READ_2(&mmie[2]);
-        if (kid != 4 && kid != 5) {
-            mbuf_freem(m0);
-            return NULL;
-        }
-        k = &ic->ic_nw_keys[kid];
-    }
-
-    if ((k->k_flags & IEEE80211_KEY_SWCRYPTO) == 0) {
+    k = ieee80211_get_rxkey(ic, m0, ni);
+    if (k == NULL || (k->k_flags & IEEE80211_KEY_SWCRYPTO) == 0) {
         mbuf_free(m0);
         return NULL;
     }

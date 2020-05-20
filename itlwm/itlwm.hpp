@@ -99,7 +99,7 @@ public:
     void unregistPM();
     
     bool createMediumTables(const IONetworkMedium **primary);
-    IOReturn getPacketFilters(const OSSymbol *group, UInt32 *filters) const override;
+//    IOReturn getPacketFilters(const OSSymbol *group, UInt32 *filters) const override;
     IOReturn selectMedium(const IONetworkMedium *medium) override;
     UInt32 getFeatures() const override;
     
@@ -200,6 +200,7 @@ public:
             uint16_t *, size_t);
     void    iwm_init_channel_map(struct iwm_softc *, const uint16_t * const,
             const uint8_t *nvm_channels, size_t nchan);
+    int    iwm_mimo_enabled(struct iwm_softc *);
     void    iwm_setup_ht_rates(struct iwm_softc *);
     static void    iwm_htprot_task(void *);
     static void    iwm_update_htprot(struct ieee80211com *, struct ieee80211_node *);
@@ -248,8 +249,10 @@ public:
     void    iwm_rx_rx_phy_cmd(struct iwm_softc *, struct iwm_rx_packet *,
             struct iwm_rx_data *);
     int    iwm_get_noise(const struct iwm_statistics_rx_non_phy *);
-    void    iwm_rx_frame(struct iwm_softc *, mbuf_t, int, int, int, uint32_t,
-    struct ieee80211_rxinfo *, struct mbuf_list *);
+    int    iwm_ccmp_decap(struct iwm_softc *, mbuf_t,
+           struct ieee80211_node *);
+    void    iwm_rx_frame(struct iwm_softc *, mbuf_t, int, uint32_t, int, int,
+           uint32_t, struct ieee80211_rxinfo *, struct mbuf_list *);
     void    iwm_rx_tx_cmd_single(struct iwm_softc *, struct iwm_rx_packet *,
             struct iwm_node *, int, int);
     void    iwm_rx_tx_cmd(struct iwm_softc *, struct iwm_rx_packet *,
@@ -336,6 +339,14 @@ public:
     int    iwm_run(struct iwm_softc *);
     int    iwm_run_stop(struct iwm_softc *);
     static struct ieee80211_node *iwm_node_alloc(struct ieee80211com *);
+    int    iwm_set_key_v1(struct ieee80211com *, struct ieee80211_node *,
+           struct ieee80211_key *);
+    static int    iwm_set_key(struct ieee80211com *, struct ieee80211_node *,
+           struct ieee80211_key *);
+    void    iwm_delete_key_v1(struct ieee80211com *,
+           struct ieee80211_node *, struct ieee80211_key *);
+    static void    iwm_delete_key(struct ieee80211com *,
+           struct ieee80211_node *, struct ieee80211_key *);
     static void    iwm_calib_timeout(void *);
     void    iwm_setrates(struct iwm_node *, int);
     int    iwm_media_change(struct ifnet *);

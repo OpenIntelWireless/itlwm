@@ -420,19 +420,19 @@ IOReturn itlwm::setMulticastList(IOEthernetAddress* addr, UInt32 len) {
     return kIOReturnSuccess;
 }
 
-IOReturn itlwm::getPacketFilters(const OSSymbol *group, UInt32 *filters) const {
-    IOReturn    rtn = kIOReturnSuccess;
-    if (group == gIOEthernetWakeOnLANFilterGroup && magicPacketSupported) {
-        *filters = kIOEthernetWakeOnMagicPacket;
-    } else if (group == gIONetworkFilterGroup) {
-        *filters = kIOPacketFilterUnicast | kIOPacketFilterBroadcast
-        | kIOPacketFilterPromiscuous | kIOPacketFilterMulticast
-        | kIOPacketFilterMulticastAll;
-    } else {
-        rtn = IOEthernetController::getPacketFilters(group, filters);
-    }
-    return rtn;
-}
+//IOReturn itlwm::getPacketFilters(const OSSymbol *group, UInt32 *filters) const {
+//    IOReturn    rtn = kIOReturnSuccess;
+//    if (group == gIOEthernetWakeOnLANFilterGroup && magicPacketSupported) {
+//        *filters = kIOEthernetWakeOnMagicPacket;
+//    } else if (group == gIONetworkFilterGroup) {
+//        *filters = kIOPacketFilterUnicast | kIOPacketFilterBroadcast
+//        | kIOPacketFilterPromiscuous | kIOPacketFilterMulticast
+//        | kIOPacketFilterMulticastAll;
+//    } else {
+//        rtn = IOEthernetController::getPacketFilters(group, filters);
+//    }
+//    return rtn;
+//}
 
 void itlwm::wakeupOn(void *ident)
 {

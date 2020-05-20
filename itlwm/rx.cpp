@@ -404,16 +404,16 @@ iwm_rx_mpdu(struct iwm_softc *sc, mbuf_t m, void *pktdata,
     device_timestamp = le32toh(phy_info->system_timestamp);
     phy_flags = letoh16(phy_info->phy_flags);
     rate_n_flags = le32toh(phy_info->rate_n_flags);
-    
+
     rssi = iwm_get_signal_strength(sc, phy_info);
     rssi = (0 - IWM_MIN_DBM) + rssi;    /* normalize */
     rssi = MIN(rssi, ic->ic_max_rssi);    /* clip to max. 100% */
-    
+
     memset(&rxi, 0, sizeof(rxi));
     rxi.rxi_rssi = rssi;
     rxi.rxi_tstamp = device_timestamp;
     
-    iwm_rx_frame(sc, m, chanidx,
+    iwm_rx_frame(sc, m, chanidx, rx_pkt_status,
                  (phy_flags & IWM_PHY_INFO_FLAG_SHPREAMBLE),
                  rate_n_flags, device_timestamp, &rxi, ml);
 }
@@ -431,7 +431,7 @@ iwm_rx_mpdu_mq(struct iwm_softc *sc, mbuf_t m, void *pktdata,
     uint16_t phy_info;
     
     desc = (struct iwm_rx_mpdu_desc *)pktdata;
-    
+
     if (!(desc->status & htole16(IWM_RX_MPDU_RES_STATUS_CRC_OK)) ||
         !(desc->status & htole16(IWM_RX_MPDU_RES_STATUS_OVERRUN_OK))) {
         mbuf_freem(m);
@@ -483,6 +483,14 @@ iwm_rx_mpdu_mq(struct iwm_softc *sc, mbuf_t m, void *pktdata,
             }
         } else
             hdrlen = ieee80211_get_hdrlen(wh);
+        
+        if ((le16toh(desc->status) &
+             IWM_RX_MPDU_RES_STATUS_SEC_ENC_MSK) ==
+             IWM_RX_MPDU_RES_STATUS_SEC_CCM_ENC) {
+             /* Padding is inserted after the IV. */
+             hdrlen += IEEE80211_CCMP_HDRLEN;
+         }
+        
         memmove((uint8_t*)mbuf_data(m) + 2, mbuf_data(m), hdrlen);
         mbuf_adj(m, 2);
     }
@@ -491,18 +499,18 @@ iwm_rx_mpdu_mq(struct iwm_softc *sc, mbuf_t m, void *pktdata,
     rate_n_flags = le32toh(desc->v1.rate_n_flags);
     chanidx = desc->v1.channel;
     device_timestamp = desc->v1.gp2_on_air_rise;
-    
+
     rssi = iwm_rxmq_get_signal_strength(sc, desc);
     rssi = (0 - IWM_MIN_DBM) + rssi;    /* normalize */
     rssi = MIN(rssi, ic->ic_max_rssi);    /* clip to max. 100% */
-    
+
     memset(&rxi, 0, sizeof(rxi));
     rxi.rxi_rssi = rssi;
     rxi.rxi_tstamp = le64toh(desc->v1.tsf_on_air_rise);
-    
-    iwm_rx_frame(sc, m, chanidx,
-                 (phy_info & IWM_RX_MPDU_PHY_SHORT_PREAMBLE),
-                 rate_n_flags, device_timestamp, &rxi, ml);
+
+    iwm_rx_frame(sc, m, chanidx, le16toh(desc->status),
+        (phy_info & IWM_RX_MPDU_PHY_SHORT_PREAMBLE),
+        rate_n_flags, device_timestamp, &rxi, ml);
 }
 
 int itlwm::
@@ -740,6 +748,7 @@ iwm_rx_pkt(struct iwm_softc *sc, struct iwm_rx_data *data, struct mbuf_list *ml)
                              IWM_DTS_MEASUREMENT_NOTIF_WIDE):
                 break;
                 
+            case IWM_ADD_STA_KEY:
             case IWM_PHY_CONFIGURATION_CMD:
             case IWM_TX_ANT_CONFIGURATION_CMD:
             case IWM_ADD_STA:

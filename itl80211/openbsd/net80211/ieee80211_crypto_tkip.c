@@ -341,6 +341,42 @@ ieee80211_tkip_encrypt(struct ieee80211com *ic, mbuf_t m0,
 	return NULL;
 }
 
+int
+ieee80211_tkip_get_tsc(uint64_t *tsc, uint64_t **prsc, mbuf_t m,
+    struct ieee80211_key *k)
+{
+   struct ieee80211_frame *wh;
+   int hdrlen;
+   u_int8_t tid;
+   const u_int8_t *ivp;
+
+   wh = mtod(m, struct ieee80211_frame *);
+   hdrlen = ieee80211_get_hdrlen(wh);
+
+   if (mbuf_pkthdr_len(m) < hdrlen + IEEE80211_TKIP_HDRLEN)
+       return EINVAL;
+
+   ivp = (u_int8_t *)wh + hdrlen;
+   /* check that ExtIV bit is set */
+   if (!(ivp[3] & IEEE80211_WEP_EXTIV))
+       return EINVAL;
+
+   /* Retrieve last seen packet number for this frame priority. */
+   tid = ieee80211_has_qos(wh) ?
+       ieee80211_get_qos(wh) & IEEE80211_QOS_TID : 0;
+   *prsc = &k->k_rsc[tid];
+
+   /* extract the 48-bit TSC from the TKIP header */
+   *tsc = (u_int64_t)ivp[2]      |
+         (u_int64_t)ivp[0] <<  8 |
+         (u_int64_t)ivp[4] << 16 |
+         (u_int64_t)ivp[5] << 24 |
+         (u_int64_t)ivp[6] << 32 |
+         (u_int64_t)ivp[7] << 40;
+
+   return 0;
+}
+
 mbuf_t
 ieee80211_tkip_decrypt(struct ieee80211com *ic, mbuf_t m0,
     struct ieee80211_key *k)
@@ -352,8 +388,7 @@ ieee80211_tkip_decrypt(struct ieee80211com *ic, mbuf_t m0,
 	u_int8_t mic[IEEE80211_TKIP_MICLEN];
 	u_int64_t tsc, *prsc;
 	u_int32_t crc, crc0;
-	u_int8_t *ivp, *mic0;
-	u_int8_t tid;
+	u_int8_t *mic0;
 	mbuf_t n0, m, n;
 	int hdrlen, left, moff, noff, len;
     mbuf_t temp;
@@ -368,25 +403,16 @@ ieee80211_tkip_decrypt(struct ieee80211com *ic, mbuf_t m0,
 		return NULL;
 	}
 
-	ivp = (u_int8_t *)wh + hdrlen;
-	/* check that ExtIV bit is set */
-	if (!(ivp[3] & IEEE80211_WEP_EXTIV)) {
-		mbuf_freem(m0);
-		return NULL;
-	}
+    /*
+     * Get the frame's Tansmit Sequence Counter (TSC), and a pointer to
+     * our last-seen Receive Sequence Counter (RSC) with which we can
+     * detect replays.
+     */
+    if (ieee80211_tkip_get_tsc(&tsc, &prsc, m0, k) != 0) {
+        mbuf_freem(m0);
+        return NULL;
+    }
 
-	/* retrieve last seen packet number for this frame priority */
-	tid = ieee80211_has_qos(wh) ?
-	    ieee80211_get_qos(wh) & IEEE80211_QOS_TID : 0;
-	prsc = &k->k_rsc[tid];
-
-	/* extract the 48-bit TSC from the TKIP header */
-	tsc = (u_int64_t)ivp[2]       |
-	      (u_int64_t)ivp[0] <<  8 |
-	      (u_int64_t)ivp[4] << 16 |
-	      (u_int64_t)ivp[5] << 24 |
-	      (u_int64_t)ivp[6] << 32 |
-	      (u_int64_t)ivp[7] << 40;
 	if (tsc <= *prsc) {
 		/* replayed frame, discard */
 		ic->ic_stats.is_tkip_replays++;

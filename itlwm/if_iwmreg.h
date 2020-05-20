@@ -5513,7 +5513,7 @@ struct iwm_scan_channel_cfg_umac {
     uint8_t channel_num;
     uint8_t iter_count;
     uint16_t iter_interval;
-} __packed; /* SCAN_CHANNEL_CFG_S_VER2 */
+} __packed; /* SCAN_CHANNEL_CFG_S_VER1 */
 
 /**
  * struct iwm_scan_umac_schedule
@@ -5882,7 +5882,7 @@ struct iwm_umac_scan_iter_complete_notif {
  * @IWM_STA_KEY_FLG_KEYID_MSK: the index of the key
  * @IWM_STA_KEY_NOT_VALID: key is invalid
  * @IWM_STA_KEY_FLG_WEP_13BYTES: set for 13 bytes WEP key
- * @IWM_STA_KEY_MULTICAST: set for multical key
+ * @IWM_STA_KEY_MULTICAST: set for multicast key
  * @IWM_STA_KEY_MFP: key is used for Management Frame Protection
  */
 #define IWM_STA_KEY_FLG_NO_ENC        (0 << 0)
@@ -6135,28 +6135,49 @@ struct iwm_add_sta_cmd {
 #define IWM_STA_AUX_ACTIVITY    4
 
 /**
- * struct iwm_add_sta_key_cmd - add/modify sta key
- * ( IWM_REPLY_ADD_STA_KEY = 0x17 )
+ * struct iwm_add_sta_key_common - add/modify sta key common part
+ * ( REPLY_ADD_STA_KEY = 0x17 )
  * @sta_id: index of station in uCode's station table
  * @key_offset: key offset in key storage
- * @key_flags: type %iwm_sta_key_flag
+ * @key_flags: IWM_STA_KEY_FLG_*
  * @key: key material data
- * @key2: key material data
  * @rx_secur_seq_cnt: RX security sequence counter for the key
- * @tkip_rx_tsc_byte2: TSC[2] for key mix ph1 detection
- * @tkip_rx_ttak: 10-byte unicast TKIP TTAK for Rx
  */
-struct iwm_add_sta_key_cmd {
+struct iwm_add_sta_key_common {
     uint8_t sta_id;
     uint8_t key_offset;
     uint16_t key_flags;
-    uint8_t key[16];
-    uint8_t key2[16];
+    uint8_t key[32];
     uint8_t rx_secur_seq_cnt[16];
+} __packed;
+
+/**
+ * struct iwm_add_sta_key_cmd_v1 - add/modify sta key
+ * @common: see &struct iwm_add_sta_key_common
+ * @tkip_rx_tsc_byte2: TSC[2] for key mix ph1 detection
+ * @reserved: reserved
+ * @tkip_rx_ttak: 10-byte unicast TKIP TTAK for Rx
+ */
+struct iwm_add_sta_key_cmd_v1 {
+    struct iwm_add_sta_key_common common;
     uint8_t tkip_rx_tsc_byte2;
     uint8_t reserved;
     uint16_t tkip_rx_ttak[5];
-} __packed; /* IWM_ADD_MODIFY_STA_KEY_API_S_VER_1 */
+} __packed; /* ADD_MODIFY_STA_KEY_API_S_VER_1 */
+
+/**
+ * struct iwm_add_sta_key_cmd - add/modify sta key
+ * @common: see &struct iwm_add_sta_key_common
+ * @rx_mic_key: TKIP RX unicast or multicast key
+ * @tx_mic_key: TKIP TX key
+ * @transmit_seq_cnt: TSC, transmit packet number
+ */
+struct iwm_add_sta_key_cmd {
+    struct iwm_add_sta_key_common common;
+    uint64_t rx_mic_key;
+    uint64_t tx_mic_key;
+    uint64_t transmit_seq_cnt;
+} __packed; /* ADD_MODIFY_STA_KEY_API_S_VER_2 */
 
 /**
  * status in the response to ADD_STA command
@@ -6502,6 +6523,7 @@ struct iwm_rx_packet {
 #define    IWM_FH_RSCSR_FRAME_INVALID    0x55550000
 #define    IWM_FH_RSCSR_FRAME_ALIGN    0x40
 #define    IWM_FH_RSCSR_RPA_EN        (1 << 25)
+#define    IWM_FH_RSCSR_RADA_EN        (1 << 26)
 #define    IWM_FH_RSCSR_RXQ_POS        16
 #define    IWM_FH_RSCSR_RXQ_MASK        0x3F0000
 

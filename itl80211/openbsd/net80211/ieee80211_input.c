@@ -68,6 +68,8 @@
 #include <net80211/ieee80211_var.h>
 #include <net80211/ieee80211_priv.h>
 
+mbuf_t ieee80211_input_hwdecrypt(struct ieee80211com *,
+                                          struct ieee80211_node *, mbuf_t);
 mbuf_t ieee80211_defrag(struct ieee80211com *, mbuf_t, int);
 void    ieee80211_defrag_timeout(void *);
 void    ieee80211_input_ba(struct ieee80211com *, mbuf_t,
@@ -155,6 +157,86 @@ ieee80211_get_hdrlen(const struct ieee80211_frame *wh)
     if (ieee80211_has_htc(wh))
         size += sizeof(u_int32_t);    /* i_ht */
     return size;
+}
+
+/* Post-processing for drivers which perform decryption in hardware. */
+mbuf_t
+ieee80211_input_hwdecrypt(struct ieee80211com *ic, struct ieee80211_node *ni,
+    mbuf_t m)
+{
+   struct ieee80211_key *k;
+   struct ieee80211_frame *wh;
+   uint64_t pn, *prsc;
+   int hdrlen;
+
+   k = ieee80211_get_rxkey(ic, m, ni);
+   if (k == NULL)
+       return NULL;
+
+   wh = mtod(m, struct ieee80211_frame *);
+   hdrlen = ieee80211_get_hdrlen(wh);
+
+   /*
+    * Update the last-seen packet number (PN) for drivers using hardware
+    * crypto offloading. This cannot be done by drivers because A-MPDU
+    * reordering needs to occur before a valid lower bound can be
+    * determined for the PN. Drivers will read the PN we write here and
+    * are expected to discard replayed frames based on it.
+    * Drivers are expected to leave the IV of decrypted frames intact
+    * so we can update the last-seen PN and strip the IV here.
+    */
+   switch (k->k_cipher) {
+   case IEEE80211_CIPHER_CCMP:
+       if (!(wh->i_fc[1] & IEEE80211_FC1_PROTECTED)) {
+           /* drop unencrypted */
+           ic->ic_stats.is_rx_unencrypted++;
+           return NULL;
+       }
+       if (ieee80211_ccmp_get_pn(&pn, &prsc, m, k) != 0)
+           return NULL;
+       if (pn <= *prsc) {
+           ic->ic_stats.is_ccmp_replays++;
+           return NULL;
+       }
+
+       /* Update last-seen packet number. */
+       *prsc = pn;
+
+       /* Clear Protected bit and strip IV. */
+       wh->i_fc[1] &= ~IEEE80211_FC1_PROTECTED;
+       memmove(mtod(m, caddr_t) + IEEE80211_CCMP_HDRLEN, wh, hdrlen);
+       mbuf_adj(m, IEEE80211_CCMP_HDRLEN);
+       /* Drivers are expected to strip the MIC. */
+       break;
+    case IEEE80211_CIPHER_TKIP:
+       if (!(wh->i_fc[1] & IEEE80211_FC1_PROTECTED)) {
+           /* drop unencrypted */
+           ic->ic_stats.is_rx_unencrypted++;
+           return NULL;
+       }
+       if (ieee80211_tkip_get_tsc(&pn, &prsc, m, k) != 0)
+           return NULL;
+
+       if (pn <= *prsc) {
+           ic->ic_stats.is_tkip_replays++;
+           return NULL;
+       }
+
+       /* Update last-seen packet number. */
+       *prsc = pn;
+
+       /* Clear Protected bit and strip IV. */
+       wh = mtod(m, struct ieee80211_frame *);
+       wh->i_fc[1] &= ~IEEE80211_FC1_PROTECTED;
+       memmove(mtod(m, caddr_t) + IEEE80211_TKIP_HDRLEN, wh, hdrlen);
+       mbuf_adj(m, IEEE80211_TKIP_HDRLEN);
+       /* Drivers are expected to strip the MIC. */
+       break;
+   default:
+       break;
+   }
+
+   return m;
 }
 
 /*
@@ -466,8 +548,12 @@ ieee80211_inputm(struct ifnet *ifp, mbuf_t m, struct ieee80211_node *ni,
                         ic->ic_stats.is_rx_wepfail++;
                         goto err;
                     }
-                    wh = mtod(m, struct ieee80211_frame *);
+                } else {
+                    m = ieee80211_input_hwdecrypt(ic, ni, m);
+                    if (m == NULL)
+                        goto err;
                 }
+                wh = mtod(m, struct ieee80211_frame *);
             } else if ((wh->i_fc[1] & IEEE80211_FC1_PROTECTED) ||
                        (rxi->rxi_flags & IEEE80211_RXI_HWDEC)) {
                 /* frame encrypted but protection off for Rx */

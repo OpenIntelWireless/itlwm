@@ -11,7 +11,7 @@
 * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 * GNU General Public License for more details.
 */
-/*	$OpenBSD: ieee80211_ioctl.h,v 1.39 2019/09/02 12:54:21 stsp Exp $	*/
+/*	$OpenBSD: ieee80211_ioctl.h,v 1.40 2020/04/29 13:13:30 stsp Exp $	*/
 /*	$NetBSD: ieee80211_ioctl.h,v 1.7 2004/04/30 22:51:04 dyoung Exp $	*/
 
 /*-
@@ -425,7 +425,8 @@ struct ieee80211_nodereq_all {
 #define IEEE80211_F_NOBRIDGE	0x00000002	/* CONF: no internal bridging */
 #define IEEE80211_F_HOSTAPMASK	0x00000003
 #define IEEE80211_F_STAYAUTH	0x00000004	/* CONF: ignore deauth */
-#define IEEE80211_F_USERBITS	"\20\01HIDENWID\02NOBRIDGE\03STAYAUTH"
+#define IEEE80211_F_NOMIMO    0x00000008    /* CONF: disable MIMO */
+#define IEEE80211_F_USERBITS    "\20\01HIDENWID\02NOBRIDGE\03STAYAUTH\04NOMIMO"
 
 struct ieee80211_flags {
 	const char		*f_name;
@@ -435,7 +436,8 @@ struct ieee80211_flags {
 #define IEEE80211_FLAGS	{			\
 	{ "hidenwid", IEEE80211_F_HIDENWID },	\
 	{ "nobridge", IEEE80211_F_NOBRIDGE },	\
-	{ "stayauth", IEEE80211_F_STAYAUTH }	\
+	{ "stayauth", IEEE80211_F_STAYAUTH },    \
+    { "nomimo", IEEE80211_F_NOMIMO }    \
 }
 
 #define SIOCG80211FLAGS		_IOWR('i', 216, struct ifreq)
