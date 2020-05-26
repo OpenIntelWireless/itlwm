@@ -107,7 +107,7 @@ bool itlwm::createMediumTables(const IONetworkMedium **primary)
         return false;
     }
     
-    medium = IONetworkMedium::medium(kIOMediumEthernetAuto, 1024 * 1000000);
+    medium = IONetworkMedium::medium(kIOMediumEthernetAuto, 0);
     IONetworkMedium::addMedium(mediumDict, medium);
     medium->release();  // 'mediumDict' holds a ref now.
     if (primary) {
@@ -157,7 +157,7 @@ bool itlwm::start(IOService *provider)
     _fWorkloop->addEventSource(_fCommandGate);
     const IONetworkMedium *primaryMedium;
     if (!createMediumTables(&primaryMedium) ||
-        !setCurrentMedium(primaryMedium)) {
+        !setCurrentMedium(primaryMedium) || !setSelectedMedium(primaryMedium)) {
         releaseAll();
         return false;
     }

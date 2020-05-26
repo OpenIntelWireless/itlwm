@@ -285,73 +285,14 @@ iwm_clear_bits_prph(struct iwm_softc *sc, uint32_t reg, uint32_t bits)
     iwm_set_bits_mask_prph(sc, reg, 0, ~bits);
 }
 
-IOBufferMemoryDescriptor* allocDmaMemory
-( size_t size, int alignment, void** vaddr, uint64_t* paddr )
-{
-    size_t        reqsize;
-    uint64_t    phymask;
-    int        i;
-    
-    
-    if (alignment <= PAGE_SIZE) {
-        reqsize = size;
-        phymask = 0x00000000ffffffffull & (~(alignment - 1));
-    } else {
-        reqsize = size + alignment;
-        phymask = 0x00000000fffff000ull; /* page-aligned */
-    }
-    
-    IOBufferMemoryDescriptor* mem = 0;
-    mem = IOBufferMemoryDescriptor::inTaskWithPhysicalMask(kernel_task, kIOMemoryPhysicallyContiguous | kIODirectionInOut | kIOMapInhibitCache,
-                                   reqsize, phymask);
-    if (!mem) {
-        XYLog("Could not allocate DMA memory\n");
-        return 0;
-    }
-    mem->prepare();
-    *paddr = mem->getPhysicalAddress();
-    *vaddr = mem->getBytesNoCopy();
-    
-    /*
-     * Check the alignment and increment by 4096 until we get the
-     * requested alignment. Fail if can't obtain the alignment
-     * we requested.
-     */
-    if ((*paddr & (alignment - 1)) != 0) {
-        for (i = 0; i < alignment / 4096; i++) {
-            if ((*paddr & (alignment - 1 )) == 0)
-                break;
-            *paddr += 4096;
-            *vaddr = ((uint8_t*) *vaddr) + 4096;
-        }
-        if (i == alignment / 4096) {
-            XYLog("Memory alloc alignment requirement %d was not satisfied\n", alignment);
-            mem->complete();
-            mem->release();
-            return 0;
-        }
-    }
-    return mem;
-}
-
 bool allocDmaMemory2(struct iwm_dma_info *dma, size_t size, int alignment)
 {
     IOBufferMemoryDescriptor *bmd;
     IODMACommand::Segment64 seg;
     UInt64 ofs = 0;
     UInt32 numSegs = 1;
-    size_t        reqsize;
-    uint64_t    phymask;
     
-    if (alignment <= PAGE_SIZE) {
-        reqsize = size;
-        phymask = 0xFFFFFFFFFFFFF000ULL & (~(alignment - 1));
-    } else {
-        reqsize = size + alignment;
-        phymask = 0xFFFFFFFFFFFFF000ULL; /* page-aligned */
-    }
-    
-    bmd = IOBufferMemoryDescriptor::inTaskWithPhysicalMask(kernel_task, kIODirectionInOut | kIOMemoryPhysicallyContiguous | kIOMapInhibitCache, size, phymask);
+    bmd = IOBufferMemoryDescriptor::inTaskWithPhysicalMask(kernel_task, kIODirectionInOut | kIOMemoryPhysicallyContiguous | kIOMapInhibitCache, size, DMA_BIT_MASK(36));
     
     bmd->prepare();
     IODMACommand *cmd = IODMACommand::withSpecification(kIODMACommandOutputHost64, 64, 0, IODMACommand::kMapped, 0, alignment);

@@ -1108,7 +1108,7 @@ iwm_tx(struct iwm_softc *sc, mbuf_t m, struct ieee80211_node *ni, int ac)
         desc->tbs[i+2].hi_n_len =
         htole16(iwm_get_dma_hi_addr(seg->location)
                 | ((seg->length) << 4));
-        XYLog("DMA segments index=%d location=0x%llx length=%llu", i, seg->location, seg->length);
+//        XYLog("DMA segments index=%d location=0x%llx length=%llu", i, seg->location, seg->length);
     }
     XYLog("----------end sending data------\n");
     
@@ -2221,12 +2221,12 @@ iwm_endscan(struct iwm_softc *sc)
 {
     int error;
     
-        static const char *ssid_name = "Redmi";
-        static const char *ssid_pwd = "zxyssdt112233";
+//        static const char *ssid_name = "Redmi";
+//        static const char *ssid_pwd = "zxyssdt112233";
 //            static const char *ssid_name = "CMCC-KtG6";
 //            static const char *ssid_pwd = "9utc5c5f";
-//    static const char *ssid_name = "ssdt";
-//    static const char *ssid_pwd = "zxyssdt112233";
+    static const char *ssid_name = "ssdt_5G";
+    static const char *ssid_pwd = "zxyssdt112233";
     
     struct ieee80211_node *ni, *nextbs;
     struct ieee80211com *ic = &sc->sc_ic;

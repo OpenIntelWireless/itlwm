@@ -462,7 +462,6 @@ iwm_binding_cmd(struct iwm_softc *sc, struct iwm_node *in, uint32_t action)
 int itlwm::
 iwm_send_cmd(struct iwm_softc *sc, struct iwm_host_cmd *hcmd)
 {
-    XYLog("%s\n", __FUNCTION__);
     struct iwm_tx_ring *ring = &sc->txq[sc->cmdqid];
     struct iwm_tfd *desc;
     struct iwm_tx_data *txdata;
@@ -529,25 +528,13 @@ iwm_send_cmd(struct iwm_softc *sc, struct iwm_host_cmd *hcmd)
             err = EINVAL;
             goto out;
         }
-//        m = allocatePacket(totlen);
         mbuf_allocpacket(MBUF_WAITOK, totlen, &max_chunks, &m);
-//        mbuf_get(MBUF_WAITOK, MBUF_TYPE_DATA, &m);
-//        mbuf_getpacket(MBUF_WAITOK, &m);
-//                mbuf_gethdr(MBUF_DONTWAIT, MT_DATA, &m);
-        ////        m = MCLGETI(NULL, M_DONTWAIT, NULL, totlen);
         if (m == NULL) {
             XYLog("%s: could not get fw cmd mbuf (%zd bytes)\n",
                   DEVNAME(sc), totlen);
             err = ENOMEM;
             goto out;
         }
-//                        if (totlen > mbuf_get_mhlen()) {
-//                            mbuf_mclget(MBUF_DONTWAIT, MT_DATA, &m);
-//                            if (!(mbuf_flags(m) & MBUF_EXT)) {
-//                                mbuf_freem(m);
-//                                return ENOMEM;
-//                            }
-//                        }
         mbuf_setlen(m, totlen);
         mbuf_pkthdr_setlen(m, totlen);
         cmd = mtod(m, struct iwm_device_cmd *);

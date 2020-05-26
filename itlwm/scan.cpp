@@ -868,7 +868,7 @@ iwm_scan(struct iwm_softc *sc)
         err = iwm_umac_scan(sc, 0);
     else
         err = iwm_lmac_scan(sc, 0);
-    if (err && err != kIOReturnTimeout) {
+    if (err && err != 1) {
         XYLog("%s: %d could not initiate scan, err=%d\n", DEVNAME(sc), __LINE__, err);
         return err;
     }
@@ -911,7 +911,7 @@ iwm_bgscan(struct ieee80211com *ic)
         err = that->iwm_umac_scan(sc, 1);
     else
         err = that->iwm_lmac_scan(sc, 1);
-    if (err) {
+    if (err && err != 1) {
         XYLog("%s: could not initiate scan\n", DEVNAME(sc));
         return err;
     }
