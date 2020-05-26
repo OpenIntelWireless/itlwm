@@ -2225,7 +2225,7 @@ iwm_endscan(struct iwm_softc *sc)
 //        static const char *ssid_pwd = "zxyssdt112233";
 //            static const char *ssid_name = "CMCC-KtG6";
 //            static const char *ssid_pwd = "9utc5c5f";
-    static const char *ssid_name = "ssdt_5G";
+    static const char *ssid_name = "ssdt";
     static const char *ssid_pwd = "zxyssdt112233";
     
     struct ieee80211_node *ni, *nextbs;

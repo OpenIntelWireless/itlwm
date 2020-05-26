@@ -100,7 +100,7 @@ public:
     void unregistPM();
     
     bool createMediumTables(const IONetworkMedium **primary);
-    IOReturn getPacketFilters(const OSSymbol *group, UInt32 *filters) const override;
+//    IOReturn getPacketFilters(const OSSymbol *group, UInt32 *filters) const override;
     IOReturn selectMedium(const IONetworkMedium *medium) override;
     UInt32 getFeatures() const override;
     

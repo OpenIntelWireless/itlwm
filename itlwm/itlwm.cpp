@@ -109,7 +109,7 @@ bool itlwm::createMediumTables(const IONetworkMedium **primary)
     
     medium = IONetworkMedium::medium(kIOMediumEthernetAuto, 0);
     IONetworkMedium::addMedium(mediumDict, medium);
-    medium->release();  // 'mediumDict' holds a ref now.
+    medium->release();
     if (primary) {
         *primary = medium;
     }
@@ -119,8 +119,6 @@ bool itlwm::createMediumTables(const IONetworkMedium **primary)
         XYLog("Cannot publish medium dictionary!\n");
     }
 
-    // Per comment for 'publishMediumDictionary' in NetworkController.h, the
-    // medium dictionary is copied and may be safely relseased after the call.
     mediumDict->release();
     return result;
 }
@@ -355,8 +353,6 @@ UInt32 itlwm::outputPacket(mbuf_t m, void *param)
 {
 //    XYLog("%s\n", __FUNCTION__);
     ifnet *ifp = &com.sc_ic.ic_ac.ac_if;
-    uint32_t pktlen = 0;
-    mbuf_t m0, m1;
     
     if (com.sc_ic.ic_state != IEEE80211_S_RUN || ifp == NULL || ifp->if_snd == NULL) {
         freePacket(m);
@@ -403,19 +399,19 @@ IOReturn itlwm::setMulticastList(IOEthernetAddress* addr, UInt32 len) {
     return kIOReturnSuccess;
 }
 
-IOReturn itlwm::getPacketFilters(const OSSymbol *group, UInt32 *filters) const {
-    IOReturn    rtn = kIOReturnSuccess;
-    if (group == gIOEthernetWakeOnLANFilterGroup && magicPacketSupported) {
-        *filters = kIOEthernetWakeOnMagicPacket;
-    } else if (group == gIONetworkFilterGroup) {
-        *filters = kIOPacketFilterUnicast | kIOPacketFilterBroadcast
-        | kIOPacketFilterPromiscuous | kIOPacketFilterMulticast
-        | kIOPacketFilterMulticastAll;
-    } else {
-        rtn = IOEthernetController::getPacketFilters(group, filters);
-    }
-    return rtn;
-}
+//IOReturn itlwm::getPacketFilters(const OSSymbol *group, UInt32 *filters) const {
+//    IOReturn    rtn = kIOReturnSuccess;
+//    if (group == gIOEthernetWakeOnLANFilterGroup && magicPacketSupported) {
+//        *filters = kIOEthernetWakeOnMagicPacket;
+//    } else if (group == gIONetworkFilterGroup) {
+//        *filters = kIOPacketFilterUnicast | kIOPacketFilterBroadcast
+//        | kIOPacketFilterPromiscuous | kIOPacketFilterMulticast
+//        | kIOPacketFilterMulticastAll;
+//    } else {
+//        rtn = IOEthernetController::getPacketFilters(group, filters);
+//    }
+//    return rtn;
+//}
 
 void itlwm::wakeupOn(void *ident)
 {
