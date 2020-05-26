@@ -314,8 +314,8 @@
 		024A08D123FCF395009FBA6C /* led.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = led.cpp; sourceTree = "<group>"; };
 		024A08D323FCF3E6009FBA6C /* power.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = power.cpp; sourceTree = "<group>"; };
 		024A08D523FCF4D7009FBA6C /* scan.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = scan.cpp; sourceTree = "<group>"; };
+		F84DBD83247D80DD005B99F3 /* iwlwifi-9260-th-b0-jf-b0-34.ucode */ = {isa = PBXFileReference; lastKnownFileType = file; path = "iwlwifi-9260-th-b0-jf-b0-34.ucode"; sourceTree = "<group>"; };
 		F852107824473ED400A545C3 /* iwlwifi-cc-a0-46.ucode */ = {isa = PBXFileReference; lastKnownFileType = file; path = "iwlwifi-cc-a0-46.ucode"; sourceTree = "<group>"; };
-		F852426B24743AF800C563BB /* iwlwifi-9260-th-b0-jf-b0-34.ucode */ = {isa = PBXFileReference; lastKnownFileType = file; path = "iwlwifi-9260-th-b0-jf-b0-34.ucode"; sourceTree = "<group>"; };
 		F88D2B3B2414E64000BBE700 /* sha1-pbkdf2.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "sha1-pbkdf2.c"; sourceTree = "<group>"; };
 		F8A33572244AED060039DA12 /* IOTaskQueue.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = IOTaskQueue.cpp; sourceTree = "<group>"; };
 		F8A33573244AED060039DA12 /* IOTaskQueue.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = IOTaskQueue.hpp; sourceTree = "<group>"; };
@@ -546,7 +546,7 @@
 				F8C4BF882420FAEC007F410E /* iwm-8265-34 */,
 				F8C4BF892420FAEC007F410E /* iwm-9000-34 */,
 				F8C4BF8B2420FAED007F410E /* iwm-9260-34 */,
-				F852426B24743AF800C563BB /* iwlwifi-9260-th-b0-jf-b0-34.ucode */,
+				F84DBD83247D80DD005B99F3 /* iwlwifi-9260-th-b0-jf-b0-34.ucode */,
 			);
 			path = firmware;
 			sourceTree = "<group>";

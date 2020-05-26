@@ -81,6 +81,7 @@ public:
     virtual IOWorkLoop* getWorkLoop() const override;
     virtual const OSString * newVendorString() const override;
     virtual const OSString * newModelString() const override;
+    virtual IOReturn getMaxPacketSize(UInt32* maxSize) const override;
     
     void releaseAll();
     IOReturn releaseAllGated(OSObject *target, void *arg0, void *arg1, void *arg2, void *arg3);
@@ -99,7 +100,7 @@ public:
     void unregistPM();
     
     bool createMediumTables(const IONetworkMedium **primary);
-//    IOReturn getPacketFilters(const OSSymbol *group, UInt32 *filters) const override;
+    IOReturn getPacketFilters(const OSSymbol *group, UInt32 *filters) const override;
     IOReturn selectMedium(const IONetworkMedium *medium) override;
     UInt32 getFeatures() const override;
     
