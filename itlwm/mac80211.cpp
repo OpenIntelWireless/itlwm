@@ -3770,7 +3770,7 @@ iwm_attach(struct iwm_softc *sc, struct pci_attach_args *pa)
             sc->nvm_type = IWM_NVM_EXT;
             break;
         case PCI_PRODUCT_INTEL_WL_9260_1:
-            sc->sc_fwname = "iwlwifi-9260-th-b0-jf-b0-34.ucode";
+            sc->sc_fwname = "iwm-9260-34";
             sc->host_interrupt_operation_mode = 0;
             sc->sc_device_family = IWM_DEVICE_FAMILY_9000;
             sc->sc_fwdmasegsz = IWM_FWDMASEGSZ_8000;

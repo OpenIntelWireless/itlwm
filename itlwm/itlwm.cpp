@@ -29,38 +29,6 @@ OSDefineMetaClassAndStructors(CTimeout, OSObject)
 IOWorkLoop *_fWorkloop;
 IOCommandGate *_fCommandGate;
 
-#define MBit 1000000
-
-static IOMediumType mediumTypeArray[MEDIUM_INDEX_COUNT] = {
-    kIOMediumEthernetAuto,
-    (kIOMediumEthernet10BaseT | kIOMediumOptionHalfDuplex),
-    (kIOMediumEthernet10BaseT | kIOMediumOptionFullDuplex),
-    (kIOMediumEthernet100BaseTX | kIOMediumOptionHalfDuplex),
-    (kIOMediumEthernet100BaseTX | kIOMediumOptionFullDuplex),
-    (kIOMediumEthernet100BaseTX | kIOMediumOptionFullDuplex | kIOMediumOptionFlowControl),
-    (kIOMediumEthernet1000BaseT | kIOMediumOptionFullDuplex),
-    (kIOMediumEthernet1000BaseT | kIOMediumOptionFullDuplex | kIOMediumOptionFlowControl),
-    (kIOMediumEthernet1000BaseT | kIOMediumOptionFullDuplex | kIOMediumOptionEEE),
-    (kIOMediumEthernet1000BaseT | kIOMediumOptionFullDuplex | kIOMediumOptionFlowControl | kIOMediumOptionEEE),
-    (kIOMediumEthernet100BaseTX | kIOMediumOptionFullDuplex | kIOMediumOptionEEE),
-    (kIOMediumEthernet100BaseTX | kIOMediumOptionFullDuplex | kIOMediumOptionFlowControl | kIOMediumOptionEEE)
-};
-
-static UInt32 mediumSpeedArray[MEDIUM_INDEX_COUNT] = {
-    0,
-    10 * MBit,
-    10 * MBit,
-    100 * MBit,
-    100 * MBit,
-    100 * MBit,
-    1000 * MBit,
-    1000 * MBit,
-    1000 * MBit,
-    1000 * MBit,
-    100 * MBit,
-    100 * MBit
-};
-
 bool itlwm::init(OSDictionary *properties)
 {
     super::init(properties);
@@ -91,10 +59,23 @@ bool itlwm::configureInterface(IONetworkInterface *netif) {
         XYLog("network statistics buffer unavailable?\n");
         return false;
     }
-    
     com.sc_ic.ic_ac.ac_if.netStat = fpNetStats;
+    com.sc_ic.ic_ac.ac_if.iface = OSDynamicCast(IOEthernetInterface, netif);
     
     return true;
+}
+
+IONetworkInterface *itlwm::createInterface()
+{
+    itlwm_interface *netif = new itlwm_interface;
+    if (!netif) {
+        return NULL;
+    }
+    if (!netif->init(this)) {
+        netif->release();
+        return NULL;
+    }
+    return netif;
 }
 
 bool itlwm::createMediumTables(const IONetworkMedium **primary)
@@ -107,7 +88,7 @@ bool itlwm::createMediumTables(const IONetworkMedium **primary)
         return false;
     }
     
-    medium = IONetworkMedium::medium(kIOMediumEthernetAuto, 0);
+    medium = IONetworkMedium::medium(kIOMediumEthernetAuto, 480 * 1000000);
     IONetworkMedium::addMedium(mediumDict, medium);
     medium->release();
     if (primary) {
@@ -125,8 +106,6 @@ bool itlwm::createMediumTables(const IONetworkMedium **primary)
 
 bool itlwm::start(IOService *provider)
 {
-    ifnet *ifp;
-    
     if (!super::start(provider)) {
         return false;
     }
@@ -155,7 +134,7 @@ bool itlwm::start(IOService *provider)
     _fWorkloop->addEventSource(_fCommandGate);
     const IONetworkMedium *primaryMedium;
     if (!createMediumTables(&primaryMedium) ||
-        !setCurrentMedium(primaryMedium) || !setSelectedMedium(primaryMedium)) {
+        !setCurrentMedium(primaryMedium)) {
         releaseAll();
         return false;
     }
@@ -165,11 +144,12 @@ bool itlwm::start(IOService *provider)
         releaseAll();
         return false;
     }
-    if (!attachInterface((IONetworkInterface **)&com.sc_ic.ic_ac.ac_if.iface)) {
+    if (!attachInterface((IONetworkInterface **)&fNetIf, true)) {
         XYLog("attach to interface fail\n");
         releaseAll();
         return false;
     }
+    fNetIf->updateMTU();
     watchdogTimer = IOTimerEventSource::timerEventSource(this, OSMemberFunctionCast(IOTimerEventSource::Action, this, &itlwm::watchdogAction));
     if (!watchdogTimer) {
         XYLog("init watchdog fail\n");
@@ -178,7 +158,6 @@ bool itlwm::start(IOService *provider)
     }
     _fWorkloop->addEventSource(watchdogTimer);
     setLinkStatus(kIONetworkLinkValid);
-    registerService();
     return true;
 }
 
@@ -249,8 +228,9 @@ void itlwm::stop(IOService *provider)
     setLinkStatus(kIONetworkLinkValid);
     iwm_stop(ifp);
     ieee80211_ifdetach(ifp);
-    detachInterface(ifp->iface);
-    OSSafeReleaseNULL(ifp->iface);
+    detachInterface(fNetIf);
+    OSSafeReleaseNULL(fNetIf);
+    ifp->iface = NULL;
     taskq_destroy(systq);
     taskq_destroy(com.sc_nswq);
     releaseAll();
@@ -258,8 +238,6 @@ void itlwm::stop(IOService *provider)
 
 void itlwm::releaseAll()
 {
-    struct ifnet *ifp = &com.sc_ic.ic_ac.ac_if;
-    IOEthernetInterface *inf = ifp->iface;
     pci_intr_handle *intrHandler = com.ih;
     
     if (com.sc_calib_to) {
@@ -327,6 +305,8 @@ IOReturn itlwm::enable(IONetworkInterface *netif)
     setLinkStatus(kIONetworkLinkValid | kIONetworkLinkActive, getCurrentMedium());
     watchdogTimer->setTimeoutMS(1000);
     watchdogTimer->enable();
+    getOutputQueue()->setCapacity(4096);
+    getOutputQueue()->start();
     return kIOReturnSuccess;
 }
 
@@ -337,6 +317,9 @@ IOReturn itlwm::disable(IONetworkInterface *netif)
     watchdogTimer->cancelTimeout();
     watchdogTimer->disable();
     iwm_activate(&com, DVACT_QUIESCE);
+    getOutputQueue()->stop();
+    getOutputQueue()->flush();
+    getOutputQueue()->setCapacity(0);
     return kIOReturnSuccess;
 }
 
@@ -347,6 +330,11 @@ IOReturn itlwm::getHardwareAddress(IOEthernetAddress *addrP) {
         IEEE80211_ADDR_COPY(addrP, com.sc_ic.ic_myaddr);
         return kIOReturnSuccess;
     }
+}
+
+IOOutputQueue *itlwm::createOutputQueue() {
+    return IOGatedOutputQueue::withTarget(this,
+        getWorkLoop(), 4096);
 }
 
 UInt32 itlwm::outputPacket(mbuf_t m, void *param)
@@ -464,6 +452,6 @@ IOReturn itlwm::tsleepHandler(OSObject* owner, void* arg0, void* arg1, void* arg
 }
 
 IOReturn itlwm::getMaxPacketSize(UInt32 *maxSize) const {
-    *maxSize = 1500;
+    *maxSize = ETHERNET_MTU + 18;
     return kIOReturnSuccess;
 }

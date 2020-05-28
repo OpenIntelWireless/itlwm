@@ -228,6 +228,8 @@
 		F8F92583240974EF0088B8D5 /* random.h in Headers */ = {isa = PBXBuildFile; fileRef = F8F92578240974EE0088B8D5 /* random.h */; };
 		F8F92586240974EF0088B8D5 /* types.h in Headers */ = {isa = PBXBuildFile; fileRef = F8F9257B240974EF0088B8D5 /* types.h */; };
 		F8F9EDE1240B7415009CB8E7 /* _task.cpp in Sources */ = {isa = PBXBuildFile; fileRef = F8F9EDE0240B7415009CB8E7 /* _task.cpp */; };
+		F8FC31CF247E797E00FB456B /* itlwm_interface.cpp in Sources */ = {isa = PBXBuildFile; fileRef = F8FC31CD247E797E00FB456B /* itlwm_interface.cpp */; };
+		F8FC31D0247E797E00FB456B /* itlwm_interface.hpp in Headers */ = {isa = PBXBuildFile; fileRef = F8FC31CE247E797E00FB456B /* itlwm_interface.hpp */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -314,7 +316,6 @@
 		024A08D123FCF395009FBA6C /* led.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = led.cpp; sourceTree = "<group>"; };
 		024A08D323FCF3E6009FBA6C /* power.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = power.cpp; sourceTree = "<group>"; };
 		024A08D523FCF4D7009FBA6C /* scan.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = scan.cpp; sourceTree = "<group>"; };
-		F84DBD83247D80DD005B99F3 /* iwlwifi-9260-th-b0-jf-b0-34.ucode */ = {isa = PBXFileReference; lastKnownFileType = file; path = "iwlwifi-9260-th-b0-jf-b0-34.ucode"; sourceTree = "<group>"; };
 		F852107824473ED400A545C3 /* iwlwifi-cc-a0-46.ucode */ = {isa = PBXFileReference; lastKnownFileType = file; path = "iwlwifi-cc-a0-46.ucode"; sourceTree = "<group>"; };
 		F88D2B3B2414E64000BBE700 /* sha1-pbkdf2.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "sha1-pbkdf2.c"; sourceTree = "<group>"; };
 		F8A33572244AED060039DA12 /* IOTaskQueue.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = IOTaskQueue.cpp; sourceTree = "<group>"; };
@@ -394,6 +395,8 @@
 		F8F9257B240974EF0088B8D5 /* types.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = types.h; sourceTree = "<group>"; };
 		F8F9EDDF240B4741009CB8E7 /* _task.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = _task.h; sourceTree = "<group>"; };
 		F8F9EDE0240B7415009CB8E7 /* _task.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = _task.cpp; sourceTree = "<group>"; };
+		F8FC31CD247E797E00FB456B /* itlwm_interface.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = itlwm_interface.cpp; sourceTree = "<group>"; };
+		F8FC31CE247E797E00FB456B /* itlwm_interface.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = itlwm_interface.hpp; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -449,6 +452,8 @@
 				0250B31C23FD768400FF8CEA /* firmware */,
 				024A07AF23FCBC3C009FBA6C /* itlwm.hpp */,
 				024A07B123FCBC3C009FBA6C /* itlwm.cpp */,
+				F8FC31CD247E797E00FB456B /* itlwm_interface.cpp */,
+				F8FC31CE247E797E00FB456B /* itlwm_interface.hpp */,
 				024A088923FCBE38009FBA6C /* if_iwmreg.h */,
 				024A088A23FCBE38009FBA6C /* if_iwmvar.h */,
 				024A07B323FCBC3C009FBA6C /* Info.plist */,
@@ -546,7 +551,6 @@
 				F8C4BF882420FAEC007F410E /* iwm-8265-34 */,
 				F8C4BF892420FAEC007F410E /* iwm-9000-34 */,
 				F8C4BF8B2420FAED007F410E /* iwm-9260-34 */,
-				F84DBD83247D80DD005B99F3 /* iwlwifi-9260-th-b0-jf-b0-34.ucode */,
 			);
 			path = firmware;
 			sourceTree = "<group>";
@@ -687,6 +691,7 @@
 				024A084A23FCBC6C009FBA6C /* cryptodev.h in Headers */,
 				024A083E23FCBC6C009FBA6C /* sk.h in Headers */,
 				F8F9257D240974EF0088B8D5 /* cfg80211.h in Headers */,
+				F8FC31D0247E797E00FB456B /* itlwm_interface.hpp in Headers */,
 				024A084323FCBC6C009FBA6C /* gmac.h in Headers */,
 				F8C2EC9C2408062D007A9422 /* pcireg.h in Headers */,
 				F8C2EC9624080557007A9422 /* _if_ether.h in Headers */,
@@ -961,6 +966,7 @@
 				024A085023FCBC6C009FBA6C /* arc4.c in Sources */,
 				024A082F23FCBC6C009FBA6C /* hmac.c in Sources */,
 				F8C2EC5D2408031A007A9422 /* ieee80211_crypto_ccmp.c in Sources */,
+				F8FC31CF247E797E00FB456B /* itlwm_interface.cpp in Sources */,
 				F8C2EC552408031A007A9422 /* ieee80211_input.c in Sources */,
 				F8C2EC662408031A007A9422 /* ieee80211_crypto_wep.c in Sources */,
 				F8C2EC692408031A007A9422 /* CTimeout.cpp in Sources */,

@@ -17,6 +17,7 @@
 #include "itlhdr.h"
 #include "kernel.h"
 
+#include "itlwm_interface.hpp"
 #include <IOKit/network/IOEthernetController.h>
 #include <IOKit/IOWorkLoop.h>
 #include "IOKit/network/IOGatedOutputQueue.h"
@@ -33,23 +34,6 @@ enum
     kPowerStateOff = 0,
     kPowerStateOn,
     kPowerStateCount
-};
-
-enum
-{
-    MEDIUM_INDEX_AUTO = 0,
-    MEDIUM_INDEX_10HD,
-    MEDIUM_INDEX_10FD,
-    MEDIUM_INDEX_100HD,
-    MEDIUM_INDEX_100FD,
-    MEDIUM_INDEX_100FDFC,
-    MEDIUM_INDEX_1000FD,
-    MEDIUM_INDEX_1000FDFC,
-    MEDIUM_INDEX_1000FDEEE,
-    MEDIUM_INDEX_1000FDFCEEE,
-    MEDIUM_INDEX_100FDEEE,
-    MEDIUM_INDEX_100FDFCEEE,
-    MEDIUM_INDEX_COUNT
 };
 
 class itlwm : public IOEthernetController {
@@ -82,6 +66,8 @@ public:
     virtual const OSString * newVendorString() const override;
     virtual const OSString * newModelString() const override;
     virtual IOReturn getMaxPacketSize(UInt32* maxSize) const override;
+    virtual IONetworkInterface * createInterface() override;
+    virtual IOOutputQueue *createOutputQueue(void) override;
     
     void releaseAll();
     IOReturn releaseAllGated(OSObject *target, void *arg0, void *arg1, void *arg2, void *arg3);
@@ -403,8 +389,9 @@ public:
     struct pci_attach_args pci;
     struct iwm_softc com;
     IONetworkMedium *autoMedium;
-    IONetworkMedium *mediumTable[MEDIUM_INDEX_COUNT];
+    IONetworkMedium *mediumTable[1];
     IONetworkStats *fpNetStats;
+    itlwm_interface *fNetIf;
     void *lastSleepChan;
     
     IOLock *fwLoadLock;
