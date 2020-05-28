@@ -1,5 +1,7 @@
 # itlwm
 
+[![Join the chat at https://gitter.im/OpenIntelWireless/itlwm](https://badges.gitter.im/OpenIntelWireless/itlwm.svg)](https://gitter.im/OpenIntelWireless/itlwm?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+
 **An Intel Wifi Adapter Kernel Extension for macOS, based on the OpenBSD Project.**
 
 ## Readme
