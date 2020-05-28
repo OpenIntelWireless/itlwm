@@ -67,7 +67,6 @@ public:
     virtual const OSString * newModelString() const override;
     virtual IOReturn getMaxPacketSize(UInt32* maxSize) const override;
     virtual IONetworkInterface * createInterface() override;
-    virtual IOOutputQueue *createOutputQueue(void) override;
     
     void releaseAll();
     IOReturn releaseAllGated(OSObject *target, void *arg0, void *arg1, void *arg2, void *arg3);
@@ -88,7 +87,7 @@ public:
     bool createMediumTables(const IONetworkMedium **primary);
 //    IOReturn getPacketFilters(const OSSymbol *group, UInt32 *filters) const override;
     IOReturn selectMedium(const IONetworkMedium *medium) override;
-    UInt32 getFeatures() const override;
+//    UInt32 getFeatures() const override;
     
     //utils
     static void *malloc(vm_size_t len, int type, int how);

@@ -134,7 +134,7 @@ bool itlwm::start(IOService *provider)
     _fWorkloop->addEventSource(_fCommandGate);
     const IONetworkMedium *primaryMedium;
     if (!createMediumTables(&primaryMedium) ||
-        !setCurrentMedium(primaryMedium)) {
+        !setCurrentMedium(primaryMedium) || !setSelectedMedium(primaryMedium)) {
         releaseAll();
         return false;
     }
@@ -149,7 +149,6 @@ bool itlwm::start(IOService *provider)
         releaseAll();
         return false;
     }
-    fNetIf->updateMTU();
     watchdogTimer = IOTimerEventSource::timerEventSource(this, OSMemberFunctionCast(IOTimerEventSource::Action, this, &itlwm::watchdogAction));
     if (!watchdogTimer) {
         XYLog("init watchdog fail\n");
@@ -305,8 +304,6 @@ IOReturn itlwm::enable(IONetworkInterface *netif)
     setLinkStatus(kIONetworkLinkValid | kIONetworkLinkActive, getCurrentMedium());
     watchdogTimer->setTimeoutMS(1000);
     watchdogTimer->enable();
-    getOutputQueue()->setCapacity(4096);
-    getOutputQueue()->start();
     return kIOReturnSuccess;
 }
 
@@ -317,9 +314,6 @@ IOReturn itlwm::disable(IONetworkInterface *netif)
     watchdogTimer->cancelTimeout();
     watchdogTimer->disable();
     iwm_activate(&com, DVACT_QUIESCE);
-    getOutputQueue()->stop();
-    getOutputQueue()->flush();
-    getOutputQueue()->setCapacity(0);
     return kIOReturnSuccess;
 }
 
@@ -330,11 +324,6 @@ IOReturn itlwm::getHardwareAddress(IOEthernetAddress *addrP) {
         IEEE80211_ADDR_COPY(addrP, com.sc_ic.ic_myaddr);
         return kIOReturnSuccess;
     }
-}
-
-IOOutputQueue *itlwm::createOutputQueue() {
-    return IOGatedOutputQueue::withTarget(this,
-        getWorkLoop(), 4096);
 }
 
 UInt32 itlwm::outputPacket(mbuf_t m, void *param)
@@ -367,13 +356,13 @@ UInt32 itlwm::outputPacket(mbuf_t m, void *param)
     return kIOReturnOutputSuccess;
 }
 
-UInt32 itlwm::getFeatures() const
-{
-    UInt32 features = (kIONetworkFeatureMultiPages | kIONetworkFeatureHardwareVlan);
-    features |= kIONetworkFeatureTSOIPv4;
-    features |= kIONetworkFeatureTSOIPv6;
-    return features;
-}
+//UInt32 itlwm::getFeatures() const
+//{
+//    UInt32 features = (kIONetworkFeatureMultiPages | kIONetworkFeatureHardwareVlan);
+//    features |= kIONetworkFeatureTSOIPv4;
+//    features |= kIONetworkFeatureTSOIPv6;
+//    return features;
+//}
 
 IOReturn itlwm::setPromiscuousMode(IOEnetPromiscuousMode mode) {
     return kIOReturnSuccess;
