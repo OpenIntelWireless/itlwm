@@ -21,6 +21,9 @@
 #include <IOKit/IOCommandGate.h>
 #include <IOKit/network/IONetworkMedium.h>
 #include <net/ethernet.h>
+#include "sha1.h"
+#include <net80211/ieee80211_node.h>
+#include <net80211/ieee80211_ioctl.h>
 
 #define super IOEthernetController
 OSDefineMetaClassAndStructors(itlwm, IOEthernetController)
@@ -104,6 +107,91 @@ bool itlwm::createMediumTables(const IONetworkMedium **primary)
     return result;
 }
 
+static char * trim(const char *strIn, char *strOut)
+{
+    size_t i, j ;
+    i = 0;
+    j = strlen(strIn) - 1;
+    if (j <= 0) {
+        memset(strOut, 0, 1);
+        return strOut;
+    }
+    while(strIn[i] == ' ')
+        ++i;
+
+    while(strIn[j] == ' ')
+        --j;
+    strncpy(strOut,  strIn + i, j - i + 1);
+    strOut[j - i + 1] = '\0';
+    return strOut;
+}
+
+static bool wifiConfigIterateCallback(void * refcon, const OSSymbol * key, OSObject * object)
+{
+    itlwm *that = (itlwm *)refcon;
+    OSDictionary *wifiEntry = OSDynamicCast(OSDictionary, object);
+    if (wifiEntry == NULL) {
+        return false;
+    }
+    OSString *ssidObj = OSDynamicCast(OSString, wifiEntry->getObject("ssid"));
+    OSString *pwdObj = OSDynamicCast(OSString, wifiEntry->getObject("password"));
+    if (ssidObj == NULL || pwdObj == NULL || ssidObj->isEqualTo("")) {
+        return false;
+    }
+    char ssid[255];
+    char password[255];
+    trim(ssidObj->getCStringNoCopy(), (char *)&ssid);
+    trim(pwdObj->getCStringNoCopy(), (char *)&password);
+    
+    XYLog("%s [%s] [%s]\n", __FUNCTION__, ssid, password);
+    that->joinSSID(ssid, password);
+    return false;
+}
+
+ieee80211_wpaparams wpa;
+ieee80211_wpapsk psk;
+ieee80211_nwkey nwkey;
+ieee80211_join join;
+
+void itlwm::joinSSID(const char *ssid_name, const char *ssid_pwd)
+{
+    struct ieee80211com *ic = &com.sc_ic;
+    
+    if (strlen(ssid_pwd) == 0) {
+        memset(&nwkey, 0, sizeof(ieee80211_nwkey));
+        nwkey.i_wepon = IEEE80211_NWKEY_OPEN;
+        nwkey.i_defkid = 0;
+        memcpy(join.i_nwid, ssid_name, strlen(ssid_name));
+        join.i_len = strlen(ssid_name);
+        join.i_flags = IEEE80211_JOIN_NWKEY;
+    } else {
+        memset(&wpa, 0, sizeof(ieee80211_wpaparams));
+        wpa.i_enabled = 1;
+        wpa.i_ciphers = IEEE80211_WPA_CIPHER_CCMP | IEEE80211_WPA_CIPHER_TKIP;
+        wpa.i_groupcipher = IEEE80211_WPA_CIPHER_CCMP | IEEE80211_WPA_CIPHER_TKIP;
+        wpa.i_protos = IEEE80211_WPA_PROTO_WPA1 | IEEE80211_WPA_PROTO_WPA2;
+        wpa.i_akms = IEEE80211_WPA_AKM_PSK | IEEE80211_WPA_AKM_8021X | IEEE80211_WPA_AKM_SHA256_PSK | IEEE80211_WPA_AKM_SHA256_8021X;
+        memcpy(wpa.i_name, "zxy", strlen("zxy"));
+        memset(&psk, 0, sizeof(ieee80211_wpapsk));
+        memcpy(psk.i_name, "zxy", strlen("zxy"));
+        psk.i_enabled = 1;
+        pbkdf2_sha1(ssid_pwd, (const uint8_t*)ssid_name, strlen(ssid_name),
+                    4096, psk.i_psk , 32);
+        memset(&nwkey, 0, sizeof(ieee80211_nwkey));
+        nwkey.i_wepon = 0;
+        nwkey.i_defkid = 0;
+        memset(&join, 0, sizeof(ieee80211_join));
+        join.i_wpaparams = wpa;
+        join.i_wpapsk = psk;
+        join.i_flags = IEEE80211_JOIN_WPAPSK | IEEE80211_JOIN_ANY | IEEE80211_JOIN_WPA | IEEE80211_JOIN_8021X;
+        join.i_nwkey = nwkey;
+        join.i_len = strlen(ssid_name);
+        memcpy(join.i_nwid, ssid_name, join.i_len);
+    }
+    if (ieee80211_add_ess(ic, &join) == 0)
+        ic->ic_flags |= IEEE80211_F_AUTO_JOIN;
+}
+
 bool itlwm::start(IOService *provider)
 {
     if (!super::start(provider)) {
@@ -157,6 +245,10 @@ bool itlwm::start(IOService *provider)
     }
     _fWorkloop->addEventSource(watchdogTimer);
     setLinkStatus(kIONetworkLinkValid);
+    OSDictionary *wifiDict = OSDynamicCast(OSDictionary, getProperty("WiFiConfig"));
+    if (wifiDict) {
+        wifiDict->iterateObjects(this, wifiConfigIterateCallback);
+    }
     return true;
 }
 

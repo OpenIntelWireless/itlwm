@@ -69,7 +69,7 @@ public:
     virtual IONetworkInterface * createInterface() override;
     
     void releaseAll();
-    IOReturn releaseAllGated(OSObject *target, void *arg0, void *arg1, void *arg2, void *arg3);
+    void joinSSID(const char *ssid, const char *pwd);
     
     bool initPCIPowerManagment(IOPCIDevice *provider);
     

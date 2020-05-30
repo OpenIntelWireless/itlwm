@@ -694,7 +694,7 @@ iwm_rx_tx_cmd_single(struct iwm_softc *sc, struct iwm_rx_packet *pkt,
             best_mcs = ieee80211_mira_get_best_mcs(&in->in_mn);
             if (best_mcs != in->chosen_txmcs) {
                 in->chosen_txmcs = best_mcs;
-                XYLog("iwm_setrates best_mcs=%d\n", best_mcs);
+//                XYLog("iwm_setrates best_mcs=%d\n", best_mcs);
                 iwm_setrates(in, 1);
             }
         }
@@ -746,7 +746,7 @@ iwm_rx_tx_cmd(struct iwm_softc *sc, struct iwm_rx_packet *pkt,
     if (txd->m == NULL)
         return;
     
-    XYLog("%s idx=%d qid=%d txd->txmcs=%d txd->txrate=%d, len=%d\n", __FUNCTION__, idx, qid, txd->txmcs, txd->txrate, ((struct iwm_tx_resp *)pkt->data)->byte_cnt);
+//    XYLog("%s idx=%d qid=%d txd->txmcs=%d txd->txrate=%d, len=%d\n", __FUNCTION__, idx, qid, txd->txmcs, txd->txrate, ((struct iwm_tx_resp *)pkt->data)->byte_cnt);
     
     iwm_rx_tx_cmd_single(sc, pkt, txd->in, txd->txmcs, txd->txrate);
     iwm_txd_done(sc, txd);
@@ -1084,11 +1084,11 @@ iwm_tx(struct iwm_softc *sc, mbuf_t m, struct ieee80211_node *ni, int ac)
     data->txmcs = ni->ni_txmcs;
     data->txrate = ni->ni_txrate;
     
-    XYLog("sending data: 嘤嘤嘤 qid=%d idx=%d len=%d nsegs=%d txflags=0x%08x rate_n_flags=0x%08x rateidx=%u txmcs=%d ni_txrate=%d\n",
-          ring->qid, ring->cur, totlen, nsegs, le32toh(tx->tx_flags),
-          le32toh(tx->rate_n_flags), tx->initial_rate_index,
-          data->txmcs,
-          data->txrate);
+//    XYLog("sending data: 嘤嘤嘤 qid=%d idx=%d len=%d nsegs=%d txflags=0x%08x rate_n_flags=0x%08x rateidx=%u txmcs=%d ni_txrate=%d\n",
+//          ring->qid, ring->cur, totlen, nsegs, le32toh(tx->tx_flags),
+//          le32toh(tx->rate_n_flags), tx->initial_rate_index,
+//          data->txmcs,
+//          data->txrate);
     
     /* Fill TX descriptor. */
     desc->num_tbs = 2 + nsegs;
@@ -1110,7 +1110,7 @@ iwm_tx(struct iwm_softc *sc, mbuf_t m, struct ieee80211_node *ni, int ac)
                 | ((seg->length) << 4));
 //        XYLog("DMA segments index=%d location=0x%llx length=%llu", i, seg->location, seg->length);
     }
-    XYLog("----------end sending data------\n");
+//    XYLog("----------end sending data------\n");
     
     //        bus_dmamap_sync(sc->sc_dmat, data->map, 0, data->map->dm_mapsize,
     //            BUS_DMASYNC_PREWRITE);
@@ -2209,132 +2209,11 @@ iwm_newstate(struct ieee80211com *ic, enum ieee80211_state nstate, int arg)
     return 0;
 }
 
-ieee80211_wpaparams wpa;
-ieee80211_wpapsk psk;
-ieee80211_nwkey nwkey;
-ieee80211_join join;
-
-#include "sha1.h"
-
 void itlwm::
 iwm_endscan(struct iwm_softc *sc)
 {
-    int error;
-    
-//        static const char *ssid_name = "Redmi";
-//        static const char *ssid_pwd = "zxyssdt112233";
-//            static const char *ssid_name = "CMCC-KtG6";
-//            static const char *ssid_pwd = "9utc5c5f";
-    static const char *ssid_name = "ssdt";
-    static const char *ssid_pwd = "zxyssdt112233";
-    
     struct ieee80211_node *ni, *nextbs;
     struct ieee80211com *ic = &sc->sc_ic;
-    
-    //    wpa.i_enabled = 0;
-    //    nwkey.i_wepon = IEEE80211_NWKEY_OPEN;
-    
-    wpa.i_enabled = 0;
-    wpa.i_ciphers = IEEE80211_WPA_CIPHER_TKIP;
-    wpa.i_protos = IEEE80211_WPA_PROTO_WPA1;
-    wpa.i_akms = IEEE80211_WPA_AKM_PSK;
-    //    wpa.i_groupcipher = IEEE80211_WPA_CIPHER_TKIP;
-    //    error = ieee80211_ioctl_setwpaparms(ic, &wpa);
-    //    if (error) {
-    //        XYLog("%s ieee80211_ioctl_setwpaparms error=%d\n", __FUNCTION__, error);
-    //    }
-    nwkey.i_key[0].i_keydat = (uint8_t*)ssid_pwd;
-    nwkey.i_key[0].i_keylen = strlen(ssid_pwd);
-    nwkey.i_wepon = IEEE80211_NWKEY_OPEN;
-    nwkey.i_defkid = 0;
-    //    error = ieee80211_ioctl_setnwkeys(ic, &nwkey);
-    //    if (error) {
-    //        XYLog("%s ieee80211_ioctl_setnwkeys error=%d\n", __FUNCTION__, error);
-    //    }
-    //    memset(ic->ic_des_essid, 0, IEEE80211_NWID_LEN);
-    //    ic->ic_des_esslen = strlen(ssid_name);
-    //    memcpy(ic->ic_des_essid, ssid_name, strlen(ssid_name));
-    //    if (ic->ic_des_esslen > 0) {
-    //        /* 'nwid' disables auto-join magic */
-    //        ic->ic_flags &= ~IEEE80211_F_AUTO_JOIN;
-    //    } else if (!TAILQ_EMPTY(&ic->ic_ess)) {
-    //        /* '-nwid' re-enables auto-join */
-    //        ic->ic_flags |= IEEE80211_F_AUTO_JOIN;
-    //    }
-    //    /* disable WPA/WEP */
-    //    ieee80211_disable_rsn(ic);
-    //    ieee80211_disable_wep(ic);
-    //    join.i_nwkey = nwkey;
-    psk.i_enabled = 1;
-    //    memcpy(psk.i_name, "ssdt_name", strlen("ssdt_name"));
-    memcpy(psk.i_psk, ssid_pwd, strlen(ssid_pwd));
-    //    join.i_wpapsk = psk;
-    join.i_wpaparams = wpa;
-    memcpy(join.i_nwid, ssid_name, strlen(ssid_name));
-    join.i_len = strlen(ssid_name);
-    join.i_flags = IEEE80211_JOIN_NWKEY;
-    
-    memset(&wpa, 0, sizeof(ieee80211_wpaparams));
-    wpa.i_enabled = 1;
-    wpa.i_ciphers = IEEE80211_WPA_CIPHER_CCMP | IEEE80211_WPA_CIPHER_TKIP;
-    wpa.i_groupcipher = IEEE80211_WPA_CIPHER_CCMP | IEEE80211_WPA_CIPHER_TKIP;
-    wpa.i_protos = IEEE80211_WPA_PROTO_WPA1 | IEEE80211_WPA_PROTO_WPA2;
-    wpa.i_akms = IEEE80211_WPA_AKM_PSK | IEEE80211_WPA_AKM_8021X | IEEE80211_WPA_AKM_SHA256_PSK | IEEE80211_WPA_AKM_SHA256_8021X;
-    memcpy(wpa.i_name, "zxy", strlen("zxy"));
-    memset(&psk, 0, sizeof(ieee80211_wpapsk));
-    memcpy(psk.i_name, "zxy", strlen("zxy"));
-    psk.i_enabled = 1;
-    pbkdf2_sha1(ssid_pwd, (const uint8_t*)ssid_name, strlen(ssid_name),
-                4096, psk.i_psk , 32);
-    memset(&nwkey, 0, sizeof(ieee80211_nwkey));
-    nwkey.i_wepon = 0;
-    nwkey.i_defkid = 0;
-    memset(&join, 0, sizeof(ieee80211_join));
-    join.i_wpaparams = wpa;
-    join.i_wpapsk = psk;
-    join.i_flags = IEEE80211_JOIN_WPAPSK | IEEE80211_JOIN_ANY | IEEE80211_JOIN_WPA | IEEE80211_JOIN_8021X;
-    join.i_nwkey = nwkey;
-    join.i_len = strlen(ssid_name);
-    memcpy(join.i_nwid, ssid_name, join.i_len);
-    
-    //    ieee80211_nwid nwid;
-    ////    nwid.i_len = 6;
-    ////    memset(nwid.i_nwid, 0, IEEE80211_NWID_LEN);
-    ////    nwid.i_nwid[0] = 0xb0;
-    ////    nwid.i_nwid[1] = 0xdf;
-    ////    nwid.i_nwid[2] = 0xc1;
-    ////    nwid.i_nwid[3] = 0x0b;
-    ////    nwid.i_nwid[4] = 0x53;
-    ////    nwid.i_nwid[5] = 0x10;
-    //    nwid.i_len = strlen(mac);
-    //    memcpy(nwid.i_nwid, mac, nwid.i_len);
-    //    memset(ic->ic_des_essid, 0, IEEE80211_NWID_LEN);
-    //    ic->ic_des_esslen = nwid.i_len;
-    //    memcpy(ic->ic_des_essid, nwid.i_nwid, nwid.i_len);
-    //    if (ic->ic_des_esslen > 0) {
-    //        /* 'nwid' disables auto-join magic */
-    //        ic->ic_flags &= ~IEEE80211_F_AUTO_JOIN;
-    //    } else if (!TAILQ_EMPTY(&ic->ic_ess)) {
-    //        /* '-nwid' re-enables auto-join */
-    //        ic->ic_flags |= IEEE80211_F_AUTO_JOIN;
-    //    }
-    //    /* disable WPA/WEP */
-    //    ieee80211_disable_rsn(ic);
-    //    ieee80211_disable_wep(ic);
-    //    if (psk.i_enabled) {
-    //        ic->ic_flags |= IEEE80211_F_PSK;
-    //        memcpy(ic->ic_psk, psk.i_psk, sizeof(ic->ic_psk));
-    //        if (ic->ic_flags & IEEE80211_F_WEPON)
-    //            ieee80211_disable_wep(ic);
-    //    } else {
-    //        ic->ic_flags &= ~IEEE80211_F_PSK;
-    //        memset(ic->ic_psk, 0, sizeof(ic->ic_psk));
-    //    }
-    //    ic->ic_txpower = 80;
-    //    ieee80211_ioctl_setwpaparms(ic, &wpa);
-    
-    if (ieee80211_add_ess(ic, &join) == 0)
-        ic->ic_flags |= IEEE80211_F_AUTO_JOIN;
     
     ni = RB_MIN(ieee80211_tree, &ic->ic_tree);
     for (; ni != NULL; ni = nextbs) {
