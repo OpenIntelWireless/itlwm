@@ -112,7 +112,7 @@ static char * trim(const char *strIn, char *strOut)
     size_t i, j ;
     i = 0;
     j = strlen(strIn) - 1;
-    if (j <= 0) {
+    if (j < 0) {
         memset(strOut, 0, 1);
         return strOut;
     }
@@ -121,6 +121,11 @@ static char * trim(const char *strIn, char *strOut)
 
     while(strIn[j] == ' ')
         --j;
+    
+    if (j - i + 1 < 0) {
+        memset(strOut, 0, 1);
+        return strOut;
+    }
     strncpy(strOut,  strIn + i, j - i + 1);
     strOut[j - i + 1] = '\0';
     return strOut;

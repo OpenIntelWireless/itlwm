@@ -67,13 +67,15 @@ public:
     void wakeupOn(void* ident);
     static bool intrFilter(OSObject *object, IOFilterInterruptEventSource *src);
     static IOReturn _iwm_start_task(OSObject *target, void *arg0, void *arg1, void *arg2, void *arg3);
-//    virtual bool createWorkLoop() override;
-//    virtual IOWorkLoop* getWorkLoop() const override;
+    virtual bool createWorkLoop() override;
+    virtual IOWorkLoop* getWorkLoop() const override;
+    void watchdogAction(IOTimerEventSource *timer);
     
     bool createMediumTables(const IONetworkMedium **primary);
-    IOReturn getPacketFilters(const OSSymbol *group, UInt32 *filters) const override;
     IOReturn selectMedium(const IONetworkMedium *medium) override;
-    UInt32 getFeatures() const override;
+    
+    void releaseAll();
+    void joinSSID(const char *ssid, const char *pwd);
     
     //utils
     static void *malloc(vm_size_t len, int type, int how);
@@ -287,6 +289,7 @@ public:
             struct ieee80211_node *);
     int    iwx_sf_config(struct iwx_softc *, int);
     int    iwx_send_bt_init_conf(struct iwx_softc *);
+    int    iwx_send_soc_conf(struct iwx_softc *);
     int    iwx_send_update_mcc_cmd(struct iwx_softc *, const char *);
     int    iwx_init_hw(struct iwx_softc *);
     int    iwx_init(struct ifnet *);
@@ -313,14 +316,13 @@ public:
     
 public:
     IOInterruptEventSource* fInterrupt;
-    IOWorkLoop *irqWorkloop;
-    IOCommandGate*        fCommandGate;
-    IOCommandGate*        fOutputCommandGate;
+    IOTimerEventSource *watchdogTimer;
     struct pci_attach_args pci;
     struct iwx_softc com;
     IONetworkStats *fpNetStats;
     
     IOLock *_fwLoadLock;
+    void *lastSleepChan;
 };
 
 struct ResourceCallbackContext

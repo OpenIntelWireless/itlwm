@@ -58,6 +58,33 @@ MSEC_TO_NSEC(uint64_t milliseconds)
     return milliseconds * 1000000ULL;
 }
 
+static inline int
+flsl(long mask)
+{
+    int bit;
+
+    if (mask == 0)
+        return (0);
+    for (bit = 1; mask != 1; bit++)
+        mask = (unsigned long)mask >> 1;
+    return (bit);
+}
+
+/*
+ * Find Last Set bit
+ */
+static inline int
+_fls(int mask)
+{
+    int bit;
+
+    if (mask == 0)
+        return (0);
+    for (bit = 1; mask != 1; bit++)
+        mask = (unsigned int)mask >> 1;
+    return (bit);
+}
+
 enum {
 	BUS_DMASYNC_PREREAD,
 	BUS_DMASYNC_PREWRITE,
