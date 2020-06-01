@@ -64,6 +64,7 @@ bool itlwm::configureInterface(IONetworkInterface *netif) {
     }
     com.sc_ic.ic_ac.ac_if.netStat = fpNetStats;
     com.sc_ic.ic_ac.ac_if.iface = OSDynamicCast(IOEthernetInterface, netif);
+    fpNetStats->collisions = 0;
     
     return true;
 }
@@ -129,28 +130,6 @@ static char * trim(const char *strIn, char *strOut)
     strncpy(strOut,  strIn + i, j - i + 1);
     strOut[j - i + 1] = '\0';
     return strOut;
-}
-
-static bool wifiConfigIterateCallback(void * refcon, const OSSymbol * key, OSObject * object)
-{
-    itlwm *that = (itlwm *)refcon;
-    OSDictionary *wifiEntry = OSDynamicCast(OSDictionary, object);
-    if (wifiEntry == NULL) {
-        return false;
-    }
-    OSString *ssidObj = OSDynamicCast(OSString, wifiEntry->getObject("ssid"));
-    OSString *pwdObj = OSDynamicCast(OSString, wifiEntry->getObject("password"));
-    if (ssidObj == NULL || pwdObj == NULL || ssidObj->isEqualTo("")) {
-        return false;
-    }
-    char ssid[255];
-    char password[255];
-    trim(ssidObj->getCStringNoCopy(), (char *)&ssid);
-    trim(pwdObj->getCStringNoCopy(), (char *)&password);
-    
-    XYLog("%s [%s] [%s]\n", __FUNCTION__, ssid, password);
-    that->joinSSID(ssid, password);
-    return false;
 }
 
 ieee80211_wpaparams wpa;
@@ -231,7 +210,12 @@ bool itlwm::start(IOService *provider)
         releaseAll();
         return false;
     }
-    pci.workloop = _fWorkloop;
+    irqWorkloop = IOWorkLoop::workLoop();
+    if (irqWorkloop == NULL) {
+        releaseAll();
+        return false;
+    }
+    pci.workloop = irqWorkloop;
     pci.pa_tag = pciNub;
     if (!iwm_attach(&com, &pci)) {
         releaseAll();
@@ -250,9 +234,37 @@ bool itlwm::start(IOService *provider)
     }
     _fWorkloop->addEventSource(watchdogTimer);
     setLinkStatus(kIONetworkLinkValid);
+    OSObject *wifiEntryObject = NULL;
+    OSDictionary *wifiEntry = NULL;
+    char ssid[255];
+    char password[255];
+    OSString *entryKey = NULL;
     OSDictionary *wifiDict = OSDynamicCast(OSDictionary, getProperty("WiFiConfig"));
-    if (wifiDict) {
-        wifiDict->iterateObjects(this, wifiConfigIterateCallback);
+    if (wifiDict != NULL) {
+        OSCollectionIterator *iterator = OSCollectionIterator::withCollection(wifiDict);
+        while ((wifiEntryObject = iterator->getNextObject())) {
+            entryKey = OSDynamicCast(OSString, wifiEntryObject);
+            if (entryKey == NULL) {
+                continue;
+            }
+            wifiEntry = OSDynamicCast(OSDictionary, wifiDict->getObject(entryKey));
+            if (wifiEntry == NULL) {
+                continue;
+            }
+            OSString *ssidObj = OSDynamicCast(OSString, wifiEntry->getObject("ssid"));
+            OSString *pwdObj = OSDynamicCast(OSString, wifiEntry->getObject("password"));
+            if (ssidObj == NULL || pwdObj == NULL || ssidObj->isEqualTo("")) {
+                continue;
+            }
+            bzero(ssid, sizeof(ssid));
+            bzero(password, sizeof(password));
+            trim(ssidObj->getCStringNoCopy(), (char *)&ssid);
+            trim(pwdObj->getCStringNoCopy(), (char *)&password);
+            
+            XYLog("%s [%s] [%s]\n", __FUNCTION__, ssid, password);
+            joinSSID(ssid, password);
+        }
+        iterator->release();
     }
     return true;
 }
@@ -374,6 +386,10 @@ void itlwm::releaseAll()
             watchdogTimer->release();
             watchdogTimer = NULL;
         }
+        if (irqWorkloop) {
+            irqWorkloop->release();
+            irqWorkloop = NULL;
+        }
         _fWorkloop->release();
         _fWorkloop = NULL;
     }
@@ -473,19 +489,19 @@ IOReturn itlwm::setMulticastList(IOEthernetAddress* addr, UInt32 len) {
     return kIOReturnSuccess;
 }
 
-//IOReturn itlwm::getPacketFilters(const OSSymbol *group, UInt32 *filters) const {
-//    IOReturn    rtn = kIOReturnSuccess;
-//    if (group == gIOEthernetWakeOnLANFilterGroup && magicPacketSupported) {
-//        *filters = kIOEthernetWakeOnMagicPacket;
-//    } else if (group == gIONetworkFilterGroup) {
-//        *filters = kIOPacketFilterUnicast | kIOPacketFilterBroadcast
-//        | kIOPacketFilterPromiscuous | kIOPacketFilterMulticast
-//        | kIOPacketFilterMulticastAll;
-//    } else {
-//        rtn = IOEthernetController::getPacketFilters(group, filters);
-//    }
-//    return rtn;
-//}
+IOReturn itlwm::getPacketFilters(const OSSymbol *group, UInt32 *filters) const {
+    IOReturn    rtn = kIOReturnSuccess;
+    if (group == gIOEthernetWakeOnLANFilterGroup && magicPacketSupported) {
+        *filters = kIOEthernetWakeOnMagicPacket;
+    } else if (group == gIONetworkFilterGroup) {
+        *filters = kIOPacketFilterUnicast | kIOPacketFilterBroadcast
+        | kIOPacketFilterPromiscuous | kIOPacketFilterMulticast
+        | kIOPacketFilterMulticastAll;
+    } else {
+        rtn = IOEthernetController::getPacketFilters(group, filters);
+    }
+    return rtn;
+}
 
 void itlwm::wakeupOn(void *ident)
 {
