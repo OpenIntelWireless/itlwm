@@ -2675,10 +2675,6 @@ ieee80211_recv_addba_req(struct ieee80211com *ic, mbuf_t m,
         return;
     }
     
-    /* No point in starting block-ack before the WPA handshake is done. */
-    if ((ic->ic_flags & IEEE80211_F_RSNON) && !ni->ni_port_valid)
-        return;
-    
     /* MLME-ADDBA.indication */
     wh = mtod(m, struct ieee80211_frame *);
     frm = (const u_int8_t *)&wh[1];

@@ -381,7 +381,6 @@ public:
     
 public:
     IOInterruptEventSource* fInterrupt;
-    IOWorkLoop *irqWorkloop;
     IOCommandGate*        fOutputCommandGate;
     IOTimerEventSource *watchdogTimer;
     IOPCIDevice *pciNub;

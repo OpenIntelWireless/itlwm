@@ -769,8 +769,8 @@ iwm_rx_tx_cmd(struct iwm_softc *sc, struct iwm_rx_packet *pkt,
     
     if (--ring->queued < IWM_TX_RING_LOMARK) {
         sc->qfullmsk &= ~(1 << ring->qid);
-        if (sc->qfullmsk == 0 /*&& ifq_is_oactive(&ifp->if_snd)*/) {
-            //                ifq_clr_oactive(&ifp->if_snd);
+        if (sc->qfullmsk == 0 && ifq_is_oactive(&ifp->if_snd)) {
+            ifq_clr_oactive(&ifp->if_snd);
             /*
              * Well, we're in interrupt context, but then again
              * I guess net80211 does all sorts of stunts in
@@ -2560,7 +2560,7 @@ iwm_init(struct ifnet *ifp)
     if (sc->sc_nvm.sku_cap_11n_enable)
         iwm_setup_ht_rates(sc);
     
-    //        ifq_clr_oactive(&ifp->if_snd);
+    ifq_clr_oactive(&ifp->if_snd);
     ifp->if_snd->flush();
     ifp->if_flags |= IFF_RUNNING;
     
@@ -2602,7 +2602,7 @@ _iwm_start_task(OSObject *target, void *arg0, void *arg1, void *arg2, void *arg3
     
     IORecursiveLockLock(_outputLock);
     
-    if (!(ifp->if_flags & IFF_RUNNING) /*|| ifq_is_oactive(&ifp->if_snd)*/) {
+    if (!(ifp->if_flags & IFF_RUNNING) || ifq_is_oactive(&ifp->if_snd)) {
         IORecursiveLockUnlock(_outputLock);
         return kIOReturnOutputDropped;
     }
@@ -2610,7 +2610,7 @@ _iwm_start_task(OSObject *target, void *arg0, void *arg1, void *arg2, void *arg3
     for (;;) {
         /* why isn't this done per-queue? */
         if (sc->qfullmsk != 0) {
-            //            ifq_set_oactive(&ifp->if_snd);
+            ifq_set_oactive(&ifp->if_snd);
             break;
         }
         
@@ -2718,7 +2718,7 @@ iwm_stop(struct ifnet *ifp)
     }
     ifp->if_flags &= ~IFF_RUNNING;
     ifp->if_snd->flush();
-    //    ifq_clr_oactive(&ifp->if_snd);
+    ifq_clr_oactive(&ifp->if_snd);
     
     in->in_phyctxt = NULL;
     if (ic->ic_state == IEEE80211_S_RUN)

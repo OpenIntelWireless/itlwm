@@ -92,7 +92,7 @@ bool itlwm::createMediumTables(const IONetworkMedium **primary)
         return false;
     }
     
-    medium = IONetworkMedium::medium(kIOMediumEthernetAuto, 480 * 1000000);
+    medium = IONetworkMedium::medium(kIOMediumEthernetAuto, 100 * 1000000);
     IONetworkMedium::addMedium(mediumDict, medium);
     medium->release();
     if (primary) {
@@ -210,12 +210,7 @@ bool itlwm::start(IOService *provider)
         releaseAll();
         return false;
     }
-    irqWorkloop = IOWorkLoop::workLoop();
-    if (irqWorkloop == NULL) {
-        releaseAll();
-        return false;
-    }
-    pci.workloop = irqWorkloop;
+    pci.workloop = _fWorkloop;
     pci.pa_tag = pciNub;
     if (!iwm_attach(&com, &pci)) {
         releaseAll();
@@ -385,10 +380,6 @@ void itlwm::releaseAll()
             _fWorkloop->removeEventSource(watchdogTimer);
             watchdogTimer->release();
             watchdogTimer = NULL;
-        }
-        if (irqWorkloop) {
-            irqWorkloop->release();
-            irqWorkloop = NULL;
         }
         _fWorkloop->release();
         _fWorkloop = NULL;
