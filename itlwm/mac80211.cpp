@@ -123,7 +123,6 @@
 #include <net/ethernet.h>
 #include <IOKit/IOCommandGate.h>
 
-IORecursiveLock *_outputLock = IORecursiveLockAlloc();
 extern IOCommandGate *_fCommandGate;;
 
 int itlwm::
@@ -2600,10 +2599,7 @@ _iwm_start_task(OSObject *target, void *arg0, void *arg1, void *arg2, void *arg3
     mbuf_t m;
     int ac = EDCA_AC_BE; /* XXX */
     
-    IORecursiveLockLock(_outputLock);
-    
     if (!(ifp->if_flags & IFF_RUNNING) || ifq_is_oactive(&ifp->if_snd)) {
-        IORecursiveLockUnlock(_outputLock);
         return kIOReturnOutputDropped;
     }
     
@@ -2668,8 +2664,6 @@ _iwm_start_task(OSObject *target, void *arg0, void *arg1, void *arg2, void *arg3
         }
     }
     
-    IORecursiveLockUnlock(_outputLock);
-    
     return kIOReturnSuccess;
 }
 
@@ -2681,8 +2675,8 @@ iwm_start(struct ifnet *ifp)
 //        if (that->outputThreadSignal) {
 //            semaphore_signal(that->outputThreadSignal);
 //        }
-//    _fCommandGate->runAction(_iwm_start_task, &that->com.sc_ic.ic_ac.ac_if);
-    _iwm_start_task(that, &that->com.sc_ic.ic_ac.ac_if, NULL, NULL, NULL);
+    _fCommandGate->runAction(_iwm_start_task, &that->com.sc_ic.ic_ac.ac_if);
+//    _iwm_start_task(that, &that->com.sc_ic.ic_ac.ac_if, NULL, NULL, NULL);
 }
 
 void itlwm::
@@ -3410,8 +3404,8 @@ static const struct pci_matchid iwm_devices[] = {
 int itlwm::
 iwm_match(struct IOPCIDevice *device)
 {
-    XYLog("%s\n", __FUNCTION__);
     int devId = device->configRead16(kIOPCIConfigDeviceID);
+    XYLog("%s devId=0x%04X\n", __FUNCTION__, devId);
     return pci_matchbyid(PCI_VENDOR_INTEL, devId, iwm_devices,
                          nitems(iwm_devices));
 }

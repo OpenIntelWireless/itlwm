@@ -57,7 +57,7 @@ bool itlwm::configureInterface(IONetworkInterface *netif) {
         return false;
     }
     
-    nd = netif->getNetworkData(kIONetworkStatsKey);
+    nd = netif->getParameter(kIONetworkStatsKey);
     if (!nd || !(fpNetStats = (IONetworkStats *)nd->getBuffer())) {
         XYLog("network statistics buffer unavailable?\n");
         return false;
@@ -279,7 +279,7 @@ const OSString * itlwm::newVendorString() const
 
 const OSString * itlwm::newModelString() const
 {
-    return OSString::withCString("Intel wireless card");
+    return OSString::withCString("Intel Wireless Card");
 }
 
 bool itlwm::initPCIPowerManagment(IOPCIDevice *provider)
