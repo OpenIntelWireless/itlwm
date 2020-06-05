@@ -114,7 +114,7 @@ ieee80211_wep_encrypt(struct ieee80211com *ic, mbuf_t m0,
 	if (mbuf_pkthdr_len(n0) >= mbuf_get_minclsize() - IEEE80211_WEP_CRCLEN) {
         mbuf_mclget(MBUF_DONTWAIT, mbuf_type(n0), &n0);
 		if (mbuf_flags(n0) & MBUF_EXT)
-            mbuf_setlen(n0, mbuf_maxlen(n0));
+            mbuf_setlen(n0, MCLBYTES);
 	}
 	if (mbuf_len(n0) > mbuf_pkthdr_len(n0))
         mbuf_setlen(n0, mbuf_pkthdr_len(n0));
@@ -168,7 +168,7 @@ ieee80211_wep_encrypt(struct ieee80211com *ic, mbuf_t m0,
                 mbuf_mclget(MBUF_DONTWAIT, mbuf_type(n), &n);
 //				MCLGET(n, MBUF_DONTWAIT);
 				if (mbuf_flags(n) & MBUF_EXT)
-                    mbuf_setlen(n, mbuf_maxlen(n));
+                    mbuf_setlen(n, MCLBYTES);
 			}
 			if (mbuf_len(n) > left)
                 mbuf_setlen(n, left);
@@ -255,7 +255,7 @@ ieee80211_wep_decrypt(struct ieee80211com *ic, mbuf_t m0,
         mbuf_mclget(MBUF_DONTWAIT, mbuf_type(n0), &n0);
 //		MCLGET(n0, MBUF_DONTWAIT);
 		if (mbuf_flags(n0) & MBUF_EXT)
-            mbuf_setlen(n0, mbuf_maxlen(n0));
+            mbuf_setlen(n0, MCLBYTES);
 //			n0->m_len = n0->m_ext.ext_size;
 	}
 	if (mbuf_len(n0) > mbuf_pkthdr_len(n0))
@@ -291,7 +291,7 @@ ieee80211_wep_decrypt(struct ieee80211com *ic, mbuf_t m0,
 			if (left >= mbuf_get_minclsize()) {
                 mbuf_mclget(MBUF_DONTWAIT, mbuf_type(n), &n);
 				if (mbuf_flags(n) & MBUF_EXT)
-					mbuf_setlen(n, mbuf_maxlen(n));
+					mbuf_setlen(n, MCLBYTES);
 			}
 			if (mbuf_len(n) > left)
                 mbuf_setlen(n, left);

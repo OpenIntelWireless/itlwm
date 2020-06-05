@@ -214,18 +214,17 @@ ieee80211_tkip_encrypt(struct ieee80211com *ic, mbuf_t m0,
         XYLog("%s, m0==NULL\n", __FUNCTION__);
         return NULL;
     }
-//    mbuf_get(MBUF_DONTWAIT, mbuf_type(m0), &n0);
-    mbuf_allocpacket(MBUF_DONTWAIT, mbuf_get_mlen(), &max_chunks, &n0);
+    mbuf_get(MBUF_DONTWAIT, mbuf_type(m0), &n0);
 	if (n0 == NULL)
 		goto nospace;
 	if (m_dup_pkthdr(n0, m0, MBUF_DONTWAIT))
 		goto nospace;
     mbuf_pkthdr_setlen(n0, mbuf_pkthdr_len(n0) + IEEE80211_TKIP_HDRLEN);
-    mbuf_setlen(n0, mbuf_get_mlen());
+    mbuf_setlen(n0, mbuf_get_mhlen());
 	if (mbuf_pkthdr_len(n0) >= mbuf_get_minclsize() - IEEE80211_TKIP_TAILLEN) {
-        mbuf_getcluster(MBUF_DONTWAIT, mbuf_type(n0), 4096, &n0);
+        mbuf_mclget(MBUF_DONTWAIT, mbuf_type(n0), &n0);
         if (mbuf_flags(n0) & MBUF_EXT)
-            mbuf_setlen(n0, 4096);
+            mbuf_setlen(n0, MCLBYTES);
 	}
 	if (mbuf_len(n0) > mbuf_pkthdr_len(n0))
         mbuf_setlen(n0, mbuf_pkthdr_len(n0));
@@ -281,9 +280,9 @@ ieee80211_tkip_encrypt(struct ieee80211com *ic, mbuf_t m0,
 			n = mbuf_next(n);
             mbuf_setlen(n, mbuf_get_mlen());
 			if (left >= mbuf_get_minclsize() - IEEE80211_TKIP_TAILLEN) {
-                mbuf_getcluster(MBUF_DONTWAIT, mbuf_type(n), 4096, &n);
+                mbuf_mclget(MBUF_DONTWAIT, mbuf_type(n), &n);
 				if (mbuf_flags(n) & MBUF_EXT)
-                    mbuf_setlen(n, 4096);
+                    mbuf_setlen(n, MCLBYTES);
 			}
 			if (mbuf_len(n) > left)
                 mbuf_setlen(n, left);
@@ -303,12 +302,9 @@ ieee80211_tkip_encrypt(struct ieee80211com *ic, mbuf_t m0,
 	/* reserve trailing space for TKIP MIC and WEP ICV */
 	if (mbuf_trailingspace(n) < IEEE80211_TKIP_TAILLEN) {
         temp = NULL;
-//        mbuf_get(MBUF_DONTWAIT, mbuf_type(n), &temp);
-        mbuf_allocpacket(MBUF_DONTWAIT, mbuf_get_mlen(), &max_chunks, &temp);
+        mbuf_get(MBUF_DONTWAIT, mbuf_type(n), &temp);
 		if (temp == NULL)
 			goto nospace;
-        mbuf_setlen(temp, mbuf_get_mlen());
-        mbuf_pkthdr_setlen(temp, mbuf_get_mlen());
         mbuf_setnext(n, temp);
 		n = mbuf_next(n);
         mbuf_setlen(n, 0);
@@ -420,18 +416,17 @@ ieee80211_tkip_decrypt(struct ieee80211com *ic, mbuf_t m0,
 		return NULL;
 	}
 
-//    mbuf_get(MBUF_DONTWAIT, mbuf_type(m0), &n0);
-    mbuf_allocpacket(MBUF_DONTWAIT, mbuf_get_mlen(), &max_chunks, &n0);
+    mbuf_get(MBUF_DONTWAIT, mbuf_type(m0), &n0);
 	if (n0 == NULL)
 		goto nospace;
 	if (m_dup_pkthdr(n0, m0, MBUF_DONTWAIT))
 		goto nospace;
     mbuf_pkthdr_setlen(n0, mbuf_pkthdr_len(n0) - IEEE80211_TKIP_OVHD);
-    mbuf_setlen(n0, mbuf_get_mlen());
+    mbuf_setlen(n0, mbuf_get_mhlen());
 	if (mbuf_pkthdr_len(n0) >= mbuf_get_minclsize()) {
-        mbuf_getcluster(MBUF_DONTWAIT, mbuf_type(n0), 4096, &n0);
+        mbuf_mclget(MBUF_DONTWAIT, mbuf_type(n0), &n0);
 		if (mbuf_flags(n0) & MBUF_EXT)
-            mbuf_setlen(n0, 4096);
+            mbuf_setlen(n0, MCLBYTES);
 	}
 	if (mbuf_len(n0) > mbuf_pkthdr_len(n0))
         mbuf_setlen(n0, mbuf_pkthdr_len(n0));
@@ -473,9 +468,9 @@ ieee80211_tkip_decrypt(struct ieee80211com *ic, mbuf_t m0,
 			n = mbuf_next(n);
             mbuf_setlen(n, mbuf_get_mlen());
 			if (left >= mbuf_get_minclsize()) {
-                mbuf_getcluster(MBUF_DONTWAIT, mbuf_type(n), 4096, &n);
+                mbuf_mclget(MBUF_DONTWAIT, mbuf_type(n), &n);
 				if (mbuf_flags(n) & MBUF_EXT)
-                    mbuf_setlen(n, 4096);
+                    mbuf_setlen(n, MCLBYTES);
 			}
 			if (mbuf_len(n) > left)
                 mbuf_setlen(n, left);

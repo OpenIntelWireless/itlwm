@@ -261,6 +261,8 @@ bool itlwm::start(IOService *provider)
         }
         iterator->release();
     }
+    registerService();
+    fNetIf->registerService();
     return true;
 }
 
