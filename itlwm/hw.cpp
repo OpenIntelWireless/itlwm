@@ -307,22 +307,13 @@ iwm_apm_config(struct iwm_softc *sc)
     pcireg_t lctl, cap;
     
     /*
-     * HW bug W/A for instability in PCIe bus L0S->L1 transition.
-     * Check if BIOS (or OS) enabled L1-ASPM on this device.
-     * If so (likely), disable L0S, so device moves directly L0->L1;
-     *    costs negligible amount of power savings.
-     * If not (unlikely), enable L0S, so there is at least some
-     *    power savings, even without L1.
+     * L0S states have been found to be unstable with our devices
+     * and in newer hardware they are not officially supported at
+     * all, so we must always set the L0S_DISABLED bit.
      */
     lctl = pci_conf_read(sc->sc_pct, sc->sc_pcitag,
                          sc->sc_cap_off + PCI_PCIE_LCSR);
-    if (lctl & PCI_PCIE_LCSR_ASPM_L1) {
-        IWM_SETBITS(sc, IWM_CSR_GIO_REG,
-                    IWM_CSR_GIO_REG_VAL_L0S_ENABLED);
-    } else {
-        IWM_CLRBITS(sc, IWM_CSR_GIO_REG,
-                    IWM_CSR_GIO_REG_VAL_L0S_ENABLED);
-    }
+    IWM_SETBITS(sc, IWM_CSR_GIO_REG, IWM_CSR_GIO_REG_VAL_L0S_DISABLED);
     
     cap = pci_conf_read(sc->sc_pct, sc->sc_pcitag,
                         sc->sc_cap_off + PCI_PCIE_DCSR2);

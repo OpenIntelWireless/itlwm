@@ -151,8 +151,8 @@ void itlwm::joinSSID(const char *ssid_name, const char *ssid_pwd)
     } else {
         memset(&wpa, 0, sizeof(ieee80211_wpaparams));
         wpa.i_enabled = 1;
-        wpa.i_ciphers = IEEE80211_WPA_CIPHER_CCMP | IEEE80211_WPA_CIPHER_TKIP;
-        wpa.i_groupcipher = IEEE80211_WPA_CIPHER_CCMP | IEEE80211_WPA_CIPHER_TKIP;
+        wpa.i_ciphers = 0;
+        wpa.i_groupcipher = 0;
         wpa.i_protos = IEEE80211_WPA_PROTO_WPA1 | IEEE80211_WPA_PROTO_WPA2;
         wpa.i_akms = IEEE80211_WPA_AKM_PSK | IEEE80211_WPA_AKM_8021X | IEEE80211_WPA_AKM_SHA256_PSK | IEEE80211_WPA_AKM_SHA256_8021X;
         memcpy(wpa.i_name, "zxy", strlen("zxy"));
@@ -176,6 +176,22 @@ void itlwm::joinSSID(const char *ssid_name, const char *ssid_pwd)
         ic->ic_flags |= IEEE80211_F_AUTO_JOIN;
 }
 
+#define IWM_PCI_BRIDGE_CONTROL    0x3e
+#define  IWM_PCI_BRIDGE_CTL_BUS_RESET    0x40    /* Secondary bus reset */
+
+static void reset_pci_secondary_bus(IOPCIDevice *pci)
+{
+    uint64_t ctrl;
+    
+    ctrl = pci->configRead16(IWM_PCI_BRIDGE_CONTROL);
+    ctrl |= IWM_PCI_BRIDGE_CTL_BUS_RESET;
+    pci->configWrite16(IWM_PCI_BRIDGE_CONTROL, ctrl);
+    IODelay(2);
+    ctrl &= ~IWM_PCI_BRIDGE_CTL_BUS_RESET;
+    pci->configWrite16(IWM_PCI_BRIDGE_CONTROL, ctrl);
+    IODelay(1000);
+}
+
 bool itlwm::start(IOService *provider)
 {
     if (!super::start(provider)) {
@@ -185,6 +201,7 @@ bool itlwm::start(IOService *provider)
     if (!pciNub) {
         return false;
     }
+    reset_pci_secondary_bus(pciNub);
     pciNub->setBusMasterEnable(true);
     pciNub->setIOEnable(true);
     pciNub->setMemoryEnable(true);
@@ -331,7 +348,6 @@ void itlwm::stop(IOService *provider)
     
     super::stop(provider);
     setLinkStatus(kIONetworkLinkValid);
-    iwm_stop(ifp);
     ieee80211_ifdetach(ifp);
     detachInterface(fNetIf);
     OSSafeReleaseNULL(fNetIf);
