@@ -289,8 +289,8 @@ IOReturn itlwmx::enable(IONetworkInterface *netif)
     join.i_nwkey = nwkey;
     join.i_len = strlen(ssid_name);
     memcpy(join.i_nwid, ssid_name, join.i_len);
-    if (ieee80211_add_ess(&com.sc_ic, &join) == 0)
-        com.sc_ic.ic_flags |= IEEE80211_F_AUTO_JOIN;
+//    if (ieee80211_add_ess(&com.sc_ic, &join) == 0)
+//        com.sc_ic.ic_flags |= IEEE80211_F_AUTO_JOIN;
     ifp->if_flags |= IFF_UP;
     _fCommandGate->enable();
     iwx_activate(&com, DVACT_WAKEUP);
@@ -905,6 +905,8 @@ iwx_ctxt_info_init(struct iwx_softc *sc, const struct iwx_fw_sects *fws)
         if (err)
             return err;
     }
+    
+    iwx_enable_fwload_interrupt(sc);
     
     /* kick FW self load */
     IWX_WRITE_8(sc, IWX_CSR_CTXT_INFO_BA, sc->ctxt_info_dma.paddr);
@@ -2133,13 +2135,7 @@ iwx_apm_config(struct iwx_softc *sc)
      */
     lctl = pci_conf_read(sc->sc_pct, sc->sc_pcitag,
                          sc->sc_cap_off + PCI_PCIE_LCSR);
-    if (lctl & PCI_PCIE_LCSR_ASPM_L1) {
-        IWX_SETBITS(sc, IWX_CSR_GIO_REG,
-                    IWX_CSR_GIO_REG_VAL_L0S_ENABLED);
-    } else {
-        IWX_CLRBITS(sc, IWX_CSR_GIO_REG,
-                    IWX_CSR_GIO_REG_VAL_L0S_ENABLED);
-    }
+    IWX_SETBITS(sc, IWX_CSR_GIO_REG, IWX_CSR_GIO_REG_VAL_L0S_DISABLED);
     
     cap = pci_conf_read(sc->sc_pct, sc->sc_pcitag,
                         sc->sc_cap_off + PCI_PCIE_DCSR2);
@@ -2566,6 +2562,12 @@ iwx_post_alive(struct iwx_softc *sc)
     XYLog("%s\n", __FUNCTION__);
     iwx_ict_reset(sc);
     iwx_ctxt_info_free(sc);
+    
+    /*
+     * Re-enable all the interrupts, including the RF-Kill one, now that
+     * the firmware is alive.
+     */
+    iwx_enable_interrupts(sc);
 }
 
 /*
@@ -3344,13 +3346,21 @@ iwx_start_fw(struct iwx_softc *sc)
     XYLog("%s\n", __FUNCTION__);
     int err;
     
-    IWX_WRITE(sc, IWX_CSR_INT, ~0);
-    
-    err = iwx_nic_init(sc);
-    if (err) {
-        XYLog("%s: unable to init nic\n", DEVNAME(sc));
+    if ((err = iwx_prepare_card_hw(sc))) {
+        XYLog("Exit HW not ready\n");
         return err;
     }
+    
+    iwx_enable_rfkill_int(sc);
+    
+    IWX_WRITE(sc, IWX_CSR_INT, ~0);
+    
+    /*
+     * We enabled the RF-Kill interrupt and the handler may very
+     * well be running. Disable the interrupts to make sure no other
+     * interrupt can be fired.
+     */
+    iwx_disable_interrupts(sc);
     
     /* make sure rfkill handshake bits are cleared */
     IWX_WRITE(sc, IWX_CSR_UCODE_DRV_GP1_CLR, IWX_CSR_UCODE_SW_BIT_RFKILL);
@@ -3359,7 +3369,12 @@ iwx_start_fw(struct iwx_softc *sc)
     
     /* clear (again), then enable firwmare load interrupt */
     IWX_WRITE(sc, IWX_CSR_INT, ~0);
-    iwx_enable_fwload_interrupt(sc);
+    
+    err = iwx_nic_init(sc);
+    if (err) {
+        XYLog("%s: unable to init nic\n", DEVNAME(sc));
+        return err;
+    }
     
     return iwx_load_firmware(sc);
 }
@@ -4888,6 +4903,7 @@ iwx_add_aux_sta(struct iwx_softc *sc)
     
     return iwx_enable_txq(sc, IWX_AUX_STA_ID, qid, IWX_MGMT_TID,
                           IWX_TX_RING_COUNT);
+    return 0;
 }
 
 int itlwmx::
@@ -5181,6 +5197,12 @@ iwx_get_scan_req_umac_data(struct iwx_softc *sc, struct iwx_scan_req_umac *req)
     
 }
 
+#define IWL_SCAN_DWELL_ACTIVE        10
+#define IWL_SCAN_DWELL_PASSIVE        110
+#define IWL_SCAN_DWELL_FRAGMENTED    44
+#define IWL_SCAN_DWELL_EXTENDED        90
+#define IWL_SCAN_NUM_OF_FRAGS        3
+
 /* adaptive dwell max budget time [TU] for full scan */
 #define IWX_SCAN_ADWELL_MAX_BUDGET_FULL_SCAN 300
 /* adaptive dwell max budget time [TU] for directed scan */
@@ -5231,6 +5253,9 @@ iwx_umac_scan(struct iwx_softc *sc, int bgscan)
         req->v7.adwell_default_n_aps =
         IWX_SCAN_ADWELL_DEFAULT_LB_N_APS;
         
+        if (isset(sc->sc_ucode_api, IWX_UCODE_TLV_API_ADWELL_HB_DEF_N_AP)) {
+            req->v9.adwell_default_hb_n_aps = IWX_SCAN_ADWELL_DEFAULT_LB_N_APS;
+        }
         if (ic->ic_des_esslen != 0)
             req->v7.adwell_max_budget =
             htole16(IWX_SCAN_ADWELL_MAX_BUDGET_DIRECTED_SCAN);
@@ -5244,19 +5269,19 @@ iwx_umac_scan(struct iwx_softc *sc, int bgscan)
         
         if (isset(sc->sc_ucode_api,
                   IWX_UCODE_TLV_API_ADAPTIVE_DWELL_V2)) {
-            req->v8.active_dwell[IWX_SCAN_LB_LMAC_IDX] = 10;
-            req->v8.passive_dwell[IWX_SCAN_LB_LMAC_IDX] = 110;
+            req->v8.active_dwell[IWX_SCAN_LB_LMAC_IDX] = IWL_SCAN_DWELL_ACTIVE;
+            req->v8.passive_dwell[IWX_SCAN_LB_LMAC_IDX] = IWL_SCAN_DWELL_PASSIVE;
         } else {
-            req->v7.active_dwell = 10;
-            req->v7.passive_dwell = 110;
-            req->v7.fragmented_dwell = 44;
+            req->v7.active_dwell = IWL_SCAN_DWELL_ACTIVE;
+            req->v7.passive_dwell = IWL_SCAN_DWELL_PASSIVE;
+            req->v7.fragmented_dwell = IWL_SCAN_DWELL_FRAGMENTED;
         }
     } else {
         /* These timings correspond to iwlwifi's UNASSOC scan. */
-        req->v1.active_dwell = 10;
-        req->v1.passive_dwell = 110;
-        req->v1.fragmented_dwell = 44;
-        req->v1.extended_dwell = 90;
+        req->v1.active_dwell = IWL_SCAN_DWELL_ACTIVE;
+        req->v1.passive_dwell = IWL_SCAN_DWELL_PASSIVE;
+        req->v1.fragmented_dwell = IWL_SCAN_DWELL_FRAGMENTED;
+        req->v1.extended_dwell = IWL_SCAN_DWELL_EXTENDED;
     }
     
     if (bgscan) {
@@ -6654,15 +6679,6 @@ iwx_init_hw(struct iwx_softc *sc)
         goto err;
     }
     
-    if (sc->sc_tx_with_siso_diversity) {
-        err = iwx_send_phy_cfg_cmd(sc);
-        if (err) {
-            XYLog("%s: could not send phy config (error %d)\n",
-                  DEVNAME(sc), err);
-            goto err;
-        }
-    }
-    
     err = iwx_send_bt_init_conf(sc);
     if (err) {
         XYLog("%s: could not init bt coex (error %d)\n",
@@ -6823,8 +6839,6 @@ iwx_init(struct ifnet *ifp)
     return 0;
 }
 
-IORecursiveLock *_outputLock = IORecursiveLockAlloc();
-
 void itlwmx::
 iwx_start(struct ifnet *ifp)
 {
@@ -6837,13 +6851,10 @@ iwx_start(struct ifnet *ifp)
     mbuf_t m;
     int ac = EDCA_AC_BE; /* XXX */
     
-    IORecursiveLockLock(_outputLock);
-    
     XYLog("%s %d\n", __FUNCTION__, __LINE__);
     
     if (!(ifp->if_flags & IFF_RUNNING)/* ||  ifq_is_oactive(&ifp->if_snd)*/) {
         XYLog("%s %d\n", __FUNCTION__, __LINE__);
-        IORecursiveLockUnlock(_outputLock);
         return;
     }
     

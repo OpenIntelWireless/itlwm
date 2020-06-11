@@ -441,7 +441,7 @@ struct iwx_context_info {
 #define IWX_CSR_HW_REV_TYPE_MSK        (0x000FFF0)
 
 /* CSR GIO */
-#define IWX_CSR_GIO_REG_VAL_L0S_ENABLED    (0x00000002)
+#define IWX_CSR_GIO_REG_VAL_L0S_DISABLED    (0x00000002)
 
 /*
  * UCODE-DRIVER GP (general purpose) mailbox register 1
@@ -925,6 +925,7 @@ enum msix_ivar_for_cause {
 #define IWX_UCODE_TLV_API_ADAPTIVE_DWELL_V2    42
 #define IWX_UCODE_TLV_API_BEACON_FILTER_V4    47
 #define IWX_UCODE_TLV_API_REDUCED_SCAN_CONFIG   56
+#define IWX_UCODE_TLV_API_ADWELL_HB_DEF_N_AP    57
 #define IWX_UCODE_TLV_API_SCAN_EXT_CHAN_VER    58
 #define IWX_NUM_UCODE_TLV_API            128
 
@@ -1435,6 +1436,33 @@ struct iwx_tx_queue_cfg_cmd {
     uint64_t byte_cnt_addr;
     uint64_t tfdq_addr;
 } __packed; /* TX_QUEUE_CFG_CMD_API_S_VER_2 */
+
+/**
+ * struct iwl_scd_txq_cfg_cmd - New txq hw scheduler config command
+ * @token: unused
+ * @sta_id: station id
+ * @tid: TID
+ * @scd_queue: scheduler queue to confiug
+ * @action: 1 queue enable, 0 queue disable, 2 change txq's tid owner
+ *    Value is one of &enum iwl_scd_cfg_actions options
+ * @aggregate: 1 aggregated queue, 0 otherwise
+ * @tx_fifo: &enum iwl_mvm_tx_fifo
+ * @window: BA window size
+ * @ssn: SSN for the BA agreement
+ * @reserved: reserved
+ */
+struct iwl_scd_txq_cfg_cmd {
+    u8 token;
+    u8 sta_id;
+    u8 tid;
+    u8 scd_queue;
+    u8 action;
+    u8 aggregate;
+    u8 tx_fifo;
+    u8 window;
+    __le16 ssn;
+    __le16 reserved;
+} __packed; /* SCD_QUEUE_CFG_CMD_API_S_VER_1 */
 
 /**
  * struct iwx_tx_queue_cfg_rsp - response to txq hw scheduler config
