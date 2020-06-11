@@ -216,9 +216,12 @@ struct iwx_nvm_data {
 	int sku_cap_band_24GHz_enable;
 	int sku_cap_band_52GHz_enable;
 	int sku_cap_11n_enable;
+    int sku_cap_11ac_enable;
+    int sku_cap_11ax_enable;
 	int sku_cap_amt_enable;
 	int sku_cap_ipan_enable;
 	int sku_cap_mimo_disable;
+    int lar_enabled;
 
 	uint8_t radio_cfg_type;
 	uint8_t radio_cfg_step;
@@ -370,13 +373,15 @@ struct iwx_bf_data {
 /**
  * struct iwx_self_init_dram - dram data used by self init process
  * @fw: lmac and umac dram data
- * @fw_cnt: total number of items in array
+ * @lmac_cnt: number of lmac sections in fw image
+ * @umac_cnt: number of umac sections in fw image
  * @paging: paging dram data
- * @paging_cnt: total number of items in array
+ * @paging_cnt: number of paging sections needed by fw image
  */
 struct iwx_self_init_dram {
 	struct iwx_dma_info *fw;
-	int fw_cnt;
+	int lmac_cnt;
+    int umac_cnt;
 	struct iwx_dma_info *paging;
 	int paging_cnt;
 };
@@ -530,6 +535,8 @@ struct iwx_softc {
     int sc_ltr_delay;
     int sc_xtal_latency;
     int sc_low_latency_xtal;
+    
+    int sc_uhb_supported;
 
 #if NBPFILTER > 0
 	caddr_t			sc_drvbpf;
