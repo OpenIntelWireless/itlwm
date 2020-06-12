@@ -15,6 +15,8 @@
 #include "itlwmx.hpp"
 #include "types.h"
 #include "kernel.h"
+#include "FwData.h"
+#include "sha1.h"
 
 #include <IOKit/IOInterruptController.h>
 #include <IOKit/IOCommandGate.h>
@@ -31,9 +33,6 @@ OSDefineMetaClassAndStructors(CTimeout, OSObject)
 #define DEVNAME(_s)    ((_s)->sc_dev.dv_xname)
 
 #define IC2IFP(_ic_) (&(_ic_)->ic_if)
-
-#define le16_to_cpup(_a_) (le16toh(*(const uint16_t *)(_a_)))
-#define le32_to_cpup(_a_) (le32toh(*(const uint32_t *)(_a_)))
 
 #define IWX_DEBUG
 
@@ -74,7 +73,7 @@ bool itlwmx::configureInterface(IONetworkInterface *netif) {
         return false;
     }
     
-    nd = netif->getNetworkData(kIONetworkStatsKey);
+    nd = netif->getParameter(kIONetworkStatsKey);
     if (!nd || !(fpNetStats = (IONetworkStats *)nd->getBuffer())) {
         XYLog("network statistics buffer unavailable?\n");
         return false;
@@ -95,7 +94,7 @@ bool itlwmx::createMediumTables(const IONetworkMedium **primary)
         return false;
     }
     
-    medium = IONetworkMedium::medium(kIOMediumEthernetAuto, 480 * 1000000);
+    medium = IONetworkMedium::medium(kIOMediumEthernetAuto, 100 * 1000000);
     IONetworkMedium::addMedium(mediumDict, medium);
     medium->release();
     if (primary) {
@@ -109,6 +108,74 @@ bool itlwmx::createMediumTables(const IONetworkMedium **primary)
     
     mediumDict->release();
     return result;
+}
+
+static char * trim(const char *strIn, char *strOut)
+{
+    size_t i, j ;
+    i = 0;
+    j = strlen(strIn) - 1;
+    if (j < 0) {
+        memset(strOut, 0, 1);
+        return strOut;
+    }
+    while(strIn[i] == ' ')
+        ++i;
+
+    while(strIn[j] == ' ')
+        --j;
+    
+    if (j - i + 1 < 0) {
+        memset(strOut, 0, 1);
+        return strOut;
+    }
+    strncpy(strOut,  strIn + i, j - i + 1);
+    strOut[j - i + 1] = '\0';
+    return strOut;
+}
+
+ieee80211_wpaparams wpa;
+ieee80211_wpapsk psk;
+ieee80211_nwkey nwkey;
+ieee80211_join join;
+
+void itlwmx::joinSSID(const char *ssid_name, const char *ssid_pwd)
+{
+    struct ieee80211com *ic = &com.sc_ic;
+    
+    if (strlen(ssid_pwd) == 0) {
+        memset(&nwkey, 0, sizeof(ieee80211_nwkey));
+        nwkey.i_wepon = IEEE80211_NWKEY_OPEN;
+        nwkey.i_defkid = 0;
+        memcpy(join.i_nwid, ssid_name, strlen(ssid_name));
+        join.i_len = strlen(ssid_name);
+        join.i_flags = IEEE80211_JOIN_NWKEY;
+    } else {
+        memset(&wpa, 0, sizeof(ieee80211_wpaparams));
+        wpa.i_enabled = 1;
+        wpa.i_ciphers = 0;
+        wpa.i_groupcipher = 0;
+        wpa.i_protos = IEEE80211_WPA_PROTO_WPA1 | IEEE80211_WPA_PROTO_WPA2;
+        wpa.i_akms = IEEE80211_WPA_AKM_PSK | IEEE80211_WPA_AKM_8021X | IEEE80211_WPA_AKM_SHA256_PSK | IEEE80211_WPA_AKM_SHA256_8021X;
+        memcpy(wpa.i_name, "zxy", strlen("zxy"));
+        memset(&psk, 0, sizeof(ieee80211_wpapsk));
+        memcpy(psk.i_name, "zxy", strlen("zxy"));
+        psk.i_enabled = 1;
+        pbkdf2_sha1(ssid_pwd, (const uint8_t*)ssid_name, strlen(ssid_name),
+                    4096, psk.i_psk , 32);
+        memset(&nwkey, 0, sizeof(ieee80211_nwkey));
+        nwkey.i_wepon = 0;
+        nwkey.i_defkid = 0;
+        memset(&join, 0, sizeof(ieee80211_join));
+        join.i_wpaparams = wpa;
+        join.i_wpapsk = psk;
+        join.i_flags = IEEE80211_JOIN_WPAPSK | IEEE80211_JOIN_ANY | IEEE80211_JOIN_WPA | IEEE80211_JOIN_8021X;
+        join.i_nwkey = nwkey;
+        join.i_len = strlen(ssid_name);
+        memcpy(join.i_nwid, ssid_name, join.i_len);
+    }
+    if (ieee80211_add_ess(ic, &join) == 0)
+        ic->ic_flags |= IEEE80211_F_AUTO_JOIN;
 }
 
 bool itlwmx::start(IOService *provider)
@@ -161,6 +228,38 @@ bool itlwmx::start(IOService *provider)
     }
     _fWorkloop->addEventSource(watchdogTimer);
     setLinkStatus(kIONetworkLinkValid);
+    OSObject *wifiEntryObject = NULL;
+    OSDictionary *wifiEntry = NULL;
+    char ssid[255];
+    char password[255];
+    OSString *entryKey = NULL;
+    OSDictionary *wifiDict = OSDynamicCast(OSDictionary, getProperty("WiFiConfig"));
+    if (wifiDict != NULL) {
+        OSCollectionIterator *iterator = OSCollectionIterator::withCollection(wifiDict);
+        while ((wifiEntryObject = iterator->getNextObject())) {
+            entryKey = OSDynamicCast(OSString, wifiEntryObject);
+            if (entryKey == NULL) {
+                continue;
+            }
+            wifiEntry = OSDynamicCast(OSDictionary, wifiDict->getObject(entryKey));
+            if (wifiEntry == NULL) {
+                continue;
+            }
+            OSString *ssidObj = OSDynamicCast(OSString, wifiEntry->getObject("ssid"));
+            OSString *pwdObj = OSDynamicCast(OSString, wifiEntry->getObject("password"));
+            if (ssidObj == NULL || pwdObj == NULL || ssidObj->isEqualTo("")) {
+                continue;
+            }
+            bzero(ssid, sizeof(ssid));
+            bzero(password, sizeof(password));
+            trim(ssidObj->getCStringNoCopy(), (char *)&ssid);
+            trim(pwdObj->getCStringNoCopy(), (char *)&password);
+            
+            XYLog("%s [%s] [%s]\n", __FUNCTION__, ssid, password);
+            joinSSID(ssid, password);
+        }
+        iterator->release();
+    }
     registerService();
     return true;
 }
@@ -186,11 +285,8 @@ void itlwmx::stop(IOService *provider)
     XYLog("%s\n", __FUNCTION__);
     struct ifnet *ifp = &com.sc_ic.ic_ac.ac_if;
     IOEthernetInterface *inf = ifp->iface;
-    pci_intr_handle *handle = com.ih;
-    
     super::stop(provider);
     setLinkStatus(kIONetworkLinkValid);
-    iwx_stop(ifp);
     ieee80211_ifdetach(ifp);
     detachInterface(inf);
     OSSafeReleaseNULL(inf);
@@ -253,44 +349,11 @@ void itlwmx::releaseAll()
     }
 }
 
-ieee80211_wpaparams wpa;
-ieee80211_wpapsk psk;
-ieee80211_nwkey nwkey;
-ieee80211_join join;
-const char *ssid_name = "ssdt";
-const char *ssid_pwd = "zxyssdt112233";
-
-#include "sha1.h"
-
 IOReturn itlwmx::enable(IONetworkInterface *netif)
 {
     XYLog("%s\n", __FUNCTION__);
     struct ifnet *ifp = &com.sc_ic.ic_ac.ac_if;
     super::enable(netif);
-    memset(&wpa, 0, sizeof(ieee80211_wpaparams));
-    wpa.i_enabled = 1;
-    wpa.i_ciphers = 0;
-    wpa.i_groupcipher = 0;
-    wpa.i_protos = IEEE80211_WPA_PROTO_WPA1 | IEEE80211_WPA_PROTO_WPA2;
-    wpa.i_akms = IEEE80211_WPA_AKM_PSK | IEEE80211_WPA_AKM_8021X | IEEE80211_WPA_AKM_SHA256_PSK | IEEE80211_WPA_AKM_SHA256_8021X;
-    memcpy(wpa.i_name, "zxy", strlen("zxy"));
-    memset(&psk, 0, sizeof(ieee80211_wpapsk));
-    memcpy(psk.i_name, "zxy", strlen("zxy"));
-    psk.i_enabled = 1;
-    pbkdf2_sha1(ssid_pwd, (const uint8_t*)ssid_name, strlen(ssid_name),
-                4096, psk.i_psk , 32);
-    memset(&nwkey, 0, sizeof(ieee80211_nwkey));
-    nwkey.i_wepon = 0;
-    nwkey.i_defkid = 0;
-    memset(&join, 0, sizeof(ieee80211_join));
-    join.i_wpaparams = wpa;
-    join.i_wpapsk = psk;
-    join.i_flags = IEEE80211_JOIN_WPAPSK | IEEE80211_JOIN_ANY | IEEE80211_JOIN_WPA | IEEE80211_JOIN_8021X;
-    join.i_nwkey = nwkey;
-    join.i_len = strlen(ssid_name);
-    memcpy(join.i_nwid, ssid_name, join.i_len);
-    if (ieee80211_add_ess(&com.sc_ic, &join) == 0)
-        com.sc_ic.ic_flags |= IEEE80211_F_AUTO_JOIN;
     ifp->if_flags |= IFF_UP;
     _fCommandGate->enable();
     iwx_activate(&com, DVACT_WAKEUP);
@@ -409,7 +472,7 @@ free(void* addr)
 
 void itlwmx::wakeupOn(void *ident)
 {
-    XYLog("%s\n", __FUNCTION__);
+//    XYLog("%s\n", __FUNCTION__);
     if (_fCommandGate == 0)
         return;
     else
@@ -418,7 +481,7 @@ void itlwmx::wakeupOn(void *ident)
 
 int itlwmx::tsleep_nsec(void *ident, int priority, const char *wmesg, int timo)
 {
-    XYLog("%s %s\n", __FUNCTION__, wmesg);
+//    XYLog("%s %s\n", __FUNCTION__, wmesg);
     IOReturn ret;
     if (_fCommandGate == 0) {
         IOSleep(timo);
@@ -1048,6 +1111,7 @@ iwx_read_firmware(struct iwx_softc *sc)
     uint8_t *data;
     int err;
     size_t len;
+    OSData *fwData = NULL;
     
     if (fw->fw_status == IWX_FW_STATUS_DONE)
         return 0;
@@ -1059,31 +1123,32 @@ iwx_read_firmware(struct iwx_softc *sc)
     if (fw->fw_rawdata != NULL)
         iwx_fw_info_free(fw);
     
-    IOLockLock(_fwLoadLock);
-    ResourceCallbackContext context =
-    {
-        .context = this,
-        .resource = NULL
-    };
-    
-    //here leaks
-    IOReturn ret = OSKextRequestResource(OSKextGetCurrentIdentifier(), sc->sc_fwname, onLoadFW, &context, NULL);
-    IOLockSleep(_fwLoadLock, this, 0);
-    IOLockUnlock(_fwLoadLock);
-    if (context.resource == NULL) {
+//    IOLockLock(_fwLoadLock);
+//    ResourceCallbackContext context =
+//    {
+//        .context = this,
+//        .resource = NULL
+//    };
+//
+//    //here leaks
+//    IOReturn ret = OSKextRequestResource(OSKextGetCurrentIdentifier(), sc->sc_fwname, onLoadFW, &context, NULL);
+//    IOLockSleep(_fwLoadLock, this, 0);
+//    IOLockUnlock(_fwLoadLock);
+//    if (context.resource == NULL) {
+//        XYLog("%s resource load fail.\n", sc->sc_fwname);
+//        goto out;
+//    }
+//    fw->fw_rawdata = malloc(context.resource->getLength(), 1, 1);
+//    memcpy(fw->fw_rawdata, context.resource->getBytesNoCopy(), context.resource->getLength());
+//    fw->fw_rawsize = context.resource->getLength();
+    fwData = getFWDescByName(sc->sc_fwname);
+    if (fwData == NULL) {
         XYLog("%s resource load fail.\n", sc->sc_fwname);
         goto out;
     }
-    fw->fw_rawdata = malloc(context.resource->getLength(), 1, 1);
-    memcpy(fw->fw_rawdata, context.resource->getBytesNoCopy(), context.resource->getLength());
-    fw->fw_rawsize = context.resource->getLength();
-    //    fwData = getFWDescByName(sc->sc_fwname);
-    //    if (fwData == NULL) {
-    //        XYLog("%s resource load fail.\n", sc->sc_fwname);
-    //        goto out;
-    //    }
-    //    fw->fw_rawdata = (u_char*)fwData->getBytesNoCopy();
-    //    fw->fw_rawsize = fwData->getLength();
+    fw->fw_rawdata = malloc(fwData->getLength(), 1, 1);
+    memcpy(fw->fw_rawdata, (u_char*)fwData->getBytesNoCopy(), fwData->getLength());
+    fw->fw_rawsize = fwData->getLength();
     XYLog("load firmware done\n");
     
     sc->sc_capaflags = 0;
@@ -4744,11 +4809,11 @@ iwx_tx(struct iwx_softc *sc, mbuf_t m, struct ieee80211_node *ni, int ac)
     data->txmcs = ni->ni_txmcs;
     data->txrate = ni->ni_txrate;
     
-    XYLog("sending data: 嘤嘤嘤 qid=%d idx=%d len=%d nsegs=%d flags=0x%08x rate_n_flags=0x%08x offload_assist=%u txmcs=%d ni_txrate=%d\n",
-          ring->qid, ring->cur, totlen, nsegs, le32toh(tx->flags),
-          le32toh(tx->rate_n_flags), tx->offload_assist,
-          data->txmcs,
-          data->txrate);
+//    XYLog("sending data: 嘤嘤嘤 qid=%d idx=%d len=%d nsegs=%d flags=0x%08x rate_n_flags=0x%08x offload_assist=%u txmcs=%d ni_txrate=%d\n",
+//          ring->qid, ring->cur, totlen, nsegs, le32toh(tx->flags),
+//          le32toh(tx->rate_n_flags), tx->offload_assist,
+//          data->txmcs,
+//          data->txrate);
     
     /* Fill TX descriptor. */
     num_tbs = 2 + nsegs;

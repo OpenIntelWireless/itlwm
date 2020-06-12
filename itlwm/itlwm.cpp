@@ -201,7 +201,6 @@ bool itlwm::start(IOService *provider)
     if (!pciNub) {
         return false;
     }
-    reset_pci_secondary_bus(pciNub);
     pciNub->setBusMasterEnable(true);
     pciNub->setIOEnable(true);
     pciNub->setMemoryEnable(true);

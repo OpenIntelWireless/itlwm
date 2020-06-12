@@ -6,7 +6,16 @@
 #  Created by qcwap on 2020/3/10.
 #  Copyright © 2020 钟先耀. All rights reserved.
 target_file="${PROJECT_DIR}/itlwm/FwBinary.cpp"
-fw_files=${PROJECT_DIR}/itlwm/firmware/*
+while [ $# -gt 0 ];
+do
+    case $1 in
+    -P) fw_files=$2
+    shift
+    ;;
+    
+    esac
+    shift
+done
 
 echo "//  itlwm\n\n//  Copyright © 2020 钟先耀. All rights reserved." >$target_file
 echo "#include \"FwData.h\"">>$target_file
