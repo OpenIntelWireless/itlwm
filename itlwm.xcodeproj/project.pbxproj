@@ -836,7 +836,7 @@
 		};
 		F8EE4D1B24178BF0002FA666 /* fwgen */ = {
 			isa = PBXLegacyTarget;
-			buildArgumentsString = "-P ${PROJECT_DIR}/itlwmx/firmware/*";
+			buildArgumentsString = "-P ${PROJECT_DIR}/itlwm/firmware/*";
 			buildConfigurationList = F8EE4D1C24178BF0002FA666 /* Build configuration list for PBXLegacyTarget "fwgen" */;
 			buildPhases = (
 			);
