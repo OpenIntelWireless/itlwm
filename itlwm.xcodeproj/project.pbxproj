@@ -219,6 +219,12 @@
 		F8CFB351244BF15C00B86738 /* compat.h in Headers */ = {isa = PBXBuildFile; fileRef = 024A082123FCBC6C009FBA6C /* compat.h */; };
 		F8D257742495A33500872E4F /* _mbuf.cpp in Sources */ = {isa = PBXBuildFile; fileRef = F8D257732495A33500872E4F /* _mbuf.cpp */; };
 		F8D257752495A33500872E4F /* _mbuf.cpp in Sources */ = {isa = PBXBuildFile; fileRef = F8D257732495A33500872E4F /* _mbuf.cpp */; };
+		F8D257782495DEFC00872E4F /* Common.h in Headers */ = {isa = PBXBuildFile; fileRef = F8D257762495DEFC00872E4F /* Common.h */; };
+		F8D257792495DEFC00872E4F /* Common.h in Headers */ = {isa = PBXBuildFile; fileRef = F8D257762495DEFC00872E4F /* Common.h */; };
+		F8D2577A2495DEFC00872E4F /* IoctlId.h in Headers */ = {isa = PBXBuildFile; fileRef = F8D257772495DEFC00872E4F /* IoctlId.h */; };
+		F8D2577B2495DEFC00872E4F /* IoctlId.h in Headers */ = {isa = PBXBuildFile; fileRef = F8D257772495DEFC00872E4F /* IoctlId.h */; };
+		F8D2577D2495EBF400872E4F /* ItlNetworkUserClient.hpp in Headers */ = {isa = PBXBuildFile; fileRef = F8D2577C2495EBF400872E4F /* ItlNetworkUserClient.hpp */; };
+		F8D2577F2495EBFB00872E4F /* ItlNetworkUserClient.cpp in Sources */ = {isa = PBXBuildFile; fileRef = F8D2577E2495EBFA00872E4F /* ItlNetworkUserClient.cpp */; };
 		F8D6CD632442E8F200D2A454 /* itlwmx.hpp in Headers */ = {isa = PBXBuildFile; fileRef = F8D6CD622442E8F200D2A454 /* itlwmx.hpp */; };
 		F8D6CD652442E8F200D2A454 /* itlwmx.cpp in Sources */ = {isa = PBXBuildFile; fileRef = F8D6CD642442E8F200D2A454 /* itlwmx.cpp */; };
 		F8D6CD6E2442F20C00D2A454 /* if_iwxreg.h in Headers */ = {isa = PBXBuildFile; fileRef = F8D6CD6C2442F20C00D2A454 /* if_iwxreg.h */; };
@@ -380,6 +386,10 @@
 		F8C4BF8E2420FAED007F410E /* iwm-7260-16 */ = {isa = PBXFileReference; lastKnownFileType = file; path = "iwm-7260-16"; sourceTree = "<group>"; };
 		F8C4BF8F2420FAED007F410E /* iwm-7260-17 */ = {isa = PBXFileReference; lastKnownFileType = file; path = "iwm-7260-17"; sourceTree = "<group>"; };
 		F8D257732495A33500872E4F /* _mbuf.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = _mbuf.cpp; sourceTree = "<group>"; };
+		F8D257762495DEFC00872E4F /* Common.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Common.h; sourceTree = "<group>"; };
+		F8D257772495DEFC00872E4F /* IoctlId.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = IoctlId.h; sourceTree = "<group>"; };
+		F8D2577C2495EBF400872E4F /* ItlNetworkUserClient.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = ItlNetworkUserClient.hpp; sourceTree = "<group>"; };
+		F8D2577E2495EBFA00872E4F /* ItlNetworkUserClient.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ItlNetworkUserClient.cpp; sourceTree = "<group>"; };
 		F8D6CD4E2442E0D100D2A454 /* itl80211.kext */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = itl80211.kext; sourceTree = BUILT_PRODUCTS_DIR; };
 		F8D6CD502442E0D100D2A454 /* itl80211.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = itl80211.hpp; sourceTree = "<group>"; };
 		F8D6CD522442E0D100D2A454 /* itl80211.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = itl80211.cpp; sourceTree = "<group>"; };
@@ -564,6 +574,8 @@
 			isa = PBXGroup;
 			children = (
 				F8EE4D1A241786B0002FA666 /* FwData.h */,
+				F8D257762495DEFC00872E4F /* Common.h */,
+				F8D257772495DEFC00872E4F /* IoctlId.h */,
 			);
 			path = include;
 			sourceTree = "<group>";
@@ -664,6 +676,8 @@
 				F8D6CD6D2442F20C00D2A454 /* if_iwxvar.h */,
 				F8D6CD622442E8F200D2A454 /* itlwmx.hpp */,
 				F8D6CD642442E8F200D2A454 /* itlwmx.cpp */,
+				F8D2577C2495EBF400872E4F /* ItlNetworkUserClient.hpp */,
+				F8D2577E2495EBFA00872E4F /* ItlNetworkUserClient.cpp */,
 				F8D6CD662442E8F200D2A454 /* Info.plist */,
 			);
 			path = itlwmx;
@@ -699,6 +713,7 @@
 				F8C2EC6A2408031A007A9422 /* ieee80211_mira.h in Headers */,
 				024A083F23FCBC6C009FBA6C /* castsb.h in Headers */,
 				F8C2EC9824080557007A9422 /* _if_media.h in Headers */,
+				F8D257782495DEFC00872E4F /* Common.h in Headers */,
 				F8C2EC9124080557007A9422 /* _buf.h in Headers */,
 				024A084123FCBC6C009FBA6C /* idgen.h in Headers */,
 				F8F92586240974EF0088B8D5 /* types.h in Headers */,
@@ -732,6 +747,7 @@
 				F8C2EC612408031A007A9422 /* ieee80211_proto.h in Headers */,
 				024A084723FCBC6C009FBA6C /* cast.h in Headers */,
 				F8C2EC622408031A007A9422 /* ieee80211_rssadapt.h in Headers */,
+				F8D2577A2495DEFC00872E4F /* IoctlId.h in Headers */,
 				F8C2EC652408031A007A9422 /* ieee80211_ioctl.h in Headers */,
 				024A083C23FCBC6C009FBA6C /* chachapoly.h in Headers */,
 				024A084C23FCBC6C009FBA6C /* chacha_private.h in Headers */,
@@ -806,7 +822,9 @@
 				F8CFB327244BF12500B86738 /* tree.h in Headers */,
 				F8CFB328244BF12500B86738 /* _if_media.h in Headers */,
 				F8CFB329244BF12500B86738 /* _null.h in Headers */,
+				F8D257792495DEFC00872E4F /* Common.h in Headers */,
 				F8CFB32A244BF12500B86738 /* timeout.h in Headers */,
+				F8D2577B2495DEFC00872E4F /* IoctlId.h in Headers */,
 				F8CFB32B244BF12500B86738 /* _task.h in Headers */,
 				F8CFB32C244BF12500B86738 /* _ifq.h in Headers */,
 				F8CFB31B244BF0FE00B86738 /* bitfield.h in Headers */,
@@ -814,6 +832,7 @@
 				F8CFB31D244BF0FE00B86738 /* kernel.h in Headers */,
 				F8CFB31E244BF0FE00B86738 /* random.h in Headers */,
 				F8CFB31F244BF0FE00B86738 /* types.h in Headers */,
+				F8D2577D2495EBF400872E4F /* ItlNetworkUserClient.hpp in Headers */,
 				F8D6CD6F2442F20C00D2A454 /* if_iwxvar.h in Headers */,
 				F8A33579244AED060039DA12 /* IOTaskQueue.hpp in Headers */,
 				F8D6CD632442E8F200D2A454 /* itlwmx.hpp in Headers */,
@@ -1095,6 +1114,7 @@
 				F8C772C62443444500A1B8A0 /* sha1-pbkdf2.c in Sources */,
 				F8C772C72443444500A1B8A0 /* aes.c in Sources */,
 				F8C772C82443444500A1B8A0 /* hmac.c in Sources */,
+				F8D2577F2495EBFB00872E4F /* ItlNetworkUserClient.cpp in Sources */,
 				F8C772C92443444500A1B8A0 /* sha2.c in Sources */,
 				F8C772CA2443444500A1B8A0 /* rijndael.c in Sources */,
 				F8C772CB2443444500A1B8A0 /* ecb3_enc.c in Sources */,

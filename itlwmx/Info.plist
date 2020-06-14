@@ -30,6 +30,8 @@
 			<string>0x00008086&amp;0x0000ffff</string>
 			<key>IOProviderClass</key>
 			<string>IOPCIDevice</string>
+			<key>IOUserClientClass</key>
+			<string>ItlNetworkUserClient</string>
 			<key>WiFiConfig</key>
 			<dict>
 				<key>WiFi_1</key>

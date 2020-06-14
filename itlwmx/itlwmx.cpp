@@ -84,6 +84,21 @@ bool itlwmx::configureInterface(IONetworkInterface *netif) {
     return true;
 }
 
+struct ifnet *itlwmx::getIfp()
+{
+    return &com.sc_ic.ic_ac.ac_if;
+}
+
+struct iwx_softc *itlwmx::getSoft()
+{
+    return &com;
+}
+
+IOEthernetInterface *itlwmx::getNetworkInterface()
+{
+    return getIfp()->iface;
+}
+
 bool itlwmx::createMediumTables(const IONetworkMedium **primary)
 {
     IONetworkMedium    *medium;

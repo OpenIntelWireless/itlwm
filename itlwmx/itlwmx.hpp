@@ -75,6 +75,10 @@ public:
     bool createMediumTables(const IONetworkMedium **primary);
     IOReturn selectMedium(const IONetworkMedium *medium) override;
     
+    struct ifnet *getIfp();
+    struct iwx_softc *getSoft();
+    IOEthernetInterface *getNetworkInterface();
+    
     void releaseAll();
     void joinSSID(const char *ssid, const char *pwd);
     
