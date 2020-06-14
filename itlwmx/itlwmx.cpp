@@ -3953,18 +3953,18 @@ iwx_rx_mpdu_mq(struct iwx_softc *sc, mbuf_t m, void *pktdata,
         /* Allow control frames in monitor mode. */
         if (len < sizeof(struct ieee80211_frame_cts)) {
             ic->ic_stats.is_rx_tooshort++;
-            IC2IFP(ic)->if_ierrors++;
+            IC2IFP(ic)->netStat->inputErrors++;
             mbuf_freem(m);
             return;
         }
     } else if (len < sizeof(struct ieee80211_frame)) {
         ic->ic_stats.is_rx_tooshort++;
-        IC2IFP(ic)->if_ierrors++;
+        IC2IFP(ic)->netStat->inputErrors++;
         mbuf_freem(m);
         return;
     }
     if (len > maxlen - sizeof(*desc)) {
-        IC2IFP(ic)->if_ierrors++;
+        IC2IFP(ic)->netStat->inputErrors++;
         mbuf_freem(m);
         return;
     }
@@ -4099,8 +4099,10 @@ iwx_rx_tx_cmd_single(struct iwx_softc *sc, struct iwx_rx_packet *pkt,
         }
     }
     
-    if (txfail)
-        ifp->if_oerrors++;
+    if (txfail) {
+        XYLog("%s %d OUTPUT_ERROR status=%d\n", __FUNCTION__, __LINE__, status);
+        ifp->netStat->outputErrors++;
+    }
 }
 
 void itlwmx::
@@ -7102,7 +7104,6 @@ _iwx_start_task(OSObject *target, void *arg0, void *arg1, void *arg2, void *arg3
     int ac = EDCA_AC_BE; /* XXX */
     
     if (!(ifp->if_flags & IFF_RUNNING) ||  ifq_is_oactive(&ifp->if_snd)) {
-        XYLog("%s %d\n", __FUNCTION__, __LINE__);
         return kIOReturnError;
     }
     
@@ -7110,7 +7111,6 @@ _iwx_start_task(OSObject *target, void *arg0, void *arg1, void *arg2, void *arg3
         /* why isn't this done per-queue? */
         if (sc->qfullmsk != 0) {
             ifq_set_oactive(&ifp->if_snd);
-            XYLog("%s %d\n", __FUNCTION__, __LINE__);
             break;
         }
         
@@ -7132,7 +7132,7 @@ _iwx_start_task(OSObject *target, void *arg0, void *arg1, void *arg2, void *arg3
             break;
         if (mbuf_len(m) < sizeof (*eh) &&
             mbuf_pullup(&m, sizeof (*eh)) != 0) {
-            ifp->if_oerrors++;
+            ifp->netStat->outputErrors++;
             continue;
         }
 #if NBPFILTER > 0
@@ -7140,7 +7140,7 @@ _iwx_start_task(OSObject *target, void *arg0, void *arg1, void *arg2, void *arg3
             bpf_mtap(ifp->if_bpf, m, BPF_DIRECTION_OUT);
 #endif
         if ((m = ieee80211_encap(ifp, m, &ni)) == NULL) {
-            ifp->if_oerrors++;
+            ifp->netStat->outputErrors++;
             continue;
         }
         
@@ -7151,7 +7151,7 @@ _iwx_start_task(OSObject *target, void *arg0, void *arg1, void *arg2, void *arg3
 #endif
         if (that->iwx_tx(sc, m, ni, ac) != 0) {
             ieee80211_release_node(ic, ni);
-            ifp->if_oerrors++;
+            ifp->netStat->outputErrors++;
             continue;
         }
         
@@ -7243,7 +7243,7 @@ iwx_watchdog(struct ifnet *ifp)
 #endif
             if ((sc->sc_flags & IWX_FLAG_SHUTDOWN) == 0)
                 task_add(systq, &sc->init_task);
-            ifp->if_oerrors++;
+            ifp->netStat->outputErrors++;
             return;
         }
         ifp->if_timer = 1;
@@ -7627,7 +7627,7 @@ iwx_rx_pkt(struct iwx_softc *sc, struct iwx_rx_data *data, struct mbuf_list *ml)
         if (code == IWX_REPLY_RX_MPDU_CMD && ++nmpdu == 1) {
             /* Take mbuf m0 off the RX ring. */
             if (iwx_rx_addbuf(sc, IWX_RBUF_SIZE, sc->rxq.cur)) {
-                ifp->if_ierrors++;
+                ifp->netStat->inputErrors++;
                 break;
             }
             KASSERT(data->m != m0, "data->m != m0");
@@ -7659,7 +7659,7 @@ iwx_rx_pkt(struct iwx_softc *sc, struct iwx_rx_data *data, struct mbuf_list *ml)
                      */
                     mbuf_copym(m0, 0, MBUF_COPYALL, MBUF_DONTWAIT, &m);
                     if (m == NULL) {
-                        ifp->if_ierrors++;
+                        ifp->netStat->inputErrors++;
                         mbuf_freem(m0);
                         m0 = NULL;
                         break;

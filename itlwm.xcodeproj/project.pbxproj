@@ -217,6 +217,8 @@
 		F8CFB34F244BF15C00B86738 /* podd.h in Headers */ = {isa = PBXBuildFile; fileRef = 024A07EF23FCBC6C009FBA6C /* podd.h */; };
 		F8CFB350244BF15C00B86738 /* cmac.h in Headers */ = {isa = PBXBuildFile; fileRef = 024A07F123FCBC6C009FBA6C /* cmac.h */; };
 		F8CFB351244BF15C00B86738 /* compat.h in Headers */ = {isa = PBXBuildFile; fileRef = 024A082123FCBC6C009FBA6C /* compat.h */; };
+		F8D257742495A33500872E4F /* _mbuf.cpp in Sources */ = {isa = PBXBuildFile; fileRef = F8D257732495A33500872E4F /* _mbuf.cpp */; };
+		F8D257752495A33500872E4F /* _mbuf.cpp in Sources */ = {isa = PBXBuildFile; fileRef = F8D257732495A33500872E4F /* _mbuf.cpp */; };
 		F8D6CD632442E8F200D2A454 /* itlwmx.hpp in Headers */ = {isa = PBXBuildFile; fileRef = F8D6CD622442E8F200D2A454 /* itlwmx.hpp */; };
 		F8D6CD652442E8F200D2A454 /* itlwmx.cpp in Sources */ = {isa = PBXBuildFile; fileRef = F8D6CD642442E8F200D2A454 /* itlwmx.cpp */; };
 		F8D6CD6E2442F20C00D2A454 /* if_iwxreg.h in Headers */ = {isa = PBXBuildFile; fileRef = F8D6CD6C2442F20C00D2A454 /* if_iwxreg.h */; };
@@ -377,6 +379,7 @@
 		F8C4BF8C2420FAED007F410E /* iwm-7265-17 */ = {isa = PBXFileReference; lastKnownFileType = file; path = "iwm-7265-17"; sourceTree = "<group>"; };
 		F8C4BF8E2420FAED007F410E /* iwm-7260-16 */ = {isa = PBXFileReference; lastKnownFileType = file; path = "iwm-7260-16"; sourceTree = "<group>"; };
 		F8C4BF8F2420FAED007F410E /* iwm-7260-17 */ = {isa = PBXFileReference; lastKnownFileType = file; path = "iwm-7260-17"; sourceTree = "<group>"; };
+		F8D257732495A33500872E4F /* _mbuf.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = _mbuf.cpp; sourceTree = "<group>"; };
 		F8D6CD4E2442E0D100D2A454 /* itl80211.kext */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = itl80211.kext; sourceTree = BUILT_PRODUCTS_DIR; };
 		F8D6CD502442E0D100D2A454 /* itl80211.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = itl80211.hpp; sourceTree = "<group>"; };
 		F8D6CD522442E0D100D2A454 /* itl80211.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = itl80211.cpp; sourceTree = "<group>"; };
@@ -615,6 +618,7 @@
 				F8C2EC8924080556007A9422 /* _arc4random.h */,
 				F8C2EC8A24080556007A9422 /* endian.h */,
 				F8C2EC8B24080556007A9422 /* _mbuf.h */,
+				F8D257732495A33500872E4F /* _mbuf.cpp */,
 				F8C2EC8C24080556007A9422 /* _if_ether.h */,
 				F8C2EC8D24080556007A9422 /* tree.h */,
 				F8C2EC8E24080556007A9422 /* _if_media.h */,
@@ -1020,6 +1024,7 @@
 				024A083623FCBC6C009FBA6C /* michael.c in Sources */,
 				F8C2EC672408031A007A9422 /* ieee80211_output.c in Sources */,
 				024A08D423FCF3E6009FBA6C /* power.cpp in Sources */,
+				F8D257742495A33500872E4F /* _mbuf.cpp in Sources */,
 				024A08C823FCE2ED009FBA6C /* hw.cpp in Sources */,
 				024A08CE23FCE67F009FBA6C /* nvm.cpp in Sources */,
 				024A083D23FCBC6C009FBA6C /* sha1.c in Sources */,
@@ -1080,6 +1085,7 @@
 				F8C772B52443444500A1B8A0 /* ieee80211_pae_input.c in Sources */,
 				F8C772B72443444500A1B8A0 /* ieee80211_amrr.c in Sources */,
 				F8C772BD2443444500A1B8A0 /* ieee80211_crypto_wep.c in Sources */,
+				F8D257752495A33500872E4F /* _mbuf.cpp in Sources */,
 				F8C772BE2443444500A1B8A0 /* ieee80211_output.c in Sources */,
 				F8C772BF2443444500A1B8A0 /* ieee80211_crypto.c in Sources */,
 				F8C772C02443444500A1B8A0 /* CTimeout.cpp in Sources */,
