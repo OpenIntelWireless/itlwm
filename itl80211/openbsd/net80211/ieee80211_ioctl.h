@@ -451,6 +451,10 @@ int
 ieee80211_ioctl_setwpaparms(struct ieee80211com *ic,
                             const struct ieee80211_wpaparams *wpa);
 
+int
+ieee80211_ioctl_getwpaparms(struct ieee80211com *ic,
+                            struct ieee80211_wpaparams *wpa);
+
 void
 ieee80211_ess_getwpaparms(struct ieee80211_ess *ess,
                           struct ieee80211_wpaparams *wpa);

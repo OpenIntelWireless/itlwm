@@ -122,13 +122,9 @@ sPOWER(OSObject* target, void* data, bool isSet)
     struct ioctl_power *ip = (struct ioctl_power *)data;
     if (isSet) {
         if (ip->enabled) {
-            if (!(that->fIfp->if_flags &= IFF_UP)) {
-                that->fDriver->iwx_activate(that->fSoft, DVACT_WAKEUP);
-            }
+            that->fDriver->enable(that->fInf);
         } else {
-            if (that->fIfp->if_flags &= IFF_UP) {
-                that->fDriver->iwx_activate(that->fSoft, DVACT_QUIESCE);
-            }
+            that->fDriver->disable(that->fInf);
         }
     } else {
         memset(ip, 0, sizeof(*ip));
@@ -169,6 +165,7 @@ sASSOCIATE(OSObject* target, void* data, bool isSet)
 {
     ItlNetworkUserClient *that = OSDynamicCast(ItlNetworkUserClient, target);
     struct ioctl_associate *as = (struct ioctl_associate *)data;
+    that->fDriver->associateSSID(as->nwid.nwid, as->wpa_key.key);
     return kIOReturnSuccess;
 }
 

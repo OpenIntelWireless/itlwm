@@ -81,6 +81,7 @@ public:
     
     void releaseAll();
     void joinSSID(const char *ssid, const char *pwd);
+    void associateSSID(const char *ssid, const char *pwd);
     
     //utils
     static void *malloc(vm_size_t len, int type, int how);
