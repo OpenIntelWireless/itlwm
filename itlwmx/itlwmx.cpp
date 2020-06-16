@@ -197,8 +197,10 @@ struct ieee80211_nwid nwid;
 
 void itlwmx::associateSSID(const char *ssid, const char *pwd)
 {
-    XYLog("%s\n", __FUNCTION__);
     struct ieee80211com *ic = &com.sc_ic;
+    if (ic->ic_state != IEEE80211_S_SCAN && ic->ic_state != IEEE80211_S_INIT) {
+        iwx_stop(&ic->ic_ac.ac_if);
+    }
     memset(&psk, 0, sizeof(psk));
     memcpy(nwid.i_nwid, ssid, 32);
     nwid.i_len = strlen((char *)nwid.i_nwid);
@@ -223,7 +225,7 @@ void itlwmx::associateSSID(const char *ssid, const char *pwd)
     if (nwid.i_len == 0)
         XYLog("wpakey: nwid not set");
     pbkdf2_sha1(pwd, (const uint8_t*)ssid, nwid.i_len, 4096,
-                     psk.i_psk, 32);
+                psk.i_psk, 32);
     psk.i_enabled = 1;
     if (psk.i_enabled) {
         ic->ic_flags |= IEEE80211_F_PSK;
@@ -237,8 +239,15 @@ void itlwmx::associateSSID(const char *ssid, const char *pwd)
     memset(&wpa, 0, sizeof(wpa));
     ieee80211_ioctl_getwpaparms(ic, &wpa);
     wpa.i_enabled = psk.i_enabled;
+    wpa.i_ciphers = 0;
+    wpa.i_groupcipher = 0;
+    wpa.i_protos = IEEE80211_WPA_PROTO_WPA1 | IEEE80211_WPA_PROTO_WPA2;
+    wpa.i_akms = IEEE80211_WPA_AKM_PSK | IEEE80211_WPA_AKM_8021X | IEEE80211_WPA_AKM_SHA256_PSK | IEEE80211_WPA_AKM_SHA256_8021X;
     ieee80211_ioctl_setwpaparms(ic, &wpa);
-    XYLog("%s done\n", __FUNCTION__);
+    ieee80211_del_ess(ic, NULL, 0, 1);
+    if (ic->ic_state != IEEE80211_S_SCAN && ic->ic_state != IEEE80211_S_INIT) {
+        iwx_init(&ic->ic_ac.ac_if);
+    }
 }
 
 bool itlwmx::start(IOService *provider)

@@ -183,6 +183,7 @@ sJOIN(OSObject* target, void* data, bool isSet)
 {
     ItlNetworkUserClient *that = OSDynamicCast(ItlNetworkUserClient, target);
     struct ioctl_join *join = (struct ioctl_join *)data;
+    that->fDriver->joinSSID(join->nwid.nwid, join->wpa_key.key);
     return kIOReturnSuccess;
 }
 
