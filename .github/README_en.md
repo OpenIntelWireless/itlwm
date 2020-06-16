@@ -1,5 +1,7 @@
 # itlwm
 
+[![Join the chat at https://gitter.im/OpenIntelWireless/itlwm](https://badges.gitter.im/OpenIntelWireless/itlwm.svg)](https://gitter.im/OpenIntelWireless/itlwm?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+
 **An Intel Wifi Adapter Kernel Extension for macOS, based on the OpenBSD Project.**
 
 ## Readme
@@ -35,8 +37,8 @@ Now the slow network speed and firmware random crash should be fix.
 
 - 3xxx: 3160, 3165, 3168
 - 7xxx: 7260, 7265
-- 8xxx: 8260, 8265
-- 9xxx: 9260、9560、9462
+- 9xxx：9260、9461、9462、9560
+- 22000：ax200
 
 ## Credit
 

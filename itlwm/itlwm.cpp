@@ -21,6 +21,9 @@
 #include <IOKit/IOCommandGate.h>
 #include <IOKit/network/IONetworkMedium.h>
 #include <net/ethernet.h>
+#include "sha1.h"
+#include <net80211/ieee80211_node.h>
+#include <net80211/ieee80211_ioctl.h>
 
 #define super IOEthernetController
 OSDefineMetaClassAndStructors(itlwm, IOEthernetController)
@@ -28,38 +31,6 @@ OSDefineMetaClassAndStructors(CTimeout, OSObject)
 
 IOWorkLoop *_fWorkloop;
 IOCommandGate *_fCommandGate;
-
-#define MBit 1000000
-
-static IOMediumType mediumTypeArray[MEDIUM_INDEX_COUNT] = {
-    kIOMediumEthernetAuto,
-    (kIOMediumEthernet10BaseT | kIOMediumOptionHalfDuplex),
-    (kIOMediumEthernet10BaseT | kIOMediumOptionFullDuplex),
-    (kIOMediumEthernet100BaseTX | kIOMediumOptionHalfDuplex),
-    (kIOMediumEthernet100BaseTX | kIOMediumOptionFullDuplex),
-    (kIOMediumEthernet100BaseTX | kIOMediumOptionFullDuplex | kIOMediumOptionFlowControl),
-    (kIOMediumEthernet1000BaseT | kIOMediumOptionFullDuplex),
-    (kIOMediumEthernet1000BaseT | kIOMediumOptionFullDuplex | kIOMediumOptionFlowControl),
-    (kIOMediumEthernet1000BaseT | kIOMediumOptionFullDuplex | kIOMediumOptionEEE),
-    (kIOMediumEthernet1000BaseT | kIOMediumOptionFullDuplex | kIOMediumOptionFlowControl | kIOMediumOptionEEE),
-    (kIOMediumEthernet100BaseTX | kIOMediumOptionFullDuplex | kIOMediumOptionEEE),
-    (kIOMediumEthernet100BaseTX | kIOMediumOptionFullDuplex | kIOMediumOptionFlowControl | kIOMediumOptionEEE)
-};
-
-static UInt32 mediumSpeedArray[MEDIUM_INDEX_COUNT] = {
-    0,
-    10 * MBit,
-    10 * MBit,
-    100 * MBit,
-    100 * MBit,
-    100 * MBit,
-    1000 * MBit,
-    1000 * MBit,
-    1000 * MBit,
-    1000 * MBit,
-    100 * MBit,
-    100 * MBit
-};
 
 bool itlwm::init(OSDictionary *properties)
 {
@@ -86,15 +57,29 @@ bool itlwm::configureInterface(IONetworkInterface *netif) {
         return false;
     }
     
-    nd = netif->getNetworkData(kIONetworkStatsKey);
+    nd = netif->getParameter(kIONetworkStatsKey);
     if (!nd || !(fpNetStats = (IONetworkStats *)nd->getBuffer())) {
         XYLog("network statistics buffer unavailable?\n");
         return false;
     }
-    
     com.sc_ic.ic_ac.ac_if.netStat = fpNetStats;
+    com.sc_ic.ic_ac.ac_if.iface = OSDynamicCast(IOEthernetInterface, netif);
+    fpNetStats->collisions = 0;
     
     return true;
+}
+
+IONetworkInterface *itlwm::createInterface()
+{
+    itlwm_interface *netif = new itlwm_interface;
+    if (!netif) {
+        return NULL;
+    }
+    if (!netif->init(this)) {
+        netif->release();
+        return NULL;
+    }
+    return netif;
 }
 
 bool itlwm::createMediumTables(const IONetworkMedium **primary)
@@ -107,7 +92,7 @@ bool itlwm::createMediumTables(const IONetworkMedium **primary)
         return false;
     }
     
-    medium = IONetworkMedium::medium(kIOMediumEthernetAuto, 0);
+    medium = IONetworkMedium::medium(kIOMediumEthernetAuto, 100 * 1000000);
     IONetworkMedium::addMedium(mediumDict, medium);
     medium->release();
     if (primary) {
@@ -123,10 +108,92 @@ bool itlwm::createMediumTables(const IONetworkMedium **primary)
     return result;
 }
 
+static char * trim(const char *strIn, char *strOut)
+{
+    size_t i, j ;
+    i = 0;
+    j = strlen(strIn) - 1;
+    if (j < 0) {
+        memset(strOut, 0, 1);
+        return strOut;
+    }
+    while(strIn[i] == ' ')
+        ++i;
+
+    while(strIn[j] == ' ')
+        --j;
+    
+    if (j - i + 1 < 0) {
+        memset(strOut, 0, 1);
+        return strOut;
+    }
+    strncpy(strOut,  strIn + i, j - i + 1);
+    strOut[j - i + 1] = '\0';
+    return strOut;
+}
+
+ieee80211_wpaparams wpa;
+ieee80211_wpapsk psk;
+ieee80211_nwkey nwkey;
+ieee80211_join join;
+
+void itlwm::joinSSID(const char *ssid_name, const char *ssid_pwd)
+{
+    struct ieee80211com *ic = &com.sc_ic;
+    
+    if (strlen(ssid_pwd) == 0) {
+        memset(&nwkey, 0, sizeof(ieee80211_nwkey));
+        nwkey.i_wepon = IEEE80211_NWKEY_OPEN;
+        nwkey.i_defkid = 0;
+        memcpy(join.i_nwid, ssid_name, strlen(ssid_name));
+        join.i_len = strlen(ssid_name);
+        join.i_flags = IEEE80211_JOIN_NWKEY;
+    } else {
+        memset(&wpa, 0, sizeof(ieee80211_wpaparams));
+        wpa.i_enabled = 1;
+        wpa.i_ciphers = 0;
+        wpa.i_groupcipher = 0;
+        wpa.i_protos = IEEE80211_WPA_PROTO_WPA1 | IEEE80211_WPA_PROTO_WPA2;
+        wpa.i_akms = IEEE80211_WPA_AKM_PSK | IEEE80211_WPA_AKM_8021X | IEEE80211_WPA_AKM_SHA256_PSK | IEEE80211_WPA_AKM_SHA256_8021X;
+        memcpy(wpa.i_name, "zxy", strlen("zxy"));
+        memset(&psk, 0, sizeof(ieee80211_wpapsk));
+        memcpy(psk.i_name, "zxy", strlen("zxy"));
+        psk.i_enabled = 1;
+        pbkdf2_sha1(ssid_pwd, (const uint8_t*)ssid_name, strlen(ssid_name),
+                    4096, psk.i_psk , 32);
+        memset(&nwkey, 0, sizeof(ieee80211_nwkey));
+        nwkey.i_wepon = 0;
+        nwkey.i_defkid = 0;
+        memset(&join, 0, sizeof(ieee80211_join));
+        join.i_wpaparams = wpa;
+        join.i_wpapsk = psk;
+        join.i_flags = IEEE80211_JOIN_WPAPSK | IEEE80211_JOIN_ANY | IEEE80211_JOIN_WPA | IEEE80211_JOIN_8021X;
+        join.i_nwkey = nwkey;
+        join.i_len = strlen(ssid_name);
+        memcpy(join.i_nwid, ssid_name, join.i_len);
+    }
+    if (ieee80211_add_ess(ic, &join) == 0)
+        ic->ic_flags |= IEEE80211_F_AUTO_JOIN;
+}
+
+#define IWM_PCI_BRIDGE_CONTROL    0x3e
+#define  IWM_PCI_BRIDGE_CTL_BUS_RESET    0x40    /* Secondary bus reset */
+
+static void reset_pci_secondary_bus(IOPCIDevice *pci)
+{
+    uint64_t ctrl;
+    
+    ctrl = pci->configRead16(IWM_PCI_BRIDGE_CONTROL);
+    ctrl |= IWM_PCI_BRIDGE_CTL_BUS_RESET;
+    pci->configWrite16(IWM_PCI_BRIDGE_CONTROL, ctrl);
+    IODelay(2);
+    ctrl &= ~IWM_PCI_BRIDGE_CTL_BUS_RESET;
+    pci->configWrite16(IWM_PCI_BRIDGE_CONTROL, ctrl);
+    IODelay(1000);
+}
+
 bool itlwm::start(IOService *provider)
 {
-    ifnet *ifp;
-    
     if (!super::start(provider)) {
         return false;
     }
@@ -165,7 +232,7 @@ bool itlwm::start(IOService *provider)
         releaseAll();
         return false;
     }
-    if (!attachInterface((IONetworkInterface **)&com.sc_ic.ic_ac.ac_if.iface)) {
+    if (!attachInterface((IONetworkInterface **)&fNetIf, true)) {
         XYLog("attach to interface fail\n");
         releaseAll();
         return false;
@@ -178,7 +245,40 @@ bool itlwm::start(IOService *provider)
     }
     _fWorkloop->addEventSource(watchdogTimer);
     setLinkStatus(kIONetworkLinkValid);
+    OSObject *wifiEntryObject = NULL;
+    OSDictionary *wifiEntry = NULL;
+    char ssid[255];
+    char password[255];
+    OSString *entryKey = NULL;
+    OSDictionary *wifiDict = OSDynamicCast(OSDictionary, getProperty("WiFiConfig"));
+    if (wifiDict != NULL) {
+        OSCollectionIterator *iterator = OSCollectionIterator::withCollection(wifiDict);
+        while ((wifiEntryObject = iterator->getNextObject())) {
+            entryKey = OSDynamicCast(OSString, wifiEntryObject);
+            if (entryKey == NULL) {
+                continue;
+            }
+            wifiEntry = OSDynamicCast(OSDictionary, wifiDict->getObject(entryKey));
+            if (wifiEntry == NULL) {
+                continue;
+            }
+            OSString *ssidObj = OSDynamicCast(OSString, wifiEntry->getObject("ssid"));
+            OSString *pwdObj = OSDynamicCast(OSString, wifiEntry->getObject("password"));
+            if (ssidObj == NULL || pwdObj == NULL || ssidObj->isEqualTo("")) {
+                continue;
+            }
+            bzero(ssid, sizeof(ssid));
+            bzero(password, sizeof(password));
+            trim(ssidObj->getCStringNoCopy(), (char *)&ssid);
+            trim(pwdObj->getCStringNoCopy(), (char *)&password);
+            
+            XYLog("%s [%s] [%s]\n", __FUNCTION__, ssid, password);
+            joinSSID(ssid, password);
+        }
+        iterator->release();
+    }
     registerService();
+    fNetIf->registerService();
     return true;
 }
 
@@ -195,7 +295,7 @@ const OSString * itlwm::newVendorString() const
 
 const OSString * itlwm::newModelString() const
 {
-    return OSString::withCString("Intel wireless card");
+    return OSString::withCString("Intel Wireless Card");
 }
 
 bool itlwm::initPCIPowerManagment(IOPCIDevice *provider)
@@ -247,10 +347,10 @@ void itlwm::stop(IOService *provider)
     
     super::stop(provider);
     setLinkStatus(kIONetworkLinkValid);
-    iwm_stop(ifp);
     ieee80211_ifdetach(ifp);
-    detachInterface(ifp->iface);
-    OSSafeReleaseNULL(ifp->iface);
+    detachInterface(fNetIf);
+    OSSafeReleaseNULL(fNetIf);
+    ifp->iface = NULL;
     taskq_destroy(systq);
     taskq_destroy(com.sc_nswq);
     releaseAll();
@@ -258,8 +358,6 @@ void itlwm::stop(IOService *provider)
 
 void itlwm::releaseAll()
 {
-    struct ifnet *ifp = &com.sc_ic.ic_ac.ac_if;
-    IOEthernetInterface *inf = ifp->iface;
     pci_intr_handle *intrHandler = com.ih;
     
     if (com.sc_calib_to) {
@@ -379,13 +477,13 @@ UInt32 itlwm::outputPacket(mbuf_t m, void *param)
     return kIOReturnOutputSuccess;
 }
 
-UInt32 itlwm::getFeatures() const
-{
-    UInt32 features = (kIONetworkFeatureMultiPages | kIONetworkFeatureHardwareVlan);
-    features |= kIONetworkFeatureTSOIPv4;
-    features |= kIONetworkFeatureTSOIPv6;
-    return features;
-}
+//UInt32 itlwm::getFeatures() const
+//{
+//    UInt32 features = (kIONetworkFeatureMultiPages | kIONetworkFeatureHardwareVlan);
+//    features |= kIONetworkFeatureTSOIPv4;
+//    features |= kIONetworkFeatureTSOIPv6;
+//    return features;
+//}
 
 IOReturn itlwm::setPromiscuousMode(IOEnetPromiscuousMode mode) {
     return kIOReturnSuccess;
@@ -399,19 +497,19 @@ IOReturn itlwm::setMulticastList(IOEthernetAddress* addr, UInt32 len) {
     return kIOReturnSuccess;
 }
 
-//IOReturn itlwm::getPacketFilters(const OSSymbol *group, UInt32 *filters) const {
-//    IOReturn    rtn = kIOReturnSuccess;
-//    if (group == gIOEthernetWakeOnLANFilterGroup && magicPacketSupported) {
-//        *filters = kIOEthernetWakeOnMagicPacket;
-//    } else if (group == gIONetworkFilterGroup) {
-//        *filters = kIOPacketFilterUnicast | kIOPacketFilterBroadcast
-//        | kIOPacketFilterPromiscuous | kIOPacketFilterMulticast
-//        | kIOPacketFilterMulticastAll;
-//    } else {
-//        rtn = IOEthernetController::getPacketFilters(group, filters);
-//    }
-//    return rtn;
-//}
+IOReturn itlwm::getPacketFilters(const OSSymbol *group, UInt32 *filters) const {
+    IOReturn    rtn = kIOReturnSuccess;
+    if (group == gIOEthernetWakeOnLANFilterGroup && magicPacketSupported) {
+        *filters = kIOEthernetWakeOnMagicPacket;
+    } else if (group == gIONetworkFilterGroup) {
+        *filters = kIOPacketFilterUnicast | kIOPacketFilterBroadcast
+        | kIOPacketFilterPromiscuous | kIOPacketFilterMulticast
+        | kIOPacketFilterMulticastAll;
+    } else {
+        rtn = IOEthernetController::getPacketFilters(group, filters);
+    }
+    return rtn;
+}
 
 void itlwm::wakeupOn(void *ident)
 {
@@ -464,6 +562,6 @@ IOReturn itlwm::tsleepHandler(OSObject* owner, void* arg0, void* arg1, void* arg
 }
 
 IOReturn itlwm::getMaxPacketSize(UInt32 *maxSize) const {
-    *maxSize = 1500;
+    *maxSize = ETHERNET_MTU + 18;
     return kIOReturnSuccess;
 }

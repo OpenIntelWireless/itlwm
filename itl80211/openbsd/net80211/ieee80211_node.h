@@ -500,6 +500,7 @@ struct ieee80211_node *ieee80211_dup_bss(struct ieee80211com *,
 struct ieee80211_node *ieee80211_find_node(struct ieee80211com *,
 		const u_int8_t *);
 void ieee80211_ba_del(struct ieee80211_node *);
+void ieee80211_ba_free(struct ieee80211_node *ni);
 struct ieee80211_node *ieee80211_find_rxnode(struct ieee80211com *,
 		const struct ieee80211_frame *);
 struct ieee80211_node *ieee80211_find_txnode(struct ieee80211com *,

@@ -182,6 +182,7 @@ ieee80211_mira_get_rateset(int mcs, int sgi)
     }
     
     panic("MCS %d is not part of any rateset", mcs);
+    return NULL;
 }
 
 /*

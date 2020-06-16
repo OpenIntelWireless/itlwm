@@ -1,10 +1,3 @@
-//
-//  _ifq.h
-//  itlwm
-//
-//  Created by qcwap on 2020/3/1.
-//  Copyright © 2020 钟先耀. All rights reserved.
-//
 /*
 * Copyright (C) 2020  钟先耀
 *
@@ -19,28 +12,24 @@
 * GNU General Public License for more details.
 */
 
-#ifndef _ifq_h
-#define _ifq_h
-#include <net/if_var.h>
+#ifndef IoctlId_h
+#define IoctlId_h
 
-static int ifq_oactive;
+enum IOCTL_IDS {
+    IOCTL_80211_DRIVER_INFO,
+    IOCTL_80211_STA_INFO,
+    IOCTL_80211_POWER,
+    IOCTL_80211_STATE,
+    IOCTL_80211_NW_ID,
+    IOCTL_80211_WPA_KEY,
+    IOCTL_80211_ASSOCIATE,
+    IOCTL_80211_DISASSOCIATE,
+    IOCTL_80211_JOIN,
+    IOCTL_80211_SCAN,
+    IOCTL_80211_SCAN_RESULT,
+    IOCTL_80211_TX_POWER_LEVEL,
+    
+    IOCTL_ID_MAX
+};
 
-static inline void
-ifq_set_oactive(IOPacketQueue **ifq)
-{
-    ifq_oactive = 1;
-}
-
-static inline void
-ifq_clr_oactive(IOPacketQueue **ifq)
-{
-    ifq_oactive = 0;
-}
-
-static inline unsigned int
-ifq_is_oactive(IOPacketQueue **ifq)
-{
-    return (ifq_oactive);
-}
-
-#endif /* _ifq_h */
+#endif /* IoctlId_h */

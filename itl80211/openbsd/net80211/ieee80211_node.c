@@ -1610,11 +1610,15 @@ ieee80211_node_alloc(struct ieee80211com *ic)
 void
 ieee80211_node_cleanup(struct ieee80211com *ic, struct ieee80211_node *ni)
 {
+    if (ni == NULL) {
+        return;
+    }
     if (ni->ni_rsnie != NULL) {
         IOFree(ni->ni_rsnie, 2 + ni->ni_rsnie[1]);
         ni->ni_rsnie = NULL;
     }
     ieee80211_ba_del(ni);
+    ieee80211_ba_free(ni);
     IOFree(ni->ni_unref_arg, ni->ni_unref_arg_size);
     ni->ni_unref_arg = NULL;
     ni->ni_unref_arg_size = 0;
@@ -2015,7 +2019,7 @@ ieee80211_ba_del(struct ieee80211_node *ni)
     timeout_del(&ni->ni_addba_req_to[EDCA_AC_VO]);
 }
 
-static void ieee80211_ba_free(struct ieee80211_node *ni)
+void ieee80211_ba_free(struct ieee80211_node *ni)
 {
     int tid;
     
@@ -2733,6 +2737,7 @@ ieee80211_node_leave_ht(struct ieee80211com *ic, struct ieee80211_node *ni)
     
     /* free all Block Ack records */
     ieee80211_ba_del(ni);
+    ieee80211_ba_free(ni);
     for (tid = 0; tid < IEEE80211_NUM_TID; tid++) {
         ba = &ni->ni_rx_ba[tid];
         if (ba->ba_buf != NULL) {

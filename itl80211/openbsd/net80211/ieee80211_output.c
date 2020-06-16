@@ -239,14 +239,15 @@ ieee80211_mgmt_output(struct ifnet *ifp, struct ieee80211_node *ni,
     #endif
                 (type & IEEE80211_FC0_SUBTYPE_MASK) !=
                 IEEE80211_FC0_SUBTYPE_PROBE_RESP)
-                XYLog("%s: sending %s to %s on channel %u mode %s\n",
+                XYLog("%s: sending %s to %s on channel %u mode %s type=%d\n",
                     ifp->if_xname,
                     ieee80211_mgt_subtype_name[
                     (type & IEEE80211_FC0_SUBTYPE_MASK)
                     >> IEEE80211_FC0_SUBTYPE_SHIFT],
                     ether_sprintf(ni->ni_macaddr),
                     ieee80211_chan2ieee(ic, ni->ni_chan),
-                    ieee80211_phymode_name[ic->ic_curmode]);
+                    ieee80211_phymode_name[ic->ic_curmode],
+                      type);
         }
 
     #ifndef IEEE80211_STA_ONLY

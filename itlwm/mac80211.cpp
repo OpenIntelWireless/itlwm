@@ -123,7 +123,6 @@
 #include <net/ethernet.h>
 #include <IOKit/IOCommandGate.h>
 
-IORecursiveLock *_outputLock = IORecursiveLockAlloc();
 extern IOCommandGate *_fCommandGate;;
 
 int itlwm::
@@ -694,7 +693,7 @@ iwm_rx_tx_cmd_single(struct iwm_softc *sc, struct iwm_rx_packet *pkt,
             best_mcs = ieee80211_mira_get_best_mcs(&in->in_mn);
             if (best_mcs != in->chosen_txmcs) {
                 in->chosen_txmcs = best_mcs;
-                XYLog("iwm_setrates best_mcs=%d\n", best_mcs);
+//                XYLog("iwm_setrates best_mcs=%d\n", best_mcs);
                 iwm_setrates(in, 1);
             }
         }
@@ -746,7 +745,7 @@ iwm_rx_tx_cmd(struct iwm_softc *sc, struct iwm_rx_packet *pkt,
     if (txd->m == NULL)
         return;
     
-    XYLog("%s idx=%d qid=%d txd->txmcs=%d txd->txrate=%d, len=%d\n", __FUNCTION__, idx, qid, txd->txmcs, txd->txrate, ((struct iwm_tx_resp *)pkt->data)->byte_cnt);
+//    XYLog("%s idx=%d qid=%d txd->txmcs=%d txd->txrate=%d, len=%d\n", __FUNCTION__, idx, qid, txd->txmcs, txd->txrate, ((struct iwm_tx_resp *)pkt->data)->byte_cnt);
     
     iwm_rx_tx_cmd_single(sc, pkt, txd->in, txd->txmcs, txd->txrate);
     iwm_txd_done(sc, txd);
@@ -769,8 +768,8 @@ iwm_rx_tx_cmd(struct iwm_softc *sc, struct iwm_rx_packet *pkt,
     
     if (--ring->queued < IWM_TX_RING_LOMARK) {
         sc->qfullmsk &= ~(1 << ring->qid);
-        if (sc->qfullmsk == 0 /*&& ifq_is_oactive(&ifp->if_snd)*/) {
-            //                ifq_clr_oactive(&ifp->if_snd);
+        if (sc->qfullmsk == 0 && ifq_is_oactive(&ifp->if_snd)) {
+            ifq_clr_oactive(&ifp->if_snd);
             /*
              * Well, we're in interrupt context, but then again
              * I guess net80211 does all sorts of stunts in
@@ -1084,11 +1083,11 @@ iwm_tx(struct iwm_softc *sc, mbuf_t m, struct ieee80211_node *ni, int ac)
     data->txmcs = ni->ni_txmcs;
     data->txrate = ni->ni_txrate;
     
-    XYLog("sending data: 嘤嘤嘤 qid=%d idx=%d len=%d nsegs=%d txflags=0x%08x rate_n_flags=0x%08x rateidx=%u txmcs=%d ni_txrate=%d\n",
-          ring->qid, ring->cur, totlen, nsegs, le32toh(tx->tx_flags),
-          le32toh(tx->rate_n_flags), tx->initial_rate_index,
-          data->txmcs,
-          data->txrate);
+//    XYLog("sending data: 嘤嘤嘤 qid=%d idx=%d len=%d nsegs=%d txflags=0x%08x rate_n_flags=0x%08x rateidx=%u txmcs=%d ni_txrate=%d\n",
+//          ring->qid, ring->cur, totlen, nsegs, le32toh(tx->tx_flags),
+//          le32toh(tx->rate_n_flags), tx->initial_rate_index,
+//          data->txmcs,
+//          data->txrate);
     
     /* Fill TX descriptor. */
     desc->num_tbs = 2 + nsegs;
@@ -1110,7 +1109,7 @@ iwm_tx(struct iwm_softc *sc, mbuf_t m, struct ieee80211_node *ni, int ac)
                 | ((seg->length) << 4));
 //        XYLog("DMA segments index=%d location=0x%llx length=%llu", i, seg->location, seg->length);
     }
-    XYLog("----------end sending data------\n");
+//    XYLog("----------end sending data------\n");
     
     //        bus_dmamap_sync(sc->sc_dmat, data->map, 0, data->map->dm_mapsize,
     //            BUS_DMASYNC_PREWRITE);
@@ -2209,132 +2208,11 @@ iwm_newstate(struct ieee80211com *ic, enum ieee80211_state nstate, int arg)
     return 0;
 }
 
-ieee80211_wpaparams wpa;
-ieee80211_wpapsk psk;
-ieee80211_nwkey nwkey;
-ieee80211_join join;
-
-#include "sha1.h"
-
 void itlwm::
 iwm_endscan(struct iwm_softc *sc)
 {
-    int error;
-    
-//        static const char *ssid_name = "Redmi";
-//        static const char *ssid_pwd = "zxyssdt112233";
-//            static const char *ssid_name = "CMCC-KtG6";
-//            static const char *ssid_pwd = "9utc5c5f";
-    static const char *ssid_name = "ssdt";
-    static const char *ssid_pwd = "zxyssdt112233";
-    
     struct ieee80211_node *ni, *nextbs;
     struct ieee80211com *ic = &sc->sc_ic;
-    
-    //    wpa.i_enabled = 0;
-    //    nwkey.i_wepon = IEEE80211_NWKEY_OPEN;
-    
-    wpa.i_enabled = 0;
-    wpa.i_ciphers = IEEE80211_WPA_CIPHER_TKIP;
-    wpa.i_protos = IEEE80211_WPA_PROTO_WPA1;
-    wpa.i_akms = IEEE80211_WPA_AKM_PSK;
-    //    wpa.i_groupcipher = IEEE80211_WPA_CIPHER_TKIP;
-    //    error = ieee80211_ioctl_setwpaparms(ic, &wpa);
-    //    if (error) {
-    //        XYLog("%s ieee80211_ioctl_setwpaparms error=%d\n", __FUNCTION__, error);
-    //    }
-    nwkey.i_key[0].i_keydat = (uint8_t*)ssid_pwd;
-    nwkey.i_key[0].i_keylen = strlen(ssid_pwd);
-    nwkey.i_wepon = IEEE80211_NWKEY_OPEN;
-    nwkey.i_defkid = 0;
-    //    error = ieee80211_ioctl_setnwkeys(ic, &nwkey);
-    //    if (error) {
-    //        XYLog("%s ieee80211_ioctl_setnwkeys error=%d\n", __FUNCTION__, error);
-    //    }
-    //    memset(ic->ic_des_essid, 0, IEEE80211_NWID_LEN);
-    //    ic->ic_des_esslen = strlen(ssid_name);
-    //    memcpy(ic->ic_des_essid, ssid_name, strlen(ssid_name));
-    //    if (ic->ic_des_esslen > 0) {
-    //        /* 'nwid' disables auto-join magic */
-    //        ic->ic_flags &= ~IEEE80211_F_AUTO_JOIN;
-    //    } else if (!TAILQ_EMPTY(&ic->ic_ess)) {
-    //        /* '-nwid' re-enables auto-join */
-    //        ic->ic_flags |= IEEE80211_F_AUTO_JOIN;
-    //    }
-    //    /* disable WPA/WEP */
-    //    ieee80211_disable_rsn(ic);
-    //    ieee80211_disable_wep(ic);
-    //    join.i_nwkey = nwkey;
-    psk.i_enabled = 1;
-    //    memcpy(psk.i_name, "ssdt_name", strlen("ssdt_name"));
-    memcpy(psk.i_psk, ssid_pwd, strlen(ssid_pwd));
-    //    join.i_wpapsk = psk;
-    join.i_wpaparams = wpa;
-    memcpy(join.i_nwid, ssid_name, strlen(ssid_name));
-    join.i_len = strlen(ssid_name);
-    join.i_flags = IEEE80211_JOIN_NWKEY;
-    
-    memset(&wpa, 0, sizeof(ieee80211_wpaparams));
-    wpa.i_enabled = 1;
-    wpa.i_ciphers = IEEE80211_WPA_CIPHER_CCMP | IEEE80211_WPA_CIPHER_TKIP;
-    wpa.i_groupcipher = IEEE80211_WPA_CIPHER_CCMP | IEEE80211_WPA_CIPHER_TKIP;
-    wpa.i_protos = IEEE80211_WPA_PROTO_WPA1 | IEEE80211_WPA_PROTO_WPA2;
-    wpa.i_akms = IEEE80211_WPA_AKM_PSK | IEEE80211_WPA_AKM_8021X | IEEE80211_WPA_AKM_SHA256_PSK | IEEE80211_WPA_AKM_SHA256_8021X;
-    memcpy(wpa.i_name, "zxy", strlen("zxy"));
-    memset(&psk, 0, sizeof(ieee80211_wpapsk));
-    memcpy(psk.i_name, "zxy", strlen("zxy"));
-    psk.i_enabled = 1;
-    pbkdf2_sha1(ssid_pwd, (const uint8_t*)ssid_name, strlen(ssid_name),
-                4096, psk.i_psk , 32);
-    memset(&nwkey, 0, sizeof(ieee80211_nwkey));
-    nwkey.i_wepon = 0;
-    nwkey.i_defkid = 0;
-    memset(&join, 0, sizeof(ieee80211_join));
-    join.i_wpaparams = wpa;
-    join.i_wpapsk = psk;
-    join.i_flags = IEEE80211_JOIN_WPAPSK | IEEE80211_JOIN_ANY | IEEE80211_JOIN_WPA | IEEE80211_JOIN_8021X;
-    join.i_nwkey = nwkey;
-    join.i_len = strlen(ssid_name);
-    memcpy(join.i_nwid, ssid_name, join.i_len);
-    
-    //    ieee80211_nwid nwid;
-    ////    nwid.i_len = 6;
-    ////    memset(nwid.i_nwid, 0, IEEE80211_NWID_LEN);
-    ////    nwid.i_nwid[0] = 0xb0;
-    ////    nwid.i_nwid[1] = 0xdf;
-    ////    nwid.i_nwid[2] = 0xc1;
-    ////    nwid.i_nwid[3] = 0x0b;
-    ////    nwid.i_nwid[4] = 0x53;
-    ////    nwid.i_nwid[5] = 0x10;
-    //    nwid.i_len = strlen(mac);
-    //    memcpy(nwid.i_nwid, mac, nwid.i_len);
-    //    memset(ic->ic_des_essid, 0, IEEE80211_NWID_LEN);
-    //    ic->ic_des_esslen = nwid.i_len;
-    //    memcpy(ic->ic_des_essid, nwid.i_nwid, nwid.i_len);
-    //    if (ic->ic_des_esslen > 0) {
-    //        /* 'nwid' disables auto-join magic */
-    //        ic->ic_flags &= ~IEEE80211_F_AUTO_JOIN;
-    //    } else if (!TAILQ_EMPTY(&ic->ic_ess)) {
-    //        /* '-nwid' re-enables auto-join */
-    //        ic->ic_flags |= IEEE80211_F_AUTO_JOIN;
-    //    }
-    //    /* disable WPA/WEP */
-    //    ieee80211_disable_rsn(ic);
-    //    ieee80211_disable_wep(ic);
-    //    if (psk.i_enabled) {
-    //        ic->ic_flags |= IEEE80211_F_PSK;
-    //        memcpy(ic->ic_psk, psk.i_psk, sizeof(ic->ic_psk));
-    //        if (ic->ic_flags & IEEE80211_F_WEPON)
-    //            ieee80211_disable_wep(ic);
-    //    } else {
-    //        ic->ic_flags &= ~IEEE80211_F_PSK;
-    //        memset(ic->ic_psk, 0, sizeof(ic->ic_psk));
-    //    }
-    //    ic->ic_txpower = 80;
-    //    ieee80211_ioctl_setwpaparms(ic, &wpa);
-    
-    if (ieee80211_add_ess(ic, &join) == 0)
-        ic->ic_flags |= IEEE80211_F_AUTO_JOIN;
     
     ni = RB_MIN(ieee80211_tree, &ic->ic_tree);
     for (; ni != NULL; ni = nextbs) {
@@ -2681,7 +2559,7 @@ iwm_init(struct ifnet *ifp)
     if (sc->sc_nvm.sku_cap_11n_enable)
         iwm_setup_ht_rates(sc);
     
-    //        ifq_clr_oactive(&ifp->if_snd);
+    ifq_clr_oactive(&ifp->if_snd);
     ifp->if_snd->flush();
     ifp->if_flags |= IFF_RUNNING;
     
@@ -2721,17 +2599,14 @@ _iwm_start_task(OSObject *target, void *arg0, void *arg1, void *arg2, void *arg3
     mbuf_t m;
     int ac = EDCA_AC_BE; /* XXX */
     
-    IORecursiveLockLock(_outputLock);
-    
-    if (!(ifp->if_flags & IFF_RUNNING) /*|| ifq_is_oactive(&ifp->if_snd)*/) {
-        IORecursiveLockUnlock(_outputLock);
+    if (!(ifp->if_flags & IFF_RUNNING) || ifq_is_oactive(&ifp->if_snd)) {
         return kIOReturnOutputDropped;
     }
     
     for (;;) {
         /* why isn't this done per-queue? */
         if (sc->qfullmsk != 0) {
-            //            ifq_set_oactive(&ifp->if_snd);
+            ifq_set_oactive(&ifp->if_snd);
             break;
         }
         
@@ -2789,8 +2664,6 @@ _iwm_start_task(OSObject *target, void *arg0, void *arg1, void *arg2, void *arg3
         }
     }
     
-    IORecursiveLockUnlock(_outputLock);
-    
     return kIOReturnSuccess;
 }
 
@@ -2802,8 +2675,8 @@ iwm_start(struct ifnet *ifp)
 //        if (that->outputThreadSignal) {
 //            semaphore_signal(that->outputThreadSignal);
 //        }
-//    _fCommandGate->runAction(_iwm_start_task, &that->com.sc_ic.ic_ac.ac_if);
-    _iwm_start_task(that, &that->com.sc_ic.ic_ac.ac_if, NULL, NULL, NULL);
+    _fCommandGate->runAction(_iwm_start_task, &that->com.sc_ic.ic_ac.ac_if);
+//    _iwm_start_task(that, &that->com.sc_ic.ic_ac.ac_if, NULL, NULL, NULL);
 }
 
 void itlwm::
@@ -2839,7 +2712,7 @@ iwm_stop(struct ifnet *ifp)
     }
     ifp->if_flags &= ~IFF_RUNNING;
     ifp->if_snd->flush();
-    //    ifq_clr_oactive(&ifp->if_snd);
+    ifq_clr_oactive(&ifp->if_snd);
     
     in->in_phyctxt = NULL;
     if (ic->ic_state == IEEE80211_S_RUN)
@@ -3482,7 +3355,7 @@ typedef void *iwm_match_t;
 #define    PCI_PRODUCT_INTEL_WL_9560_1    0x9df0        /* Dual Band Wireless AC 9560 */
 #define    PCI_PRODUCT_INTEL_WL_9560_2    0xa370        /* Dual Band Wireless AC 9560 */
 #define    PCI_PRODUCT_INTEL_WL_9560_3    0x31DC        /* Dual Band Wireless AC 9560 */
-#define    PCI_PRODUCT_INTEL_WL_9560_4    0x30DC        /* Dual Band Wireless AC 9560 */
+#define    PCI_PRODUCT_INTEL_WL_9560_4    0x30DC        /* Dual Band Wireless AC 9560 */ //maybe is qu device ?
 #define    PCI_PRODUCT_INTEL_WL_9560_5    0x271C        /* Dual Band Wireless AC 9560 */
 #define    PCI_PRODUCT_INTEL_WL_9560_6    0x271B        /* Dual Band Wireless AC 9560 */
 #define    PCI_PRODUCT_INTEL_WL_9462_1    0x42a4        /* Dual Band Wireless AC 9462 */
@@ -3531,8 +3404,8 @@ static const struct pci_matchid iwm_devices[] = {
 int itlwm::
 iwm_match(struct IOPCIDevice *device)
 {
-    XYLog("%s\n", __FUNCTION__);
     int devId = device->configRead16(kIOPCIConfigDeviceID);
+    XYLog("%s devId=0x%04X\n", __FUNCTION__, devId);
     return pci_matchbyid(PCI_VENDOR_INTEL, devId, iwm_devices,
                          nitems(iwm_devices));
 }
@@ -3770,7 +3643,7 @@ iwm_attach(struct iwm_softc *sc, struct pci_attach_args *pa)
             sc->nvm_type = IWM_NVM_EXT;
             break;
         case PCI_PRODUCT_INTEL_WL_9260_1:
-            sc->sc_fwname = "iwlwifi-9260-th-b0-jf-b0-34.ucode";
+            sc->sc_fwname = "iwm-9260-34";
             sc->host_interrupt_operation_mode = 0;
             sc->sc_device_family = IWM_DEVICE_FAMILY_9000;
             sc->sc_fwdmasegsz = IWM_FWDMASEGSZ_8000;

@@ -67,13 +67,21 @@ public:
     void wakeupOn(void* ident);
     static bool intrFilter(OSObject *object, IOFilterInterruptEventSource *src);
     static IOReturn _iwm_start_task(OSObject *target, void *arg0, void *arg1, void *arg2, void *arg3);
-//    virtual bool createWorkLoop() override;
-//    virtual IOWorkLoop* getWorkLoop() const override;
+    virtual bool createWorkLoop() override;
+    virtual IOWorkLoop* getWorkLoop() const override;
+    void watchdogAction(IOTimerEventSource *timer);
+    static IOReturn _iwx_start_task(OSObject *target, void *arg0, void *arg1, void *arg2, void *arg3);
     
     bool createMediumTables(const IONetworkMedium **primary);
-    IOReturn getPacketFilters(const OSSymbol *group, UInt32 *filters) const override;
     IOReturn selectMedium(const IONetworkMedium *medium) override;
-    UInt32 getFeatures() const override;
+    
+    struct ifnet *getIfp();
+    struct iwx_softc *getSoft();
+    IOEthernetInterface *getNetworkInterface();
+    
+    void releaseAll();
+    void joinSSID(const char *ssid, const char *pwd);
+    void associateSSID(const char *ssid, const char *pwd);
     
     //utils
     static void *malloc(vm_size_t len, int type, int how);
@@ -91,7 +99,6 @@ public:
     int    iwx_apply_debug_destination(struct iwx_softc *);
     int    iwx_ctxt_info_init(struct iwx_softc *, const struct iwx_fw_sects *);
     void iwx_ctxt_info_free_fw_img(struct iwx_softc *sc);
-    void    iwx_ctxt_info_free(struct iwx_softc *);
     int iwx_ctxt_info_alloc_dma(struct iwx_softc *sc,
                                 const struct iwx_fw_onesect *sec, struct iwx_dma_info *dram);
     void    iwx_ctxt_info_free_paging(struct iwx_softc *);
@@ -160,8 +167,7 @@ public:
             uint16_t *, size_t);
     uint8_t iwx_fw_valid_tx_ant(struct iwx_softc *sc);
     uint8_t iwx_fw_valid_rx_ant(struct iwx_softc *sc);
-    void    iwx_init_channel_map(struct iwx_softc *, const uint16_t * const,
-            const uint8_t *nvm_channels, int nchan);
+    void    iwx_init_channel_map(struct iwx_softc *, uint16_t *, uint32_t *, int);
     void    iwx_setup_ht_rates(struct iwx_softc *);
     int    iwx_mimo_enabled(struct iwx_softc *);
     static void    iwx_htprot_task(void *);
@@ -184,6 +190,9 @@ public:
             const uint16_t *, const uint16_t *,
             const uint16_t *, const uint16_t *,
             const uint16_t *, int);
+    int    iwx_set_mac_addr_from_csr(struct iwx_softc *, struct iwx_nvm_data *);
+    int    iwx_is_valid_mac_addr(const uint8_t *);
+    int    iwx_nvm_get(struct iwx_softc *);
     void    iwx_set_hw_address_8000(struct iwx_softc *, struct iwx_nvm_data *,
             const uint16_t *, const uint16_t *);
     int    iwx_parse_nvm_sections(struct iwx_softc *, struct iwx_nvm_section *);
@@ -254,6 +263,7 @@ public:
     struct iwx_scan_umac_chan_param *iwx_get_scan_req_umac_chan_param(struct iwx_softc *sc, struct iwx_scan_req_umac *req);
     void *iwx_get_scan_req_umac_data(struct iwx_softc *sc, struct iwx_scan_req_umac *req);
     int    iwx_umac_scan(struct iwx_softc *, int);
+    void    iwx_mcc_update(struct iwx_softc *, struct iwx_mcc_chub_notif *);
     uint8_t    iwx_ridx2rate(struct ieee80211_rateset *, int);
     int    iwx_rval2ridx(int);
     void    iwx_ack_rates(struct iwx_softc *, struct iwx_node *, int *, int *);
@@ -287,6 +297,7 @@ public:
             struct ieee80211_node *);
     int    iwx_sf_config(struct iwx_softc *, int);
     int    iwx_send_bt_init_conf(struct iwx_softc *);
+    int    iwx_send_soc_conf(struct iwx_softc *);
     int    iwx_send_update_mcc_cmd(struct iwx_softc *, const char *);
     int    iwx_init_hw(struct iwx_softc *);
     int    iwx_init(struct ifnet *);
@@ -313,14 +324,13 @@ public:
     
 public:
     IOInterruptEventSource* fInterrupt;
-    IOWorkLoop *irqWorkloop;
-    IOCommandGate*        fCommandGate;
-    IOCommandGate*        fOutputCommandGate;
+    IOTimerEventSource *watchdogTimer;
     struct pci_attach_args pci;
     struct iwx_softc com;
     IONetworkStats *fpNetStats;
     
     IOLock *_fwLoadLock;
+    void *lastSleepChan;
 };
 
 struct ResourceCallbackContext

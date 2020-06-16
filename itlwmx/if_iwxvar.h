@@ -11,7 +11,7 @@
 * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 * GNU General Public License for more details.
 */
-/*	$OpenBSD: if_iwxvar.h,v 1.4 2020/04/03 08:32:21 stsp Exp $	*/
+/*    $OpenBSD: if_iwxvar.h,v 1.6 2020/05/26 12:05:51 stsp Exp $    */
 
 /*
  * Copyright (c) 2014 genua mbh <info@genua.de>
@@ -145,7 +145,7 @@ struct iwx_tx_radiotap_header {
 	 (1 << IEEE80211_RADIOTAP_CHANNEL) |				\
 	 (1 << IEEE80211_RADIOTAP_HWQUEUE))
 
-#define IWX_UCODE_SECT_MAX 39
+#define IWX_UCODE_SECT_MAX 42
 #define IWX_FWDMASEGSZ (192*1024)
 #define IWX_FWDMASEGSZ_8000 (320*1024)
 /* sanity check value */
@@ -216,9 +216,12 @@ struct iwx_nvm_data {
 	int sku_cap_band_24GHz_enable;
 	int sku_cap_band_52GHz_enable;
 	int sku_cap_11n_enable;
+    int sku_cap_11ac_enable;
+    int sku_cap_11ax_enable;
 	int sku_cap_amt_enable;
 	int sku_cap_ipan_enable;
 	int sku_cap_mimo_disable;
+    int lar_enabled;
 
 	uint8_t radio_cfg_type;
 	uint8_t radio_cfg_step;
@@ -370,13 +373,15 @@ struct iwx_bf_data {
 /**
  * struct iwx_self_init_dram - dram data used by self init process
  * @fw: lmac and umac dram data
- * @fw_cnt: total number of items in array
+ * @lmac_cnt: number of lmac sections in fw image
+ * @umac_cnt: number of umac sections in fw image
  * @paging: paging dram data
- * @paging_cnt: total number of items in array
+ * @paging_cnt: number of paging sections needed by fw image
  */
 struct iwx_self_init_dram {
 	struct iwx_dma_info *fw;
-	int fw_cnt;
+	int lmac_cnt;
+    int umac_cnt;
 	struct iwx_dma_info *paging;
 	int paging_cnt;
 };
@@ -527,6 +532,11 @@ struct iwx_softc {
 	int sc_integrated;
 	int sc_tx_with_siso_diversity;
 	int sc_max_tfd_queue_size;
+    int sc_ltr_delay;
+    int sc_xtal_latency;
+    int sc_low_latency_xtal;
+    
+    int sc_uhb_supported;
 
 #if NBPFILTER > 0
 	caddr_t			sc_drvbpf;

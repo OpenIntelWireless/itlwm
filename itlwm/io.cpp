@@ -294,8 +294,21 @@ bool allocDmaMemory2(struct iwm_dma_info *dma, size_t size, int alignment)
     
     bmd = IOBufferMemoryDescriptor::inTaskWithPhysicalMask(kernel_task, kIODirectionInOut | kIOMemoryPhysicallyContiguous | kIOMapInhibitCache, size, DMA_BIT_MASK(36));
     
+    if (bmd == NULL) {
+        XYLog("%s alloc DMA memory failed.\n", __FUNCTION__);
+        return false;
+    }
+    
     bmd->prepare();
     IODMACommand *cmd = IODMACommand::withSpecification(kIODMACommandOutputHost64, 64, 0, IODMACommand::kMapped, 0, alignment);
+    
+    if (cmd == NULL) {
+        XYLog("%s alloc IODMACommand memory failed.\n", __FUNCTION__);
+        bmd->complete();
+        bmd->release();
+        return false;
+    }
+    
     cmd->setMemoryDescriptor(bmd);
 
     if (cmd->gen64IOVMSegments(&ofs, &seg, &numSegs) != kIOReturnSuccess) {

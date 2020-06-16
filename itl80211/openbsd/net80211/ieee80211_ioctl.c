@@ -366,7 +366,7 @@ ieee80211_ioctl_setwpaparms(struct ieee80211com *ic,
 	return ENETRESET;
 }
 
-static int
+int
 ieee80211_ioctl_getwpaparms(struct ieee80211com *ic,
     struct ieee80211_wpaparams *wpa)
 {

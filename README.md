@@ -1,5 +1,7 @@
 # itlwm
 
+[![Join the chat at https://gitter.im/OpenIntelWireless/itlwm](https://badges.gitter.im/OpenIntelWireless/itlwm.svg)](https://gitter.im/OpenIntelWireless/itlwm?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+
 **基于 OpenBSD 的 macOS 英特尔网卡驱动。**
 
 ## Readme
@@ -36,7 +38,8 @@ WPA 加解密已经完成,支持wpa2 Wi-Fi连接, ssid为`ssdt`, 密码为`zxyss
 - 3 系：3160、3165、3168
 - 7 系：7260、7265
 - 8 系：8260、8265
-- 9 系：9260、9560、9462
+- 9 系：9260、9461、9462、9560
+- 22000系：ax200
 
 ## 参考资料
 

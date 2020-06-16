@@ -56,9 +56,14 @@
 #ifndef _mbuf_h
 #define _mbuf_h
 
+#include <linux/types.h>
+#include <sys/_if_ether.h>
 #include <sys/mbuf.h>
 #include <sys/kpi_mbuf.h>
+#include <sys/errno.h>
 #include <IOKit/network/IOPacketQueue.h>
+#include <IOKit/IOLib.h>
+#include <IOKit/IOLocks.h>
 
 #define PACKET_TAG_DLT            0x0100 /* data link layer type */
 #define IPL_NET        6
@@ -458,37 +463,7 @@ fail:
     return (NULL);
 }
 
-static IORecursiveLock *inputLock = IORecursiveLockAlloc();
-
-static inline int if_input(struct ifnet *ifq, struct mbuf_list *ml)
-{
-    mbuf_t m;
-    uint64_t packets;
-    bool isEmpty = true;
-    
-    IORecursiveLockLock(inputLock);
-    MBUF_LIST_FOREACH(ml, m) {
-        if (ifq->iface == NULL) {
-            panic("%s ifq->iface == NULL!!!\n");
-            break;
-        }
-        if (m == NULL) {
-            panic("%s m == NULL!!!\n");
-            continue;
-        }
-//        XYLog("%s %d 啊啊啊啊 ifq->iface->inputPacket(m) hdr_len=%d len=%d\n", __FUNCTION__, __LINE__, mbuf_pkthdr_len(m), mbuf_len(m));
-        isEmpty = false;
-        ifq->iface->inputPacket(m, 0, IONetworkInterface::kInputOptionQueuePacket);
-        if (ifq->netStat != NULL) {
-            ifq->netStat->inputPackets++;
-        }
-    }
-    if (!isEmpty) {
-        ifq->iface->flushInputQueue();
-    }
-    IORecursiveLockUnlock(inputLock);
-    return 1;
-}
+int if_input(struct ifnet *ifq, struct mbuf_list *ml);
 
 extern int TX_TYPE_MGMT;
 extern int TX_TYPE_FRAME;

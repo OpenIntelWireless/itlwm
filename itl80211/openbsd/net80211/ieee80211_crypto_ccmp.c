@@ -192,7 +192,6 @@ ieee80211_ccmp_encrypt(struct ieee80211com *ic, mbuf_t m0,
     unsigned int max_chunks = 1;
 
     mbuf_get(MBUF_DONTWAIT, mbuf_type(m0), &n0);
-//    mbuf_allocpacket(MBUF_DONTWAIT, mbuf_get_mhlen(), &max_chunks, &n0);
 	if (n0 == NULL)
 		goto nospace;
 	if (m_dup_pkthdr(n0, m0, MBUF_DONTWAIT))
@@ -402,7 +401,6 @@ ieee80211_ccmp_decrypt(struct ieee80211com *ic, mbuf_t m0,
 	}
 
     mbuf_get(MBUF_DONTWAIT, mbuf_type(m0), &n0);
-//    mbuf_allocpacket(MBUF_DONTWAIT, mbuf_get_mhlen(), &max_chunks, &n0);
 	if (n0 == NULL)
 		goto nospace;
 	if (m_dup_pkthdr(n0, m0, MBUF_DONTWAIT))

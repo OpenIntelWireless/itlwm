@@ -349,6 +349,7 @@
 
 /* CSR GIO */
 #define IWM_CSR_GIO_REG_VAL_L0S_ENABLED    (0x00000002)
+#define IWM_CSR_GIO_REG_VAL_L0S_DISABLED    (0x00000002)
 
 /*
  * UCODE-DRIVER GP (general purpose) mailbox register 1

@@ -58,6 +58,7 @@
 #include <net/if.h>
 #include <net/if_var.h>
 #include <sys/queue.h>
+#include <sys/CTimeout.hpp>
 #include <sys/_if_media.h>
 #include <net/if_dl.h>
 
