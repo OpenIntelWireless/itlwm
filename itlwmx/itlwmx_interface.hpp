@@ -12,15 +12,17 @@
 * GNU General Public License for more details.
 */
 
-#ifndef itlwm_interface_hpp
-#define itlwm_interface_hpp
+#ifndef itlwmx_interface_hpp
+#define itlwmx_interface_hpp
+
+#include "itlwmx_interface.hpp"
 
 #include <IOKit/network/IOEthernetInterface.h>
 
 #define ETHERNET_MTU            1482
 
-class itlwm_interface : public IOEthernetInterface {
-    OSDeclareDefaultStructors( itlwm_interface )
+class itlwmx_interface : public IOEthernetInterface {
+    OSDeclareDefaultStructors( itlwmx_interface )
     
 public:
     virtual bool init( IONetworkController * controller ) APPLE_KEXT_OVERRIDE;
@@ -32,4 +34,4 @@ protected:
     virtual bool setMaxTransferUnit(UInt32 mtu) APPLE_KEXT_OVERRIDE;
 };
 
-#endif /* itlwm_interface_hpp */
+#endif /* itlwmx_interface_hpp */

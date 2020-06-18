@@ -16,6 +16,7 @@
 #include "compat.h"
 #include "kernel.h"
 
+#include "itlwmx_interface.hpp"
 #include <sys/param.h>
 #include <sys/conf.h>
 #include <sys/kernel.h>
@@ -61,6 +62,7 @@ public:
     IOReturn setPromiscuousMode(IOEnetPromiscuousMode mode) override;
     IOReturn setMulticastMode(IOEnetMulticastMode mode) override;
     IOReturn setMulticastList(IOEthernetAddress* addr, UInt32 len) override;
+    virtual IOReturn getMaxPacketSize(UInt32* maxSize) const override;
     bool configureInterface(IONetworkInterface *netif) override;
     static IOReturn tsleepHandler(OSObject* owner, void* arg0 = 0, void* arg1 = 0, void* arg2 = 0, void* arg3 = 0);
     int tsleep_nsec(void *ident, int priority, const char *wmesg, int timo);
@@ -280,6 +282,10 @@ public:
     static int    iwx_bgscan(struct ieee80211com *);
     int    iwx_umac_scan_abort(struct iwx_softc *);
     int    iwx_scan_abort(struct iwx_softc *);
+    int    iwx_rs_rval2idx(uint8_t);
+    uint16_t iwx_rs_ht_rates(struct iwx_softc *, struct ieee80211_node *, int);
+    int    iwx_rs_init(struct iwx_softc *, struct iwx_node *);
+    void iwx_rs_update(struct iwx_softc *sc, struct iwx_tlc_update_notif *notif);
     int    iwx_enable_data_tx_queues(struct iwx_softc *);
     int    iwx_auth(struct iwx_softc *);
     int    iwx_deauth(struct iwx_softc *);
@@ -327,6 +333,7 @@ public:
     IOTimerEventSource *watchdogTimer;
     struct pci_attach_args pci;
     struct iwx_softc com;
+    itlwmx_interface *fNetIf;
     IONetworkStats *fpNetStats;
     
     IOLock *_fwLoadLock;

@@ -1613,7 +1613,9 @@ struct iwx_tx_queue_cfg_rsp {
 
 /* DATA_PATH group subcommand IDs */
 #define IWX_DQA_ENABLE_CMD    0x00
+#define IWX_TLC_MNG_CONFIG_CMD    0x0f
 #define IWX_RX_NO_DATA_NOTIF    0xf5
+#define IWX_TLC_MNG_UPDATE_NOTIF 0xf7
 
 /* REGULATORY_AND_NVM group subcommand IDs */
 #define IWX_NVM_ACCESS_COMPLETE    0x00
@@ -4533,6 +4535,166 @@ enum {
  */
 #define IWX_LQ_FLAG_DYNAMIC_BW_POS          6
 #define IWX_LQ_FLAG_DYNAMIC_BW_MSK          (1 << IWX_LQ_FLAG_DYNAMIC_BW_POS)
+
+/**
+ * Options for TLC config flags
+ * @IWX_TLC_MNG_CFG_FLAGS_STBC_MSK: enable STBC. For HE this enables STBC for
+ *                    bandwidths <= 80MHz
+ * @IWX_TLC_MNG_CFG_FLAGS_LDPC_MSK: enable LDPC
+ * @IWX_TLC_MNG_CFG_FLAGS_HE_STBC_160MHZ_MSK: enable STBC in HE at 160MHz
+ *                          bandwidth
+ * @IWX_TLC_MNG_CFG_FLAGS_HE_DCM_NSS_1_MSK: enable HE Dual Carrier Modulation
+ *                        for BPSK (MCS 0) with 1 spatial
+ *                        stream
+ * @IWX_TLC_MNG_CFG_FLAGS_HE_DCM_NSS_2_MSK: enable HE Dual Carrier Modulation
+ *                        for BPSK (MCS 0) with 2 spatial
+ *                        streams
+ */
+#define IWX_TLC_MNG_CFG_FLAGS_STBC_MSK            (1 << 0)
+#define IWX_TLC_MNG_CFG_FLAGS_LDPC_MSK            (1 << 1)
+#define IWX_TLC_MNG_CFG_FLAGS_HE_STBC_160MHZ_MSK    (1 << 2)
+#define IWX_TLC_MNG_CFG_FLAGS_HE_DCM_NSS_1_MSK        (1 << 3)
+#define IWX_TLC_MNG_CFG_FLAGS_HE_DCM_NSS_2_MSK        (1 << 4)
+
+/**
+ * enum iwx_tlc_mng_cfg_cw - channel width options
+ * @IWX_TLC_MNG_CH_WIDTH_20MHZ: 20MHZ channel
+ * @IWX_TLC_MNG_CH_WIDTH_40MHZ: 40MHZ channel
+ * @IWX_TLC_MNG_CH_WIDTH_80MHZ: 80MHZ channel
+ * @IWX_TLC_MNG_CH_WIDTH_160MHZ: 160MHZ channel
+ * @IWX_TLC_MNG_CH_WIDTH_LAST: maximum value
+ */
+enum iwx_tlc_mng_cfg_cw {
+    IWX_TLC_MNG_CH_WIDTH_20MHZ,
+    IWX_TLC_MNG_CH_WIDTH_40MHZ,
+    IWX_TLC_MNG_CH_WIDTH_80MHZ,
+    IWX_TLC_MNG_CH_WIDTH_160MHZ,
+    IWX_TLC_MNG_CH_WIDTH_LAST = IWX_TLC_MNG_CH_WIDTH_160MHZ,
+};
+
+/**
+ * @IWX_TLC_MNG_CHAIN_A_MSK: chain A
+ * @IWX_TLC_MNG_CHAIN_B_MSK: chain B
+ */
+#define IWX_TLC_MNG_CHAIN_A_MSK    (1 << 0)
+#define IWX_TLC_MNG_CHAIN_B_MSK    (1 << 1)
+
+/**
+ * enum iwx_tlc_mng_cfg_mode - supported modes
+ * @IWX_TLC_MNG_MODE_CCK: enable CCK
+ * @IWX_TLC_MNG_MODE_OFDM_NON_HT: enable OFDM (non HT)
+ * @IWX_TLC_MNG_MODE_NON_HT: enable non HT
+ * @IWX_TLC_MNG_MODE_HT: enable HT
+ * @IWX_TLC_MNG_MODE_VHT: enable VHT
+ * @IWX_TLC_MNG_MODE_HE: enable HE
+ * @IWX_TLC_MNG_MODE_INVALID: invalid value
+ * @IWX_TLC_MNG_MODE_NUM: a count of possible modes
+ */
+enum iwx_tlc_mng_cfg_mode {
+    IWX_TLC_MNG_MODE_CCK = 0,
+    IWX_TLC_MNG_MODE_OFDM_NON_HT = IWX_TLC_MNG_MODE_CCK,
+    IWX_TLC_MNG_MODE_NON_HT = IWX_TLC_MNG_MODE_CCK,
+    IWX_TLC_MNG_MODE_HT,
+    IWX_TLC_MNG_MODE_VHT,
+    IWX_TLC_MNG_MODE_HE,
+    IWX_TLC_MNG_MODE_INVALID,
+    IWX_TLC_MNG_MODE_NUM = IWX_TLC_MNG_MODE_INVALID,
+};
+
+/**
+ * @IWX_TLC_MNG_HT_RATE_MCS0: index of MCS0
+ * @IWX_TLC_MNG_HT_RATE_MCS1: index of MCS1
+ * @IWX_TLC_MNG_HT_RATE_MCS2: index of MCS2
+ * @IWX_TLC_MNG_HT_RATE_MCS3: index of MCS3
+ * @IWX_TLC_MNG_HT_RATE_MCS4: index of MCS4
+ * @IWX_TLC_MNG_HT_RATE_MCS5: index of MCS5
+ * @IWX_TLC_MNG_HT_RATE_MCS6: index of MCS6
+ * @IWX_TLC_MNG_HT_RATE_MCS7: index of MCS7
+ * @IWX_TLC_MNG_HT_RATE_MCS8: index of MCS8
+ * @IWX_TLC_MNG_HT_RATE_MCS9: index of MCS9
+ * @IWX_TLC_MNG_HT_RATE_MCS10: index of MCS10
+ * @IWX_TLC_MNG_HT_RATE_MCS11: index of MCS11
+ * @IWX_TLC_MNG_HT_RATE_MAX: maximal rate for HT/VHT
+ */
+enum iwx_tlc_mng_ht_rates {
+    IWX_TLC_MNG_HT_RATE_MCS0 = 0,
+    IWX_TLC_MNG_HT_RATE_MCS1,
+    IWX_TLC_MNG_HT_RATE_MCS2,
+    IWX_TLC_MNG_HT_RATE_MCS3,
+    IWX_TLC_MNG_HT_RATE_MCS4,
+    IWX_TLC_MNG_HT_RATE_MCS5,
+    IWX_TLC_MNG_HT_RATE_MCS6,
+    IWX_TLC_MNG_HT_RATE_MCS7,
+    IWX_TLC_MNG_HT_RATE_MCS8,
+    IWX_TLC_MNG_HT_RATE_MCS9,
+    IWX_TLC_MNG_HT_RATE_MCS10,
+    IWX_TLC_MNG_HT_RATE_MCS11,
+    IWX_TLC_MNG_HT_RATE_MAX = IWX_TLC_MNG_HT_RATE_MCS11,
+};
+
+#define IWX_TLC_NSS_1    0
+#define IWX_TLC_NSS_2    1
+#define IWX_TLC_NSS_MAX    2
+
+#define IWX_TLC_HT_BW_NONE_160    0
+#define IWX_TLC_HT_BW_160    1
+
+/**
+ * struct iwx_tlc_config_cmd - TLC configuration
+ * @sta_id: station id
+ * @reserved1: reserved
+ * @max_ch_width: max supported channel width from @enum iwx_tlc_mng_cfg_cw
+ * @mode: &enum iwx_tlc_mng_cfg_mode
+ * @chains: bitmask of IWX_TLC_MNG_CHAIN_*_MSK
+ * @amsdu: 1 = TX amsdu is supported, 0 = not supported
+ * @flags: bitmask of IWX_TLC_MNG_CFG_*
+ * @non_ht_rates: bitmap of supported legacy rates
+ * @ht_rates: bitmap of &enum iwx_tlc_mng_ht_rates, per <nss, channel-width>
+ *          pair (0 - 80mhz width and below, 1 - 160mhz).
+ * @max_mpdu_len: max MPDU length, in bytes
+ * @sgi_ch_width_supp: bitmap of SGI support per channel width
+ *               use (1 << @enum iwx_tlc_mng_cfg_cw)
+ * @reserved2: reserved
+ */
+struct iwx_tlc_config_cmd {
+    uint8_t sta_id;
+    uint8_t reserved1[3];
+    uint8_t max_ch_width;
+    uint8_t mode;
+    uint8_t chains;
+    uint8_t amsdu;
+    uint16_t flags;
+    uint16_t non_ht_rates;
+    uint16_t ht_rates[IWX_TLC_NSS_MAX][2];
+    uint16_t max_mpdu_len;
+    uint8_t sgi_ch_width_supp;
+    uint8_t reserved2[1];
+} __packed; /* TLC_MNG_CONFIG_CMD_API_S_VER_2 */
+
+/**
+ * @IWX_TLC_NOTIF_FLAG_RATE: last initial rate update
+ * @IWX_TLC_NOTIF_FLAG_AMSDU: umsdu parameters update
+ */
+#define IWX_TLC_NOTIF_FLAG_RATE        (1 << 0)
+#define IWX_TLC_NOTIF_FLAG_AMSDU    (1 << 1)
+
+/**
+ * struct iwx_tlc_update_notif - TLC notification from FW
+ * @sta_id: station id
+ * @reserved: reserved
+ * @flags: bitmap of notifications reported
+ * @rate: current initial rate
+ * @amsdu_size: Max AMSDU size, in bytes
+ * @amsdu_enabled: bitmap for per-TID AMSDU enablement
+ */
+struct iwx_tlc_update_notif {
+    uint8_t sta_id;
+    uint8_t reserved[3];
+    uint32_t flags;
+    uint32_t rate;
+    uint32_t amsdu_size;
+    uint32_t amsdu_enabled;
+} __packed; /* TLC_MNG_UPDATE_NTFY_API_S_VER_2 */
 
 /* Antenna flags. */
 #define IWX_ANT_A    (1 << 0)

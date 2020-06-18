@@ -34,6 +34,8 @@
 			<integer>2000</integer>
 			<key>IOProviderClass</key>
 			<string>IOPCIDevice</string>
+			<key>IOUserClientClass</key>
+			<string>ItlNetworkUserClient</string>
 			<key>WiFiConfig</key>
 			<dict>
 				<key>WiFi_1</key>

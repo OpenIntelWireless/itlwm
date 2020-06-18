@@ -43,7 +43,7 @@ bool ItlNetworkUserClient::start(IOService *provider)
 //    IOLog("start\n");
     if( !super::start( provider ))
         return false;
-    fDriver = OSDynamicCast(itlwmx, provider);
+    fDriver = OSDynamicCast(itlwm, provider);
     fInf = fDriver->getNetworkInterface();
     fIfp = fDriver->getIfp();
     fSoft = fDriver->getSoft();

@@ -1,5 +1,3 @@
-/* add your code here */
-
 /*
 * Copyright (C) 2020  钟先耀
 *
@@ -82,6 +80,21 @@ IONetworkInterface *itlwm::createInterface()
     return netif;
 }
 
+struct ifnet *itlwm::getIfp()
+{
+    return &com.sc_ic.ic_ac.ac_if;
+}
+
+struct iwm_softc *itlwm::getSoft()
+{
+    return &com;
+}
+
+IOEthernetInterface *itlwm::getNetworkInterface()
+{
+    return getIfp()->iface;
+}
+
 bool itlwm::createMediumTables(const IONetworkMedium **primary)
 {
     IONetworkMedium    *medium;
@@ -106,30 +119,6 @@ bool itlwm::createMediumTables(const IONetworkMedium **primary)
 
     mediumDict->release();
     return result;
-}
-
-static char * trim(const char *strIn, char *strOut)
-{
-    size_t i, j ;
-    i = 0;
-    j = strlen(strIn) - 1;
-    if (j < 0) {
-        memset(strOut, 0, 1);
-        return strOut;
-    }
-    while(strIn[i] == ' ')
-        ++i;
-
-    while(strIn[j] == ' ')
-        --j;
-    
-    if (j - i + 1 < 0) {
-        memset(strOut, 0, 1);
-        return strOut;
-    }
-    strncpy(strOut,  strIn + i, j - i + 1);
-    strOut[j - i + 1] = '\0';
-    return strOut;
 }
 
 ieee80211_wpaparams wpa;
@@ -174,6 +163,61 @@ void itlwm::joinSSID(const char *ssid_name, const char *ssid_pwd)
     }
     if (ieee80211_add_ess(ic, &join) == 0)
         ic->ic_flags |= IEEE80211_F_AUTO_JOIN;
+}
+
+struct ieee80211_nwid nwid;
+
+void itlwm::associateSSID(const char *ssid, const char *pwd)
+{
+    struct ieee80211com *ic = &com.sc_ic;
+    if (ic->ic_state != IEEE80211_S_SCAN && ic->ic_state != IEEE80211_S_INIT) {
+        iwm_stop(&ic->ic_ac.ac_if);
+    }
+    memset(&psk, 0, sizeof(psk));
+    memcpy(nwid.i_nwid, ssid, 32);
+    nwid.i_len = strlen((char *)nwid.i_nwid);
+    memset(ic->ic_des_essid, 0, IEEE80211_NWID_LEN);
+    ic->ic_des_esslen = nwid.i_len;
+    memcpy(ic->ic_des_essid, nwid.i_nwid, nwid.i_len);
+    if (ic->ic_des_esslen > 0) {
+        /* 'nwid' disables auto-join magic */
+        ic->ic_flags &= ~IEEE80211_F_AUTO_JOIN;
+    } else if (!TAILQ_EMPTY(&ic->ic_ess)) {
+        /* '-nwid' re-enables auto-join */
+        ic->ic_flags |= IEEE80211_F_AUTO_JOIN;
+    }
+    /* disable WPA/WEP */
+    ieee80211_disable_rsn(ic);
+    ieee80211_disable_wep(ic);
+    size_t passlen = strlen(pwd);
+    /* Parse a WPA passphrase */
+    if (passlen < 8 || passlen > 63)
+        XYLog("wpakey: passphrase must be between "
+              "8 and 63 characters");
+    if (nwid.i_len == 0)
+        XYLog("wpakey: nwid not set");
+    pbkdf2_sha1(pwd, (const uint8_t*)ssid, nwid.i_len, 4096,
+                psk.i_psk, 32);
+    psk.i_enabled = 1;
+    if (psk.i_enabled) {
+        ic->ic_flags |= IEEE80211_F_PSK;
+        memcpy(ic->ic_psk, psk.i_psk, sizeof(ic->ic_psk));
+        if (ic->ic_flags & IEEE80211_F_WEPON)
+            ieee80211_disable_wep(ic);
+    } else {
+        ic->ic_flags &= ~IEEE80211_F_PSK;
+        memset(ic->ic_psk, 0, sizeof(ic->ic_psk));
+    }
+    memset(&wpa, 0, sizeof(wpa));
+    ieee80211_ioctl_getwpaparms(ic, &wpa);
+    wpa.i_enabled = psk.i_enabled;
+    wpa.i_ciphers = 0;
+    wpa.i_groupcipher = 0;
+    wpa.i_protos = IEEE80211_WPA_PROTO_WPA1 | IEEE80211_WPA_PROTO_WPA2;
+    wpa.i_akms = IEEE80211_WPA_AKM_PSK | IEEE80211_WPA_AKM_8021X | IEEE80211_WPA_AKM_SHA256_PSK | IEEE80211_WPA_AKM_SHA256_8021X;
+    ieee80211_ioctl_setwpaparms(ic, &wpa);
+    ieee80211_del_ess(ic, NULL, 0, 1);
+    iwm_add_task(&com, systq, &com.init_task);
 }
 
 #define IWM_PCI_BRIDGE_CONTROL    0x3e
@@ -247,8 +291,6 @@ bool itlwm::start(IOService *provider)
     setLinkStatus(kIONetworkLinkValid);
     OSObject *wifiEntryObject = NULL;
     OSDictionary *wifiEntry = NULL;
-    char ssid[255];
-    char password[255];
     OSString *entryKey = NULL;
     OSDictionary *wifiDict = OSDynamicCast(OSDictionary, getProperty("WiFiConfig"));
     if (wifiDict != NULL) {
@@ -267,13 +309,8 @@ bool itlwm::start(IOService *provider)
             if (ssidObj == NULL || pwdObj == NULL || ssidObj->isEqualTo("")) {
                 continue;
             }
-            bzero(ssid, sizeof(ssid));
-            bzero(password, sizeof(password));
-            trim(ssidObj->getCStringNoCopy(), (char *)&ssid);
-            trim(pwdObj->getCStringNoCopy(), (char *)&password);
             
-            XYLog("%s [%s] [%s]\n", __FUNCTION__, ssid, password);
-            joinSSID(ssid, password);
+            joinSSID(ssidObj->getCStringNoCopy(), pwdObj->getCStringNoCopy());
         }
         iterator->release();
     }
@@ -435,6 +472,7 @@ IOReturn itlwm::disable(IONetworkInterface *netif)
     watchdogTimer->cancelTimeout();
     watchdogTimer->disable();
     iwm_activate(&com, DVACT_QUIESCE);
+    setLinkStatus(kIONetworkLinkValid);
     return kIOReturnSuccess;
 }
 

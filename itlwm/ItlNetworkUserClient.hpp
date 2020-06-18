@@ -19,7 +19,7 @@
 #include <IOKit/IOUserClient.h>
 #include <IOKit/IOBufferMemoryDescriptor.h>
 #include <IOKit/network/IOEthernetInterface.h>
-#include "itlwmx.hpp"
+#include "itlwm.hpp"
 #include "Common.h"
 
 typedef IOReturn (*IOControlMethodAction)(OSObject * target, void *data, bool isSet);
@@ -55,10 +55,10 @@ private:
     
 private:
     task_t fTask;
-    itlwmx *fDriver;
+    itlwm *fDriver;
     IOEthernetInterface *fInf;
     struct ifnet *fIfp;
-    struct iwx_softc *fSoft;
+    struct iwm_softc *fSoft;
     
 protected:
     bool fScanResultWrapping;

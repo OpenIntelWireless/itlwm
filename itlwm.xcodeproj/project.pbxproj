@@ -230,6 +230,10 @@
 		F8D6CD6E2442F20C00D2A454 /* if_iwxreg.h in Headers */ = {isa = PBXBuildFile; fileRef = F8D6CD6C2442F20C00D2A454 /* if_iwxreg.h */; };
 		F8D6CD6F2442F20C00D2A454 /* if_iwxvar.h in Headers */ = {isa = PBXBuildFile; fileRef = F8D6CD6D2442F20C00D2A454 /* if_iwxvar.h */; };
 		F8D76362244F21BB00DEA040 /* pm.cpp in Sources */ = {isa = PBXBuildFile; fileRef = F8D76361244F21BB00DEA040 /* pm.cpp */; };
+		F8E49A10249B8DE500BE6868 /* itlwmx_interface.cpp in Sources */ = {isa = PBXBuildFile; fileRef = F8E49A0E249B8DE500BE6868 /* itlwmx_interface.cpp */; };
+		F8E49A11249B8DE500BE6868 /* itlwmx_interface.hpp in Headers */ = {isa = PBXBuildFile; fileRef = F8E49A0F249B8DE500BE6868 /* itlwmx_interface.hpp */; };
+		F8E49A14249B923500BE6868 /* ItlNetworkUserClient.cpp in Sources */ = {isa = PBXBuildFile; fileRef = F8E49A12249B923500BE6868 /* ItlNetworkUserClient.cpp */; };
+		F8E49A15249B923500BE6868 /* ItlNetworkUserClient.hpp in Headers */ = {isa = PBXBuildFile; fileRef = F8E49A13249B923500BE6868 /* ItlNetworkUserClient.hpp */; };
 		F8F9257D240974EF0088B8D5 /* cfg80211.h in Headers */ = {isa = PBXBuildFile; fileRef = F8F92572240974ED0088B8D5 /* cfg80211.h */; };
 		F8F9257E240974EF0088B8D5 /* bitfield.h in Headers */ = {isa = PBXBuildFile; fileRef = F8F92573240974EE0088B8D5 /* bitfield.h */; };
 		F8F9257F240974EF0088B8D5 /* kernel.h in Headers */ = {isa = PBXBuildFile; fileRef = F8F92574240974EE0088B8D5 /* kernel.h */; };
@@ -401,6 +405,10 @@
 		F8D6CD6C2442F20C00D2A454 /* if_iwxreg.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = if_iwxreg.h; sourceTree = "<group>"; };
 		F8D6CD6D2442F20C00D2A454 /* if_iwxvar.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = if_iwxvar.h; sourceTree = "<group>"; };
 		F8D76361244F21BB00DEA040 /* pm.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = pm.cpp; sourceTree = "<group>"; };
+		F8E49A0E249B8DE500BE6868 /* itlwmx_interface.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = itlwmx_interface.cpp; sourceTree = "<group>"; };
+		F8E49A0F249B8DE500BE6868 /* itlwmx_interface.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = itlwmx_interface.hpp; sourceTree = "<group>"; };
+		F8E49A12249B923500BE6868 /* ItlNetworkUserClient.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ItlNetworkUserClient.cpp; sourceTree = "<group>"; };
+		F8E49A13249B923500BE6868 /* ItlNetworkUserClient.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = ItlNetworkUserClient.hpp; sourceTree = "<group>"; };
 		F8EE4D1924177FEE002FA666 /* fw_gen.sh */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; path = fw_gen.sh; sourceTree = "<group>"; };
 		F8EE4D1A241786B0002FA666 /* FwData.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = FwData.h; sourceTree = "<group>"; };
 		F8F92572240974ED0088B8D5 /* cfg80211.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = cfg80211.h; sourceTree = "<group>"; };
@@ -488,6 +496,8 @@
 				024A08D323FCF3E6009FBA6C /* power.cpp */,
 				024A08D523FCF4D7009FBA6C /* scan.cpp */,
 				F8D76361244F21BB00DEA040 /* pm.cpp */,
+				F8E49A12249B923500BE6868 /* ItlNetworkUserClient.cpp */,
+				F8E49A13249B923500BE6868 /* ItlNetworkUserClient.hpp */,
 			);
 			path = itlwm;
 			sourceTree = "<group>";
@@ -679,6 +689,8 @@
 				F8D2577C2495EBF400872E4F /* ItlNetworkUserClient.hpp */,
 				F8D2577E2495EBFA00872E4F /* ItlNetworkUserClient.cpp */,
 				F8D6CD662442E8F200D2A454 /* Info.plist */,
+				F8E49A0E249B8DE500BE6868 /* itlwmx_interface.cpp */,
+				F8E49A0F249B8DE500BE6868 /* itlwmx_interface.hpp */,
 			);
 			path = itlwmx;
 			sourceTree = "<group>";
@@ -753,6 +765,7 @@
 				024A084C23FCBC6C009FBA6C /* chacha_private.h in Headers */,
 				024A083B23FCBC6C009FBA6C /* arc4.h in Headers */,
 				024A084623FCBC6C009FBA6C /* aes.h in Headers */,
+				F8E49A15249B923500BE6868 /* ItlNetworkUserClient.hpp in Headers */,
 				F8C2EC632408031A007A9422 /* ieee80211.h in Headers */,
 				024A085623FCBC6C009FBA6C /* cmac.h in Headers */,
 				F8F9257E240974EF0088B8D5 /* bitfield.h in Headers */,
@@ -810,6 +823,7 @@
 				F8CFB334244BF13A00B86738 /* ieee80211.h in Headers */,
 				F8CFB335244BF13A00B86738 /* ieee80211_priv.h in Headers */,
 				F8CFB336244BF13A00B86738 /* ieee80211_ioctl.h in Headers */,
+				F8E49A11249B8DE500BE6868 /* itlwmx_interface.hpp in Headers */,
 				F8CFB337244BF13A00B86738 /* ieee80211_mira.h in Headers */,
 				F8CFB338244BF13A00B86738 /* ieee80211_var.h in Headers */,
 				F8CFB320244BF12500B86738 /* pcireg.h in Headers */,
@@ -1056,6 +1070,7 @@
 				024A084E23FCBC6C009FBA6C /* chachapoly.c in Sources */,
 				F8F9EDE1240B7415009CB8E7 /* _task.cpp in Sources */,
 				024A085523FCBC6C009FBA6C /* key_wrap.c in Sources */,
+				F8E49A14249B923500BE6868 /* ItlNetworkUserClient.cpp in Sources */,
 				F8C2EC6D2408031A007A9422 /* ieee80211_pae_output.c in Sources */,
 				F8C2EC5E2408031A007A9422 /* ieee80211_pae_input.c in Sources */,
 				024A08BE23FCD314009FBA6C /* fw.cpp in Sources */,
@@ -1100,6 +1115,7 @@
 				F8C772B02443444500A1B8A0 /* ieee80211_mira.c in Sources */,
 				F8C772B22443444500A1B8A0 /* ieee80211_crypto_bip.c in Sources */,
 				F8C772B32443444500A1B8A0 /* ieee80211_crypto_tkip.c in Sources */,
+				F8E49A10249B8DE500BE6868 /* itlwmx_interface.cpp in Sources */,
 				F8C772B42443444500A1B8A0 /* ieee80211_crypto_ccmp.c in Sources */,
 				F8C772B52443444500A1B8A0 /* ieee80211_pae_input.c in Sources */,
 				F8C772B72443444500A1B8A0 /* ieee80211_amrr.c in Sources */,
@@ -1267,7 +1283,7 @@
 		024A07B723FCBC3C009FBA6C /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CLANG_CXX_LANGUAGE_STANDARD = "compiler-default";
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1.0.0d1;
@@ -1297,7 +1313,7 @@
 		024A07B823FCBC3C009FBA6C /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CLANG_CXX_LANGUAGE_STANDARD = "compiler-default";
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1.0.0d1;
@@ -1356,6 +1372,7 @@
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1.0.0d1;
 				DEVELOPMENT_TEAM = "";
+				GCC_C_LANGUAGE_STANDARD = c11;
 				GCC_INPUT_FILETYPE = sourcecode.cpp.cpp;
 				INFOPLIST_FILE = itl80211/Info.plist;
 				MACOSX_DEPLOYMENT_TARGET = 10.13;
@@ -1377,6 +1394,7 @@
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1.0.0d1;
 				DEVELOPMENT_TEAM = "";
+				GCC_C_LANGUAGE_STANDARD = c11;
 				GCC_INPUT_FILETYPE = sourcecode.cpp.cpp;
 				INFOPLIST_FILE = itl80211/Info.plist;
 				MACOSX_DEPLOYMENT_TARGET = 10.13;
@@ -1398,6 +1416,7 @@
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1.0.0d1;
 				DEVELOPMENT_TEAM = "";
+				GCC_C_LANGUAGE_STANDARD = c11;
 				GCC_INPUT_FILETYPE = sourcecode.cpp.cpp;
 				INFOPLIST_FILE = itlwmx/Info.plist;
 				LIBRARY_SEARCH_PATHS = (
@@ -1405,11 +1424,12 @@
 					"$(PROJECT_DIR)/itl80211/openbsd",
 					"$(PROJECT_DIR)/itl80211/linux",
 				);
+				MACOSX_DEPLOYMENT_TARGET = 10.12;
 				MODULE_NAME = com.zxystd.itlwmx;
 				MODULE_VERSION = 1.0.0d1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.zxystd.itlwmx;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = macosx;
+				SDKROOT = macosx10.12;
 				SYSTEM_HEADER_SEARCH_PATHS = "itl80211/openbsd itl80211";
 				WRAPPER_EXTENSION = kext;
 			};
@@ -1422,6 +1442,7 @@
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1.0.0d1;
 				DEVELOPMENT_TEAM = "";
+				GCC_C_LANGUAGE_STANDARD = c11;
 				GCC_INPUT_FILETYPE = sourcecode.cpp.cpp;
 				INFOPLIST_FILE = itlwmx/Info.plist;
 				LIBRARY_SEARCH_PATHS = (
@@ -1429,11 +1450,12 @@
 					"$(PROJECT_DIR)/itl80211/openbsd",
 					"$(PROJECT_DIR)/itl80211/linux",
 				);
+				MACOSX_DEPLOYMENT_TARGET = 10.12;
 				MODULE_NAME = com.zxystd.itlwmx;
 				MODULE_VERSION = 1.0.0d1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.zxystd.itlwmx;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = macosx;
+				SDKROOT = macosx10.12;
 				SYSTEM_HEADER_SEARCH_PATHS = "itl80211/openbsd itl80211";
 				WRAPPER_EXTENSION = kext;
 			};

@@ -70,8 +70,13 @@ public:
     
     void releaseAll();
     void joinSSID(const char *ssid, const char *pwd);
+    void associateSSID(const char *ssid, const char *pwd);
     
     bool initPCIPowerManagment(IOPCIDevice *provider);
+    
+    struct ifnet *getIfp();
+    struct iwm_softc *getSoft();
+    IOEthernetInterface *getNetworkInterface();
     
     //-----------------------------------------------------------------------
     // Power management support.
