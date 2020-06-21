@@ -2008,6 +2008,10 @@ iwx_reset_tx_ring(struct iwx_softc *sc, struct iwx_tx_ring *ring)
             data->m = NULL;
         }
     }
+    
+    /* Clear byte count table. */
+     memset(ring->bc_tbl.vaddr, 0, ring->bc_tbl.size);
+    
     /* Clear TX descriptors. */
     memset(ring->desc, 0, ring->desc_dma.size);
     //    bus_dmamap_sync(sc->sc_dmat, ring->desc_dma.map, 0,
@@ -3885,16 +3889,65 @@ iwx_get_noise(const struct iwx_statistics_rx_non_phy *stats)
     return (nbant == 0) ? -127 : (total / nbant) - 107;
 }
 
+int itlwmx::
+iwx_ccmp_decap(struct iwx_softc *sc, mbuf_t m, struct ieee80211_node *ni)
+{
+   struct ieee80211com *ic = &sc->sc_ic;
+   struct ieee80211_key *k = &ni->ni_pairwise_key;
+   struct ieee80211_frame *wh;
+   uint64_t pn, *prsc;
+   uint8_t *ivp;
+   uint8_t tid;
+   int hdrlen, hasqos;
+
+   wh = mtod(m, struct ieee80211_frame *);
+   hdrlen = ieee80211_get_hdrlen(wh);
+   ivp = (uint8_t *)wh + hdrlen;
+
+   /* Check that ExtIV bit is be set. */
+   if (!(ivp[3] & IEEE80211_WEP_EXTIV))
+       return 1;
+
+   hasqos = ieee80211_has_qos(wh);
+   tid = hasqos ? ieee80211_get_qos(wh) & IEEE80211_QOS_TID : 0;
+   prsc = &k->k_rsc[tid];
+
+   /* Extract the 48-bit PN from the CCMP header. */
+   pn = (uint64_t)ivp[0]       |
+        (uint64_t)ivp[1] <<  8 |
+        (uint64_t)ivp[4] << 16 |
+        (uint64_t)ivp[5] << 24 |
+        (uint64_t)ivp[6] << 32 |
+        (uint64_t)ivp[7] << 40;
+   if (pn <= *prsc) {
+       ic->ic_stats.is_ccmp_replays++;
+       return 1;
+   }
+   /* Last seen packet number is updated in ieee80211_inputm(). */
+
+   /*
+    * Some firmware versions strip the MIC, and some don't. It is not
+    * clear which of the capability flags could tell us what to expect.
+    * For now, keep things simple and just leave the MIC in place if
+    * it is present.
+    *
+    * The IV will be stripped by ieee80211_inputm().
+    */
+   return 0;
+}
+
 void itlwmx::
 iwx_rx_frame(struct iwx_softc *sc, mbuf_t m, int chanidx,
-             int is_shortpre, int rate_n_flags, uint32_t device_timestamp,
-             struct ieee80211_rxinfo *rxi, struct mbuf_list *ml)
+             uint32_t rx_pkt_status, int is_shortpre, int rate_n_flags,
+             uint32_t device_timestamp, struct ieee80211_rxinfo *rxi,
+             struct mbuf_list *ml)
 {
     struct ieee80211com *ic = &sc->sc_ic;
     struct ieee80211_frame *wh;
     struct ieee80211_node *ni;
     struct ieee80211_channel *bss_chan;
     uint8_t saved_bssid[IEEE80211_ADDR_LEN] = { 0 };
+    struct ifnet *ifp = IC2IFP(ic);
     
     if (chanidx < 0 || chanidx >= nitems(ic->ic_channels))
         chanidx = ieee80211_chan2ieee(ic, ic->ic_ibss_chan);
@@ -3910,6 +3963,40 @@ iwx_rx_frame(struct iwx_softc *sc, mbuf_t m, int chanidx,
         IEEE80211_ADDR_COPY(&saved_bssid, ni->ni_macaddr);
     }
     ni->ni_chan = &ic->ic_channels[chanidx];
+    
+    /* Handle hardware decryption. */
+     if (((wh->i_fc[0] & IEEE80211_FC0_TYPE_MASK) != IEEE80211_FC0_TYPE_CTL)
+         && (wh->i_fc[1] & IEEE80211_FC1_PROTECTED) &&
+         (ni->ni_flags & IEEE80211_NODE_RXPROT) &&
+         ni->ni_pairwise_key.k_cipher == IEEE80211_CIPHER_CCMP) {
+         if ((rx_pkt_status & IWX_RX_MPDU_RES_STATUS_SEC_ENC_MSK) !=
+             IWX_RX_MPDU_RES_STATUS_SEC_CCM_ENC) {
+             ic->ic_stats.is_ccmp_dec_errs++;
+             ifp->netStat->inputErrors++;
+             mbuf_freem(m);
+             ieee80211_release_node(ic, ni);
+             return;
+         }
+         /* Check whether decryption was successful or not. */
+         if ((rx_pkt_status &
+             (IWX_RX_MPDU_RES_STATUS_DEC_DONE |
+             IWX_RX_MPDU_RES_STATUS_MIC_OK)) !=
+             (IWX_RX_MPDU_RES_STATUS_DEC_DONE |
+             IWX_RX_MPDU_RES_STATUS_MIC_OK)) {
+             ic->ic_stats.is_ccmp_dec_errs++;
+             ifp->netStat->inputErrors++;
+             mbuf_freem(m);
+             ieee80211_release_node(ic, ni);
+             return;
+         }
+         if (iwx_ccmp_decap(sc, m, ni) != 0) {
+             ifp->netStat->inputErrors++;
+             mbuf_freem(m);
+             ieee80211_release_node(ic, ni);
+             return;
+         }
+         rxi->rxi_flags |= IEEE80211_RXI_HWDEC;
+     }
     
 #if NBPFILTER > 0
     if (sc->sc_drvbpf != NULL) {
@@ -4035,6 +4122,14 @@ iwx_rx_mpdu_mq(struct iwx_softc *sc, mbuf_t m, void *pktdata,
             }
         } else
             hdrlen = ieee80211_get_hdrlen(wh);
+        
+        if ((le16toh(desc->status) &
+             IWX_RX_MPDU_RES_STATUS_SEC_ENC_MSK) ==
+             IWX_RX_MPDU_RES_STATUS_SEC_CCM_ENC) {
+             /* Padding is inserted after the IV. */
+             hdrlen += IEEE80211_CCMP_HDRLEN;
+         }
+        
         //        memmove(m->m_data + 2, m->m_data, hdrlen);
         memmove((uint8_t*)mbuf_data(m) + 2, mbuf_data(m), hdrlen);
         mbuf_adj(m, 2);
@@ -4053,7 +4148,7 @@ iwx_rx_mpdu_mq(struct iwx_softc *sc, mbuf_t m, void *pktdata,
     rxi.rxi_rssi = rssi;
     rxi.rxi_tstamp = le64toh(desc->v1.tsf_on_air_rise);
     
-    iwx_rx_frame(sc, m, chanidx,
+    iwx_rx_frame(sc, m, chanidx, le16toh(desc->status),
                  (phy_info & IWX_RX_MPDU_PHY_SHORT_PREAMBLE),
                  rate_n_flags, device_timestamp, &rxi, ml);
 }
@@ -4188,6 +4283,7 @@ iwx_rx_tx_cmd(struct iwx_softc *sc, struct iwx_rx_packet *pkt,
     
     iwx_rx_tx_cmd_single(sc, pkt, txd->in, txd->txmcs, txd->txrate);
     iwx_txd_done(sc, txd);
+    iwx_tx_update_byte_tbl(ring, idx, 0, 0);
     
     /*
      * XXX Sometimes we miss Tx completion interrupts.
@@ -4200,6 +4296,7 @@ iwx_rx_tx_cmd(struct iwx_softc *sc, struct iwx_rx_packet *pkt,
             DPRINTF(("%s: missed Tx completion: tail=%d idx=%d\n",
                      __func__, ring->tail, idx));
             iwx_txd_done(sc, txd);
+            iwx_tx_update_byte_tbl(ring, idx, 0, 0);
             ring->queued--;
         }
         ring->tail = (ring->tail + 1) % IWX_TX_RING_COUNT;
@@ -4687,7 +4784,6 @@ iwx_tx_fill_cmd(struct iwx_softc *sc, struct iwx_node *in,
             ridx = min_ridx;
     }
     
-    flags |= IWX_TX_FLAGS_ENCRYPT_DIS;
     if ((ic->ic_flags & IEEE80211_F_RSNON) &&
         ni->ni_rsn_supp_state == RSNA_SUPP_PTKNEGOTIATING)
         flags |= IWX_TX_FLAGS_HIGH_PRI;
@@ -4713,7 +4809,7 @@ iwx_tx_fill_cmd(struct iwx_softc *sc, struct iwx_node *in,
 }
 
 void itlwmx::
-iwx_tx_update_byte_tbl(struct iwx_tx_ring *txq, uint16_t byte_cnt,
+iwx_tx_update_byte_tbl(struct iwx_tx_ring *txq, int idx, uint16_t byte_cnt,
                        uint16_t num_tbs)
 {
     uint8_t filled_tfd_size, num_fetch_chunks;
@@ -4736,7 +4832,7 @@ iwx_tx_update_byte_tbl(struct iwx_tx_ring *txq, uint16_t byte_cnt,
     /* Before AX210, the HW expects DW */
     len = howmany(len, 4);
     bc_ent = htole16(len | (num_fetch_chunks << 12));
-    scd_bc_tbl->tfd_offset[txq->cur] = bc_ent;
+    scd_bc_tbl->tfd_offset[idx] = bc_ent;
 }
 
 int itlwmx::
@@ -4823,11 +4919,18 @@ iwx_tx(struct iwx_softc *sc, mbuf_t m, struct ieee80211_node *ni, int ac)
     
     if (wh->i_fc[1] & IEEE80211_FC1_PROTECTED) {
         k = ieee80211_get_txkey(ic, wh, ni);
-        if ((m = ieee80211_encrypt(ic, m, k)) == NULL)
-            return ENOBUFS;
-        /* 802.11 header may have moved. */
-        wh = mtod(m, struct ieee80211_frame *);
-    }
+        if (k->k_cipher != IEEE80211_CIPHER_CCMP) {
+            if ((m = ieee80211_encrypt(ic, m, k)) == NULL)
+                return ENOBUFS;
+            /* 802.11 header may have moved. */
+            wh = mtod(m, struct ieee80211_frame *);
+            tx->flags |= htole32(IWX_TX_FLAGS_ENCRYPT_DIS);
+        } else {
+            k->k_tsc++;
+            /* Hardware increments PN internally and adds IV. */
+        }
+    } else
+        tx->flags |= htole32(IWX_TX_FLAGS_ENCRYPT_DIS);
     //    totlen = m->m_pkthdr.len;
     totlen = mbuf_pkthdr_len(m);
     
@@ -4901,7 +5004,7 @@ iwx_tx(struct iwx_softc *sc, mbuf_t m, struct ieee80211_node *ni, int ac)
     //        (char *)(void *)desc - (char *)(void *)ring->desc_dma.vaddr,
     //        sizeof (*desc), BUS_DMASYNC_PREWRITE);
     
-    iwx_tx_update_byte_tbl(ring, totlen, num_tbs);
+    iwx_tx_update_byte_tbl(ring, ring->cur, totlen, num_tbs);
     
     /* Kick TX ring. */
     ring->cur = (ring->cur + 1) % IWX_TX_RING_COUNT;
@@ -6131,7 +6234,7 @@ iwx_enable_data_tx_queues(struct iwx_softc *sc)
          * Regular data frames use the "MGMT" TID and queue.
          * Other TIDs and queues are reserved for frame aggregation.
          */
-        err = iwx_enable_txq(sc, IWX_STATION_ID, qid, IWX_MGMT_TID,
+        err = iwx_enable_txq(sc, IWX_STATION_ID, qid, IWX_TID_NON_QOS,
                              IWX_TX_RING_COUNT);
         if (err) {
             XYLog("%s: could not enable Tx queue %d (error %d)\n",
@@ -6614,6 +6717,70 @@ struct ieee80211_node *itlwmx::
 iwx_node_alloc(struct ieee80211com *ic)
 {
     return (struct ieee80211_node *)malloc(sizeof (struct iwx_node), 0, M_NOWAIT | M_ZERO);
+}
+
+int itlwmx::
+iwx_set_key(struct ieee80211com *ic, struct ieee80211_node *ni,
+            struct ieee80211_key *k)
+{
+    struct iwx_softc *sc = (struct iwx_softc *)ic->ic_softc;
+    struct iwx_add_sta_key_cmd cmd;
+    itlwmx *that = container_of(sc, itlwmx, com);
+    
+    if (k->k_cipher != IEEE80211_CIPHER_CCMP) {
+        /* Fallback to software crypto for other ciphers. */
+        return (ieee80211_set_key(ic, ni, k));
+    }
+    
+    memset(&cmd, 0, sizeof(cmd));
+    
+    cmd.common.key_flags = htole16(IWX_STA_KEY_FLG_CCM |
+                                   IWX_STA_KEY_FLG_WEP_KEY_MAP |
+                                   ((k->k_id << IWX_STA_KEY_FLG_KEYID_POS) &
+                                    IWX_STA_KEY_FLG_KEYID_MSK));
+    if (k->k_flags & IEEE80211_KEY_GROUP) {
+        cmd.common.key_offset = 1;
+        cmd.common.key_flags |= htole16(IWX_STA_KEY_MULTICAST);
+    } else
+        cmd.common.key_offset = 0;
+    
+    memcpy(cmd.common.key, k->k_key, MIN(sizeof(cmd.common.key), k->k_len));
+    cmd.common.sta_id = IWX_STATION_ID;
+    
+    cmd.transmit_seq_cnt = htole64(k->k_tsc);
+    
+    return that->iwx_send_cmd_pdu(sc, IWX_ADD_STA_KEY, IWX_CMD_ASYNC,
+                            sizeof(cmd), &cmd);
+}
+
+void itlwmx::
+iwx_delete_key(struct ieee80211com *ic, struct ieee80211_node *ni,
+               struct ieee80211_key *k)
+{
+    struct iwx_softc *sc = (struct iwx_softc *)ic->ic_softc;
+    struct iwx_add_sta_key_cmd cmd;
+    itlwmx *that = container_of(sc, itlwmx, com);
+    
+    if (k->k_cipher != IEEE80211_CIPHER_CCMP) {
+        /* Fallback to software crypto for other ciphers. */
+        ieee80211_delete_key(ic, ni, k);
+        return;
+    }
+    
+    memset(&cmd, 0, sizeof(cmd));
+    
+    cmd.common.key_flags = htole16(IWX_STA_KEY_NOT_VALID |
+                                   IWX_STA_KEY_FLG_NO_ENC | IWX_STA_KEY_FLG_WEP_KEY_MAP |
+                                   ((k->k_id << IWX_STA_KEY_FLG_KEYID_POS) &
+                                    IWX_STA_KEY_FLG_KEYID_MSK));
+    memcpy(cmd.common.key, k->k_key, MIN(sizeof(cmd.common.key), k->k_len));
+    if (k->k_flags & IEEE80211_KEY_GROUP)
+        cmd.common.key_offset = 1;
+    else
+        cmd.common.key_offset = 0;
+    cmd.common.sta_id = IWX_STATION_ID;
+    
+    that->iwx_send_cmd_pdu(sc, IWX_ADD_STA_KEY, IWX_CMD_ASYNC, sizeof(cmd), &cmd);
 }
 
 void itlwmx::
@@ -7896,6 +8063,7 @@ iwx_rx_pkt(struct iwx_softc *sc, struct iwx_rx_data *data, struct mbuf_list *ml)
                 
             case IWX_WIDE_ID(IWX_REGULATORY_AND_NVM_GROUP,
                 IWX_NVM_GET_INFO):
+            case IWX_ADD_STA_KEY:
             case IWX_PHY_CONFIGURATION_CMD:
             case IWX_TX_ANT_CONFIGURATION_CMD:
             case IWX_ADD_STA:
@@ -8750,6 +8918,8 @@ iwx_attach(struct iwx_softc *sc, struct pci_attach_args *pa)
     /* TODO: background scans trigger firmware errors */
     ic->ic_bgscan_start = iwx_bgscan;
 #endif
+    ic->ic_set_key = iwx_set_key;
+    ic->ic_delete_key = iwx_delete_key;
     
     /* Override 802.11 state transition machine. */
     sc->sc_newstate = ic->ic_newstate;

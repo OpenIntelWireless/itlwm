@@ -213,8 +213,10 @@ public:
     void    iwx_rx_rx_phy_cmd(struct iwx_softc *, struct iwx_rx_packet *,
             struct iwx_rx_data *);
     int    iwx_get_noise(const struct iwx_statistics_rx_non_phy *);
-    void    iwx_rx_frame(struct iwx_softc *, mbuf_t, int, int, int, uint32_t,
-            struct ieee80211_rxinfo *, struct mbuf_list *);
+    int    iwx_ccmp_decap(struct iwx_softc *, mbuf_t,
+           struct ieee80211_node *);
+    void    iwx_rx_frame(struct iwx_softc *, mbuf_t, int, uint32_t, int, int,
+           uint32_t, struct ieee80211_rxinfo *, struct mbuf_list *);
     void iwx_rx_mpdu_mq(struct iwx_softc *sc, mbuf_t m, void *pktdata,
                         size_t maxlen, struct mbuf_list *ml);
     void    iwx_enable_ht_cck_fallback(struct iwx_softc *, struct iwx_node *);
@@ -241,7 +243,7 @@ public:
     void    iwx_cmd_done(struct iwx_softc *, int, int, int);
     const struct iwx_rate *iwx_tx_fill_cmd(struct iwx_softc *, struct iwx_node *,
             struct ieee80211_frame *, struct iwx_tx_cmd_gen2 *);
-    void    iwx_tx_update_byte_tbl(struct iwx_tx_ring *, uint16_t, uint16_t);
+    void    iwx_tx_update_byte_tbl(struct iwx_tx_ring *, int, uint16_t, uint16_t);
     int    iwx_tx(struct iwx_softc *, mbuf_t, struct ieee80211_node *, int);
     int    iwx_flush_tx_path(struct iwx_softc *);
     int    iwx_beacon_filter_send_cmd(struct iwx_softc *,
@@ -295,6 +297,10 @@ public:
     int    iwx_run_stop(struct iwx_softc *);
     static struct ieee80211_node *iwx_node_alloc(struct ieee80211com *);
     static void    iwx_calib_timeout(void *);
+    static int    iwx_set_key(struct ieee80211com *, struct ieee80211_node *,
+           struct ieee80211_key *);
+    static void    iwx_delete_key(struct ieee80211com *,
+           struct ieee80211_node *, struct ieee80211_key *);
     int    iwx_media_change(struct ifnet *);
     static void    iwx_newstate_task(void *);
     static int    iwx_newstate(struct ieee80211com *, enum ieee80211_state, int);
