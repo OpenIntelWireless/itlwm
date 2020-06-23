@@ -347,10 +347,6 @@ void itlwmx::releaseAll()
 {
     pci_intr_handle *intrHandler = com.ih;
     
-    if (com.sc_calib_to) {
-        timeout_del(&com.sc_calib_to);
-        timeout_free(&com.sc_calib_to);
-    }
     if (_fWorkloop) {
         if (intrHandler) {
             if (intrHandler->intr) {
@@ -640,11 +636,6 @@ const int iwx_mcs2ridx[] = {
     IWX_RATE_MCS_13_INDEX,
     IWX_RATE_MCS_14_INDEX,
     IWX_RATE_MCS_15_INDEX,
-};
-
-struct iwx_nvm_section {
-    uint16_t length;
-    uint8_t *data;
 };
 
 #if NBPFILTER > 0
@@ -1523,6 +1514,7 @@ iwx_read_firmware(struct iwx_softc *sc)
             default:
                 //            err = EINVAL;
                 //            goto parse_out;
+                XYLog("%s unhandle section type= %d\n", __FUNCTION__, tlv_type);
                 break;
         }
         
@@ -2253,7 +2245,13 @@ iwx_apm_config(struct iwx_softc *sc)
      */
     lctl = pci_conf_read(sc->sc_pct, sc->sc_pcitag,
                          sc->sc_cap_off + PCI_PCIE_LCSR);
-    IWX_SETBITS(sc, IWX_CSR_GIO_REG, IWX_CSR_GIO_REG_VAL_L0S_ENABLED);
+    if (lctl & PCI_PCIE_LCSR_ASPM_L1) {
+        IWX_SETBITS(sc, IWX_CSR_GIO_REG,
+            IWX_CSR_GIO_REG_VAL_L0S_ENABLED);
+    } else {
+        IWX_CLRBITS(sc, IWX_CSR_GIO_REG,
+            IWX_CSR_GIO_REG_VAL_L0S_ENABLED);
+    }
     
     cap = pci_conf_read(sc->sc_pct, sc->sc_pcitag,
                         sc->sc_cap_off + PCI_PCIE_DCSR2);
@@ -2596,10 +2594,10 @@ iwx_nic_init(struct iwx_softc *sc)
 
 /* Map ieee80211_edca_ac categories to firmware Tx FIFO. */
 const uint8_t iwx_ac_to_tx_fifo[] = {
-    IWX_TX_FIFO_BE,
-    IWX_TX_FIFO_BK,
-    IWX_TX_FIFO_VI,
-    IWX_TX_FIFO_VO,
+    IWX_GEN2_EDCA_TX_FIFO_BE,
+    IWX_GEN2_EDCA_TX_FIFO_BK,
+    IWX_GEN2_EDCA_TX_FIFO_VI,
+    IWX_GEN2_EDCA_TX_FIFO_VO,
 };
 
 int itlwmx::
@@ -2798,169 +2796,6 @@ iwx_unprotect_session(struct iwx_softc *sc, struct iwx_node *in)
  * NVM read access and content parsing.  We do not support
  * external NVM or writing NVM.
  */
-
-/* list of NVM sections we are allowed/need to read */
-const int iwx_nvm_to_read[] = {
-    IWX_NVM_SECTION_TYPE_SW,
-    IWX_NVM_SECTION_TYPE_REGULATORY,
-    IWX_NVM_SECTION_TYPE_CALIBRATION,
-    IWX_NVM_SECTION_TYPE_PRODUCTION,
-    IWX_NVM_SECTION_TYPE_REGULATORY_SDP,
-    IWX_NVM_SECTION_TYPE_HW_8000,
-    IWX_NVM_SECTION_TYPE_MAC_OVERRIDE,
-    IWX_NVM_SECTION_TYPE_PHY_SKU,
-};
-
-#define IWX_NVM_DEFAULT_CHUNK_SIZE    (2*1024)
-
-#define IWX_NVM_WRITE_OPCODE 1
-#define IWX_NVM_READ_OPCODE 0
-
-/* load nvm chunk response */
-enum {
-    READ_NVM_CHUNK_SUCCEED = 0,
-    READ_NVM_CHUNK_NOT_VALID_ADDRESS = 1
-};
-
-int itlwmx::
-iwx_nvm_read_chunk(struct iwx_softc *sc, uint16_t section, uint16_t offset,
-                   uint16_t length, uint8_t *data, uint16_t *len)
-{
-    XYLog("%s\n", __FUNCTION__);
-    offset = 0;
-    struct iwx_nvm_access_cmd nvm_access_cmd = {
-        .offset = htole16(offset),
-        .length = htole16(length),
-        .type = htole16(section),
-        .op_code = IWX_NVM_READ_OPCODE,
-    };
-    struct iwx_nvm_access_resp *nvm_resp;
-    struct iwx_rx_packet *pkt;
-    struct iwx_host_cmd cmd = {
-        .id = IWX_NVM_ACCESS_CMD,
-        .flags = (IWX_CMD_WANT_RESP | IWX_CMD_SEND_IN_RFKILL),
-        .resp_pkt_len = IWX_CMD_RESP_MAX,
-        .data = { &nvm_access_cmd, },
-    };
-    int err, offset_read;
-    size_t bytes_read;
-    uint8_t *resp_data;
-    
-    cmd.len[0] = sizeof(struct iwx_nvm_access_cmd);
-    
-    err = iwx_send_cmd(sc, &cmd);
-    if (err)
-        return err;
-    
-    pkt = cmd.resp_pkt;
-    if (pkt->hdr.flags & IWX_CMD_FAILED_MSK) {
-        err = EIO;
-        goto exit;
-    }
-    
-    /* Extract NVM response */
-    nvm_resp = (struct iwx_nvm_access_resp *)pkt->data;
-    if (nvm_resp == NULL)
-        return EIO;
-    
-    err = le16toh(nvm_resp->status);
-    bytes_read = le16toh(nvm_resp->length);
-    offset_read = le16toh(nvm_resp->offset);
-    resp_data = nvm_resp->data;
-    if (err) {
-        if ((offset != 0) &&
-            (err == READ_NVM_CHUNK_NOT_VALID_ADDRESS)) {
-            /*
-             * meaning of NOT_VALID_ADDRESS:
-             * driver try to read chunk from address that is
-             * multiple of 2K and got an error since addr is empty.
-             * meaning of (offset != 0): driver already
-             * read valid data from another chunk so this case
-             * is not an error.
-             */
-            XYLog("NVM access command failed on offset 0x%x since that section size is multiple 2K\n",
-                  offset);
-            err = 0;
-        } else {
-            XYLog("NVM access command failed with status %d (device: %s)\n",
-                  err, "itlwm");
-            err = ENODATA;
-        }
-        goto exit;
-    }
-    
-    if (offset_read != offset) {
-        XYLog("NVM ACCESS response with invalid offset %d\n", offset_read);
-        err = EINVAL;
-        goto exit;
-    }
-    
-    //    if (bytes_read > length) {
-    //        err = EINVAL;
-    //        goto exit;
-    //    }
-    
-    memcpy(data + offset, resp_data, bytes_read);
-    *len = bytes_read;
-    
-exit:
-    iwx_free_resp(sc, &cmd);
-    return err;
-}
-
-#define    ANT_A        BIT(0)
-#define    ANT_B        BIT(1)
-
-static void iwl_nvm_fixups(u32 hw_id, unsigned int section, u8 *data,
-                           unsigned int len)
-{
-#define IWL_4165_DEVICE_ID    0x5501
-#define NVM_SKU_CAP_MIMO_DISABLE BIT(5)
-    
-    if (section == IWX_NVM_SECTION_TYPE_PHY_SKU &&
-        hw_id == IWL_4165_DEVICE_ID && data && len >= 5 &&
-        (data[4] & NVM_SKU_CAP_MIMO_DISABLE))
-    /* OTP 0x52 bug work around: it's a 1x1 device */
-        data[3] = ANT_B | (ANT_B << 4);
-}
-
-#define OTP_LOW_IMAGE_SIZE_32K        (32 * 512 * sizeof(uint16_t)) /* 32 KB */
-
-/*
- * Reads an NVM section completely.
- * NICs prior to 7000 family doesn't have a real NVM, but just read
- * section 0 which is the EEPROM. Because the EEPROM reading is unlimited
- * by uCode, we need to manually check in this case that we don't
- * overflow and try to read more than the EEPROM size.
- */
-int itlwmx::
-iwx_nvm_read_section(struct iwx_softc *sc, uint16_t section, uint8_t *data,
-                     uint16_t *len, size_t max_len)
-{
-    uint16_t chunklen, seglen;
-    int err = 0;
-    
-    chunklen = seglen = IWX_NVM_DEFAULT_CHUNK_SIZE;
-    *len = 0;
-    
-    /* Read NVM chunks until exhausted (reading less than requested) */
-    while (seglen == chunklen && *len < max_len) {
-        err = iwx_nvm_read_chunk(sc,
-                                 section, *len, chunklen, data, &seglen);
-        if (err) {
-            XYLog("Cannot read NVM from section %d offset %d, length %d, err=%d\n", section, *len, chunklen, err);
-            return err;
-        }
-        
-        *len += seglen;
-    }
-    
-    iwl_nvm_fixups(sc->sc_hw_id, section, data, *len);
-    
-    XYLog("NVM section %d read completed\n", section);
-    
-    return err;
-}
 
 uint8_t itlwmx::
 iwx_fw_valid_tx_ant(struct iwx_softc *sc)
@@ -3364,211 +3199,6 @@ out:
    iwx_free_resp(sc, &hcmd);
    return err;
 }
-
-#if 0
-void itlwmx::
-iwx_set_hw_address_8000(struct iwx_softc *sc, struct iwx_nvm_data *data,
-                        const uint16_t *mac_override, const uint16_t *nvm_hw)
-{
-    const uint8_t *hw_addr;
-    
-    if (mac_override) {
-        static const uint8_t reserved_mac[] = {
-            0x02, 0xcc, 0xaa, 0xff, 0xee, 0x00
-        };
-        
-        hw_addr = (const uint8_t *)(mac_override +
-                                    IWX_MAC_ADDRESS_OVERRIDE_8000);
-        
-        /*
-         * Store the MAC address from MAO section.
-         * No byte swapping is required in MAO section
-         */
-        memcpy(data->hw_addr, hw_addr, ETHER_ADDR_LEN);
-        
-        /*
-         * Force the use of the OTP MAC address in case of reserved MAC
-         * address in the NVM, or if address is given but invalid.
-         */
-        if (memcmp(reserved_mac, hw_addr, ETHER_ADDR_LEN) != 0 &&
-            (memcmp(etherbroadcastaddr, data->hw_addr,
-                    sizeof(etherbroadcastaddr)) != 0) &&
-            (memcmp(etheranyaddr, data->hw_addr,
-                    sizeof(etheranyaddr)) != 0) &&
-            !ETHER_IS_MULTICAST(data->hw_addr))
-            return;
-    }
-    
-    if (nvm_hw) {
-        /* Read the mac address from WFMP registers. */
-        uint32_t mac_addr0, mac_addr1;
-        
-        if (!iwx_nic_lock(sc))
-            goto out;
-        mac_addr0 = htole32(iwx_read_prph(sc, IWX_WFMP_MAC_ADDR_0));
-        mac_addr1 = htole32(iwx_read_prph(sc, IWX_WFMP_MAC_ADDR_1));
-        iwx_nic_unlock(sc);
-        
-        hw_addr = (const uint8_t *)&mac_addr0;
-        data->hw_addr[0] = hw_addr[3];
-        data->hw_addr[1] = hw_addr[2];
-        data->hw_addr[2] = hw_addr[1];
-        data->hw_addr[3] = hw_addr[0];
-        
-        hw_addr = (const uint8_t *)&mac_addr1;
-        data->hw_addr[4] = hw_addr[1];
-        data->hw_addr[5] = hw_addr[0];
-        
-        return;
-    }
-out:
-    XYLog("%s: mac address not found\n", DEVNAME(sc));
-    memset(data->hw_addr, 0, sizeof(data->hw_addr));
-}
-
-int itlwmx::
-iwx_parse_nvm_data(struct iwx_softc *sc, const uint16_t *nvm_hw,
-                   const uint16_t *nvm_sw, const uint16_t *nvm_calib,
-                   const uint16_t *mac_override, const uint16_t *phy_sku,
-                   const uint16_t *regulatory, int n_regulatory)
-{
-    struct iwx_nvm_data *data = &sc->sc_nvm;
-    uint32_t sku, radio_cfg;
-    uint16_t lar_config, lar_offset;
-    
-    data->nvm_version = le16_to_cpup(nvm_sw + IWX_NVM_VERSION);
-    
-    radio_cfg = le32_to_cpup((uint32_t *)(phy_sku + IWX_RADIO_CFG_8000));
-    data->radio_cfg_type = IWX_NVM_RF_CFG_TYPE_MSK_8000(radio_cfg);
-    data->radio_cfg_step = IWX_NVM_RF_CFG_STEP_MSK_8000(radio_cfg);
-    data->radio_cfg_dash = IWX_NVM_RF_CFG_DASH_MSK_8000(radio_cfg);
-    data->radio_cfg_pnum = IWX_NVM_RF_CFG_PNUM_MSK_8000(radio_cfg);
-    data->valid_tx_ant = IWX_NVM_RF_CFG_TX_ANT_MSK_8000(radio_cfg);
-    data->valid_rx_ant = IWX_NVM_RF_CFG_RX_ANT_MSK_8000(radio_cfg);
-    
-    sku = le32_to_cpup((uint32_t *)(phy_sku + IWX_SKU_8000));
-    data->sku_cap_band_24GHz_enable = sku & IWX_NVM_SKU_CAP_BAND_24GHZ;
-    data->sku_cap_band_52GHz_enable = sku & IWX_NVM_SKU_CAP_BAND_52GHZ;
-    data->sku_cap_11n_enable = sku & IWX_NVM_SKU_CAP_11N_ENABLE;
-    data->sku_cap_mimo_disable = sku & IWX_NVM_SKU_CAP_MIMO_DISABLE;
-    
-    lar_offset = data->nvm_version < 0xE39 ?
-    IWX_NVM_LAR_OFFSET_8000_OLD :
-    IWX_NVM_LAR_OFFSET_8000;
-    
-    lar_config = le16_to_cpup(regulatory + lar_offset);
-    data->n_hw_addrs = le16_to_cpup(nvm_sw + IWX_N_HW_ADDRS_8000);
-    iwx_set_hw_address_8000(sc, data, mac_override, nvm_hw);
-    
-    iwx_init_channel_map(sc, &regulatory[IWX_NVM_CHANNELS_8000],
-                         iwx_nvm_channels_8000,
-                         MIN(n_regulatory, nitems(iwx_nvm_channels_8000)));
-    
-    data->calib_version = 255;   /* TODO:
-                                  this value will prevent some checks from
-                                  failing, we need to check if this
-                                  field is still needed, and if it does,
-                                  where is it in the NVM */
-    
-    return 0;
-}
-
-int itlwmx::
-iwx_parse_nvm_sections(struct iwx_softc *sc, struct iwx_nvm_section *sections)
-{
-    const uint16_t *hw, *sw, *calib, *mac_override = NULL, *phy_sku = NULL;
-    const uint16_t *regulatory = NULL;
-    int n_regulatory = 0;
-    
-    /* Checking for required sections */
-    
-    /* SW and REGULATORY sections are mandatory */
-    if (!sections[IWX_NVM_SECTION_TYPE_SW].data ||
-        !sections[IWX_NVM_SECTION_TYPE_REGULATORY].data) {
-        XYLog("Can't parse empty family 8000 OTP/NVM sections\n");
-        return ENOENT;
-    }
-    /* MAC_OVERRIDE or at least HW section must exist */
-    if (!sections[IWX_NVM_SECTION_TYPE_HW_8000].data &&
-        !sections[IWX_NVM_SECTION_TYPE_MAC_OVERRIDE].data) {
-        XYLog("Can't parse mac_address, empty sections\n");
-        return ENOENT;
-    }
-    
-    /* PHY_SKU section is mandatory in B0 */
-    if (!sections[IWX_NVM_SECTION_TYPE_PHY_SKU].data) {
-        XYLog("Can't parse phy_sku in B0, empty sections\n");
-        return ENOENT;
-    }
-    
-    regulatory = (const uint16_t *)
-    sections[IWX_NVM_SECTION_TYPE_REGULATORY].data;
-    n_regulatory = sections[IWX_NVM_SECTION_TYPE_REGULATORY].length;
-    hw = (const uint16_t *)
-    sections[IWX_NVM_SECTION_TYPE_HW_8000].data;
-    mac_override =
-    (const uint16_t *)
-    sections[IWX_NVM_SECTION_TYPE_MAC_OVERRIDE].data;
-    phy_sku = (const uint16_t *)
-    sections[IWX_NVM_SECTION_TYPE_PHY_SKU].data;
-    
-    sw = (const uint16_t *)sections[IWX_NVM_SECTION_TYPE_SW].data;
-    calib = (const uint16_t *)
-    sections[IWX_NVM_SECTION_TYPE_CALIBRATION].data;
-    
-    /* XXX should pass in the length of every section */
-    return iwx_parse_nvm_data(sc, hw, sw, calib, mac_override,
-                              phy_sku, regulatory, n_regulatory);
-}
-
-int itlwmx::
-iwx_nvm_init(struct iwx_softc *sc)
-{
-    struct iwx_nvm_section nvm_sections[IWX_NVM_NUM_OF_SECTIONS];
-    int i, section, err = 0;
-    uint16_t len;
-    uint8_t *buf;
-    const size_t bufsz = sc->sc_nvm_max_section_size;
-    
-    memset(nvm_sections, 0, sizeof(nvm_sections));
-    
-    buf = (uint8_t *)malloc(bufsz, 0, M_WAITOK);
-    if (buf == NULL)
-        return ENOMEM;
-    
-    for (i = 0; i < nitems(iwx_nvm_to_read); i++) {
-        section = iwx_nvm_to_read[i];
-        KASSERT(section <= nitems(nvm_sections), "section <= nitems(nvm_sections)");
-        XYLog("Reading section %d\n", section);
-        err = iwx_nvm_read_section(sc, section, buf, &len, bufsz);
-        if (err) {
-            XYLog("Reading section failed err=%d\n", err);
-            err = 0;
-            continue;
-        }
-        nvm_sections[section].data = (uint8_t *)malloc(len, 0, M_WAITOK);
-        if (nvm_sections[section].data == NULL) {
-            err = ENOMEM;
-            break;
-        }
-        memcpy(nvm_sections[section].data, buf, len);
-        nvm_sections[section].length = len;
-    }
-    free(buf);
-    if (err == 0) {
-        XYLog("Parsing section\n");
-        err = iwx_parse_nvm_sections(sc, nvm_sections);
-    }
-    
-    XYLog("Free section\n");
-    for (i = 0; i < IWX_NVM_NUM_OF_SECTIONS; i++) {
-        if (nvm_sections[i].data != NULL)
-            free(nvm_sections[i].data);
-    }
-    
-    return err;
-}
-#endif
 
 int itlwmx::
 iwx_load_firmware(struct iwx_softc *sc)
@@ -4154,42 +3784,10 @@ iwx_rx_mpdu_mq(struct iwx_softc *sc, mbuf_t m, void *pktdata,
 }
 
 void itlwmx::
-iwx_enable_ht_cck_fallback(struct iwx_softc *sc, struct iwx_node *in)
-{
-    struct ieee80211com *ic = &sc->sc_ic;
-    struct ieee80211_node *ni = &in->in_ni;
-    struct ieee80211_rateset *rs = &ni->ni_rates;
-    uint8_t rval = (rs->rs_rates[ni->ni_txrate] & IEEE80211_RATE_VAL);
-    uint8_t min_rval = ieee80211_min_basic_rate(ic);
-    int i;
-    
-    /* Are CCK frames forbidden in our BSS? */
-    if (IWX_RVAL_IS_OFDM(min_rval))
-        return;
-    
-    in->ht_force_cck = 1;
-    
-    ieee80211_mira_cancel_timeouts(&in->in_mn);
-    ieee80211_mira_node_init(&in->in_mn);
-    ieee80211_amrr_node_init(&sc->sc_amrr, &in->in_amn);
-    
-    /* Choose initial CCK Tx rate. */
-    ni->ni_txrate = 0;
-    for (i = 0; i < rs->rs_nrates; i++) {
-        rval = (rs->rs_rates[i] & IEEE80211_RATE_VAL);
-        if (rval == min_rval) {
-            ni->ni_txrate = i;
-            break;
-        }
-    }
-}
-
-void itlwmx::
 iwx_rx_tx_cmd_single(struct iwx_softc *sc, struct iwx_rx_packet *pkt,
-                     struct iwx_node *in, int txmcs, int txrate)
+                     struct iwx_node *in)
 {
     struct ieee80211com *ic = &sc->sc_ic;
-    struct ieee80211_node *ni = &in->in_ni;
     struct ifnet *ifp = IC2IFP(ic);
     struct iwx_tx_resp *tx_resp = (struct iwx_tx_resp *)pkt->data;
     int status = le16toh(tx_resp->status.status) & IWX_TX_STATUS_MSK;
@@ -4199,44 +3797,6 @@ iwx_rx_tx_cmd_single(struct iwx_softc *sc, struct iwx_rx_packet *pkt,
     
     txfail = (status != IWX_TX_STATUS_SUCCESS &&
               status != IWX_TX_STATUS_DIRECT_DONE);
-    
-    /*
-     * Update rate control statistics.
-     * Only report frames which were actually queued with the currently
-     * selected Tx rate. Because Tx queues are relatively long we may
-     * encounter previously selected rates here during Tx bursts.
-     * Providing feedback based on such frames can lead to suboptimal
-     * Tx rate control decisions.
-     */
-    if ((ni->ni_flags & IEEE80211_NODE_HT) == 0 || in->ht_force_cck) {
-        if (txrate == ni->ni_txrate) {
-            in->in_amn.amn_txcnt++;
-            if (txfail)
-                in->in_amn.amn_retrycnt++;
-            if (tx_resp->failure_frame > 0)
-                in->in_amn.amn_retrycnt++;
-        }
-    } else if (ic->ic_fixed_mcs == -1 && txmcs == ni->ni_txmcs) {
-        in->in_mn.frames += tx_resp->frame_count;
-        in->in_mn.ampdu_size = le16toh(tx_resp->byte_cnt);
-        in->in_mn.agglen = tx_resp->frame_count;
-        if (tx_resp->failure_frame > 0)
-            in->in_mn.retries += tx_resp->failure_frame;
-        if (txfail)
-            in->in_mn.txfail += tx_resp->frame_count;
-#if 0
-        if (ic->ic_state == IEEE80211_S_RUN && !in->ht_force_cck) {
-            int otxmcs = ni->ni_txmcs;
-            
-            ieee80211_mira_choose(&in->in_mn, ic, &in->in_ni);
-            
-            /* Fall back to CCK rates if MCS 0 is failing. */
-            if (txfail && IEEE80211_IS_CHAN_2GHZ(ni->ni_chan) &&
-                otxmcs == 0 && ni->ni_txmcs == 0)
-                iwx_enable_ht_cck_fallback(sc, in);
-        }
-#endif
-    }
     
     if (txfail) {
         XYLog("%s %d OUTPUT_ERROR status=%d\n", __FUNCTION__, __LINE__, status);
@@ -4281,7 +3841,7 @@ iwx_rx_tx_cmd(struct iwx_softc *sc, struct iwx_rx_packet *pkt,
     if (txd->m == NULL)
         return;
     
-    iwx_rx_tx_cmd_single(sc, pkt, txd->in, txd->txmcs, txd->txrate);
+    iwx_rx_tx_cmd_single(sc, pkt, txd->in);
     iwx_txd_done(sc, txd);
     iwx_tx_update_byte_tbl(ring, idx, 0, 0);
     
@@ -4738,9 +4298,8 @@ iwx_cmd_done(struct iwx_softc *sc, int qid, int idx, int code)
     
     DPRINTF(("%s: command 0x%x done\n", __func__, code));
     if (ring->queued == 0) {
-        if (code != IWX_NVM_ACCESS_CMD)
-            DPRINTF(("%s: unexpected firmware response to command 0x%x\n",
-                     DEVNAME(sc), code));
+        DPRINTF(("%s: unexpected firmware response to command 0x%x\n",
+                 DEVNAME(sc), code));
     } else if (ring->queued > 0)
         ring->queued--;
 }
@@ -4774,7 +4333,7 @@ iwx_tx_fill_cmd(struct iwx_softc *sc, struct iwx_node *in,
     } else if (ic->ic_fixed_rate != -1) {
         ridx = sc->sc_fixed_ridx;
         flags |= IWX_TX_FLAGS_CMD_RATE;
-    } else if ((ni->ni_flags & IEEE80211_NODE_HT) && !in->ht_force_cck) {
+    } else if (ni->ni_flags & IEEE80211_NODE_HT) {
         ridx = iwx_mcs2ridx[ni->ni_txmcs];
     } else {
         uint8_t rval;
@@ -4958,8 +4517,6 @@ iwx_tx(struct iwx_softc *sc, mbuf_t m, struct ieee80211_node *ni, int ac)
     }
     data->m = m;
     data->in = in;
-    data->txmcs = ni->ni_txmcs;
-    data->txrate = ni->ni_txrate;
     
 //    XYLog("sending data: 嘤嘤嘤 qid=%d idx=%d len=%d nsegs=%d flags=0x%08x rate_n_flags=0x%08x offload_assist=%u txmcs=%d ni_txrate=%d\n",
 //          ring->qid, ring->cur, totlen, nsegs, le32toh(tx->flags),
@@ -5302,12 +4859,26 @@ iwx_umac_scan_fill_channels(struct iwx_softc *sc,
          c <= &ic->ic_channels[IEEE80211_CHAN_MAX] &&
          nchan < sc->sc_capa_n_scan_channels;
          c++) {
+        uint8_t channel_num;
+        
         if (c->ic_flags == 0)
             continue;
         
-        chan->channel_num = ieee80211_mhz2ieee(c->ic_freq, 0);
-        chan->iter_count = 1;
-        chan->iter_interval = htole16(0);
+        channel_num = ieee80211_mhz2ieee(c->ic_freq, 0);
+        if (isset(sc->sc_ucode_api,
+                  IWX_UCODE_TLV_API_SCAN_EXT_CHAN_VER)) {
+            chan->v2.channel_num = channel_num;
+            if (IEEE80211_IS_CHAN_2GHZ(c))
+                chan->v2.band = IWX_PHY_BAND_24;
+            else
+                chan->v2.band = IWX_PHY_BAND_5;
+            chan->v2.iter_count = 1;
+            chan->v2.iter_interval = 0;
+        } else {
+            chan->v1.channel_num = channel_num;
+            chan->v1.iter_count = 1;
+            chan->v1.iter_interval = htole16(0);
+        }
         if (n_ssids != 0 && !bgscan)
             chan->flags = htole32(1 << 0); /* select SSID 0 */
         chan++;
@@ -5365,7 +4936,9 @@ iwx_fill_probe_req(struct iwx_softc *sc, struct iwx_scan_probe_req *preq)
     *(uint16_t *)&wh->i_seq[0] = 0;    /* filled by HW */
     
     frm = (uint8_t *)(wh + 1);
-    frm = ieee80211_add_ssid(frm, ic->ic_des_essid, ic->ic_des_esslen);
+    *frm++ = IEEE80211_ELEMID_SSID;
+    *frm++ = 0;
+    /* hardware inserts SSID */
     
     /* Tell the firmware where the MAC header is. */
     preq->mac_header.offset = 0;
@@ -5384,7 +4957,6 @@ iwx_fill_probe_req(struct iwx_softc *sc, struct iwx_scan_probe_req *preq)
     frm = ieee80211_add_rates(frm, rs);
     if (rs->rs_nrates > IEEE80211_RATE_SIZE)
         frm = ieee80211_add_xrates(frm, rs);
-    preq->band_data[0].len = htole16(frm - pos);
     remain -= frm - pos;
     
     if (isset(sc->sc_enabled_capa,
@@ -5396,6 +4968,7 @@ iwx_fill_probe_req(struct iwx_softc *sc, struct iwx_scan_probe_req *preq)
         *frm++ = 0;
         remain -= 3;
     }
+    preq->band_data[0].len = htole16(frm - pos);
     
     if (sc->sc_nvm.sku_cap_band_52GHz_enable) {
         /* Fill in 5GHz IEs. */
@@ -5644,6 +5217,8 @@ iwx_umac_scan(struct iwx_softc *sc, int bgscan)
         req->v1.passive_dwell = IWL_SCAN_DWELL_PASSIVE;
         req->v1.fragmented_dwell = IWL_SCAN_DWELL_FRAGMENTED;
         req->v1.extended_dwell = IWL_SCAN_DWELL_EXTENDED;
+        
+        req->v1.scan_priority = htole32(IWX_SCAN_PRIORITY_HIGH);
     }
     
     if (bgscan) {
@@ -5662,7 +5237,6 @@ iwx_umac_scan(struct iwx_softc *sc, int bgscan)
         }
     }
     
-    req->v1.scan_priority = htole32(IWX_SCAN_PRIORITY_HIGH);
     req->ooc_priority = htole32(IWX_SCAN_PRIORITY_HIGH);
     
     cmd_data = iwx_get_scan_req_umac_data(sc, req);
@@ -6639,28 +6213,19 @@ iwx_run(struct iwx_softc *sc)
         }
     }
     
-    ieee80211_amrr_node_init(&sc->sc_amrr, &in->in_amn);
-    ieee80211_mira_node_init(&in->in_mn);
-    
     if (ic->ic_opmode == IEEE80211_M_MONITOR)
         return 0;
     
-    /* Start at lowest available bit-rate, AMRR will raise. */
+    /* Start at lowest available bit-rate. Firmware will raise. */
     in->in_ni.ni_txrate = 0;
     in->in_ni.ni_txmcs = 0;
     
-    if (isset(sc->sc_enabled_capa, IWX_UCODE_TLV_CAPA_TLC_OFFLOAD)) {
-         err = iwx_rs_init(sc, in);
-         if (err) {
-             XYLog("%s: could not init rate scaling (error %d)\n",
-                 DEVNAME(sc), err);
-             return err;
-         }
-     }
-    
-#if 0
-    timeout_add_msec(&sc->sc_calib_to, 500);
-#endif
+    err = iwx_rs_init(sc, in);
+    if (err) {
+        XYLog("%s: could not init rate scaling (error %d)\n",
+              DEVNAME(sc), err);
+        return err;
+    }
     return 0;
 }
 
@@ -6781,34 +6346,6 @@ iwx_delete_key(struct ieee80211com *ic, struct ieee80211_node *ni,
     cmd.common.sta_id = IWX_STATION_ID;
     
     that->iwx_send_cmd_pdu(sc, IWX_ADD_STA_KEY, IWX_CMD_ASYNC, sizeof(cmd), &cmd);
-}
-
-void itlwmx::
-iwx_calib_timeout(void *arg)
-{
-    struct iwx_softc *sc = (struct iwx_softc *)arg;
-    struct ieee80211com *ic = &sc->sc_ic;
-    struct iwx_node *in = (struct iwx_node *)ic->ic_bss;
-    struct ieee80211_node *ni = &in->in_ni;
-    int s;
-    
-    s = splnet();
-    if ((ic->ic_fixed_rate == -1 || ic->ic_fixed_mcs == -1) &&
-        ((ni->ni_flags & IEEE80211_NODE_HT) == 0 || in->ht_force_cck) &&
-        ic->ic_opmode == IEEE80211_M_STA && ic->ic_bss) {
-        ieee80211_amrr_choose(&sc->sc_amrr, &in->in_ni, &in->in_amn);
-        if (in->ht_force_cck) {
-            struct ieee80211_rateset *rs = &ni->ni_rates;
-            uint8_t rv;
-            rv = (rs->rs_rates[ni->ni_txrate] & IEEE80211_RATE_VAL);
-            if (IWX_RVAL_IS_OFDM(rv))
-                in->ht_force_cck = 0;
-        }
-    }
-    
-    splx(s);
-    
-    timeout_add_msec(&sc->sc_calib_to, 500);
 }
 
 int itlwmx::
@@ -6951,12 +6488,9 @@ iwx_newstate(struct ieee80211com *ic, enum ieee80211_state nstate, int arg)
 {
     struct ifnet *ifp = IC2IFP(ic);
     struct iwx_softc *sc = (struct iwx_softc *)ifp->if_softc;
-    struct iwx_node *in = (struct iwx_node *)ic->ic_bss;
     itlwmx *that = container_of(sc, itlwmx, com);
     
     if (ic->ic_state == IEEE80211_S_RUN) {
-        timeout_del(&sc->sc_calib_to);
-        ieee80211_mira_cancel_timeouts(&in->in_mn);
         that->iwx_del_task(sc, systq, &sc->ba_task);
         that->iwx_del_task(sc, systq, &sc->htprot_task);
     }
@@ -7228,6 +6762,29 @@ out:
 }
 
 int itlwmx::
+iwx_send_temp_report_ths_cmd(struct iwx_softc *sc)
+{
+    struct iwx_temp_report_ths_cmd cmd;
+    int err;
+    
+    /*
+     * In order to give responsibility for critical-temperature-kill
+     * and TX backoff to FW we need to send an empty temperature
+     * reporting command at init time.
+     */
+    memset(&cmd, 0, sizeof(cmd));
+    
+    err = iwx_send_cmd_pdu(sc,
+                           IWX_WIDE_ID(IWX_PHY_OPS_GROUP, IWX_TEMP_REPORTING_THRESHOLDS_CMD),
+                           0, sizeof(cmd), &cmd);
+    if (err)
+        XYLog("%s: TEMP_REPORT_THS_CMD command failed (error %d)\n",
+               DEVNAME(sc), err);
+    
+    return err;
+}
+
+int itlwmx::
 iwx_init_hw(struct iwx_softc *sc)
 {
     XYLog("%s\n", __FUNCTION__);
@@ -7310,6 +6867,12 @@ iwx_init_hw(struct iwx_softc *sc)
     if (err) {
         XYLog("%s: PCIe LTR configuration failed (error %d)\n",
                DEVNAME(sc), err);
+    }
+    
+    if (isset(sc->sc_enabled_capa, IWX_UCODE_TLV_CAPA_CT_KILL_BY_FW)) {
+        err = iwx_send_temp_report_ths_cmd(sc);
+        if (err)
+            goto err;
     }
     
     err = iwx_power_update_device(sc);
@@ -7544,8 +7107,6 @@ iwx_stop(struct ifnet *ifp)
     if (in != NULL) {
         in->in_phyctxt = NULL;
     }
-    if (ic->ic_state == IEEE80211_S_RUN)
-        ieee80211_mira_cancel_timeouts(&in->in_mn); /* XXX refcount? */
     
     sc->sc_flags &= ~(IWX_FLAG_SCANNING | IWX_FLAG_BGSCAN);
     sc->sc_flags &= ~IWX_FLAG_MAC_ACTIVE;
@@ -7557,7 +7118,6 @@ iwx_stop(struct ifnet *ifp)
     
     sc->sc_newstate(ic, IEEE80211_S_INIT, -1);
     
-    timeout_del(&sc->sc_calib_to); /* XXX refcount? */
     ifp->if_timer = sc->sc_tx_timer = 0;
     
     splx(s);
@@ -8059,7 +7619,21 @@ iwx_rx_pkt(struct iwx_softc *sc, struct iwx_rx_data *data, struct mbuf_list *ml)
             case IWX_DTS_MEASUREMENT_NOTIFICATION:
             case IWX_WIDE_ID(IWX_PHY_OPS_GROUP,
                              IWX_DTS_MEASUREMENT_NOTIF_WIDE):
+            case IWX_WIDE_ID(IWX_PHY_OPS_GROUP,
+                             IWX_TEMP_REPORTING_THRESHOLDS_CMD):
                 break;
+                
+            case IWX_WIDE_ID(IWX_PHY_OPS_GROUP,
+                             IWX_CT_KILL_NOTIFICATION): {
+                struct iwx_ct_kill_notif *notif;
+                SYNC_RESP_STRUCT(notif, pkt, struct iwx_ct_kill_notif *);
+                XYLog("%s: device at critical temperature (%u degC), "
+                       "stopping device\n",
+                       DEVNAME(sc), le16toh(notif->temperature));
+                sc->sc_flags |= IWX_FLAG_HW_ERR;
+                task_add(systq, &sc->init_task);
+                break;
+            }
                 
             case IWX_WIDE_ID(IWX_REGULATORY_AND_NVM_GROUP,
                 IWX_NVM_GET_INFO):
@@ -8082,7 +7656,6 @@ iwx_rx_pkt(struct iwx_softc *sc, struct iwx_rx_data *data, struct mbuf_list *ml)
             case IWX_REMOVE_STA:
             case IWX_TXPATH_FLUSH:
             case IWX_BT_CONFIG:
-            case IWX_NVM_ACCESS_CMD:
             case IWX_MCC_UPDATE_CMD:
             case IWX_TIME_EVENT_CMD:
             case IWX_STATISTICS_CMD:
@@ -8692,7 +8265,6 @@ iwx_attach(struct iwx_softc *sc, struct pci_attach_args *pa)
             sc->sc_fwname = "iwlwifi-cc-a0-48.ucode";
             sc->sc_device_family = IWX_DEVICE_FAMILY_22000;
             sc->sc_fwdmasegsz = IWX_FWDMASEGSZ_8000;
-            sc->sc_nvm_max_section_size = 32768;
             sc->sc_integrated = 1;
             sc->sc_ltr_delay = IWX_SOC_FLAGS_LTR_APPLY_DELAY_NONE;
             sc->sc_low_latency_xtal = 0;
@@ -8707,7 +8279,6 @@ iwx_attach(struct iwx_softc *sc, struct pci_attach_args *pa)
             sc->sc_fwname = "iwlwifi-Qu-b0-hr-b0-48.ucode";
             sc->sc_device_family = IWX_DEVICE_FAMILY_22000;
             sc->sc_fwdmasegsz = IWX_FWDMASEGSZ_8000;
-            sc->sc_nvm_max_section_size = 32768;
             sc->sc_integrated = 1;
             sc->sc_ltr_delay = IWX_SOC_FLAGS_LTR_APPLY_DELAY_NONE;
             sc->sc_low_latency_xtal = 0;
@@ -8720,7 +8291,6 @@ iwx_attach(struct iwx_softc *sc, struct pci_attach_args *pa)
             sc->sc_fwname = "iwlwifi-QuZ-a0-hr-b0-48.ucode";
             sc->sc_device_family = IWX_DEVICE_FAMILY_22000;
             sc->sc_fwdmasegsz = IWX_FWDMASEGSZ_8000;
-            sc->sc_nvm_max_section_size = 32768;
             sc->sc_integrated = 1;
             sc->sc_ltr_delay = IWX_SOC_FLAGS_LTR_APPLY_DELAY_NONE;
             sc->sc_low_latency_xtal = 0;
@@ -8732,7 +8302,6 @@ iwx_attach(struct iwx_softc *sc, struct pci_attach_args *pa)
             sc->sc_fwname = "iwlwifi-QuQnj-b0-hr-b0-48.ucode";
             sc->sc_device_family = IWX_DEVICE_FAMILY_22000;
             sc->sc_fwdmasegsz = IWX_FWDMASEGSZ_8000;
-            sc->sc_nvm_max_section_size = 32768;
             sc->sc_integrated = 1;
             sc->sc_ltr_delay = IWX_SOC_FLAGS_LTR_APPLY_DELAY_NONE;
             sc->sc_low_latency_xtal = 0;
@@ -8883,9 +8452,6 @@ iwx_attach(struct iwx_softc *sc, struct pci_attach_args *pa)
         sc->sc_phyctxt[i].id = i;
     }
     
-    sc->sc_amrr.amrr_min_success_threshold =  1;
-    sc->sc_amrr.amrr_max_success_threshold = 15;
-    
     /* IBSS channel undefined for now. */
     ic->ic_ibss_chan = &ic->ic_channels[1];
     
@@ -8907,7 +8473,6 @@ iwx_attach(struct iwx_softc *sc, struct pci_attach_args *pa)
 #if NBPFILTER > 0
     iwx_radiotap_attach(sc);
 #endif
-    timeout_set(&sc->sc_calib_to, iwx_calib_timeout, sc);
     task_set(&sc->init_task, iwx_init_task, sc, "iwx_init_task");
     task_set(&sc->newstate_task, iwx_newstate_task, sc, "iwx_newstate_task");
     task_set(&sc->ba_task, iwx_ba_task, sc, "iwx_ba_task");

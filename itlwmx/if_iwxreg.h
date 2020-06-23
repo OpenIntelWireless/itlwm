@@ -1700,53 +1700,30 @@ struct iwx_phy_cfg_cmd {
 #define IWX_PHY_CFG_RX_CHAIN_B    (1 << 13)
 #define IWX_PHY_CFG_RX_CHAIN_C    (1 << 14)
 
-#define IWX_NVM_VERSION        0
+#define IWX_MAX_DTS_TRIPS    8
 
-/* 8k family NVM HW-Section offset (in words) definitions */
-#define IWX_HW_ADDR0_WFPM_8000        0x12
-#define IWX_HW_ADDR1_WFPM_8000        0x16
-#define IWX_HW_ADDR0_PCIE_8000        0x8A
-#define IWX_HW_ADDR1_PCIE_8000        0x8E
-#define IWX_MAC_ADDRESS_OVERRIDE_8000    1
+/**
+ * struct iwx_ct_kill_notif - CT-kill entry notification
+ *
+ * @temperature: the current temperature in celsius
+ * @reserved: reserved
+ */
+struct iwx_ct_kill_notif {
+   uint16_t temperature;
+   uint16_t reserved;
+} __packed; /* GRP_PHY_CT_KILL_NTF */
 
-/* 8k family NVM SW-Section offset (in words) definitions */
-#define IWX_NVM_SW_SECTION_8000    0x1C0
-#define IWX_NVM_VERSION_8000    0
-#define IWX_RADIO_CFG_8000    0
-#define IWX_SKU_8000        2
-#define IWX_N_HW_ADDRS_8000    3
-
-/* 8k family NVM REGULATORY -Section offset (in words) definitions */
-#define IWX_NVM_CHANNELS_8000        0
-#define IWX_NVM_LAR_OFFSET_8000_OLD    0x4C7
-#define IWX_NVM_LAR_OFFSET_8000        0x507
-#define IWX_NVM_LAR_ENABLED_8000    0x7
-
-/* 8k family NVM calibration section offset (in words) definitions */
-#define IWX_NVM_CALIB_SECTION_8000    0x2B8
-#define IWX_XTAL_CALIB_8000        (0x316 - IWX_NVM_CALIB_SECTION_8000)
-
-/* SKU Capabilities (actual values from NVM definition) */
-#define IWX_NVM_SKU_CAP_BAND_24GHZ    (1 << 0)
-#define IWX_NVM_SKU_CAP_BAND_52GHZ    (1 << 1)
-#define IWX_NVM_SKU_CAP_11N_ENABLE    (1 << 2)
-#define IWX_NVM_SKU_CAP_11AC_ENABLE    (1 << 3)
-#define IWX_NVM_SKU_CAP_MIMO_DISABLE    (1 << 5)
-
-/* radio config bits (actual values from NVM definition) */
-#define IWX_NVM_RF_CFG_DASH_MSK(x)   (x & 0x3)         /* bits 0-1   */
-#define IWX_NVM_RF_CFG_STEP_MSK(x)   ((x >> 2)  & 0x3) /* bits 2-3   */
-#define IWX_NVM_RF_CFG_TYPE_MSK(x)   ((x >> 4)  & 0x3) /* bits 4-5   */
-#define IWX_NVM_RF_CFG_PNUM_MSK(x)   ((x >> 6)  & 0x3) /* bits 6-7   */
-#define IWX_NVM_RF_CFG_TX_ANT_MSK(x) ((x >> 8)  & 0xF) /* bits 8-11  */
-#define IWX_NVM_RF_CFG_RX_ANT_MSK(x) ((x >> 12) & 0xF) /* bits 12-15 */
-
-#define IWX_NVM_RF_CFG_PNUM_MSK_8000(x)        (x & 0xF)
-#define IWX_NVM_RF_CFG_DASH_MSK_8000(x)        ((x >> 4) & 0xF)
-#define IWX_NVM_RF_CFG_STEP_MSK_8000(x)        ((x >> 8) & 0xF)
-#define IWX_NVM_RF_CFG_TYPE_MSK_8000(x)        ((x >> 12) & 0xFFF)
-#define IWX_NVM_RF_CFG_TX_ANT_MSK_8000(x)    ((x >> 24) & 0xF)
-#define IWX_NVM_RF_CFG_RX_ANT_MSK_8000(x)    ((x >> 28) & 0xF)
+/**
+ * struct iwx_temp_report_ths_cmd - set temperature thresholds
+ * (IWX_TEMP_REPORTING_THRESHOLDS_CMD)
+ *
+ * @num_temps: number of temperature thresholds passed
+ * @thresholds: array with the thresholds to be configured
+ */
+struct iwx_temp_report_ths_cmd {
+   uint32_t num_temps;
+   uint16_t thresholds[IWX_MAX_DTS_TRIPS];
+} __packed; /* GRP_PHY_TEMP_REPORTING_THRESHOLDS_CMD */
 
 /*
  * channel flags in NVM
@@ -1777,54 +1754,6 @@ struct iwx_phy_cfg_cmd {
 #define IWX_NVM_CHANNEL_160MHZ    (1 << 11)
 #define IWX_NVM_CHANNEL_DC_HIGH    (1 << 12)
 
-/* Target of the IWX_NVM_ACCESS_CMD */
-#define IWX_NVM_ACCESS_TARGET_CACHE    0
-#define IWX_NVM_ACCESS_TARGET_OTP    1
-#define IWX_NVM_ACCESS_TARGET_EEPROM    2
-
-/* Section types for IWX_NVM_ACCESS_CMD */
-#define IWX_NVM_SECTION_TYPE_SW            1
-#define IWX_NVM_SECTION_TYPE_PAPD        2
-#define IWX_NVM_SECTION_TYPE_REGULATORY        3
-#define IWX_NVM_SECTION_TYPE_CALIBRATION    4
-#define IWX_NVM_SECTION_TYPE_PRODUCTION        5
-#define IWX_NVM_SECTION_TYPE_POST_FCS_CALIB    6
-/* 7 unknown */
-#define IWX_NVM_SECTION_TYPE_REGULATORY_SDP    8
-/* 9 unknown */
-#define IWX_NVM_SECTION_TYPE_HW_8000        10
-#define IWX_NVM_SECTION_TYPE_MAC_OVERRIDE    11
-#define IWX_NVM_SECTION_TYPE_PHY_SKU        12
-#define IWX_NVM_NUM_OF_SECTIONS            13
-
-/**
- * enum iwx_nvm_type - nvm formats
- * @IWX_NVM: the regular format
- * @IWX_NVM_EXT: extended NVM format
- */
-enum iwx_nvm_type {
-    IWX_NVM,
-    IWX_NVM_EXT,
-};
-
-/**
- * struct iwx_nvm_access_cmd_ver2 - Request the device to send an NVM section
- * @op_code: 0 - read, 1 - write
- * @target: IWX_NVM_ACCESS_TARGET_*
- * @type: IWX_NVM_SECTION_TYPE_*
- * @offset: offset in bytes into the section
- * @length: in bytes, to read/write
- * @data: if write operation, the data to write. On read its empty
- */
-struct iwx_nvm_access_cmd {
-    uint8_t op_code;
-    uint8_t target;
-    uint16_t type;
-    uint16_t offset;
-    uint16_t length;
-    uint8_t data[];
-} __packed; /* IWX_NVM_ACCESS_CMD_API_S_VER_2 */
-
 /**
  * struct iwx_nvm_access_complete_cmd - NVM_ACCESS commands are completed
  * @reserved: reserved
@@ -1832,22 +1761,6 @@ struct iwx_nvm_access_cmd {
 struct iwx_nvm_access_complete_cmd {
     uint32_t reserved;
 } __packed; /* NVM_ACCESS_COMPLETE_CMD_API_S_VER_1 */
-
-/**
- * struct iwx_nvm_access_resp_ver2 - response to IWX_NVM_ACCESS_CMD
- * @offset: offset in bytes into the section
- * @length: in bytes, either how much was written or read
- * @type: IWX_NVM_SECTION_TYPE_*
- * @status: 0 for success, fail otherwise
- * @data: if read operation, the data returned. Empty on write.
- */
-struct iwx_nvm_access_resp {
-    uint16_t offset;
-    uint16_t length;
-    uint16_t type;
-    uint16_t status;
-    uint8_t data[];
-} __packed; /* IWX_NVM_ACCESS_CMD_RESP_API_S_VER_2 */
 
 /*
  * struct iwx_nvm_get_info - request to get NVM data
@@ -4853,10 +4766,10 @@ struct iwx_tlc_update_notif {
  *    alignment
  * @TX_CMD_OFFLD_AMSDU: mark TX command is A-MSDU
  */
-#define IWX_TX_CMD_OFFLD_IP_HDR        (1 << 0)
+#define IWX_TX_CMD_OFFLD_IP_HDR(x)    ((x) << 0)
 #define IWX_TX_CMD_OFFLD_L4_EN        (1 << 6)
 #define IWX_TX_CMD_OFFLD_L3_EN        (1 << 7)
-#define IWX_TX_CMD_OFFLD_MH_SIZE    (1 << 8)
+#define IWX_TX_CMD_OFFLD_MH_SIZE(x)    ((x) << 8)
 #define IWX_TX_CMD_OFFLD_PAD        (1 << 13)
 #define IWX_TX_CMD_OFFLD_AMSDU        (1 << 14)
 #define IWX_TX_CMD_OFFLD_MH_MASK    0x1f
@@ -5658,6 +5571,45 @@ struct iwx_scan_config {
 #define IWX_UMAC_SCAN_GEN_FLAGS2_ALLOW_CHNL_REORDER    (1 << 1)
 
 /**
+ * UMAC scan general flags version 2
+ *
+ * The FW flags were reordered and hence the driver introduce version 2
+ *
+ * @IWX_UMAC_SCAN_GEN_FLAGS_V2_PERIODIC: periodic or scheduled
+ * @IWX_UMAC_SCAN_GEN_FLAGS_V2_PASS_ALL: pass all probe responses and beacons
+ *                                       during scan iterations
+ * @IWX_UMAC_SCAN_GEN_FLAGS_V2_NTFY_ITER_COMPLETE: send complete notification
+ *      on every iteration instead of only once after the last iteration
+ * @IWX_UMAC_SCAN_GEN_FLAGS_V2_FRAGMENTED_LMAC1: fragmented scan LMAC1
+ * @IWX_UMAC_SCAN_GEN_FLAGS_V2_FRAGMENTED_LMAC2: fragmented scan LMAC2
+ * @IWX_UMAC_SCAN_GEN_FLAGS_V2_MATCH: does this scan check for profile matching
+ * @IWX_UMAC_SCAN_GEN_FLAGS_V2_USE_ALL_RX_CHAINS: use all valid chains for RX
+ * @IWX_UMAC_SCAN_GEN_FLAGS_V2_ADAPTIVE_DWELL: works with adaptive dwell
+ *                                             for active channel
+ * @IWX_UMAC_SCAN_GEN_FLAGS_V2_PREEMPTIVE: can be preempted by other requests
+ * @IWX_UMAC_SCAN_GEN_FLAGS_V2_NTF_START: send notification of scan start
+ * @IWX_UMAC_SCAN_GEN_FLAGS_V2_MULTI_SSID: matching on multiple SSIDs
+ * @IWX_UMAC_SCAN_GEN_FLAGS_V2_FORCE_PASSIVE: all the channels scanned
+ *                                           as passive
+ * @IWX_UMAC_SCAN_GEN_FLAGS_V2_TRIGGER_UHB_SCAN: at the end of 2.4GHz and
+ *        5.2Ghz bands scan, trigger scan on 6GHz band to discover
+ *        the reported collocated APs
+ */
+#define IWX_UMAC_SCAN_GEN_FLAGS_V2_PERIODIC             (1 << 0)
+#define IWX_UMAC_SCAN_GEN_FLAGS_V2_PASS_ALL             (1 << 1)
+#define IWX_UMAC_SCAN_GEN_FLAGS_V2_NTFY_ITER_COMPLETE   (1 << 2)
+#define IWX_UMAC_SCAN_GEN_FLAGS_V2_FRAGMENTED_LMAC1     (1 << 3)
+#define IWX_UMAC_SCAN_GEN_FLAGS_V2_FRAGMENTED_LMAC2     (1 << 4)
+#define IWX_UMAC_SCAN_GEN_FLAGS_V2_MATCH                (1 << 5)
+#define IWX_UMAC_SCAN_GEN_FLAGS_V2_USE_ALL_RX_CHAINS    (1 << 6)
+#define IWX_UMAC_SCAN_GEN_FLAGS_V2_ADAPTIVE_DWELL       (1 << 7)
+#define IWX_UMAC_SCAN_GEN_FLAGS_V2_PREEMPTIVE           (1 << 8)
+#define IWX_UMAC_SCAN_GEN_FLAGS_V2_NTF_START            (1 << 9)
+#define IWX_UMAC_SCAN_GEN_FLAGS_V2_MULTI_SSID           (1 << 10)
+#define IWX_UMAC_SCAN_GEN_FLAGS_V2_FORCE_PASSIVE        (1 << 11)
+#define IWX_UMAC_SCAN_GEN_FLAGS_V2_TRIGGER_UHB_SCAN     (1 << 12)
+
+/**
  * struct iwx_scan_channel_cfg_umac
  * @flags:        bitmap - 0-19:    directed scan to i'th ssid.
  * @channel_num:    channel number 1-13 etc.
@@ -5666,10 +5618,20 @@ struct iwx_scan_config {
  */
 struct iwx_scan_channel_cfg_umac {
     uint32_t flags;
-    uint8_t channel_num;
-    uint8_t iter_count;
-    uint16_t iter_interval;
-} __packed; /* SCAN_CHANNEL_CFG_S_VER1 */
+    union {
+        struct {
+            uint8_t channel_num;
+            uint8_t iter_count;
+            uint16_t iter_interval;
+        } v1; /* SCAN_CHANNEL_CFG_S_VER1 */
+        struct {
+            uint8_t channel_num;
+            uint8_t band;
+            uint8_t iter_count;
+            uint8_t iter_interval;
+        } v2; /* SCAN_CHANNEL_CFG_S_VER{2,3,4} */
+    };
+} __packed;
 
 /**
  * struct iwx_scan_umac_schedule
