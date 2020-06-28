@@ -138,7 +138,7 @@ sSTATE(OSObject* target, void* data, bool isSet)
 {
     ItlNetworkUserClient *that = OSDynamicCast(ItlNetworkUserClient, target);
     struct ioctl_state *st = (struct ioctl_state *)data;
-    if (!isSet) {
+    if (isSet) {
         return kIOReturnError;
     }
     memset(st, 0, sizeof(*st));
