@@ -106,11 +106,29 @@ sSTA_INFO(OSObject* target, void* data, bool isSet)
 {
     ItlNetworkUserClient *that = OSDynamicCast(ItlNetworkUserClient, target);
     struct ioctl_sta_info *st = (struct ioctl_sta_info *)data;
+    struct ieee80211com *ic = &that->fSoft->sc_ic;
+    struct ieee80211_node *ic_bss = that->fSoft->sc_ic.ic_bss;
     if (isSet) {
         return kIOReturnError;
     }
+    if (ic_bss == NULL) {
+        return kIOReturnError;
+    }
+    if (ic_bss->ni_chan == NULL) {
+        return kIOReturnError;
+    }
+    st->version = IOCTL_VERSION;
     st->op_mode = ITL80211_MODE_11N;
-    //TODO
+    st->max_mcs = ic_bss->ni_txmcs;
+    st->cur_mcs = ic_bss->ni_txmcs;
+    st->channel = ieee80211_chan2ieee(&that->fSoft->sc_ic, ic_bss->ni_chan);
+    st->rssi = ic_bss->ni_rssi;
+    st->noise = 0;
+    st->rate = ic_bss->ni_rates.rs_rates[ic_bss->ni_txrate];
+    memset(st->ssid, 0, sizeof(st->ssid));
+    bcopy(ic->ic_des_essid, st->ssid, ic->ic_des_esslen);
+    memset(st->bssid, 0, sizeof(st->bssid));
+    bcopy(ic->ic_bss->ni_bssid, st->bssid, ETHER_ADDR_LEN);
     return kIOReturnSuccess;
 }
 
@@ -128,7 +146,8 @@ sPOWER(OSObject* target, void* data, bool isSet)
     } else {
         memset(ip, 0, sizeof(*ip));
         ip->version = IOCTL_VERSION;
-        ip->enabled = that->fIfp->if_flags &= IFF_UP;
+        ip->enabled = (that->fIfp->if_flags & (IFF_UP | IFF_RUNNING)) ==
+        (IFF_UP | IFF_RUNNING) ? 1 : 0;
     }
     return kIOReturnSuccess;
 }
@@ -190,9 +209,10 @@ IOReturn ItlNetworkUserClient::
 sSCAN(OSObject* target, void* data, bool isSet)
 {
     ItlNetworkUserClient *that = OSDynamicCast(ItlNetworkUserClient, target);
+    struct ieee80211com *ic = &that->fSoft->sc_ic;
     if (that->fSoft->sc_ic.ic_state == IEEE80211_S_RUN) {
-        //TODO background scan
-        
+        //TODO need to scan all of the channels.
+//        timeout_add_usec(&ic->ic_bgscan_timeout, 1);
     }
     return kIOReturnSuccess;
 }

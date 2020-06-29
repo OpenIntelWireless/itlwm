@@ -45,6 +45,12 @@ struct ioctl_sta_info {
     enum itl_phy_mode op_mode;
     int max_mcs;
     int cur_mcs;
+    uint channel;
+    uint rssi;
+    uint noise;
+    uint rate;
+    unsigned char ssid[NWID_LEN];
+    uint8_t bssid[ETHER_ADDR_LEN];
 };
 
 struct ioctl_power {
