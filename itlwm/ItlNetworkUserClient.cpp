@@ -122,6 +122,8 @@ sSTA_INFO(OSObject* target, void* data, bool isSet)
     st->max_mcs = ic_bss->ni_txmcs;
     st->cur_mcs = ic_bss->ni_txmcs;
     st->channel = ieee80211_chan2ieee(&that->fSoft->sc_ic, ic_bss->ni_chan);
+    //TODO only support 20mhz band width now
+    st->band_width = 20;
     st->rssi = ic_bss->ni_rssi;
     st->noise = 0;
     st->rate = ic_bss->ni_rates.rs_rates[ic_bss->ni_txrate];
@@ -192,7 +194,10 @@ sDISASSOCIATE(OSObject* target, void* data, bool isSet)
 {
     ItlNetworkUserClient *that = OSDynamicCast(ItlNetworkUserClient, target);
     struct ioctl_disassociate *dis = (struct ioctl_disassociate *)data;
-    
+    struct ieee80211com *ic = &that->fSoft->sc_ic;
+    that->fDriver->iwm_stop(&ic->ic_ac.ac_if);
+    ieee80211_del_ess(ic, (char *)dis->ssid, strlen((char *)dis->ssid), 0);
+    that->fDriver->iwm_add_task(that->fSoft, systq, &that->fSoft->init_task);
     return kIOReturnSuccess;
 }
 
