@@ -342,7 +342,6 @@ iwm_dma_contig_free(struct iwm_dma_info *dma)
     dma->buffer->release();
     dma->buffer = NULL;
     dma->vaddr = NULL;
-    dma->paddr = NULL;
 }
 
 int itlwm::
