@@ -21,13 +21,13 @@ bool itlwm_interface::init(IONetworkController *controller)
 {
     if (!super::init(controller))
         return false;
-    IOLog("itlwm setting MTU to %d\n", ETHERNET_MTU);
     setMaxTransferUnit(ETHERNET_MTU);
     return true;
 }
 
 bool itlwm_interface::setMaxTransferUnit(UInt32 mtu) {
-    if (mtu > 1500) {
+    IOLog("itlwm setting MTU to %d\n", mtu);
+    if (mtu > ETHERNET_MTU) {
         return false;
     }
     super::setMaxTransferUnit(mtu);

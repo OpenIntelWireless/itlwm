@@ -424,7 +424,7 @@ void itlwm::releaseAll()
             if (lastSleepChan) {
                 wakeupOn(lastSleepChan);
             }
-            _fCommandGate->disable();
+//            _fCommandGate->disable();
             _fWorkloop->removeEventSource(_fCommandGate);
             _fCommandGate->release();
             _fCommandGate = NULL;
@@ -600,6 +600,5 @@ IOReturn itlwm::tsleepHandler(OSObject* owner, void* arg0, void* arg1, void* arg
 }
 
 IOReturn itlwm::getMaxPacketSize(UInt32 *maxSize) const {
-    *maxSize = ETHERNET_MTU + 18;
-    return kIOReturnSuccess;
+    return super::getMaxPacketSize(maxSize);
 }

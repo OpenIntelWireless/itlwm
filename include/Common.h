@@ -47,8 +47,8 @@ struct ioctl_sta_info {
     int cur_mcs;
     uint channel;
     uint16_t band_width;//20 40 80 160
-    uint rssi;
-    uint noise;
+    int16_t rssi;
+    int16_t noise;
     uint rate;
     unsigned char ssid[NWID_LEN];
     uint8_t bssid[ETHER_ADDR_LEN];

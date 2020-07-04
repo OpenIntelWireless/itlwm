@@ -86,6 +86,19 @@ bool itlwmx::configureInterface(IONetworkInterface *netif) {
     return true;
 }
 
+IONetworkInterface *itlwmx::createInterface()
+{
+    itlwmx_interface *netif = new itlwmx_interface;
+    if (!netif) {
+        return NULL;
+    }
+    if (!netif->init(this)) {
+        netif->release();
+        return NULL;
+    }
+    return netif;
+}
+
 struct ifnet *itlwmx::getIfp()
 {
     return &com.sc_ic.ic_ac.ac_if;
@@ -366,7 +379,7 @@ void itlwmx::releaseAll()
             if (lastSleepChan) {
                 wakeupOn(lastSleepChan);
             }
-            _fCommandGate->disable();
+//            _fCommandGate->disable();
             _fWorkloop->removeEventSource(_fCommandGate);
             _fCommandGate->release();
             _fCommandGate = NULL;
@@ -459,8 +472,9 @@ IOReturn itlwmx::setMulticastList(IOEthernetAddress* addr, UInt32 len) {
 }
 
 IOReturn itlwmx::getMaxPacketSize(UInt32 *maxSize) const {
-    *maxSize = ETHERNET_MTU + 18;
-    return kIOReturnSuccess;
+    IOReturn ret = super::getMaxPacketSize(maxSize);
+    XYLog("%s maxsize=%d\n", __FUNCTION__, *maxSize);
+    return ret;
 }
 
 void itlwmx::watchdogAction(IOTimerEventSource *timer)
