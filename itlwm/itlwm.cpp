@@ -281,13 +281,18 @@ bool itlwm::start(IOService *provider)
         releaseAll();
         return false;
     }
+    fWatchdogWorkLoop = IOWorkLoop::workLoop();
+    if (fWatchdogWorkLoop == NULL) {
+        releaseAll();
+        return false;
+    }
     watchdogTimer = IOTimerEventSource::timerEventSource(this, OSMemberFunctionCast(IOTimerEventSource::Action, this, &itlwm::watchdogAction));
     if (!watchdogTimer) {
         XYLog("init watchdog fail\n");
         releaseAll();
         return false;
     }
-    _fWorkloop->addEventSource(watchdogTimer);
+    fWatchdogWorkLoop->addEventSource(watchdogTimer);
     setLinkStatus(kIONetworkLinkValid);
     OSObject *wifiEntryObject = NULL;
     OSDictionary *wifiEntry = NULL;
@@ -429,11 +434,13 @@ void itlwm::releaseAll()
             _fCommandGate->release();
             _fCommandGate = NULL;
         }
-        if (watchdogTimer) {
+        if (fWatchdogWorkLoop && watchdogTimer) {
             watchdogTimer->cancelTimeout();
-            _fWorkloop->removeEventSource(watchdogTimer);
+            fWatchdogWorkLoop->removeEventSource(watchdogTimer);
             watchdogTimer->release();
             watchdogTimer = NULL;
+            fWatchdogWorkLoop->release();
+            fWatchdogWorkLoop = NULL;
         }
         _fWorkloop->release();
         _fWorkloop = NULL;

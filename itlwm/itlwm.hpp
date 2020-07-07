@@ -90,8 +90,8 @@ public:
     void unregistPM();
     
     bool createMediumTables(const IONetworkMedium **primary);
-    IOReturn getPacketFilters(const OSSymbol *group, UInt32 *filters) const override;
-    IOReturn selectMedium(const IONetworkMedium *medium) override;
+    virtual IOReturn getPacketFilters(const OSSymbol *group, UInt32 *filters) const override;
+    virtual IOReturn selectMedium(const IONetworkMedium *medium) override;
 //    UInt32 getFeatures() const override;
     
     //utils
@@ -396,6 +396,7 @@ public:
     IONetworkStats *fpNetStats;
     itlwm_interface *fNetIf;
     void *lastSleepChan;
+    IOWorkLoop *fWatchdogWorkLoop;
     
     IOLock *fwLoadLock;
     semaphore_t outputThreadSignal;

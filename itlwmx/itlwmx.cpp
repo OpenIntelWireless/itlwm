@@ -252,6 +252,13 @@ bool itlwmx::start(IOService *provider)
     device->setIOEnable(true);
     device->setMemoryEnable(true);
     device->configWrite8(0x41, 0);
+    if (device->requestPowerDomainState(kIOPMPowerOn,
+                                        (IOPowerConnection *) getParentEntry(gIOPowerPlane), IOPMLowestState) != IOPMNoErr) {
+        return false;
+    }
+    if (initPCIPowerManagment(device) == false) {
+        return false;
+    }
     _fWorkloop = getWorkLoop();
     _fCommandGate = IOCommandGate::commandGate(this, (IOCommandGate::Action)tsleepHandler);
     if (_fCommandGate == 0) {
@@ -278,13 +285,18 @@ bool itlwmx::start(IOService *provider)
         releaseAll();
         return false;
     }
+    fWatchdogWorkLoop = IOWorkLoop::workLoop();
+    if (fWatchdogWorkLoop == NULL) {
+        releaseAll();
+        return false;
+    }
     watchdogTimer = IOTimerEventSource::timerEventSource(this, OSMemberFunctionCast(IOTimerEventSource::Action, this, &itlwmx::watchdogAction));
     if (!watchdogTimer) {
         XYLog("init watchdog fail\n");
         releaseAll();
         return false;
     }
-    _fWorkloop->addEventSource(watchdogTimer);
+    fWatchdogWorkLoop->addEventSource(watchdogTimer);
     setLinkStatus(kIONetworkLinkValid);
     OSObject *wifiEntryObject = NULL;
     OSDictionary *wifiEntry = NULL;
@@ -312,6 +324,42 @@ bool itlwmx::start(IOService *provider)
     }
     registerService();
     fNetIf->registerService();
+    return true;
+}
+
+const OSString * itlwmx::newVendorString() const
+{
+    return OSString::withCString("Apple");
+}
+
+const OSString * itlwmx::newModelString() const
+{
+    return OSString::withCString("Intel Wireless Card");
+}
+
+bool itlwmx::initPCIPowerManagment(IOPCIDevice *provider)
+{
+    UInt16 reg16;
+
+    reg16 = provider->configRead16(kIOPCIConfigCommand);
+
+    reg16 |= ( kIOPCICommandBusMaster       |
+               kIOPCICommandMemorySpace     |
+               kIOPCICommandMemWrInvalidate );
+
+    reg16 &= ~kIOPCICommandIOSpace;  // disable I/O space
+
+    provider->configWrite16( kIOPCIConfigCommand, reg16 );
+    provider->findPCICapability(kIOPCIPowerManagementCapability,
+                                &pmPCICapPtr);
+    if (pmPCICapPtr) {
+        UInt16 pciPMCReg = provider->configRead32( pmPCICapPtr ) >> 16;
+        if (pciPMCReg & kPCIPMCPMESupportFromD3Cold) {
+            magicPacketSupported = true;
+        }
+        provider->configWrite16((pmPCICapPtr + 4), 0x8000 );
+        IOSleep(10);
+    }
     return true;
 }
 
@@ -384,11 +432,13 @@ void itlwmx::releaseAll()
             _fCommandGate->release();
             _fCommandGate = NULL;
         }
-        if (watchdogTimer) {
+        if (fWatchdogWorkLoop && watchdogTimer) {
             watchdogTimer->cancelTimeout();
-            _fWorkloop->removeEventSource(watchdogTimer);
+            fWatchdogWorkLoop->removeEventSource(watchdogTimer);
             watchdogTimer->release();
             watchdogTimer = NULL;
+            fWatchdogWorkLoop->release();
+            fWatchdogWorkLoop = NULL;
         }
         _fWorkloop->release();
         _fWorkloop = NULL;
@@ -472,9 +522,145 @@ IOReturn itlwmx::setMulticastList(IOEthernetAddress* addr, UInt32 len) {
 }
 
 IOReturn itlwmx::getMaxPacketSize(UInt32 *maxSize) const {
-    IOReturn ret = super::getMaxPacketSize(maxSize);
-    XYLog("%s maxsize=%d\n", __FUNCTION__, *maxSize);
+    return super::getMaxPacketSize(maxSize);
+}
+
+IOReturn itlwmx::getPacketFilters(const OSSymbol *group, UInt32 *filters) const {
+    IOReturn    rtn = kIOReturnSuccess;
+    if (group == gIOEthernetWakeOnLANFilterGroup && magicPacketSupported) {
+        *filters = kIOEthernetWakeOnMagicPacket;
+    } else if (group == gIONetworkFilterGroup) {
+        *filters = kIOPacketFilterUnicast | kIOPacketFilterBroadcast
+        | kIOPacketFilterPromiscuous | kIOPacketFilterMulticast
+        | kIOPacketFilterMulticastAll;
+    } else {
+        rtn = IOEthernetController::getPacketFilters(group, filters);
+    }
+    return rtn;
+}
+
+static IOPMPowerState powerStateArray[kPowerStateCount] =
+{
+    {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+    {1, kIOPMDeviceUsable, kIOPMPowerOn, kIOPMPowerOn, 0, 0, 0, 0, 0, 0, 0, 0}
+};
+
+void itlwmx::unregistPM()
+{
+    if (powerOffThreadCall) {
+        thread_call_free(powerOffThreadCall);
+        powerOffThreadCall = NULL;
+    }
+    if (powerOnThreadCall) {
+        thread_call_free(powerOnThreadCall);
+        powerOnThreadCall = NULL;
+    }
+}
+
+IOReturn itlwmx::setPowerState(unsigned long powerStateOrdinal, IOService *policyMaker)
+{
+    IOReturn result = IOPMAckImplied;
+    
+    if (pmPowerState == powerStateOrdinal) {
+        return result;
+    }
+    switch (powerStateOrdinal) {
+        case kPowerStateOff:
+            if (powerOffThreadCall) {
+                retain();
+                if (thread_call_enter(powerOffThreadCall)) {
+                    release();
+                }
+                result = 5000000;
+            }
+            break;
+        case kPowerStateOn:
+            if (powerOnThreadCall) {
+                retain();
+                if (thread_call_enter(powerOnThreadCall)) {
+                    release();
+                }
+                result = 5000000;
+            }
+            break;
+            
+        default:
+            break;
+    }
+    return result;
+}
+
+IOReturn itlwmx::setWakeOnMagicPacket(bool active)
+{
+    magicPacketEnabled = active;
+    return kIOReturnSuccess;
+}
+
+static void handleSetPowerStateOff(thread_call_param_t param0,
+                             thread_call_param_t param1)
+{
+    itlwmx *self = (itlwmx *)param0;
+
+    if (param1 == 0)
+    {
+        self->getCommandGate()->runAction((IOCommandGate::Action)
+                                           handleSetPowerStateOff,
+                                           (void *) 1);
+    }
+    else
+    {
+        self->setPowerStateOff();
+        self->release();
+    }
+}
+
+static void handleSetPowerStateOn(thread_call_param_t param0,
+                            thread_call_param_t param1)
+{
+    itlwmx *self = (itlwmx *) param0;
+
+    if (param1 == 0)
+    {
+        self->getCommandGate()->runAction((IOCommandGate::Action)
+                                           handleSetPowerStateOn,
+                                           (void *) 1);
+    }
+    else
+    {
+        self->setPowerStateOn();
+        self->release();
+    }
+}
+
+IOReturn itlwmx::registerWithPolicyMaker(IOService *policyMaker)
+{
+    IOReturn ret;
+    
+    pmPowerState = kPowerStateOn;
+    pmPolicyMaker = policyMaker;
+    
+    powerOffThreadCall = thread_call_allocate(
+                                            (thread_call_func_t)handleSetPowerStateOff,
+                                            (thread_call_param_t)this);
+    powerOnThreadCall  = thread_call_allocate(
+                                            (thread_call_func_t)handleSetPowerStateOn,
+                                              (thread_call_param_t)this);
+    ret = pmPolicyMaker->registerPowerDriver(this,
+                                             powerStateArray,
+                                             kPowerStateCount);
     return ret;
+}
+
+void itlwmx::setPowerStateOff()
+{
+    pmPowerState = kPowerStateOff;
+    pmPolicyMaker->acknowledgeSetPowerState();
+}
+
+void itlwmx::setPowerStateOn()
+{
+    pmPowerState = kPowerStateOn;
+    pmPolicyMaker->acknowledgeSetPowerState();
 }
 
 void itlwmx::watchdogAction(IOTimerEventSource *timer)

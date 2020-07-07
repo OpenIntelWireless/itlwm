@@ -21,7 +21,7 @@ bool itlwmx_interface::init(IONetworkController *controller)
 {
     if (!super::init(controller))
         return false;
-    setMaxTransferUnit(ETHERNET_MTU);
+    setMaxTransferUnit(1482);
     return true;
 }
 

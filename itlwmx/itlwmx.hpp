@@ -44,6 +44,13 @@
 #include <libkern/c++/OSMetaClass.h>
 #include <IOKit/IOFilterInterruptEventSource.h>
 
+enum
+{
+    kPowerStateOff = 0,
+    kPowerStateOn,
+    kPowerStateCount
+};
+
 class itlwmx : public IOEthernetController {
     OSDeclareDefaultStructors(itlwmx)
     
@@ -62,6 +69,8 @@ public:
     IOReturn setPromiscuousMode(IOEnetPromiscuousMode mode) override;
     IOReturn setMulticastMode(IOEnetMulticastMode mode) override;
     IOReturn setMulticastList(IOEthernetAddress* addr, UInt32 len) override;
+    virtual const OSString * newVendorString() const override;
+    virtual const OSString * newModelString() const override;
     virtual IOReturn getMaxPacketSize(UInt32* maxSize) const override;
     virtual IONetworkInterface * createInterface() override;
     
@@ -76,12 +85,26 @@ public:
     void watchdogAction(IOTimerEventSource *timer);
     static IOReturn _iwx_start_task(OSObject *target, void *arg0, void *arg1, void *arg2, void *arg3);
     
+    virtual IOReturn getPacketFilters(const OSSymbol *group, UInt32 *filters) const override;
     bool createMediumTables(const IONetworkMedium **primary);
-    IOReturn selectMedium(const IONetworkMedium *medium) override;
+    virtual IOReturn selectMedium(const IONetworkMedium *medium) override;
+    
+    bool initPCIPowerManagment(IOPCIDevice *provider);
     
     struct ifnet *getIfp();
     struct iwx_softc *getSoft();
     IOEthernetInterface *getNetworkInterface();
+    
+    //-----------------------------------------------------------------------
+    // Power management support.
+    //-----------------------------------------------------------------------
+    virtual IOReturn registerWithPolicyMaker( IOService * policyMaker ) override;
+    virtual IOReturn setPowerState( unsigned long powerStateOrdinal,
+                                    IOService *   policyMaker) override;
+    virtual IOReturn setWakeOnMagicPacket( bool active ) override;
+    void setPowerStateOff(void);
+    void setPowerStateOn(void);
+    void unregistPM();
     
     void releaseAll();
     void joinSSID(const char *ssid, const char *pwd);
@@ -330,9 +353,19 @@ public:
     struct iwx_softc com;
     itlwmx_interface *fNetIf;
     IONetworkStats *fpNetStats;
+    IOWorkLoop *fWatchdogWorkLoop;
     
     IOLock *_fwLoadLock;
     void *lastSleepChan;
+    
+    //pm
+    thread_call_t powerOnThreadCall;
+    thread_call_t powerOffThreadCall;
+    UInt32 pmPowerState;
+    IOService *pmPolicyMaker;
+    UInt8 pmPCICapPtr;
+    bool magicPacketEnabled;
+    bool magicPacketSupported;
 };
 
 struct ResourceCallbackContext

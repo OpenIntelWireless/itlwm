@@ -19,7 +19,7 @@
 
 #include <IOKit/network/IOEthernetInterface.h>
 
-#define ETHERNET_MTU            1482
+#define ETHERNET_MTU            1500
 
 class itlwmx_interface : public IOEthernetInterface {
     OSDeclareDefaultStructors( itlwmx_interface )
