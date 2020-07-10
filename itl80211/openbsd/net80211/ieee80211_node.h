@@ -350,6 +350,25 @@ struct ieee80211_node {
 	uint16_t		ni_htop1;
 	uint16_t		ni_htop2;
 	uint8_t			ni_basic_mcs[howmany(128,NBBY)];
+    
+    ///added
+    uint8_t            ni_htparam;    /* HT params */
+    uint8_t            ni_htctlchan;    /* HT control channel */
+    uint8_t            ni_ht2ndchan;    /* HT 2nd channel */
+    uint8_t            ni_htopmode;    /* HT operating mode */
+    uint8_t            ni_chw;        /* negotiated channel width */
+    
+    /* VHT state */
+    uint32_t        ni_vhtcap;
+    uint16_t        ni_vht_basicmcs;
+    uint16_t        ni_vht_pad2;
+    struct ieee80211_vht_mcs_info    ni_vht_mcsinfo;
+    uint8_t            ni_vht_chan1;    /* 20/40/80/160 - VHT chan1 */
+    uint8_t            ni_vht_chan2;    /* 80+80 - VHT chan2 */
+    uint8_t            ni_vht_chanwidth;    /* IEEE80211_VHT_CHANWIDTH_ */
+    uint8_t            ni_vht_pad1;
+    uint32_t        ni_vht_spare[8];
+    ///end
 
 	/* Timeout handlers which trigger Tx Block Ack negotiation. */
 	CTimeout*		ni_addba_req_to[IEEE80211_NUM_TID];

@@ -431,6 +431,7 @@ struct ieee80211com {
 	u_int8_t		ic_scan_count;	/* count scans */
 	u_int32_t		ic_flags;	/* state flags */
 	u_int32_t		ic_xflags;	/* more flags */
+    
 	u_int32_t		ic_userflags;	/* yet more flags */
 	u_int32_t		ic_caps;	/* capabilities */
 	u_int16_t		ic_modecaps;	/* set of mode capabilities */
@@ -523,6 +524,13 @@ struct ieee80211com {
 	u_int8_t		ic_aselcaps;
 	u_int8_t		ic_dialog_token;
 	int			ic_fixed_mcs;
+    
+    ///add
+    uint32_t        ic_flags_vht;    /* VHT state flags */
+    uint32_t        ic_flags_ht;    /* HT state flags */
+    ///end add
+    
+    
 	TAILQ_HEAD(, ieee80211_ess)	 ic_ess;
 };
 #define	ic_if		ic_ac.ac_if

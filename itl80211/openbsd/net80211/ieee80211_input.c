@@ -1473,6 +1473,77 @@ ieee80211_save_ie(const u_int8_t *frm, u_int8_t **ie)
     return 0;
 }
 
+/*
+ * Parse an 802.11ac VHT operation IE.
+ */
+void
+ieee80211_parse_vhtopmode(struct ieee80211_node *ni, const uint8_t *ie)
+{
+    /* vht operation */
+    ni->ni_vht_chanwidth = ie[2];
+    ni->ni_vht_chan1 = ie[3];
+    ni->ni_vht_chan2 = ie[4];
+    ni->ni_vht_basicmcs = le16dec(ie + 5);
+
+    DPRINTF(("%s: chan1=%d, chan2=%d, chanwidth=%d, basicmcs=0x%04x\n",
+        __func__,
+        ni->ni_vht_chan1,
+        ni->ni_vht_chan2,
+        ni->ni_vht_chanwidth,
+        ni->ni_vht_basicmcs));
+}
+
+/*
+ * Parse an 802.11ac VHT capability IE.
+ */
+void
+ieee80211_parse_vhtcap(struct ieee80211_node *ni, const uint8_t *ie)
+{
+
+    /* vht capability */
+    ni->ni_vhtcap = le32dec(ie + 2);
+
+    /* suppmcs */
+    ni->ni_vht_mcsinfo.rx_mcs_map = le16dec(ie + 6);
+    ni->ni_vht_mcsinfo.rx_highest = le16dec(ie + 8);
+    ni->ni_vht_mcsinfo.tx_mcs_map = le16dec(ie + 10);
+    ni->ni_vht_mcsinfo.tx_highest = le16dec(ie + 12);
+}
+
+int
+ieee80211_vht_updateparams(struct ieee80211com *ic, struct ieee80211_node *ni,
+    const uint8_t *vhtcap_ie,
+    const uint8_t *vhtop_ie)
+{
+    
+    return 0;
+}
+
+/*
+* Final part of updating the HT parameters.
+*
+* This is called from the STA management path and
+* the ieee80211_node_join() path.  It will take into
+* account the IEs discovered during scanning and
+* adjust things accordingly.
+*
+* This is done after a call to ieee80211_ht_updateparams()
+* because it (and the upcoming VHT version of updateparams)
+* needs to ensure everything is parsed before htinfo_update_chw()
+* is called - which will change the channel config for the
+* node for us.
+*/
+int
+ieee80211_ht_updateparams_final(struct ieee80211com *ic, struct ieee80211_node *ni,
+    const uint8_t *htcapie, const uint8_t *htinfoie)
+{
+    const struct ieee80211_ie_htinfo *htinfo;
+    int htflags, vhtflags;
+    int ret = 0;
+    
+    return (ret);
+}
+
 /*-
  * Beacon/Probe response frame format:
  * [8]   Timestamp
@@ -1498,6 +1569,9 @@ ieee80211_recv_probe_resp(struct ieee80211com *ic, mbuf_t m,
     const u_int8_t *frm, *efrm;
     const u_int8_t *tstamp, *ssid, *rates, *xrates, *edcaie, *wmmie;
     const u_int8_t *rsnie, *wpaie, *htcaps, *htop;
+    const uint8_t *csa = NULL;
+    const uint8_t *vhtcap = NULL;
+    const uint8_t *vhtopmode = NULL;
     u_int16_t capinfo, bintval;
     u_int8_t chan, bchan, erp, dtim_count, dtim_period;
     int is_new;
@@ -1552,6 +1626,9 @@ ieee80211_recv_probe_resp(struct ieee80211com *ic, mbuf_t m,
             case IEEE80211_ELEMID_SSID:
                 ssid = frm;
                 break;
+            case IEEE80211_ELEMID_CSA:
+                csa = frm;
+                break;
             case IEEE80211_ELEMID_RATES:
                 rates = frm;
                 break;
@@ -1571,6 +1648,12 @@ ieee80211_recv_probe_resp(struct ieee80211com *ic, mbuf_t m,
                     break;
                 }
                 erp = frm[2];
+                break;
+            case IEEE80211_ELEMID_VHT_CAP:
+                vhtcap = frm;
+                break;
+            case IEEE80211_ELEMID_VHT_OPMODE:
+                vhtopmode = frm;
                 break;
             case IEEE80211_ELEMID_RSN:
                 rsnie = frm;
@@ -1616,7 +1699,24 @@ ieee80211_recv_probe_resp(struct ieee80211com *ic, mbuf_t m,
         DPRINTF(("invalid SSID element\n"));
         return;
     }
-    
+    if (csa != NULL) {
+        if (csa[1] < 3 * sizeof(uint8_t)) {
+            DPRINTF(("csa ie too short, got %d, expected %d\n", csa[1], 3 * sizeof(uint8_t)));
+            csa = NULL;
+        }
+    }
+    if (vhtcap != NULL) {
+        if (vhtcap[1] < sizeof(struct ieee80211_ie_vhtcap) - 2) {
+            DPRINTF(("vhtcap ie too short, got %d, expected %d\n", vhtcap[1], sizeof(struct ieee80211_ie_vhtcap) - 2));
+            vhtcap = NULL;
+        }
+    }
+    if (vhtopmode != NULL) {
+        if (vhtopmode[1] < sizeof(struct ieee80211_ie_vht_operation) - 2) {
+            DPRINTF(("vhtcap ie too short, got %d, expected %d\n", vhtopmode[1], sizeof(struct ieee80211_ie_vht_operation) - 2));
+            vhtopmode = NULL;
+        }
+    }
     if (
 #if IEEE80211_CHAN_MAX < 255
         chan > IEEE80211_CHAN_MAX ||
@@ -1700,6 +1800,14 @@ ieee80211_recv_probe_resp(struct ieee80211com *ic, mbuf_t m,
         ieee80211_setup_htcaps(ni, htcaps + 2, htcaps[1]);
     if (htop && !ieee80211_setup_htop(ni, htop + 2, htop[1], 1))
         htop = NULL; /* invalid HTOP */
+    
+    int do_ht = 0;
+    if (htcaps != NULL && htop != NULL) {
+        do_ht = 1;
+    }
+    if (vhtcap != NULL && vhtopmode != NULL) {
+        do_ht = 1;
+    }
     
     ni->ni_dtimcount = dtim_count;
     ni->ni_dtimperiod = dtim_period;
