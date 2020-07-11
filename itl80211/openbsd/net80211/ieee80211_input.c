@@ -1515,7 +1515,8 @@ ieee80211_vht_updateparams(struct ieee80211com *ic, struct ieee80211_node *ni,
     const uint8_t *vhtcap_ie,
     const uint8_t *vhtop_ie)
 {
-    
+    ieee80211_parse_vhtcap(ni, vhtcap_ie);
+    ieee80211_parse_vhtopmode(ni, vhtop_ie);
     return 0;
 }
 
@@ -1544,6 +1545,61 @@ ieee80211_ht_updateparams_final(struct ieee80211com *ic, struct ieee80211_node *
     return (ret);
 }
 
+/*
+ * Setup the current channel.  The request channel may be
+ * promoted if other vap's are operating with HT20/HT40.
+ */
+void
+ieee80211_setupcurchan(struct ieee80211com *ic, struct ieee80211_channel *c)
+{
+//    if (ic->ic_htcaps & IEEE80211_HTC_HT) {
+//        int flags = gethtadjustflags(ic);
+//        /*
+//         * Check for channel promotion required to support the
+//         * set of running vap's.  This assumes we are called
+//         * after ni_chan is setup for each vap.
+//         */
+//        /* XXX VHT? */
+//        /* NB: this assumes IEEE80211_FHT_USEHT40 > IEEE80211_FHT_HT */
+//        if (flags > ieee80211_htchanflags(c))
+//            c = ieee80211_ht_adjust_channel(ic, c, flags);
+//    }
+//
+//    /*
+//     * VHT promotion - this will at least promote to VHT20/40
+//     * based on what HT has done; it may further promote the
+//     * channel to VHT80 or above.
+//     */
+//    if (ic->ic_vhtcaps != 0) {
+//        int flags = getvhtadjustflags(ic);
+//        if (flags > ieee80211_vhtchanflags(c))
+//            c = ieee80211_vht_adjust_channel(ic, c, flags);
+//    }
+//
+//    ic->ic_bsschan = ic->ic_curchan = c;
+//    ic->ic_curmode = ieee80211_chan2mode(ic->ic_curchan);
+//    ic->ic_rt = ieee80211_get_ratetable(ic->ic_curchan);
+}
+
+
+/*
+ * Change the current channel.  The channel change is guaranteed to have
+ * happened before the next state change.
+ */
+void
+ieee80211_setcurchan(struct ieee80211com *ic, struct ieee80211_channel *c)
+{
+    ieee80211_setupcurchan(ic, c);
+//    ieee80211_runtask(ic, &ic->ic_chan_task);
+}
+
+void
+ieee80211_update_chw(struct ieee80211com *ic)
+{
+//    ieee80211_setupcurchan(ic, ic->ic_curchan);
+//    ieee80211_runtask(ic, &ic->ic_chw_task);
+}
+
 /*-
  * Beacon/Probe response frame format:
  * [8]   Timestamp
@@ -1569,9 +1625,9 @@ ieee80211_recv_probe_resp(struct ieee80211com *ic, mbuf_t m,
     const u_int8_t *frm, *efrm;
     const u_int8_t *tstamp, *ssid, *rates, *xrates, *edcaie, *wmmie;
     const u_int8_t *rsnie, *wpaie, *htcaps, *htop;
-    const uint8_t *csa = NULL;
-    const uint8_t *vhtcap = NULL;
-    const uint8_t *vhtopmode = NULL;
+    const uint8_t *csa;
+    const uint8_t *vhtcap;
+    const uint8_t *vhtopmode;
     u_int16_t capinfo, bintval;
     u_int8_t chan, bchan, erp, dtim_count, dtim_period;
     int is_new;
@@ -1611,7 +1667,7 @@ ieee80211_recv_probe_resp(struct ieee80211com *ic, mbuf_t m,
     bintval = LE_READ_2(frm); frm += 2;
     capinfo = LE_READ_2(frm); frm += 2;
     
-    ssid = rates = xrates = edcaie = wmmie = rsnie = wpaie = NULL;
+    ssid = rates = xrates = edcaie = wmmie = rsnie = wpaie = csa = vhtcap = vhtopmode = NULL;
     htcaps = htop = NULL;
     bchan = ieee80211_chan2ieee(ic, ic->ic_bss->ni_chan);
     chan = bchan;
@@ -1699,23 +1755,17 @@ ieee80211_recv_probe_resp(struct ieee80211com *ic, mbuf_t m,
         DPRINTF(("invalid SSID element\n"));
         return;
     }
-    if (csa != NULL) {
-        if (csa[1] < 3 * sizeof(uint8_t)) {
-            DPRINTF(("csa ie too short, got %d, expected %d\n", csa[1], 3 * sizeof(uint8_t)));
-            csa = NULL;
-        }
+    if (csa == NULL || csa[1] < 3 * sizeof(uint8_t)) {
+        DPRINTF(("csa ie too short, got %d, expected %lu\n", csa[1], 3 * sizeof(uint8_t)));
+        csa = NULL;
     }
-    if (vhtcap != NULL) {
-        if (vhtcap[1] < sizeof(struct ieee80211_ie_vhtcap) - 2) {
-            DPRINTF(("vhtcap ie too short, got %d, expected %d\n", vhtcap[1], sizeof(struct ieee80211_ie_vhtcap) - 2));
-            vhtcap = NULL;
-        }
+    if (vhtcap == NULL || vhtcap[1] < sizeof(struct ieee80211_ie_vhtcap) - 2) {
+        DPRINTF(("vhtcap ie too short, got %d, expected %lu\n", vhtcap[1], sizeof(struct ieee80211_ie_vhtcap) - 2));
+        vhtcap = NULL;
     }
-    if (vhtopmode != NULL) {
-        if (vhtopmode[1] < sizeof(struct ieee80211_ie_vht_operation) - 2) {
-            DPRINTF(("vhtcap ie too short, got %d, expected %d\n", vhtopmode[1], sizeof(struct ieee80211_ie_vht_operation) - 2));
-            vhtopmode = NULL;
-        }
+    if (vhtopmode == NULL || vhtopmode[1] < sizeof(struct ieee80211_ie_vht_operation) - 2) {
+        DPRINTF(("vhtopmode ie too short, got %d, expected %lu\n", vhtopmode[1], sizeof(struct ieee80211_ie_vht_operation) - 2));
+        vhtopmode = NULL;
     }
     if (
 #if IEEE80211_CHAN_MAX < 255
@@ -1802,11 +1852,18 @@ ieee80211_recv_probe_resp(struct ieee80211com *ic, mbuf_t m,
         htop = NULL; /* invalid HTOP */
     
     int do_ht = 0;
+    int ht_state_change = 0;
     if (htcaps != NULL && htop != NULL) {
         do_ht = 1;
     }
     if (vhtcap != NULL && vhtopmode != NULL) {
+        ieee80211_vht_updateparams(ic, ni, vhtcap, vhtopmode);
         do_ht = 1;
+    }
+    if (do_ht) {
+        if (ieee80211_ht_updateparams_final(ic, ni, htcaps, htop)) {
+            ht_state_change = 1;
+        }
     }
     
     ni->ni_dtimcount = dtim_count;
@@ -1982,6 +2039,18 @@ ieee80211_recv_probe_resp(struct ieee80211com *ic, mbuf_t m,
     ni->ni_erp = erp;
     /* NB: must be after ni_chan is setup */
     ieee80211_setup_rates(ic, ni, rates, xrates, IEEE80211_F_DOSORT);
+    /*
+    * When operating in station mode, check for state updates.
+    * Be careful to ignore beacons received while doing a
+    * background scan.  We consider only 11g/WMM stuff right now.
+    */
+    if (ni->ni_associd != 0 &&
+        ((ic->ic_flags & IEEE80211_F_BGSCAN) == 0 ||
+        IEEE80211_ADDR_EQ(wh->i_addr2, ni->ni_bssid))) {
+        if (ht_state_change) {
+            ieee80211_update_chw(ic);
+        }
+    }
 #ifndef IEEE80211_STA_ONLY
     if (ic->ic_opmode == IEEE80211_M_IBSS && is_new && isprobe) {
         /*
