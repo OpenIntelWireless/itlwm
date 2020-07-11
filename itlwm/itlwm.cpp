@@ -466,7 +466,6 @@ IOReturn itlwm::enable(IONetworkInterface *netif)
     ifp->if_flags |= IFF_UP;
     _fCommandGate->enable();
     iwm_activate(&com, DVACT_WAKEUP);
-    setLinkStatus(kIONetworkLinkValid | kIONetworkLinkActive, getCurrentMedium());
     watchdogTimer->setTimeoutMS(1000);
     watchdogTimer->enable();
     return kIOReturnSuccess;
