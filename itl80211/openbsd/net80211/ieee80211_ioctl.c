@@ -69,6 +69,18 @@ void	 ieee80211_node2req(struct ieee80211com *,
 void	 ieee80211_req2node(struct ieee80211com *,
 	    const struct ieee80211_nodereq *, struct ieee80211_node *);
 
+static int kernel_copyin(const user_addr_t dest, void *src, size_t len)
+{
+    memcpy(src, (void *)dest, len);
+    return 0;
+}
+
+static int kernel_copyout(void *src, const user_addr_t dest, size_t len)
+{
+    memcpy((void *)dest, src, len);
+    return 0;
+}
+
 void
 ieee80211_node2req(struct ieee80211com *ic, const struct ieee80211_node *ni,
     struct ieee80211_nodereq *nr)
@@ -257,7 +269,7 @@ ieee80211_ioctl_setnwkeys(struct ieee80211com *ic,
 			k->k_cipher = IEEE80211_CIPHER_WEP104;
 		k->k_len = ieee80211_cipher_keylen(k->k_cipher);
 		k->k_flags = IEEE80211_KEY_GROUP | IEEE80211_KEY_TX;
-		error = copyin((const user_addr_t)nwkey->i_key[i].i_keydat, k->k_key, k->k_len);
+		error = kernel_copyin((const user_addr_t)nwkey->i_key[i].i_keydat, k->k_key, k->k_len);
 		if (error != 0)
 			return error;
 		if ((error = (*ic->ic_set_key)(ic, NULL, k)) != 0)
@@ -487,7 +499,7 @@ ieee80211_ioctl(struct ifnet *ifp, u_long cmd, caddr_t data)
 	case SIOCS80211NWID:
 //		if ((error = suser(curproc)) != 0)
 //			break;
-		if ((error = copyin((const user_addr_t)ifr->ifr_data, &nwid, sizeof(nwid))) != 0)
+		if ((error = kernel_copyin((const user_addr_t)ifr->ifr_data, &nwid, sizeof(nwid))) != 0)
 			break;
 		if (nwid.i_len > IEEE80211_NWID_LEN) {
 			error = EINVAL;
@@ -521,12 +533,12 @@ ieee80211_ioctl(struct ifnet *ifp, u_long cmd, caddr_t data)
 			memcpy(nwid.i_nwid, ic->ic_bss->ni_essid, nwid.i_len);
 			break;
 		}
-		error = copyout((const void *)&nwid, (user_addr_t)ifr->ifr_data, sizeof(nwid));
+		error = kernel_copyout((void *)&nwid, (user_addr_t)ifr->ifr_data, sizeof(nwid));
 		break;
 	case SIOCS80211JOIN:
 //		if ((error = suser(curproc)) != 0)
 //			break;
-		if ((error = copyin((user_addr_t)ifr->ifr_data, &join, sizeof(join))) != 0)
+		if ((error = kernel_copyin((user_addr_t)ifr->ifr_data, &join, sizeof(join))) != 0)
 			break;
 		if (join.i_len > IEEE80211_NWID_LEN) {
 			error = EINVAL;
@@ -584,7 +596,7 @@ ieee80211_ioctl(struct ifnet *ifp, u_long cmd, caddr_t data)
 				    join.i_len);
 				if (ic->ic_flags & IEEE80211_F_AUTO_JOIN)
 					join.i_flags = IEEE80211_JOIN_FOUND;
-				error = copyout(&join, (user_addr_t)ifr->ifr_data,
+				error = kernel_copyout(&join, (user_addr_t)ifr->ifr_data,
 				    sizeof(join));
 				break;
 			}
@@ -612,7 +624,7 @@ ieee80211_ioctl(struct ifnet *ifp, u_long cmd, caddr_t data)
 			if (ess->flags & IEEE80211_JOIN_ANY)
 				join.i_flags |= IEEE80211_JOIN_ANY;
 			ieee80211_ess_getwpaparms(ess, &join.i_wpaparams);
-			error = copyout(&join, (user_addr_t)&ja->ja_node[ja->ja_nodes],
+			error = kernel_copyout(&join, (user_addr_t)&ja->ja_node[ja->ja_nodes],
 			    sizeof(ja->ja_node[0]));
 			if (error)
 				break;
@@ -797,7 +809,7 @@ ieee80211_ioctl(struct ifnet *ifp, u_long cmd, caddr_t data)
 		chanreq->i_channel = ieee80211_chan2ieee(ic, chan);
 		break;
 	case SIOCG80211ALLCHANS:
-		error = copyout(ic->ic_channels,
+		error = kernel_copyout(ic->ic_channels,
 		    (user_addr_t)((struct ieee80211_chanreq_all *)data)->i_chans,
 		    sizeof(ic->ic_channels));
 		break;
@@ -806,7 +818,7 @@ ieee80211_ioctl(struct ifnet *ifp, u_long cmd, caddr_t data)
 #endif
 	case SIOCG80211STATS:
 		ifr = (struct ifreq *)data;
-		error = copyout(&ic->ic_stats, (user_addr_t)ifr->ifr_data,
+		error = kernel_copyout(&ic->ic_stats, (user_addr_t)ifr->ifr_data,
 		    sizeof(ic->ic_stats));
 #if 0
 		if (cmd == SIOCG80211ZSTATS)
@@ -925,7 +937,7 @@ ieee80211_ioctl(struct ifnet *ifp, u_long cmd, caddr_t data)
 		while (ni && na->na_size >=
 		    i + sizeof(struct ieee80211_nodereq)) {
 			ieee80211_node2req(ic, ni, &nrbuf);
-			error = copyout(&nrbuf, (user_addr_t)(caddr_t)na->na_node + i,
+			error = kernel_copyout(&nrbuf, (user_addr_t)(caddr_t)na->na_node + i,
 			    sizeof(struct ieee80211_nodereq));
 			if (error)
 				break;
