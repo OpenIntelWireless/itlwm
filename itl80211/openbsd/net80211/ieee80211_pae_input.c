@@ -670,6 +670,8 @@ ieee80211_recv_4way_msg3(struct ieee80211com *ic,
             ni->ni_port_valid = 1;
             ieee80211_set_link_state(ic, LINK_STATE_UP);
             ni->ni_assoc_fail = 0;
+            if (ic->ic_opmode == IEEE80211_M_STA)
+                ic->ic_rsngroupcipher = ni->ni_rsngroupcipher;
         }
     }
 deauth:
