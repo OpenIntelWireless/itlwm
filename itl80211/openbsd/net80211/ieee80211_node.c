@@ -1305,7 +1305,6 @@ ieee80211_node_choose_bss(struct ieee80211com *ic, int bgscan,
     ni = RB_MIN(ieee80211_tree, &ic->ic_tree);
     
     for (; ni != NULL; ni = nextbs) {
-        XYLog("%s nextbs\n", __FUNCTION__);
         nextbs = RB_NEXT(ieee80211_tree, &ic->ic_tree, ni);
         if (ni->ni_fails) {
             /*
@@ -1315,7 +1314,7 @@ ieee80211_node_choose_bss(struct ieee80211com *ic, int bgscan,
              */
             if (ni->ni_fails++ > 2)
                 ieee80211_free_node(ic, ni);
-            XYLog("%s ni->ni_fails==TRUE\n", __FUNCTION__);
+            DPRINTF(("%s ni->ni_fails==TRUE\n", __FUNCTION__));
             continue;
         }
         
@@ -1324,7 +1323,7 @@ ieee80211_node_choose_bss(struct ieee80211com *ic, int bgscan,
         
         int fail = ieee80211_match_bss(ic, ni, bgscan);
         if (fail != 0) {
-            XYLog("%s ieee80211_match_bss==FALSE, ssid=%s, bssid=%s, %d\n", __FUNCTION__, ni->ni_essid, ether_sprintf(ni->ni_bssid), fail);
+            DPRINTF(("%s ieee80211_match_bss==FALSE, ssid=%s, bssid=%s, %d\n", __FUNCTION__, ni->ni_essid, ether_sprintf(ni->ni_bssid), fail));
             continue;
         }
         
