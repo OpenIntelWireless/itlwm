@@ -154,7 +154,9 @@ void taskq_create_thread(void *arg)
         case TQ_S_DESTROYED:
         IOLog("itlwm: taskq %s unlock\n", __FUNCTION__);
             IOLockUnlock(tq->tq_mtx);
-            IOFree(tq, sizeof(*tq));
+            if (tq != systq) {
+                IOFree(tq, sizeof(*tq));
+            }
             return;
 
         case TQ_S_CREATED:
@@ -162,7 +164,8 @@ void taskq_create_thread(void *arg)
             break;
 
         default:
-            panic("unexpected %s tq state %d", tq->tq_name, tq->tq_state);
+            IOLog("itlwm: unexpected %s tq state %u", tq->tq_name, tq->tq_state);
+            return;
     }
 
     do {
@@ -249,7 +252,8 @@ taskq_destroy(struct taskq *tq)
             break;
 
         default:
-            panic("unexpected %s tq state %u", tq->tq_name, tq->tq_state);
+            IOLog("itlwm: unexpected %s tq state %u", tq->tq_name, tq->tq_state);
+            return;
     }
 
     while (tq->tq_running > 0) {

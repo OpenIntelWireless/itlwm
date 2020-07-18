@@ -290,6 +290,9 @@ mq_purge(struct mbuf_queue *mq)
 {
     struct mbuf_list ml;
     
+    if (!mq->mq_mtx) {
+        return 0;
+    }
     mq_delist(mq, &ml);
 
     return (ml_purge(&ml));
