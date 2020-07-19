@@ -519,7 +519,6 @@ iwm_send_cmd(struct iwm_softc *sc, struct iwm_host_cmd *hcmd)
     }
     
     if (paylen > datasz) {
-        XYLog("large command paylen=%u len0=%u\n", paylen, hcmd->len[0]);
         /* Command is too large to fit in pre-allocated space. */
         size_t totlen = hdrlen + paylen;
         if (paylen > IWM_MAX_CMD_PAYLOAD_SIZE) {

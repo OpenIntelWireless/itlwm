@@ -125,6 +125,32 @@ ieee80211_begin_bgscan(struct ifnet *ifp)
 }
 
 void
+ieee80211_begin_cache_bgscan(struct ifnet *ifp)
+{
+    struct ieee80211com *ic = (struct ieee80211com *)ifp;
+    struct timeval tv;
+    
+    if ((ic->ic_flags & IEEE80211_F_BGSCAN) ||
+        ic->ic_state != IEEE80211_S_RUN || ic->ic_mgt_timer != 0)
+        return;
+    
+    if ((ic->ic_flags & IEEE80211_F_RSNON) && !ic->ic_bss->ni_port_valid)
+        return;
+    
+    //if last cache scan is 5 minutes ago, clear the nodes and rescan.
+    microtime(&tv);
+    if (ic->ic_last_cache_scan_ts > 0 && tv.tv_sec - ic->ic_last_cache_scan_ts > 5 * 60) {
+        ieee80211_free_allnodes(ic, 0);
+    }
+    ic->ic_last_cache_scan_ts = tv.tv_sec;
+    
+    if (ic->ic_bgscan_start != NULL && ic->ic_bgscan_start(ic) == 0) {
+        ic->ic_flags |= IEEE80211_F_BGSCAN;
+        DPRINTF(("%s: begin cache background scan\n", ifp->if_xname));
+    }
+}
+
+void
 ieee80211_bgscan_timeout(void *arg)
 {
     struct ifnet *ifp = (struct ifnet *)arg;

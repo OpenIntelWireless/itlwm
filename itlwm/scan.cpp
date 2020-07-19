@@ -216,7 +216,6 @@ iwm_umac_scan_fill_channels(struct iwm_softc *sc,
 int itlwm::
 iwm_fill_probe_req_v1(struct iwm_softc *sc, struct iwm_scan_probe_req_v1 *preq1)
 {
-    XYLog("%s\n", __FUNCTION__);
     struct iwm_scan_probe_req preq2;
     int err, i;
     
@@ -235,7 +234,6 @@ iwm_fill_probe_req_v1(struct iwm_softc *sc, struct iwm_scan_probe_req_v1 *preq1)
 int itlwm::
 iwm_fill_probe_req(struct iwm_softc *sc, struct iwm_scan_probe_req *preq)
 {
-    XYLog("%s\n", __FUNCTION__);
     struct ieee80211com *ic = &sc->sc_ic;
     struct ifnet *ifp = IC2IFP(ic);
     struct ieee80211_frame *wh = (struct ieee80211_frame *)preq->buf;
@@ -329,7 +327,6 @@ iwm_fill_probe_req(struct iwm_softc *sc, struct iwm_scan_probe_req *preq)
 int itlwm::
 iwm_lmac_scan(struct iwm_softc *sc, int bgscan)
 {
-    XYLog("%s\n", __FUNCTION__);
     struct ieee80211com *ic = &sc->sc_ic;
     struct iwm_host_cmd hcmd = {
         .id = IWM_SCAN_OFFLOAD_REQUEST_CMD,

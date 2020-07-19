@@ -1076,7 +1076,6 @@ ieee80211_decap(struct ieee80211com *ic, mbuf_t m,
     
     if (mbuf_len(m) < hdrlen + LLC_SNAPFRAMELEN &&
         mbuf_pullup(&m, hdrlen + LLC_SNAPFRAMELEN)) {
-        XYLog("%s %d\n", __FUNCTION__, __LINE__);
         ic->ic_stats.is_rx_decap++;
         return;
     }

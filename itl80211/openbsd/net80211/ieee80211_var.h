@@ -524,6 +524,7 @@ struct ieee80211com {
 	u_int8_t		ic_aselcaps;
 	u_int8_t		ic_dialog_token;
 	int			ic_fixed_mcs;
+    uint64_t        ic_last_cache_scan_ts;
     
     ///add
     uint32_t        ic_flags_vht;    /* VHT state flags */
@@ -653,6 +654,7 @@ void	ieee80211_set_ess(struct ieee80211com *, struct ieee80211_ess *,
 	    struct ieee80211_node *);
 void    ieee80211_deselect_ess(struct ieee80211com *);
 struct ieee80211_ess *ieee80211_get_ess(struct ieee80211com *, const char *, int);
+void ieee80211_begin_cache_bgscan(struct ifnet *);
 
 extern	int ieee80211_cache_size;
 

@@ -2272,7 +2272,7 @@ ieee80211_clean_nodes(struct ieee80211com *ic, int cache_timeout)
 void
 ieee80211_clean_inactive_nodes(struct ieee80211com *ic, int inact_max)
 {
-    XYLog("%s\n", __FUNCTION__);
+    DPRINTF(("%s\n", __FUNCTION__));
     struct ieee80211_node *ni, *next_ni;
     u_int gen = ic->ic_scangen++;	/* NB: ok 'cuz single-threaded*/
     int s;
