@@ -276,23 +276,13 @@ void itlwm::associateSSID(const char *ssid, const char *pwd)
         ieee80211_ioctl_setwpaparms(ic, &wpa);
     }
     ieee80211_del_ess(ic, NULL, 0, 1);
+//    struct ieee80211_node *selbs = ieee80211_node_choose_bss(ic, 0, NULL);
+//    if (selbs == NULL) {
+//        ieee80211_new_state(ic, IEEE80211_S_SCAN, -1);
+//    } else {
+//        ieee80211_node_join_bss(ic, selbs);
+//    }
     iwm_add_task(&com, systq, &com.init_task);
-}
-
-#define IWM_PCI_BRIDGE_CONTROL    0x3e
-#define  IWM_PCI_BRIDGE_CTL_BUS_RESET    0x40    /* Secondary bus reset */
-
-static void reset_pci_secondary_bus(IOPCIDevice *pci)
-{
-    uint64_t ctrl;
-    
-    ctrl = pci->configRead16(IWM_PCI_BRIDGE_CONTROL);
-    ctrl |= IWM_PCI_BRIDGE_CTL_BUS_RESET;
-    pci->configWrite16(IWM_PCI_BRIDGE_CONTROL, ctrl);
-    IODelay(2);
-    ctrl &= ~IWM_PCI_BRIDGE_CTL_BUS_RESET;
-    pci->configWrite16(IWM_PCI_BRIDGE_CONTROL, ctrl);
-    IODelay(1000);
 }
 
 bool itlwm::start(IOService *provider)
@@ -316,6 +306,11 @@ bool itlwm::start(IOService *provider)
         return false;
     }
     _fWorkloop = getWorkLoop();
+    if (_fWorkloop == NULL) {
+        XYLog("No _fWorkloop!!\n");
+        releaseAll();
+        return false;
+    }
     _fCommandGate = IOCommandGate::commandGate(this, (IOCommandGate::Action)tsleepHandler);
     if (_fCommandGate == 0) {
         XYLog("No command gate!!\n");

@@ -55,14 +55,57 @@ bool itlwmx::init(OSDictionary *properties)
     return true;
 }
 
+#define  PCI_MSI_FLAGS        2    /* Message Control */
+#define  PCI_CAP_ID_MSI        0x05    /* Message Signalled Interrupts */
+#define  PCI_MSIX_FLAGS        2    /* Message Control */
+#define  PCI_CAP_ID_MSIX    0x11    /* MSI-X */
+#define  PCI_MSIX_FLAGS_ENABLE    0x8000    /* MSI-X enable */
+#define  PCI_MSI_FLAGS_ENABLE    0x0001    /* MSI feature enabled */
+
+static void pciMsiSetEnable(IOPCIDevice *device, UInt8 msiCap, int enable)
+{
+    u16 control;
+    
+    control = device->configRead16(msiCap + PCI_MSI_FLAGS);
+    control &= ~PCI_MSI_FLAGS_ENABLE;
+    if (enable)
+        control |= PCI_MSI_FLAGS_ENABLE;
+    device->configWrite16(msiCap + PCI_MSI_FLAGS, control);
+}
+
+static void pciMsiXClearAndSet(IOPCIDevice *device, UInt8 msixCap, UInt16 clear, UInt16 set)
+{
+    u16 ctrl;
+    
+    ctrl = device->configRead16(msixCap + PCI_MSIX_FLAGS);
+    ctrl &= ~clear;
+    ctrl |= set;
+    device->configWrite16(msixCap + PCI_MSIX_FLAGS, ctrl);
+}
+
 IOService* itlwmx::probe(IOService *provider, SInt32 *score)
 {
     super::probe(provider, score);
+    UInt8 msiCap;
+    UInt8 msixCap;
     IOPCIDevice* device = OSDynamicCast(IOPCIDevice, provider);
     if (!device) {
         return NULL;
     }
-    return iwx_match(device) == 0?NULL:this;
+    if (iwx_match(device)) {
+        device->findPCICapability(PCI_CAP_ID_MSI, &msiCap);
+        if (msiCap) {
+            XYLog("%s msi capa exists\n", __FUNCTION__);
+            pciMsiSetEnable(device, msiCap, 0);
+        }
+        device->findPCICapability(PCI_CAP_ID_MSIX, &msixCap);
+        if (msixCap) {
+            XYLog("%s msix capa exists\n", __FUNCTION__);
+            pciMsiXClearAndSet(device, msixCap, PCI_MSIX_FLAGS_ENABLE, 0);
+        }
+        return this;
+    }
+    return NULL;
 }
 
 bool itlwmx::configureInterface(IONetworkInterface *netif) {
@@ -259,6 +302,7 @@ void itlwmx::associateSSID(const char *ssid, const char *pwd)
 
 bool itlwmx::start(IOService *provider)
 {
+    struct ifnet *ifp = &com.sc_ic.ic_ac.ac_if;
     if (!super::start(provider)) {
         return false;
     }
@@ -266,6 +310,11 @@ bool itlwmx::start(IOService *provider)
     if (!device) {
         return false;
     }
+    
+//    device->enablePCIPowerManagement(kPCIPMCSPowerStateD0);
+//    uint16_t oldPowerStateWord = device->configRead16(0xc8 + 0x4);
+//    uint16_t newPowerStateWord = (oldPowerStateWord & (~0x3)) | 0x0;
+//    device->configWrite16(0xc8 + 0x4, newPowerStateWord);
     device->setBusMasterEnable(true);
     device->setIOEnable(true);
     device->setMemoryEnable(true);
@@ -295,11 +344,19 @@ bool itlwmx::start(IOService *provider)
     pci.pa_tag = device;
     pci.workloop = _fWorkloop;
     if (!iwx_attach(&com, &pci)) {
+        super::stop(provider);
+        ieee80211_ifdetach(ifp);
+        taskq_destroy(systq);
+        taskq_destroy(com.sc_nswq);
         releaseAll();
         return false;
     }
     if (!attachInterface((IONetworkInterface **)&fNetIf)) {
         XYLog("attach to interface fail\n");
+        super::stop(provider);
+        ieee80211_ifdetach(ifp);
+        taskq_destroy(systq);
+        taskq_destroy(com.sc_nswq);
         releaseAll();
         return false;
     }
@@ -2447,13 +2504,13 @@ iwx_apm_config(struct iwx_softc *sc)
      */
     lctl = pci_conf_read(sc->sc_pct, sc->sc_pcitag,
                          sc->sc_cap_off + PCI_PCIE_LCSR);
-    if (lctl & PCI_PCIE_LCSR_ASPM_L1) {
+//    if (lctl & PCI_PCIE_LCSR_ASPM_L1) {
         IWX_SETBITS(sc, IWX_CSR_GIO_REG,
             IWX_CSR_GIO_REG_VAL_L0S_ENABLED);
-    } else {
-        IWX_CLRBITS(sc, IWX_CSR_GIO_REG,
-            IWX_CSR_GIO_REG_VAL_L0S_ENABLED);
-    }
+//    } else {
+//        IWX_CLRBITS(sc, IWX_CSR_GIO_REG,
+//            IWX_CSR_GIO_REG_VAL_L0S_ENABLED);
+//    }
     
     cap = pci_conf_read(sc->sc_pct, sc->sc_pcitag,
                         sc->sc_cap_off + PCI_PCIE_DCSR2);
@@ -3449,7 +3506,7 @@ iwx_start_fw(struct iwx_softc *sc)
     
     iwx_enable_rfkill_int(sc);
     
-    IWX_WRITE(sc, IWX_CSR_INT, ~0);
+    IWX_WRITE(sc, IWX_CSR_INT, 0xFFFFFFFF);
     
     /*
      * We enabled the RF-Kill interrupt and the handler may very
@@ -3464,7 +3521,7 @@ iwx_start_fw(struct iwx_softc *sc)
               IWX_CSR_UCODE_DRV_GP1_BIT_CMD_BLOCKED);
     
     /* clear (again), then enable firwmare load interrupt */
-    IWX_WRITE(sc, IWX_CSR_INT, ~0);
+    IWX_WRITE(sc, IWX_CSR_INT, 0xFFFFFFFF);
     
     err = iwx_nic_init(sc);
     if (err) {
@@ -4305,7 +4362,6 @@ iwx_send_cmd(struct iwx_softc *sc, struct iwx_host_cmd *hcmd)
     }
     
     if (paylen > datasz) {
-        XYLog("large command paylen=%u len0=%u\n", paylen, hcmd->len[0]);
                 /* Command is too large to fit in pre-allocated space. */
         size_t totlen = hdrlen + paylen;
         if (paylen > IWX_MAX_CMD_PAYLOAD_SIZE) {
@@ -8040,6 +8096,8 @@ iwx_intr(OSObject *object, IOInterruptEventSource* sender, int count)
     int handled = 0;
     int r1, r2, rv = 0;
     
+//    IWX_WRITE(&that->com, IWX_CSR_INT_MASK, 0);
+    
     if (sc->sc_flags & IWX_FLAG_USE_ICT) {
         uint32_t *ict = (uint32_t *)sc->ict_dma.vaddr;
         int tmp;
@@ -8184,7 +8242,7 @@ out:
 int itlwmx::
 iwx_intr_msix(OSObject *object, IOInterruptEventSource* sender, int count)
 {
-    XYLog("Interrupt!!!\n");
+//    XYLog("Interrupt!!!\n");
     itlwmx *that = (itlwmx*)object;
     struct iwx_softc *sc = &that->com;
     uint32_t inta_fh, inta_hw;
@@ -8403,7 +8461,7 @@ iwx_attach(struct iwx_softc *sc, struct pci_attach_args *pa)
     /* Clear device-specific "PCI retry timeout" register (41h). */
     reg = pci_conf_read(sc->sc_pct, sc->sc_pcitag, 0x40);
     pci_conf_write(sc->sc_pct, sc->sc_pcitag, 0x40, reg & ~0xff00);
-    
+
     /* Enable bus-mastering and hardware bug workaround. */
     reg = pci_conf_read(sc->sc_pct, sc->sc_pcitag, PCI_COMMAND_STATUS_REG);
     reg |= PCI_COMMAND_MASTER_ENABLE;
@@ -8420,7 +8478,6 @@ iwx_attach(struct iwx_softc *sc, struct pci_attach_args *pa)
         XYLog("%s: can't map mem space\n", DEVNAME(sc));
         return false;
     }
-    
     if (0) {
         sc->sc_msix = 1;
         XYLog("msix intr mode\n");
@@ -8700,7 +8757,9 @@ iwx_attach(struct iwx_softc *sc, struct pci_attach_args *pa)
      * firmware from disk. Postpone until mountroot is done.
      */
     //    config_mountroot(self, iwx_attach_hook);
-    iwx_preinit(sc);
+    if (iwx_preinit(sc)) {
+        goto fail4;
+    }
     
     return true;
     

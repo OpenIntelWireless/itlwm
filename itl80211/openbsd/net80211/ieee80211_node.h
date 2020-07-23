@@ -243,6 +243,12 @@ struct ieee80211_rx_ba {
 	u_int16_t		ba_head;
 	CTimeout*		ba_gap_to;
 #define IEEE80211_BA_GAP_TIMEOUT	300 /* msec */
+    
+    /*
+     * Counter for frames forced to wait in the reordering buffer
+     * due to a leading gap caused by one or more missing frames.
+     */
+    int            ba_gapwait;
 	/* Counter for consecutive frames which missed the BA window. */
 	int			ba_winmiss;
 	/* Sequence number of previous frame which missed the BA window. */
