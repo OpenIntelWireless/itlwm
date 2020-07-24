@@ -1603,7 +1603,7 @@ ieee80211_get_rate(struct ieee80211com *ic)
 struct ieee80211_node *
 ieee80211_node_alloc(struct ieee80211com *ic)
 {
-    return (struct ieee80211_node *)_MallocZero(sizeof(struct ieee80211_node));
+    return (struct ieee80211_node *)malloc(sizeof(struct ieee80211_node), 0, 0);
 }
 
 void
@@ -1631,8 +1631,7 @@ void
 ieee80211_node_free(struct ieee80211com *ic, struct ieee80211_node *ni)
 {
     ieee80211_node_cleanup(ic, ni);
-    //memory leak.
-    //	IOFree(ni, sizeof(*ni));
+    free(ni);
 }
 
 void

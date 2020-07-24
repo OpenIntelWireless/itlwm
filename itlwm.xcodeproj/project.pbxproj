@@ -335,6 +335,7 @@
 		F8A68DD92482241E007EB376 /* iwlwifi-QuZ-a0-hr-b0-48.ucode */ = {isa = PBXFileReference; lastKnownFileType = file; path = "iwlwifi-QuZ-a0-hr-b0-48.ucode"; sourceTree = "<group>"; };
 		F8A68DDB2482242E007EB376 /* iwlwifi-cc-a0-48.ucode */ = {isa = PBXFileReference; lastKnownFileType = file; path = "iwlwifi-cc-a0-48.ucode"; sourceTree = "<group>"; };
 		F8B783AF240B9F87004C9777 /* _ifq.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = _ifq.h; sourceTree = "<group>"; };
+		F8BEFA9124CA93E900F6D938 /* _malloc.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = _malloc.h; sourceTree = "<group>"; };
 		F8C03BB0246FED4400A3E889 /* FwBinary.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = FwBinary.cpp; path = itlwm/FwBinary.cpp; sourceTree = "<group>"; };
 		F8C2EC2F24080319007A9422 /* ieee80211_proto.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = ieee80211_proto.c; sourceTree = "<group>"; };
 		F8C2EC3024080319007A9422 /* _string.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = _string.c; sourceTree = "<group>"; };
@@ -649,6 +650,7 @@
 				F8F9EDDF240B4741009CB8E7 /* _task.h */,
 				F8F9EDE0240B7415009CB8E7 /* _task.cpp */,
 				F8B783AF240B9F87004C9777 /* _ifq.h */,
+				F8BEFA9124CA93E900F6D938 /* _malloc.h */,
 			);
 			path = sys;
 			sourceTree = "<group>";
@@ -1304,7 +1306,7 @@
 				MODULE_VERSION = 1.0.0d1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.zxystd.itlwm;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = macosx;
+				SDKROOT = macosx10.12;
 				SYSTEM_HEADER_SEARCH_PATHS = "itl80211/openbsd itl80211";
 				WRAPPER_EXTENSION = kext;
 			};
@@ -1334,7 +1336,7 @@
 				MODULE_VERSION = 1.0.0d1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.zxystd.itlwm;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = macosx;
+				SDKROOT = macosx10.12;
 				SYSTEM_HEADER_SEARCH_PATHS = "itl80211/openbsd itl80211";
 				WRAPPER_EXTENSION = kext;
 			};
@@ -1429,7 +1431,7 @@
 				MODULE_VERSION = 1.0.0d1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.zxystd.itlwmx;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = macosx;
+				SDKROOT = macosx10.12;
 				SYSTEM_HEADER_SEARCH_PATHS = "itl80211/openbsd itl80211";
 				WRAPPER_EXTENSION = kext;
 			};
@@ -1455,7 +1457,7 @@
 				MODULE_VERSION = 1.0.0d1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.zxystd.itlwmx;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = macosx;
+				SDKROOT = macosx10.12;
 				SYSTEM_HEADER_SEARCH_PATHS = "itl80211/openbsd itl80211";
 				WRAPPER_EXTENSION = kext;
 			};

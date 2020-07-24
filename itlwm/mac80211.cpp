@@ -1992,7 +1992,7 @@ iwm_allow_mcast(struct iwm_softc *sc)
     
     err = iwm_send_cmd_pdu(sc, IWM_MCAST_FILTER_CMD,
                            0, size, cmd);
-    free(cmd);
+    ::free(cmd);
     return err;
 }
 
@@ -2706,7 +2706,7 @@ iwm_stop(struct ifnet *ifp)
     
     sc->sc_generation++;
     for (i = 0; i < nitems(sc->sc_cmd_resp_pkt); i++) {
-        free(sc->sc_cmd_resp_pkt[i]);
+        ::free(sc->sc_cmd_resp_pkt[i]);
         sc->sc_cmd_resp_pkt[i] = NULL;
         sc->sc_cmd_resp_len[i] = 0;
     }

@@ -15,30 +15,6 @@
 #include "itlwm.hpp"
 #include <IOKit/IOLib.h>
 
-void* itlwm::
-malloc(vm_size_t len, int type, int how)
-{
-    void* addr = IOMalloc(len + sizeof(vm_size_t));
-    if (addr == NULL) {
-        return NULL;
-    }
-    *((vm_size_t*) addr) = len;
-    void *ret = (void*)((uint8_t*)addr + sizeof(vm_size_t));
-    bzero(ret, len);
-    return ret;
-}
-
-void itlwm::
-free(void* addr)
-{
-    if (addr == NULL) {
-        return;
-    }
-    void* actual_addr = (void*)((uint8_t*)addr - sizeof(vm_size_t));
-    vm_size_t len = *((vm_size_t*) actual_addr);
-    IOFree(actual_addr, len + sizeof(vm_size_t));
-}
-
 int itlwm::
 iwm_send_bt_init_conf(struct iwm_softc *sc)
 {

@@ -790,7 +790,7 @@ iwm_rx_pkt(struct iwm_softc *sc, struct iwm_rx_data *data, struct mbuf_list *ml)
                 if ((pkt->hdr.flags & IWM_CMD_FAILED_MSK) ||
                     pkt_len < sizeof(*pkt) ||
                     pkt_len > sc->sc_cmd_resp_len[idx]) {
-                    free(sc->sc_cmd_resp_pkt[idx]);
+                    ::free(sc->sc_cmd_resp_pkt[idx]);
                     sc->sc_cmd_resp_pkt[idx] = NULL;
                     break;
                 }

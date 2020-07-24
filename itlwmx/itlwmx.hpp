@@ -111,8 +111,6 @@ public:
     void associateSSID(const char *ssid, const char *pwd);
     
     //utils
-    static void *malloc(vm_size_t len, int type, int how);
-    static void free(void* addr);
     static void *mallocarray(size_t, size_t, int, int);
     
     static void onLoadFW(OSKextRequestTag requestTag, OSReturn result, const void *resourceData, uint32_t resourceDataLength, void *context);

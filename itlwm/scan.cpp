@@ -419,7 +419,7 @@ iwm_lmac_scan(struct iwm_softc *sc, int bgscan)
                                              sc->sc_capa_n_scan_channels));
     err = iwm_fill_probe_req_v1(sc, preq);
     if (err) {
-        free(req);
+        ::free(req);
         return err;
     }
     
@@ -432,7 +432,7 @@ iwm_lmac_scan(struct iwm_softc *sc, int bgscan)
     req->channel_opt[1].non_ebs_ratio = 1;
     
     err = iwm_send_cmd(sc, &hcmd);
-    free(req);
+    ::free(req);
     return err;
 }
 
@@ -507,7 +507,7 @@ iwm_config_umac_scan(struct iwm_softc *sc)
     hcmd.len[0] = cmd_size;
     
     err = iwm_send_cmd(sc, &hcmd);
-    free(scan_config);
+    ::free(scan_config);
     return err;
 }
 
@@ -715,7 +715,7 @@ iwm_umac_scan(struct iwm_softc *sc, int bgscan)
     else
         err = iwm_fill_probe_req_v1(sc, &tailv1->preq);
     if (err) {
-        free(req);
+        ::free(req);
         return err;
     }
     
@@ -724,7 +724,7 @@ iwm_umac_scan(struct iwm_softc *sc, int bgscan)
     tail->schedule[0].iter_count = 1;
     
     err = iwm_send_cmd(sc, &hcmd);
-    free(req);
+    ::free(req);
     return err;
 }
 

@@ -211,7 +211,7 @@ iwm_set_default_calib(struct iwm_softc *sc, const void *data)
 void itlwm::
 iwm_fw_info_free(struct iwm_fw_info *fw)
 {
-    free(fw->fw_rawdata);
+    ::free(fw->fw_rawdata);
     fw->fw_rawdata = NULL;
     fw->fw_rawsize = 0;
     /* don't touch fw->fw_status */

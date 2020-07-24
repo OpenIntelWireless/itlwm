@@ -426,13 +426,13 @@ iwm_nvm_init(struct iwm_softc *sc)
         memcpy(nvm_sections[section].data, buf, len);
         nvm_sections[section].length = len;
     }
-    free(buf);
+    ::free(buf);
     if (err == 0)
         err = iwm_parse_nvm_sections(sc, nvm_sections);
     
     for (i = 0; i < IWM_NVM_NUM_OF_SECTIONS; i++) {
         if (nvm_sections[i].data != NULL)
-            free(nvm_sections[i].data);
+            ::free(nvm_sections[i].data);
     }
     
     return err;

@@ -66,6 +66,7 @@
 #include <sys/_arc4random.h>
 #include <sys/_task.h>
 #include <sys/_ifq.h>
+#include <sys/_malloc.h>
 
 #include <sys/kpi_mbuf.h>
 #include <net80211/ieee80211.h>

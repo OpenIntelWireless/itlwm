@@ -95,8 +95,7 @@ public:
 //    UInt32 getFeatures() const override;
     
     //utils
-    static void *malloc(vm_size_t len, int type, int how);
-    static void free(void* addr);
+    int    iwm_send_bt_init_conf(struct iwm_softc *);
     
     //fw
     uint8_t iwm_fw_valid_tx_ant(struct iwm_softc *sc);
@@ -347,7 +346,6 @@ public:
     void    iwm_fill_sf_command(struct iwm_softc *, struct iwm_sf_cfg_cmd *,
             struct ieee80211_node *);
     int    iwm_sf_config(struct iwm_softc *, int);
-    int    iwm_send_bt_init_conf(struct iwm_softc *);
     int    iwm_send_update_mcc_cmd(struct iwm_softc *, const char *);
     void    iwm_tt_tx_backoff(struct iwm_softc *, uint32_t);
     int iwm_fill_paging_mem(struct iwm_softc *, const struct iwm_fw_sects *);

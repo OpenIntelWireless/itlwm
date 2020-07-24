@@ -165,7 +165,7 @@ iwm_phy_db_set_section(struct iwm_softc *sc,
         return EINVAL;
     
     if (entry->data)
-        free(entry->data);
+        ::free(entry->data);
     entry->data = (uint8_t*)malloc(size, M_DEVBUF, M_NOWAIT);
     if (!entry->data) {
         entry->size = 0;
@@ -628,7 +628,7 @@ iwm_send_cmd(struct iwm_softc *sc, struct iwm_host_cmd *hcmd)
             hcmd->resp_pkt = (struct iwm_rx_packet *)sc->sc_cmd_resp_pkt[idx];
             sc->sc_cmd_resp_pkt[idx] = NULL;
         } else if (generation == sc->sc_generation) {
-            free(sc->sc_cmd_resp_pkt[idx]);
+            ::free(sc->sc_cmd_resp_pkt[idx]);
             sc->sc_cmd_resp_pkt[idx] = NULL;
         }
     }
@@ -701,7 +701,7 @@ void itlwm::
 iwm_free_resp(struct iwm_softc *sc, struct iwm_host_cmd *hcmd)
 {
     _KASSERT((hcmd->flags & (IWM_CMD_WANT_RESP)) == IWM_CMD_WANT_RESP);
-    free(hcmd->resp_pkt);
+    ::free(hcmd->resp_pkt);
     hcmd->resp_pkt = NULL;
 }
 

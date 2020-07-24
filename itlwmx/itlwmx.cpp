@@ -743,19 +743,6 @@ void itlwmx::watchdogAction(IOTimerEventSource *timer)
     watchdogTimer->setTimeoutMS(1000);
 }
 
-void* itlwmx::
-malloc(vm_size_t len, int type, int how)
-{
-    void* addr = IOMalloc(len + sizeof(vm_size_t));
-    if (addr == NULL) {
-        return NULL;
-    }
-    *((vm_size_t*) addr) = len;
-    void *buf = (void*)((uint8_t*)addr + sizeof(vm_size_t));
-    bzero(buf, len);
-    return buf;
-}
-
 #define MUL_NO_OVERFLOW    (1UL << (sizeof(size_t) * 4))
 
 #define    M_CANFAIL    0x0004
@@ -769,17 +756,6 @@ mallocarray(size_t nmemb, size_t size, int type, int flags)
         panic("mallocarray: overflow %zu * %zu", nmemb, size);
     }
     return (malloc(size * nmemb, type, flags));
-}
-
-void itlwmx::
-free(void* addr)
-{
-    if (addr == NULL) {
-        return;
-    }
-    void* actual_addr = (void*)((uint8_t*)addr - sizeof(vm_size_t));
-    vm_size_t len = *((vm_size_t*) actual_addr);
-    IOFree(actual_addr, len + sizeof(vm_size_t));
 }
 
 void itlwmx::wakeupOn(void *ident)
@@ -1384,7 +1360,7 @@ iwx_set_default_calib(struct iwx_softc *sc, const void *data)
 void itlwmx::
 iwx_fw_info_free(struct iwx_fw_info *fw)
 {
-    free(fw->fw_rawdata);
+    ::free(fw->fw_rawdata);
     fw->fw_rawdata = NULL;
     fw->fw_rawsize = 0;
     /* don't touch fw->fw_status */
@@ -4454,7 +4430,7 @@ iwx_send_cmd(struct iwx_softc *sc, struct iwx_host_cmd *hcmd)
             hcmd->resp_pkt = (struct iwx_rx_packet *)sc->sc_cmd_resp_pkt[idx];
             sc->sc_cmd_resp_pkt[idx] = NULL;
         } else if (generation == sc->sc_generation) {
-            free(sc->sc_cmd_resp_pkt[idx]);
+            ::free(sc->sc_cmd_resp_pkt[idx]);
             sc->sc_cmd_resp_pkt[idx] = NULL;
         }
     }
@@ -4529,7 +4505,7 @@ void itlwmx::
 iwx_free_resp(struct iwx_softc *sc, struct iwx_host_cmd *hcmd)
 {
     KASSERT((hcmd->flags & (IWX_CMD_WANT_RESP)) == IWX_CMD_WANT_RESP, "(hcmd->flags & (IWX_CMD_WANT_RESP)) == IWX_CMD_WANT_RESP");
-    free(hcmd->resp_pkt);
+    ::free(hcmd->resp_pkt);
     hcmd->resp_pkt = NULL;
 }
 
@@ -5331,7 +5307,7 @@ iwx_config_umac_scan(struct iwx_softc *sc)
     hcmd.len[0] = cmd_size;
     
     err = iwx_send_cmd(sc, &hcmd);
-    free(scan_config);
+    ::free(scan_config);
     return err;
 }
 
@@ -5555,7 +5531,7 @@ iwx_umac_scan(struct iwx_softc *sc, int bgscan)
     else
         err = iwx_fill_probe_req_v1(sc, &tailv1->preq);
     if (err) {
-        free(req);
+        ::free(req);
         return err;
     }
     
@@ -5564,7 +5540,7 @@ iwx_umac_scan(struct iwx_softc *sc, int bgscan)
     tail->schedule[0].iter_count = 1;
     
     err = iwx_send_cmd(sc, &hcmd);
-    free(req);
+    ::free(req);
     return err;
 }
 
@@ -7190,7 +7166,7 @@ iwx_allow_mcast(struct iwx_softc *sc)
     
     err = iwx_send_cmd_pdu(sc, IWX_MCAST_FILTER_CMD,
                            0, size, cmd);
-    free(cmd);
+    ::free(cmd);
     return err;
 }
 
@@ -7354,7 +7330,7 @@ iwx_stop(struct ifnet *ifp)
     
     sc->sc_generation++;
     for (i = 0; i < nitems(sc->sc_cmd_resp_pkt); i++) {
-        free(sc->sc_cmd_resp_pkt[i]);
+        ::free(sc->sc_cmd_resp_pkt[i]);
         sc->sc_cmd_resp_pkt[i] = NULL;
         sc->sc_cmd_resp_len[i] = 0;
     }
@@ -7932,7 +7908,7 @@ iwx_rx_pkt(struct iwx_softc *sc, struct iwx_rx_data *data, struct mbuf_list *ml)
                 if ((pkt->hdr.flags & IWX_CMD_FAILED_MSK) ||
                     pkt_len < sizeof(*pkt) ||
                     pkt_len > sc->sc_cmd_resp_len[idx]) {
-                    free(sc->sc_cmd_resp_pkt[idx]);
+                    ::free(sc->sc_cmd_resp_pkt[idx]);
                     sc->sc_cmd_resp_pkt[idx] = NULL;
                     break;
                 }
