@@ -1,0 +1,82 @@
+name: CD
+
+on:
+  push:
+    branches: master
+
+env:
+  BUILD_OUTPUT: 'build/Build/Products/Debug'
+
+jobs:
+
+  build:
+    
+    runs-on: macos-latest
+
+    steps:
+
+    - uses: actions/checkout@v2
+      with:
+        fetch-depth: '5'
+
+    - name: Manage Version
+      run: |
+        git fetch --prune --unshallow --tags
+        GIT_SHA="$(git rev-parse --short HEAD)"
+        CUR_TAG="$(git tag -l | grep 'alpha\|beta' | tail -1)"
+        sed -i '' -e "s/CURRENT_PROJECT_VERSION =.*/CURRENT_PROJECT_VERSION = ${GIT_SHA};/g" itlwm.xcodeproj/project.pbxproj
+        eval $(grep -m 1 "MARKETING_VERSION" itlwm.xcodeproj/project.pbxproj | tr -d ';' | tr -d '\t' | tr -d " ")
+        echo "::set-env name=SHORT_SHA::$GIT_SHA"
+        echo "::set-env name=ITLWM_VER::$MARKETING_VERSION"
+        if [[ -z $CUR_TAG ]]; then
+          echo "::set-env name=OLD_PRE_TAG::NULL"
+        else
+          echo "::set-env name=OLD_PRE_TAG::$CUR_TAG"
+        fi
+
+    - name: Generate Prerelease Release Notes
+      run: |
+        echo '### Disclaimer' >> ReleaseNotes.md
+        echo '***This alpha version is for testing only.***' >> ReleaseNotes.md
+        echo 'It is not ready for daily use and we do not guarantee its usability.' >> ReleaseNotes.md
+        echo 'If you discovered an issue and you do not have debugging skills, please check with the Gitter chat room in advance before opening an Issue' >> ReleaseNotes.md
+        echo '### The latest five updates are:' >> ReleaseNotes.md
+        git log -"5" --format="- %H %s" | sed '/^$/d' >> ReleaseNotes.md
+
+    - name: "Install macOS 10.12 SDK"
+      run: |
+        curl -L https://github.com/alexey-lysiuk/macos-sdk/releases/download/10.12/MacOSX10.12.tar.bz2 -o /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.12.tar.bz2 && tar -xjf /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.12.tar.bz2 -C /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/
+
+    - name: Build itlwm
+      run: |
+        xcodebuild -scheme fw_gen
+        xcodebuild -scheme itlwm -configuration Debug -sdk macosx10.12 -derivedDataPath build CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO | xcpretty && exit ${PIPESTATUS[0]}
+
+    - name: Build itlwmx
+      run: |
+        xcodebuild -scheme fw_genx
+        xcodebuild -scheme itlwmx -configuration Debug -sdk macosx10.12 -derivedDataPath build CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO | xcpretty && exit ${PIPESTATUS[0]}
+
+    - name: Pack Artifacts
+      run: |
+        cd $BUILD_OUTPUT
+        zip -r itlwm-v${ITLWM_VER}-DEBUG-alpha-${SHORT_SHA}.zip itlwm.kext
+        zip -r itlwmx-v${ITLWM_VER}-DEBUG-alpha-${SHORT_SHA}.zip itlwmx.kext
+        cd -
+
+    - name: Delete Old Prerelease
+      uses: dev-drprasad/delete-tag-and-release@v0.1.2
+      with:
+        tag_name: ${{ env.OLD_PRE_TAG }}
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Publish GitHub Release
+      uses: ncipollo/release-action@v1
+      with:
+        prerelease: true
+        bodyFile: ReleaseNotes.md
+        artifacts: "${{ env.BUILD_OUTPUT }}/*.zip"
+        tag: "v${{ env.ITLWM_VER }}-alpha"
+        token: ${{ secrets.GITHUB_TOKEN }}
+

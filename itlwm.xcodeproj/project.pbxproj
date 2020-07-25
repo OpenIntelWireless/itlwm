@@ -857,17 +857,17 @@
 			passBuildSettingsInEnvironment = 1;
 			productName = fw_genx;
 		};
-		F8EE4D1B24178BF0002FA666 /* fwgen */ = {
+		F8EE4D1B24178BF0002FA666 /* fw_gen */ = {
 			isa = PBXLegacyTarget;
 			buildArgumentsString = "-P ${PROJECT_DIR}/itlwm/firmware/*";
-			buildConfigurationList = F8EE4D1C24178BF0002FA666 /* Build configuration list for PBXLegacyTarget "fwgen" */;
+			buildConfigurationList = F8EE4D1C24178BF0002FA666 /* Build configuration list for PBXLegacyTarget "fw_gen" */;
 			buildPhases = (
 			);
 			buildToolPath = "$(PROJECT_DIR)/fw_gen.sh";
 			buildWorkingDirectory = "";
 			dependencies = (
 			);
-			name = fwgen;
+			name = fw_gen;
 			passBuildSettingsInEnvironment = 1;
 			productName = fwgen;
 		};
@@ -952,7 +952,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				F8EE4D1B24178BF0002FA666 /* fwgen */,
+				F8EE4D1B24178BF0002FA666 /* fw_gen */,
 				024A07AB23FCBC3C009FBA6C /* itlwm */,
 				F8D6CD5F2442E8F200D2A454 /* itlwmx */,
 				F8B8F15E2493C1E90059FAA8 /* fw_genx */,
@@ -1114,7 +1114,7 @@
 		};
 		F8CC2BCE245080C3008EA16B /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = F8EE4D1B24178BF0002FA666 /* fwgen */;
+			target = F8EE4D1B24178BF0002FA666 /* fw_gen */;
 			targetProxy = F8CC2BCD245080C3008EA16B /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
@@ -1235,7 +1235,7 @@
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = "$(MARKETING_VERSION)";
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = "";
 				FRAMEWORK_SEARCH_PATHS = "";
@@ -1266,7 +1266,7 @@
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = "$(MARKETING_VERSION)";
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = "";
 				FRAMEWORK_SEARCH_PATHS = "";
@@ -1321,7 +1321,7 @@
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = "$(MARKETING_VERSION)";
 				DEVELOPMENT_TEAM = "";
 				GCC_C_LANGUAGE_STANDARD = c11;
 				GCC_INPUT_FILETYPE = sourcecode.cpp.cpp;
@@ -1348,7 +1348,7 @@
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = "$(MARKETING_VERSION)";
 				DEVELOPMENT_TEAM = "";
 				GCC_C_LANGUAGE_STANDARD = c11;
 				GCC_INPUT_FILETYPE = sourcecode.cpp.cpp;
@@ -1434,7 +1434,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		F8EE4D1C24178BF0002FA666 /* Build configuration list for PBXLegacyTarget "fwgen" */ = {
+		F8EE4D1C24178BF0002FA666 /* Build configuration list for PBXLegacyTarget "fw_gen" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				F8EE4D1D24178BF0002FA666 /* Debug */,
