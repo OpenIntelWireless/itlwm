@@ -25,7 +25,7 @@ jobs:
         GIT_SHA="$(git rev-parse --short HEAD)"
         CUR_TAG="$(git tag -l | grep 'alpha\|beta' | tail -1)"
         sed -i '' -e "s/CURRENT_PROJECT_VERSION =.*/CURRENT_PROJECT_VERSION = ${GIT_SHA};/g" itlwm.xcodeproj/project.pbxproj
-        eval $(grep -m 1 "MARKETING_VERSION" itlwm.xcodeproj/project.pbxproj | tr -d ';' | tr -d '\t' | tr -d " ")
+        eval $(grep -m 1 "MARKETING_VERSION =" itlwm.xcodeproj/project.pbxproj | tr -d ';' | tr -d '\t' | tr -d " ")
         echo "::set-env name=SHORT_SHA::$GIT_SHA"
         echo "::set-env name=ITLWM_VER::$MARKETING_VERSION"
         if [[ -z $CUR_TAG ]]; then
