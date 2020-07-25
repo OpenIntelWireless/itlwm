@@ -419,6 +419,8 @@ struct ieee80211com {
 	void			(*ic_update_htprot)(struct ieee80211com *,
 					struct ieee80211_node *);
 	int			(*ic_bgscan_start)(struct ieee80211com *);
+    /* The channel width has changed (20<->2040) */
+    void            (*ic_update_chw)(struct ieee80211com *);
 	CTimeout*		ic_bgscan_timeout;
 	uint32_t		ic_bgscan_fail;
 	u_int8_t		ic_myaddr[IEEE80211_ADDR_LEN];
