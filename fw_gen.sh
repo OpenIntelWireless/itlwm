@@ -5,7 +5,7 @@
 #
 #  Created by qcwap on 2020/3/10.
 #  Copyright © 2020 钟先耀. All rights reserved.
-target_file="${PROJECT_DIR}/itlwm/FwBinary.cpp"
+target_file="${PROJECT_DIR}/include/FwBinary.cpp"
 while [ $# -gt 0 ];
 do
     case $1 in
