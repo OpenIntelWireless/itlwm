@@ -17,7 +17,7 @@
 	<key>CFBundleShortVersionString</key>
 	<string>$(MARKETING_VERSION)</string>
 	<key>CFBundleVersion</key>
-	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<string>$(MARKETING_VERSION)</string>
 	<key>IOKitPersonalities</key>
 	<dict>
 		<key>itlwmx</key>
@@ -82,5 +82,9 @@
 		<key>com.apple.kpi.mach</key>
 		<string>16.7</string>
 	</dict>
+	<key>OSBundleRequired</key>
+	<string>Network-Root</string>
+	<key>XCBUILD</key>
+	<string>$(CURRENT_PROJECT_VERSION)</string>
 </dict>
 </plist>

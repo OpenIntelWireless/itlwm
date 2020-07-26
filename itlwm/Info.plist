@@ -17,7 +17,7 @@
 	<key>CFBundleShortVersionString</key>
 	<string>$(MARKETING_VERSION)</string>
 	<key>CFBundleVersion</key>
-	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<string>$(MARKETING_VERSION)</string>
 	<key>IOKitPersonalities</key>
 	<dict>
 		<key>itlwm</key>
@@ -88,5 +88,7 @@
 	</dict>
 	<key>OSBundleRequired</key>
 	<string>Network-Root</string>
+	<key>XCBUILD</key>
+	<string>$(CURRENT_PROJECT_VERSION)</string>
 </dict>
 </plist>
