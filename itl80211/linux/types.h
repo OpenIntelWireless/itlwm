@@ -30,8 +30,6 @@
 #define local_bh_disable()
 #define local_bh_enable()
 
-#define IFNAMSIZ 32
-
 #define NUM_DEFAULT_KEYS 4
 #define NUM_DEFAULT_MGMT_KEYS 2
 
