@@ -1754,15 +1754,15 @@ ieee80211_recv_probe_resp(struct ieee80211com *ic, mbuf_t m,
         DPRINTF(("invalid SSID element\n"));
         return;
     }
-    if (csa == NULL || csa[1] < 3 * sizeof(uint8_t)) {
+    if (csa != NULL && csa[1] < 3 * sizeof(uint8_t)) {
         DPRINTF(("csa ie too short, got %d, expected %lu\n", csa[1], 3 * sizeof(uint8_t)));
         csa = NULL;
     }
-    if (vhtcap == NULL || vhtcap[1] < sizeof(struct ieee80211_ie_vhtcap) - 2) {
+    if (vhtcap != NULL && vhtcap[1] < sizeof(struct ieee80211_ie_vhtcap) - 2) {
         DPRINTF(("vhtcap ie too short, got %d, expected %lu\n", vhtcap[1], sizeof(struct ieee80211_ie_vhtcap) - 2));
         vhtcap = NULL;
     }
-    if (vhtopmode == NULL || vhtopmode[1] < sizeof(struct ieee80211_ie_vht_operation) - 2) {
+    if (vhtopmode != NULL && vhtopmode[1] < sizeof(struct ieee80211_ie_vht_operation) - 2) {
         DPRINTF(("vhtopmode ie too short, got %d, expected %lu\n", vhtopmode[1], sizeof(struct ieee80211_ie_vht_operation) - 2));
         vhtopmode = NULL;
     }
