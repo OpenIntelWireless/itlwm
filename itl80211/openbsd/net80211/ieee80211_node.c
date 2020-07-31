@@ -611,7 +611,8 @@ ieee80211_switch_ess(struct ieee80211com *ic)
         if (!ISSET(ic->ic_flags, IEEE80211_F_AUTO_JOIN)) {
             if (ic->ic_des_esslen == ni->ni_esslen &&
                 memcmp(ic->ic_des_essid, ni->ni_essid,
-                       ni->ni_esslen) == 0) {
+                       ni->ni_esslen) == 0 &&
+                ni->ni_esslen > 0) {
                 ieee80211_set_ess(ic, ess, ni);
                 return;
             }

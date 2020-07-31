@@ -310,11 +310,6 @@ bool itlwmx::start(IOService *provider)
     if (!device) {
         return false;
     }
-    
-//    device->enablePCIPowerManagement(kPCIPMCSPowerStateD0);
-//    uint16_t oldPowerStateWord = device->configRead16(0xc8 + 0x4);
-//    uint16_t newPowerStateWord = (oldPowerStateWord & (~0x3)) | 0x0;
-//    device->configWrite16(0xc8 + 0x4, newPowerStateWord);
     device->setBusMasterEnable(true);
     device->setIOEnable(true);
     device->setMemoryEnable(true);
@@ -1078,7 +1073,7 @@ iwx_alloc_fw_monitor_block(struct iwx_softc *sc, uint8_t max_power,
     struct iwx_dma_info *fw_mon = &sc->fw_mon;
     uint32_t size = 0;
     uint8_t power;
-    int err;
+    int err = 0;
     
     if (fw_mon->size)
         return 0;
