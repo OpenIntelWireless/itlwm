@@ -507,6 +507,7 @@ struct iwx_softc {
 	struct iwx_notif_statistics sc_stats;
 	int sc_noise;
 
+    int sc_pm_support;
 	int sc_ltr_enabled;
 
 	int sc_integrated;

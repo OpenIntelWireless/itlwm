@@ -441,7 +441,7 @@ struct iwx_context_info {
 #define IWX_CSR_HW_REV_TYPE_MSK        (0x000FFF0)
 
 /* CSR GIO */
-#define IWX_CSR_GIO_REG_VAL_L0S_ENABLED    (0x00000002)
+#define IWX_CSR_GIO_REG_VAL_L0S_DISABLED    (0x00000002)
 
 /*
  * UCODE-DRIVER GP (general purpose) mailbox register 1
@@ -732,12 +732,21 @@ struct iwx_context_info {
 #define IWX_SB_CFG_OVERRIDE_ENABLE        0x8000
 #define IWX_SB_CFG_BASE_OVERRIDE        0xa20000
 #define IWX_SB_MODIFY_CFG_FLAG            0xa03088
-#define IWX_SB_CPU_1_STATUS            0xa01e30
-#define IWX_SB_CPU_2_STATUS            0Xa01e34
+#define IWX_UMAG_SB_CPU_1_STATUS        0xa038c0
+#define IWX_UMAG_SB_CPU_2_STATUS        0xa038c4
 
 #define IWX_UREG_CHICK                0xa05c00
 #define IWX_UREG_CHICK_MSI_ENABLE        (1 << 24)
 #define IWX_UREG_CHICK_MSIX_ENABLE        (1 << 25)
+
+#define IWX_HPM_DEBUG            0xa03440
+#define IWX_PERSISTENCE_BIT        (1 << 12)
+#define IWX_PREG_WFPM_ACCESS        (1 << 12)
+
+#define IWX_HPM_HIPM_GEN_CFG            0xa03458
+#define IWX_HPM_HIPM_GEN_CFG_CR_PG_EN        (1 << 0)
+#define IWX_HPM_HIPM_GEN_CFG_CR_SLP_EN        (1 << 1)
+#define IWX_HPM_HIPM_GEN_CFG_CR_FORCE_ACTIVE    (1 << 10)
 
 /*
  * Per-Tx-queue write pointer (index, really!)
@@ -6597,12 +6606,6 @@ iwx_rx_packet_payload_len(const struct iwx_rx_packet *pkt)
 
 #define IWX_MIN_DBM    -100
 #define IWX_MAX_DBM    -33    /* realistic guess */
-
-#define IWX_READ_8(sc, reg)                        \
-    bus_space_read_8((sc)->sc_st, (sc)->sc_sh, (reg))
-
-#define IWX_WRITE_8(sc, reg, val)                    \
-    bus_space_write_8((sc)->sc_st, (sc)->sc_sh, (reg), (val))
 
 #define IWX_READ(sc, reg)                        \
     bus_space_read_4((sc)->sc_st, (sc)->sc_sh, (reg))

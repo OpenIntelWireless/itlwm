@@ -1211,6 +1211,7 @@ iwx_ctxt_info_init(struct iwx_softc *sc, const struct iwx_fw_sects *fws)
     struct iwx_context_info *ctxt_info;
     struct iwx_context_info_rbd_cfg *rx_cfg;
     uint32_t control_flags = 0, rb_size;
+    uint64_t paddr;
     int err;
     
     ctxt_info = (struct iwx_context_info *)sc->ctxt_info_dma.vaddr;
@@ -1263,8 +1264,16 @@ iwx_ctxt_info_init(struct iwx_softc *sc, const struct iwx_fw_sects *fws)
     
     iwx_enable_fwload_interrupt(sc);
     
+    /*
+      * Write the context info DMA base address. The device expects a
+      * 64-bit address but a simple bus_space_write_8 to this register
+      * won't work on some devices, such as the AX201.
+      */
+     paddr = sc->ctxt_info_dma.paddr;
+     IWX_WRITE(sc, IWX_CSR_CTXT_INFO_BA, paddr & 0xffffffff);
+     IWX_WRITE(sc, IWX_CSR_CTXT_INFO_BA + 4, paddr >> 32);
+    
     /* kick FW self load */
-    IWX_WRITE_8(sc, IWX_CSR_CTXT_INFO_BA, sc->ctxt_info_dma.paddr);
     if (!iwx_nic_lock(sc))
         return EBUSY;
     iwx_write_prph(sc, IWX_UREG_CPU_INIT_RUN, 1);
@@ -1273,6 +1282,20 @@ iwx_ctxt_info_init(struct iwx_softc *sc, const struct iwx_fw_sects *fws)
     /* Context info will be released upon alive or failure to get one */
     
     return 0;
+}
+
+void itlwmx::
+iwx_force_power_gating(struct iwx_softc *sc)
+{
+   iwx_set_bits_prph(sc, IWX_HPM_HIPM_GEN_CFG,
+       IWX_HPM_HIPM_GEN_CFG_CR_FORCE_ACTIVE);
+   DELAY(20);
+   iwx_set_bits_prph(sc, IWX_HPM_HIPM_GEN_CFG,
+       IWX_HPM_HIPM_GEN_CFG_CR_PG_EN |
+       IWX_HPM_HIPM_GEN_CFG_CR_SLP_EN);
+   DELAY(20);
+   iwx_clear_bits_prph(sc, IWX_HPM_HIPM_GEN_CFG,
+       IWX_HPM_HIPM_GEN_CFG_CR_FORCE_ACTIVE);
 }
 
 void itlwmx::
@@ -2466,22 +2489,13 @@ iwx_apm_config(struct iwx_softc *sc)
     pcireg_t lctl, cap;
     
     /*
-     * HW bug W/A for instability in PCIe bus L0S->L1 transition.
-     * Check if BIOS (or OS) enabled L1-ASPM on this device.
-     * If so (likely), disable L0S, so device moves directly L0->L1;
-     *    costs negligible amount of power savings.
-     * If not (unlikely), enable L0S, so there is at least some
-     *    power savings, even without L1.
+     * L0S states have been found to be unstable with our devices
+     * and in newer hardware they are not officially supported at
+     * all, so we must always set the L0S_DISABLED bit.
      */
+    IWX_SETBITS(sc, IWX_CSR_GIO_REG, IWX_CSR_GIO_REG_VAL_L0S_DISABLED);
     lctl = pci_conf_read(sc->sc_pct, sc->sc_pcitag,
                          sc->sc_cap_off + PCI_PCIE_LCSR);
-//    if (lctl & PCI_PCIE_LCSR_ASPM_L1) {
-        IWX_SETBITS(sc, IWX_CSR_GIO_REG,
-            IWX_CSR_GIO_REG_VAL_L0S_ENABLED);
-//    } else {
-//        IWX_CLRBITS(sc, IWX_CSR_GIO_REG,
-//            IWX_CSR_GIO_REG_VAL_L0S_ENABLED);
-//    }
     
     cap = pci_conf_read(sc->sc_pct, sc->sc_pcitag,
                         sc->sc_cap_off + PCI_PCIE_DCSR2);
@@ -2681,6 +2695,7 @@ iwx_start_hw(struct iwx_softc *sc)
 {
     XYLog("%s\n", __FUNCTION__);
     int err;
+    int t = 0;
     
     err = iwx_prepare_card_hw(sc);
     if (err)
@@ -2690,11 +2705,40 @@ iwx_start_hw(struct iwx_softc *sc)
     IWX_SETBITS(sc, IWX_CSR_RESET, IWX_CSR_RESET_REG_FLAG_SW_RESET);
     DELAY(5000);
     
+    if (sc->sc_integrated) {
+        IWX_SETBITS(sc, IWX_CSR_GP_CNTRL,
+                    IWX_CSR_GP_CNTRL_REG_FLAG_INIT_DONE);
+        DELAY(20);
+        if (!iwx_poll_bit(sc, IWX_CSR_GP_CNTRL,
+                          IWX_CSR_GP_CNTRL_REG_FLAG_MAC_CLOCK_READY,
+                          IWX_CSR_GP_CNTRL_REG_FLAG_MAC_CLOCK_READY, 25000)) {
+            XYLog("%s: timeout waiting for clock stabilization\n",
+                  DEVNAME(sc));
+            return ETIMEDOUT;
+        }
+        
+        iwx_force_power_gating(sc);
+        
+        /* Reset the entire device */
+        IWX_SETBITS(sc, IWX_CSR_RESET, IWX_CSR_RESET_REG_FLAG_SW_RESET);
+        DELAY(5000);
+    }
+    
     err = iwx_apm_init(sc);
     if (err)
         return err;
     
     iwx_init_msix_hw(sc);
+    
+    while (t < 150000 && !iwx_set_hw_ready(sc)) {
+        DELAY(200);
+        t += 200;
+        if (iwx_set_hw_ready(sc)) {
+            break;
+        }
+    }
+    if (t >= 150000)
+        return ETIMEDOUT;
     
     iwx_enable_rfkill_int(sc);
     iwx_check_rfkill(sc);
@@ -3470,20 +3514,8 @@ iwx_start_fw(struct iwx_softc *sc)
     XYLog("%s\n", __FUNCTION__);
     int err;
     
-    if ((err = iwx_prepare_card_hw(sc))) {
-        XYLog("Exit HW not ready\n");
-        return err;
-    }
-    
-    iwx_enable_rfkill_int(sc);
-    
     IWX_WRITE(sc, IWX_CSR_INT, 0xFFFFFFFF);
     
-    /*
-     * We enabled the RF-Kill interrupt and the handler may very
-     * well be running. Disable the interrupts to make sure no other
-     * interrupt can be fired.
-     */
     iwx_disable_interrupts(sc);
     
     /* make sure rfkill handshake bits are cleared */
@@ -3492,13 +3524,15 @@ iwx_start_fw(struct iwx_softc *sc)
               IWX_CSR_UCODE_DRV_GP1_BIT_CMD_BLOCKED);
     
     /* clear (again), then enable firwmare load interrupt */
-    IWX_WRITE(sc, IWX_CSR_INT, 0xFFFFFFFF);
+    IWX_WRITE(sc, IWX_CSR_INT, ~0);
     
     err = iwx_nic_init(sc);
     if (err) {
         XYLog("%s: unable to init nic\n", DEVNAME(sc));
         return err;
     }
+    
+    iwx_enable_fwload_interrupt(sc);
     
     return iwx_load_firmware(sc);
 }
@@ -8486,7 +8520,10 @@ iwx_attach(struct iwx_softc *sc, struct pci_attach_args *pa)
     }
     sc->sc_ih->enable();
     
-    iwx_disable_interrupts(sc);
+    /* Clear pending interrupts. */
+    IWX_WRITE(sc, IWX_CSR_INT_MASK, 0);
+    IWX_WRITE(sc, IWX_CSR_INT, ~0);
+    IWX_WRITE(sc, IWX_CSR_FH_INT_STATUS, ~0);
     
     sc->sc_hw_rev = IWX_READ(sc, IWX_CSR_HW_REV);
     int pa_id = pa->pa_tag->configRead16(kIOPCIConfigDeviceID);
@@ -8512,7 +8549,7 @@ iwx_attach(struct iwx_softc *sc, struct pci_attach_args *pa)
             sc->sc_integrated = 1;
             sc->sc_ltr_delay = IWX_SOC_FLAGS_LTR_APPLY_DELAY_NONE;
             sc->sc_low_latency_xtal = 0;
-            sc->sc_xtal_latency = 0;
+            sc->sc_xtal_latency = 5000;
             sc->sc_tx_with_siso_diversity = 0;
             sc->sc_uhb_supported = 0;
             break;
@@ -8524,7 +8561,7 @@ iwx_attach(struct iwx_softc *sc, struct pci_attach_args *pa)
             sc->sc_integrated = 1;
             sc->sc_ltr_delay = IWX_SOC_FLAGS_LTR_APPLY_DELAY_NONE;
             sc->sc_low_latency_xtal = 0;
-            sc->sc_xtal_latency = 0;
+            sc->sc_xtal_latency = 5000;
             sc->sc_tx_with_siso_diversity = 0;
             sc->sc_uhb_supported = 0;
             break;
@@ -8535,7 +8572,7 @@ iwx_attach(struct iwx_softc *sc, struct pci_attach_args *pa)
             sc->sc_integrated = 1;
             sc->sc_ltr_delay = IWX_SOC_FLAGS_LTR_APPLY_DELAY_NONE;
             sc->sc_low_latency_xtal = 0;
-            sc->sc_xtal_latency = 0;
+            sc->sc_xtal_latency = 5000;
             sc->sc_tx_with_siso_diversity = 0;
             sc->sc_uhb_supported = 0;
             break;
@@ -8648,9 +8685,6 @@ iwx_attach(struct iwx_softc *sc, struct pci_attach_args *pa)
     sc->sc_nswq = taskq_create("iwxns", 1, IPL_NET, 0);
     if (sc->sc_nswq == NULL)
         goto fail4;
-    
-    /* Clear pending interrupts. */
-    IWX_WRITE(sc, IWX_CSR_INT, 0xffffffff);
     
     ic->ic_phytype = IEEE80211_T_OFDM;    /* not only, but not used */
     ic->ic_opmode = IEEE80211_M_STA;    /* default to BSS mode */

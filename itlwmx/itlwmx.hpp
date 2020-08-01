@@ -168,6 +168,7 @@ public:
     void    iwx_ict_reset(struct iwx_softc *);
     int    iwx_set_hw_ready(struct iwx_softc *);
     int    iwx_prepare_card_hw(struct iwx_softc *);
+    void    iwx_force_power_gating(struct iwx_softc *);
     void    iwx_apm_config(struct iwx_softc *);
     int    iwx_apm_init(struct iwx_softc *);
     void    iwx_apm_stop(struct iwx_softc *);
