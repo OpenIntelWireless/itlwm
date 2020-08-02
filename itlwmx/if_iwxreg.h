@@ -284,6 +284,16 @@ struct iwx_context_info {
  *  1-0:  "Dash" (-) value, as in A-1, etc.
  */
 #define IWX_CSR_HW_REV              (0x028)
+/*
+* RF ID revision info
+* Bit fields:
+* 31:24: Reserved (set to 0x0)
+* 23:12: Type
+* 11:8:  Step (A - 0x0, B - 0x1, etc)
+* 7:4:   Dash
+* 3:0:   Flavor
+*/
+#define IWX_CSR_HW_RF_ID            (0x09c)
 
 #define IWX_CSR_GIO_REG        (0x03C)
 

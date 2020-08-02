@@ -377,6 +377,18 @@ struct iwx_self_init_dram {
 #define DELAY IODelay
 #endif
 
+struct iwl_cfg {
+    const char *fwname;
+    int device_family;
+    uint32_t fwdmasegsz;
+    int integrated;
+    int ltr_delay;
+    int low_latency_xtal;
+    int xtal_latency;
+    int tx_with_siso_diversity;
+    int uhb_supported;
+};
+
 struct iwx_softc {
 	struct device sc_dev;
 	struct ieee80211com sc_ic;
@@ -429,7 +441,9 @@ struct iwx_softc {
 #define IWX_SILICON_B_STEP	1
 #define IWX_SILICON_C_STEP	2
 #define IWX_SILICON_D_STEP	3
+    int sc_hw_rf_id;
 	int sc_hw_id;
+    const struct iwl_cfg *sc_cfg;
 	int sc_device_family;
 #define IWX_DEVICE_FAMILY_22000	1
 #define IWX_DEVICE_FAMILY_22560	2

@@ -3355,7 +3355,7 @@ typedef void *iwm_match_t;
 #define    PCI_PRODUCT_INTEL_WL_9560_1    0x9df0        /* Dual Band Wireless AC 9560 */
 #define    PCI_PRODUCT_INTEL_WL_9560_2    0xa370        /* Dual Band Wireless AC 9560 */
 #define    PCI_PRODUCT_INTEL_WL_9560_3    0x31DC        /* Dual Band Wireless AC 9560 */
-#define    PCI_PRODUCT_INTEL_WL_9560_4    0x30DC        /* Dual Band Wireless AC 9560 */ //maybe is qu device ?
+#define    PCI_PRODUCT_INTEL_WL_9560_4    0x30DC        /* Dual Band Wireless AC 9560 */
 #define    PCI_PRODUCT_INTEL_WL_9560_5    0x271C        /* Dual Band Wireless AC 9560 */
 #define    PCI_PRODUCT_INTEL_WL_9560_6    0x271B        /* Dual Band Wireless AC 9560 */
 #define    PCI_PRODUCT_INTEL_WL_9462_1    0x42a4        /* Dual Band Wireless AC 9462 */

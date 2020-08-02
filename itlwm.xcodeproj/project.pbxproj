@@ -329,6 +329,10 @@
 		024A08D323FCF3E6009FBA6C /* power.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = power.cpp; sourceTree = "<group>"; };
 		024A08D523FCF4D7009FBA6C /* scan.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = scan.cpp; sourceTree = "<group>"; };
 		5076FA7F24CC71E40011B2BB /* FwBinary.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = FwBinary.cpp; sourceTree = "<group>"; };
+		F889443424D670EE001DF7B7 /* iwlwifi-Qu-b0-jf-b0-48.ucode */ = {isa = PBXFileReference; lastKnownFileType = file; path = "iwlwifi-Qu-b0-jf-b0-48.ucode"; sourceTree = "<group>"; };
+		F889443524D670EE001DF7B7 /* iwlwifi-Qu-c0-jf-b0-48.ucode */ = {isa = PBXFileReference; lastKnownFileType = file; path = "iwlwifi-Qu-c0-jf-b0-48.ucode"; sourceTree = "<group>"; };
+		F889443624D670EE001DF7B7 /* iwlwifi-Qu-c0-hr-b0-48.ucode */ = {isa = PBXFileReference; lastKnownFileType = file; path = "iwlwifi-Qu-c0-hr-b0-48.ucode"; sourceTree = "<group>"; };
+		F889443A24D67DDD001DF7B7 /* iwlwifi-QuZ-a0-jf-b0-48.ucode */ = {isa = PBXFileReference; lastKnownFileType = file; path = "iwlwifi-QuZ-a0-jf-b0-48.ucode"; sourceTree = "<group>"; };
 		F88D2B3B2414E64000BBE700 /* sha1-pbkdf2.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "sha1-pbkdf2.c"; sourceTree = "<group>"; };
 		F8A33572244AED060039DA12 /* IOTaskQueue.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = IOTaskQueue.cpp; sourceTree = "<group>"; };
 		F8A33573244AED060039DA12 /* IOTaskQueue.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = IOTaskQueue.hpp; sourceTree = "<group>"; };
@@ -649,6 +653,10 @@
 		F8C7721324433E6500A1B8A0 /* firmware */ = {
 			isa = PBXGroup;
 			children = (
+				F889443A24D67DDD001DF7B7 /* iwlwifi-QuZ-a0-jf-b0-48.ucode */,
+				F889443424D670EE001DF7B7 /* iwlwifi-Qu-b0-jf-b0-48.ucode */,
+				F889443624D670EE001DF7B7 /* iwlwifi-Qu-c0-hr-b0-48.ucode */,
+				F889443524D670EE001DF7B7 /* iwlwifi-Qu-c0-jf-b0-48.ucode */,
 				F8A68DDB2482242E007EB376 /* iwlwifi-cc-a0-48.ucode */,
 				F8A68DD72482224F007EB376 /* iwlwifi-Qu-b0-hr-b0-48.ucode */,
 				F8A68DD92482241E007EB376 /* iwlwifi-QuZ-a0-hr-b0-48.ucode */,
