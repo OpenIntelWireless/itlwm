@@ -15,7 +15,6 @@
 #include "itlwmx.hpp"
 #include "types.h"
 #include "kernel.h"
-#include "FwData.h"
 #include "sha1.h"
 
 #include <IOKit/IOInterruptController.h>
@@ -1412,7 +1411,6 @@ iwx_read_firmware(struct iwx_softc *sc)
     uint8_t *data;
     int err;
     size_t len;
-    OSData *fwData = NULL;
     
     if (fw->fw_status == IWX_FW_STATUS_DONE)
         return 0;
@@ -1424,32 +1422,33 @@ iwx_read_firmware(struct iwx_softc *sc)
     if (fw->fw_rawdata != NULL)
         iwx_fw_info_free(fw);
     
-//    IOLockLock(_fwLoadLock);
-//    ResourceCallbackContext context =
-//    {
-//        .context = this,
-//        .resource = NULL
-//    };
-//
-//    //here leaks
-//    IOReturn ret = OSKextRequestResource(OSKextGetCurrentIdentifier(), sc->sc_fwname, onLoadFW, &context, NULL);
-//    IOLockSleep(_fwLoadLock, this, 0);
-//    IOLockUnlock(_fwLoadLock);
-//    if (context.resource == NULL) {
-//        XYLog("%s resource load fail.\n", sc->sc_fwname);
-//        goto out;
-//    }
-//    fw->fw_rawdata = malloc(context.resource->getLength(), 1, 1);
-//    memcpy(fw->fw_rawdata, context.resource->getBytesNoCopy(), context.resource->getLength());
-//    fw->fw_rawsize = context.resource->getLength();
-    fwData = getFWDescByName(sc->sc_fwname);
-    if (fwData == NULL) {
-        XYLog("%s resource load fail.\n", sc->sc_fwname);
+    IOLockLock(_fwLoadLock);
+    ResourceCallbackContext context =
+    {
+        .context = this,
+        .resource = NULL
+    };
+    
+    // Request FW blob
+    err = OSKextRequestResource(OSKextGetCurrentIdentifier(), sc->sc_fwname, onLoadFW, &context, NULL);
+    if (err != kIOReturnSuccess) {
+        IOLockUnlock(_fwLoadLock);
+        XYLog("%s resource request failed.\n", sc->sc_fwname);
         goto out;
     }
-    fw->fw_rawdata = malloc(fwData->getLength(), 1, 1);
-    memcpy(fw->fw_rawdata, (u_char*)fwData->getBytesNoCopy(), fwData->getLength());
-    fw->fw_rawsize = fwData->getLength();
+    
+    err = IOLockSleep(_fwLoadLock, this, false);
+    IOLockUnlock(_fwLoadLock);
+    if (err != kIOReturnSuccess || context.resource == NULL) {
+        XYLog("%s resource callback fail.\n", sc->sc_fwname);
+        goto out;
+    }
+
+    fw->fw_rawdata = malloc(context.resource->getLength(), 1, 1);
+    memcpy(fw->fw_rawdata, context.resource->getBytesNoCopy(), context.resource->getLength());
+    fw->fw_rawsize = context.resource->getLength();
+    OSSafeReleaseNULL(context.resource);
+    
     XYLog("load firmware %s done\n", sc->sc_fwname);
     
     sc->sc_capaflags = 0;

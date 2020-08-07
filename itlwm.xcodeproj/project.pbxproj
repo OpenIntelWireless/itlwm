@@ -68,8 +68,22 @@
 		024A08D223FCF395009FBA6C /* led.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 024A08D123FCF395009FBA6C /* led.cpp */; };
 		024A08D423FCF3E6009FBA6C /* power.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 024A08D323FCF3E6009FBA6C /* power.cpp */; };
 		024A08D623FCF4D7009FBA6C /* scan.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 024A08D523FCF4D7009FBA6C /* scan.cpp */; };
-		5076FA8024CC71E40011B2BB /* FwBinary.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5076FA7F24CC71E40011B2BB /* FwBinary.cpp */; };
-		5076FA8124CC71E40011B2BB /* FwBinary.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5076FA7F24CC71E40011B2BB /* FwBinary.cpp */; };
+		285E676624DD02C300971720 /* iwlwifi-QuZ-a0-jf-b0-48.ucode in Resources */ = {isa = PBXBuildFile; fileRef = F889443A24D67DDD001DF7B7 /* iwlwifi-QuZ-a0-jf-b0-48.ucode */; };
+		285E676724DD02C300971720 /* iwlwifi-Qu-b0-jf-b0-48.ucode in Resources */ = {isa = PBXBuildFile; fileRef = F889443424D670EE001DF7B7 /* iwlwifi-Qu-b0-jf-b0-48.ucode */; };
+		285E676824DD02C300971720 /* iwlwifi-Qu-c0-hr-b0-48.ucode in Resources */ = {isa = PBXBuildFile; fileRef = F889443624D670EE001DF7B7 /* iwlwifi-Qu-c0-hr-b0-48.ucode */; };
+		285E676924DD02C300971720 /* iwlwifi-Qu-c0-jf-b0-48.ucode in Resources */ = {isa = PBXBuildFile; fileRef = F889443524D670EE001DF7B7 /* iwlwifi-Qu-c0-jf-b0-48.ucode */; };
+		285E676A24DD02C300971720 /* iwlwifi-cc-a0-48.ucode in Resources */ = {isa = PBXBuildFile; fileRef = F8A68DDB2482242E007EB376 /* iwlwifi-cc-a0-48.ucode */; };
+		285E676B24DD02C300971720 /* iwlwifi-Qu-b0-hr-b0-48.ucode in Resources */ = {isa = PBXBuildFile; fileRef = F8A68DD72482224F007EB376 /* iwlwifi-Qu-b0-hr-b0-48.ucode */; };
+		285E676C24DD02C300971720 /* iwlwifi-QuZ-a0-hr-b0-48.ucode in Resources */ = {isa = PBXBuildFile; fileRef = F8A68DD92482241E007EB376 /* iwlwifi-QuZ-a0-hr-b0-48.ucode */; };
+		28CA268224DCFB5400A2AB67 /* iwm-3160-17 in Resources */ = {isa = PBXBuildFile; fileRef = F8C4BF822420FAEB007F410E /* iwm-3160-17 */; };
+		28CA268324DCFB5400A2AB67 /* iwm-3168-29 in Resources */ = {isa = PBXBuildFile; fileRef = F8C4BF8A2420FAEC007F410E /* iwm-3168-29 */; };
+		28CA268424DCFB5400A2AB67 /* iwm-7260-16 in Resources */ = {isa = PBXBuildFile; fileRef = F8C4BF8E2420FAED007F410E /* iwm-7260-16 */; };
+		28CA268524DCFB5400A2AB67 /* iwm-7260-17 in Resources */ = {isa = PBXBuildFile; fileRef = F8C4BF8F2420FAED007F410E /* iwm-7260-17 */; };
+		28CA268624DCFB5400A2AB67 /* iwm-7265-17 in Resources */ = {isa = PBXBuildFile; fileRef = F8C4BF8C2420FAED007F410E /* iwm-7265-17 */; };
+		28CA268724DCFB5400A2AB67 /* iwm-8000C-34 in Resources */ = {isa = PBXBuildFile; fileRef = F8C4BF842420FAEB007F410E /* iwm-8000C-34 */; };
+		28CA268824DCFB5400A2AB67 /* iwm-8265-34 in Resources */ = {isa = PBXBuildFile; fileRef = F8C4BF882420FAEC007F410E /* iwm-8265-34 */; };
+		28CA268924DCFB5400A2AB67 /* iwm-9000-34 in Resources */ = {isa = PBXBuildFile; fileRef = F8C4BF892420FAEC007F410E /* iwm-9000-34 */; };
+		28CA268A24DCFB5400A2AB67 /* iwm-9260-34 in Resources */ = {isa = PBXBuildFile; fileRef = F8C4BF8B2420FAED007F410E /* iwm-9260-34 */; };
 		F88D2B3D2414E64000BBE700 /* sha1-pbkdf2.c in Sources */ = {isa = PBXBuildFile; fileRef = F88D2B3B2414E64000BBE700 /* sha1-pbkdf2.c */; };
 		F8A33574244AED060039DA12 /* IOTaskQueue.cpp in Sources */ = {isa = PBXBuildFile; fileRef = F8A33572244AED060039DA12 /* IOTaskQueue.cpp */; };
 		F8A33576244AED060039DA12 /* IOTaskQueue.cpp in Sources */ = {isa = PBXBuildFile; fileRef = F8A33572244AED060039DA12 /* IOTaskQueue.cpp */; };
@@ -244,23 +258,6 @@
 		F8FC31D0247E797E00FB456B /* itlwm_interface.hpp in Headers */ = {isa = PBXBuildFile; fileRef = F8FC31CE247E797E00FB456B /* itlwm_interface.hpp */; };
 /* End PBXBuildFile section */
 
-/* Begin PBXContainerItemProxy section */
-		F8B8F1632493C54C0059FAA8 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 024A07A323FCBC3C009FBA6C /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = F8B8F15E2493C1E90059FAA8;
-			remoteInfo = fw_genx;
-		};
-		F8CC2BCD245080C3008EA16B /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 024A07A323FCBC3C009FBA6C /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = F8EE4D1B24178BF0002FA666;
-			remoteInfo = fwgen;
-		};
-/* End PBXContainerItemProxy section */
-
 /* Begin PBXFileReference section */
 		024A07AC23FCBC3C009FBA6C /* itlwm.kext */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = itlwm.kext; sourceTree = BUILT_PRODUCTS_DIR; };
 		024A07AF23FCBC3C009FBA6C /* itlwm.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = itlwm.hpp; sourceTree = "<group>"; };
@@ -328,7 +325,6 @@
 		024A08D123FCF395009FBA6C /* led.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = led.cpp; sourceTree = "<group>"; };
 		024A08D323FCF3E6009FBA6C /* power.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = power.cpp; sourceTree = "<group>"; };
 		024A08D523FCF4D7009FBA6C /* scan.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = scan.cpp; sourceTree = "<group>"; };
-		5076FA7F24CC71E40011B2BB /* FwBinary.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = FwBinary.cpp; sourceTree = "<group>"; };
 		F889443424D670EE001DF7B7 /* iwlwifi-Qu-b0-jf-b0-48.ucode */ = {isa = PBXFileReference; lastKnownFileType = file; path = "iwlwifi-Qu-b0-jf-b0-48.ucode"; sourceTree = "<group>"; };
 		F889443524D670EE001DF7B7 /* iwlwifi-Qu-c0-jf-b0-48.ucode */ = {isa = PBXFileReference; lastKnownFileType = file; path = "iwlwifi-Qu-c0-jf-b0-48.ucode"; sourceTree = "<group>"; };
 		F889443624D670EE001DF7B7 /* iwlwifi-Qu-c0-hr-b0-48.ucode */ = {isa = PBXFileReference; lastKnownFileType = file; path = "iwlwifi-Qu-c0-hr-b0-48.ucode"; sourceTree = "<group>"; };
@@ -413,8 +409,6 @@
 		F8E49A0F249B8DE500BE6868 /* itlwmx_interface.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = itlwmx_interface.hpp; sourceTree = "<group>"; };
 		F8E49A12249B923500BE6868 /* ItlNetworkUserClient.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ItlNetworkUserClient.cpp; sourceTree = "<group>"; };
 		F8E49A13249B923500BE6868 /* ItlNetworkUserClient.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = ItlNetworkUserClient.hpp; sourceTree = "<group>"; };
-		F8EE4D1924177FEE002FA666 /* fw_gen.sh */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; path = fw_gen.sh; sourceTree = "<group>"; };
-		F8EE4D1A241786B0002FA666 /* FwData.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = FwData.h; sourceTree = "<group>"; };
 		F8F92572240974ED0088B8D5 /* cfg80211.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = cfg80211.h; sourceTree = "<group>"; };
 		F8F92573240974EE0088B8D5 /* bitfield.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = bitfield.h; sourceTree = "<group>"; };
 		F8F92574240974EE0088B8D5 /* kernel.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = kernel.h; sourceTree = "<group>"; };
@@ -447,7 +441,6 @@
 		024A07A223FCBC3C009FBA6C = {
 			isa = PBXGroup;
 			children = (
-				F8EE4D1924177FEE002FA666 /* fw_gen.sh */,
 				F8B8F1622493C28B0059FAA8 /* include */,
 				024A07AE23FCBC3C009FBA6C /* itlwm */,
 				F8D6CD4F2442E0D100D2A454 /* itl80211 */,
@@ -578,8 +571,6 @@
 		F8B8F1622493C28B0059FAA8 /* include */ = {
 			isa = PBXGroup;
 			children = (
-				5076FA7F24CC71E40011B2BB /* FwBinary.cpp */,
-				F8EE4D1A241786B0002FA666 /* FwData.h */,
 				F8D257762495DEFC00872E4F /* Common.h */,
 				F8D257772495DEFC00872E4F /* IoctlId.h */,
 			);
@@ -850,37 +841,6 @@
 		};
 /* End PBXHeadersBuildPhase section */
 
-/* Begin PBXLegacyTarget section */
-		F8B8F15E2493C1E90059FAA8 /* fw_genx */ = {
-			isa = PBXLegacyTarget;
-			buildArgumentsString = "-P ${PROJECT_DIR}/itlwmx/firmware/*";
-			buildConfigurationList = F8B8F1612493C1E90059FAA8 /* Build configuration list for PBXLegacyTarget "fw_genx" */;
-			buildPhases = (
-			);
-			buildToolPath = "$(PROJECT_DIR)/fw_gen.sh";
-			buildWorkingDirectory = "";
-			dependencies = (
-			);
-			name = fw_genx;
-			passBuildSettingsInEnvironment = 1;
-			productName = fw_genx;
-		};
-		F8EE4D1B24178BF0002FA666 /* fw_gen */ = {
-			isa = PBXLegacyTarget;
-			buildArgumentsString = "-P ${PROJECT_DIR}/itlwm/firmware/*";
-			buildConfigurationList = F8EE4D1C24178BF0002FA666 /* Build configuration list for PBXLegacyTarget "fw_gen" */;
-			buildPhases = (
-			);
-			buildToolPath = "$(PROJECT_DIR)/fw_gen.sh";
-			buildWorkingDirectory = "";
-			dependencies = (
-			);
-			name = fw_gen;
-			passBuildSettingsInEnvironment = 1;
-			productName = fwgen;
-		};
-/* End PBXLegacyTarget section */
-
 /* Begin PBXNativeTarget section */
 		024A07AB23FCBC3C009FBA6C /* itlwm */ = {
 			isa = PBXNativeTarget;
@@ -894,7 +854,6 @@
 			buildRules = (
 			);
 			dependencies = (
-				F8CC2BCE245080C3008EA16B /* PBXTargetDependency */,
 			);
 			name = itlwm;
 			productName = itlwm;
@@ -913,7 +872,6 @@
 			buildRules = (
 			);
 			dependencies = (
-				F8B8F1642493C54C0059FAA8 /* PBXTargetDependency */,
 			);
 			name = itlwmx;
 			productName = itlwmx;
@@ -933,16 +891,8 @@
 						CreatedOnToolsVersion = 11.1;
 						ProvisioningStyle = Automatic;
 					};
-					F8B8F15E2493C1E90059FAA8 = {
-						CreatedOnToolsVersion = 11.1;
-						ProvisioningStyle = Automatic;
-					};
 					F8D6CD5F2442E8F200D2A454 = {
 						CreatedOnToolsVersion = 11.1;
-						ProvisioningStyle = Automatic;
-					};
-					F8EE4D1B24178BF0002FA666 = {
-						CreatedOnToolsVersion = 11.3.1;
 						ProvisioningStyle = Automatic;
 					};
 				};
@@ -960,10 +910,8 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				F8EE4D1B24178BF0002FA666 /* fw_gen */,
 				024A07AB23FCBC3C009FBA6C /* itlwm */,
 				F8D6CD5F2442E8F200D2A454 /* itlwmx */,
-				F8B8F15E2493C1E90059FAA8 /* fw_genx */,
 			);
 		};
 /* End PBXProject section */
@@ -973,6 +921,15 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				28CA268224DCFB5400A2AB67 /* iwm-3160-17 in Resources */,
+				28CA268324DCFB5400A2AB67 /* iwm-3168-29 in Resources */,
+				28CA268424DCFB5400A2AB67 /* iwm-7260-16 in Resources */,
+				28CA268524DCFB5400A2AB67 /* iwm-7260-17 in Resources */,
+				28CA268624DCFB5400A2AB67 /* iwm-7265-17 in Resources */,
+				28CA268724DCFB5400A2AB67 /* iwm-8000C-34 in Resources */,
+				28CA268824DCFB5400A2AB67 /* iwm-8265-34 in Resources */,
+				28CA268924DCFB5400A2AB67 /* iwm-9000-34 in Resources */,
+				28CA268A24DCFB5400A2AB67 /* iwm-9260-34 in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -980,6 +937,13 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				285E676624DD02C300971720 /* iwlwifi-QuZ-a0-jf-b0-48.ucode in Resources */,
+				285E676724DD02C300971720 /* iwlwifi-Qu-b0-jf-b0-48.ucode in Resources */,
+				285E676824DD02C300971720 /* iwlwifi-Qu-c0-hr-b0-48.ucode in Resources */,
+				285E676924DD02C300971720 /* iwlwifi-Qu-c0-jf-b0-48.ucode in Resources */,
+				285E676A24DD02C300971720 /* iwlwifi-cc-a0-48.ucode in Resources */,
+				285E676B24DD02C300971720 /* iwlwifi-Qu-b0-hr-b0-48.ucode in Resources */,
+				285E676C24DD02C300971720 /* iwlwifi-QuZ-a0-hr-b0-48.ucode in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1011,7 +975,6 @@
 				024A08C623FCDC3B009FBA6C /* tx.cpp in Sources */,
 				024A083423FCBC6C009FBA6C /* cast.c in Sources */,
 				024A08CA23FCE537009FBA6C /* phy.cpp in Sources */,
-				5076FA8024CC71E40011B2BB /* FwBinary.cpp in Sources */,
 				F8C2EC502408031A007A9422 /* _string.c in Sources */,
 				024A082E23FCBC6C009FBA6C /* aes.c in Sources */,
 				F8C2EC4F2408031A007A9422 /* ieee80211_proto.c in Sources */,
@@ -1095,7 +1058,6 @@
 				F8C772CF2443444500A1B8A0 /* michael.c in Sources */,
 				F8C772D62443444500A1B8A0 /* sha1.c in Sources */,
 				F8C772DB2443444500A1B8A0 /* cmac.c in Sources */,
-				5076FA8124CC71E40011B2BB /* FwBinary.cpp in Sources */,
 				F8A33576244AED060039DA12 /* IOTaskQueue.cpp in Sources */,
 				F8C772E22443444500A1B8A0 /* ecb_enc.c in Sources */,
 				F8C772E72443444500A1B8A0 /* chachapoly.c in Sources */,
@@ -1113,19 +1075,6 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
-
-/* Begin PBXTargetDependency section */
-		F8B8F1642493C54C0059FAA8 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = F8B8F15E2493C1E90059FAA8 /* fw_genx */;
-			targetProxy = F8B8F1632493C54C0059FAA8 /* PBXContainerItemProxy */;
-		};
-		F8CC2BCE245080C3008EA16B /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = F8EE4D1B24178BF0002FA666 /* fw_gen */;
-			targetProxy = F8CC2BCD245080C3008EA16B /* PBXContainerItemProxy */;
-		};
-/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		024A07B423FCBC3C009FBA6C /* Debug */ = {
@@ -1264,7 +1213,7 @@
 				MODULE_VERSION = "$(MARKETING_VERSION)";
 				PRODUCT_BUNDLE_IDENTIFIER = com.zxystd.itlwm;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = macosx10.12;
+				SDKROOT = macosx;
 				SYSTEM_HEADER_SEARCH_PATHS = "itl80211/openbsd itl80211";
 				WRAPPER_EXTENSION = kext;
 			};
@@ -1295,34 +1244,9 @@
 				MODULE_VERSION = "$(MARKETING_VERSION)";
 				PRODUCT_BUNDLE_IDENTIFIER = com.zxystd.itlwm;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = macosx10.12;
+				SDKROOT = macosx;
 				SYSTEM_HEADER_SEARCH_PATHS = "itl80211/openbsd itl80211";
 				WRAPPER_EXTENSION = kext;
-			};
-			name = Release;
-		};
-		F8B8F15F2493C1E90059FAA8 /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CODE_SIGN_STYLE = Automatic;
-				DEBUGGING_SYMBOLS = YES;
-				DEBUG_INFORMATION_FORMAT = dwarf;
-				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
-				GCC_OPTIMIZATION_LEVEL = 0;
-				OTHER_CFLAGS = "";
-				OTHER_LDFLAGS = "";
-				PRODUCT_NAME = "$(TARGET_NAME)";
-			};
-			name = Debug;
-		};
-		F8B8F1602493C1E90059FAA8 /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CODE_SIGN_STYLE = Automatic;
-				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
-				OTHER_CFLAGS = "";
-				OTHER_LDFLAGS = "";
-				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Release;
 		};
@@ -1347,7 +1271,7 @@
 				MODULE_VERSION = "$(MARKETING_VERSION)";
 				PRODUCT_BUNDLE_IDENTIFIER = com.zxystd.itlwmx;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = macosx10.12;
+				SDKROOT = macosx;
 				SYSTEM_HEADER_SEARCH_PATHS = "itl80211/openbsd itl80211";
 				WRAPPER_EXTENSION = kext;
 			};
@@ -1374,34 +1298,9 @@
 				MODULE_VERSION = "$(MARKETING_VERSION)";
 				PRODUCT_BUNDLE_IDENTIFIER = com.zxystd.itlwmx;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = macosx10.12;
+				SDKROOT = macosx;
 				SYSTEM_HEADER_SEARCH_PATHS = "itl80211/openbsd itl80211";
 				WRAPPER_EXTENSION = kext;
-			};
-			name = Release;
-		};
-		F8EE4D1D24178BF0002FA666 /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CODE_SIGN_STYLE = Automatic;
-				DEBUGGING_SYMBOLS = YES;
-				DEBUG_INFORMATION_FORMAT = dwarf;
-				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
-				GCC_OPTIMIZATION_LEVEL = 0;
-				OTHER_CFLAGS = "";
-				OTHER_LDFLAGS = "";
-				PRODUCT_NAME = "$(TARGET_NAME)";
-			};
-			name = Debug;
-		};
-		F8EE4D1E24178BF0002FA666 /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CODE_SIGN_STYLE = Automatic;
-				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
-				OTHER_CFLAGS = "";
-				OTHER_LDFLAGS = "";
-				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Release;
 		};
@@ -1426,29 +1325,11 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		F8B8F1612493C1E90059FAA8 /* Build configuration list for PBXLegacyTarget "fw_genx" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				F8B8F15F2493C1E90059FAA8 /* Debug */,
-				F8B8F1602493C1E90059FAA8 /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
 		F8D6CD672442E8F200D2A454 /* Build configuration list for PBXNativeTarget "itlwmx" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				F8D6CD682442E8F200D2A454 /* Debug */,
 				F8D6CD692442E8F200D2A454 /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
-		F8EE4D1C24178BF0002FA666 /* Build configuration list for PBXLegacyTarget "fw_gen" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				F8EE4D1D24178BF0002FA666 /* Debug */,
-				F8EE4D1E24178BF0002FA666 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

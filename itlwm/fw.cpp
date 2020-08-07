@@ -120,7 +120,6 @@
  */
 
 #include "itlwm.hpp"
-#include "FwData.h"
 
 int itlwm::
 iwm_is_mimo_ht_plcp(uint8_t ht_plcp)
@@ -222,6 +221,7 @@ void itlwm::
 onLoadFW(OSKextRequestTag requestTag, OSReturn result, const void *resourceData, uint32_t resourceDataLength, void *context)
 {
     XYLog("onLoadFW callback ret=0x%08x length=%d", result, resourceDataLength);
+    
     ResourceCallbackContext *resourceContxt = (ResourceCallbackContext*)context;
     IOLockLock(resourceContxt->context->fwLoadLock);
     if (resourceDataLength > 0) {
@@ -245,7 +245,6 @@ iwm_read_firmware(struct iwm_softc *sc, enum iwm_ucode_type ucode_type)
     uint8_t *data;
     int err = 0;
     size_t len;
-    OSData *fwData = NULL;
     
     if (fw->fw_status == IWM_FW_STATUS_DONE &&
         ucode_type != IWM_UCODE_TYPE_INIT)
@@ -258,36 +257,35 @@ iwm_read_firmware(struct iwm_softc *sc, enum iwm_ucode_type ucode_type)
     if (fw->fw_rawdata != NULL)
         iwm_fw_info_free(fw);
     
-    //TODO
-    //    err = loadfirmware(sc->sc_fwname,
-    //        (u_char **)&fw->fw_rawdata, &fw->fw_rawsize);
-//    IOLockLock(fwLoadLock);
-//    ResourceCallbackContext context =
-//    {
-//        .context = this,
-//        .resource = NULL
-//    };
-//
-//    //here leaks
-//    IOReturn ret = OSKextRequestResource(OSKextGetCurrentIdentifier(), sc->sc_fwname, onLoadFW, &context, NULL);
-//    IOLockSleep(fwLoadLock, this, 0);
-//    IOLockUnlock(fwLoadLock);
-//    if (context.resource == NULL) {
-//        XYLog("%s resource load fail.\n", sc->sc_fwname);
-//        goto out;
-//    }
-//    fw->fw_rawdata = malloc(context.resource->getLength(), 1, 1);
-//    memcpy(fw->fw_rawdata, context.resource->getBytesNoCopy(), context.resource->getLength());
-//    fw->fw_rawsize = context.resource->getLength();
-    fwData = getFWDescByName(sc->sc_fwname);
-    if (fwData == NULL) {
-        XYLog("%s resource load fail.\n", sc->sc_fwname);
+    IOLockLock(fwLoadLock);
+    ResourceCallbackContext context =
+    {
+        .context = this,
+        .resource = NULL
+    };
+    
+    // Request fw blob
+    err = OSKextRequestResource(OSKextGetCurrentIdentifier(), sc->sc_fwname, onLoadFW, &context, NULL);
+    if (err != kIOReturnSuccess) {
+        IOLockUnlock(fwLoadLock);
+        XYLog("%s resource request failed.\n", sc->sc_fwname);
         goto out;
     }
-    fw->fw_rawdata = malloc(fwData->getLength(), 1, 1);
-    memcpy(fw->fw_rawdata, (u_char*)fwData->getBytesNoCopy(), fwData->getLength());
-    fw->fw_rawsize = fwData->getLength();
+    
+    err = IOLockSleep(fwLoadLock, this, false);
+    IOLockUnlock(fwLoadLock);
+    if (err != kIOReturnSuccess || context.resource == NULL) {
+        XYLog("%s resource callback fail.\n", sc->sc_fwname);
+        goto out;
+    }
+    
+    fw->fw_rawdata = malloc(context.resource->getLength(), 1, 1);
+    memcpy(fw->fw_rawdata, context.resource->getBytesNoCopy(), context.resource->getLength());
+    fw->fw_rawsize = context.resource->getLength();
+    OSSafeReleaseNULL(context.resource);
+    
     XYLog("load firmware %s done\n", sc->sc_fwname);
+    
     sc->sc_capaflags = 0;
     sc->sc_capa_n_scan_channels = IWM_DEFAULT_SCAN_CHANNELS;
     memset(sc->sc_enabled_capa, 0, sizeof(sc->sc_enabled_capa));
