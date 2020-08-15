@@ -556,7 +556,7 @@ void ieee80211_node_leave(struct ieee80211com *,
 int ieee80211_match_bss(struct ieee80211com *, struct ieee80211_node *, int);
 struct ieee80211_node *ieee80211_node_choose_bss(struct ieee80211com *, int,
 		struct ieee80211_node **);
-void ieee80211_node_join_bss(struct ieee80211com *, struct ieee80211_node *);
+void ieee80211_node_join_bss(struct ieee80211com *, struct ieee80211_node *, int force_reauth = 0);
 void ieee80211_create_ibss(struct ieee80211com* ,
 		struct ieee80211_channel *);
 void ieee80211_notify_dtim(struct ieee80211com *);

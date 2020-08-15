@@ -211,9 +211,6 @@ struct ieee80211_nwid nwid;
 void itlwm::associateSSID(const char *ssid, const char *pwd)
 {
     struct ieee80211com *ic = &com.sc_ic;
-    if (ic->ic_state != IEEE80211_S_SCAN && ic->ic_state != IEEE80211_S_INIT) {
-        iwm_stop(&ic->ic_ac.ac_if);
-    }
     if (strlen(pwd) == 0) {
         memcpy(nwid.i_nwid, ssid, 32);
         nwid.i_len = strlen((char *)nwid.i_nwid);
@@ -276,13 +273,13 @@ void itlwm::associateSSID(const char *ssid, const char *pwd)
         ieee80211_ioctl_setwpaparms(ic, &wpa);
     }
     ieee80211_del_ess(ic, NULL, 0, 1);
-//    struct ieee80211_node *selbs = ieee80211_node_choose_bss(ic, 0, NULL);
-//    if (selbs == NULL) {
-//        ieee80211_new_state(ic, IEEE80211_S_SCAN, -1);
-//    } else {
-//        ieee80211_node_join_bss(ic, selbs);
-//    }
-    iwm_add_task(&com, systq, &com.init_task);
+    struct ieee80211_node *selbs = ieee80211_node_choose_bss(ic, 0, NULL);
+    if (selbs == NULL) {
+        ieee80211_new_state(ic, IEEE80211_S_SCAN, -1);
+    } else {
+        ieee80211_node_join_bss(ic, selbs, 1);
+        com.sc_flags &= ~(IWM_FLAG_SCANNING | IWM_FLAG_BGSCAN);
+    }
 }
 
 bool itlwm::start(IOService *provider)

@@ -195,10 +195,10 @@ sDISASSOCIATE(OSObject* target, void* data, bool isSet)
     ItlNetworkUserClient *that = OSDynamicCast(ItlNetworkUserClient, target);
     struct ioctl_disassociate *dis = (struct ioctl_disassociate *)data;
     struct ieee80211com *ic = &that->fSoft->sc_ic;
-    that->fDriver->iwm_stop(&ic->ic_ac.ac_if);
     ieee80211_del_ess(ic, (char *)dis->ssid, strlen((char *)dis->ssid), 0);
     ieee80211_deselect_ess(&that->fSoft->sc_ic);
-    that->fDriver->iwm_add_task(that->fSoft, systq, &that->fSoft->init_task);
+    ic->ic_flags &= ~IEEE80211_F_AUTO_JOIN;
+    ieee80211_new_state(ic, IEEE80211_S_SCAN, -1);
     return kIOReturnSuccess;
 }
 

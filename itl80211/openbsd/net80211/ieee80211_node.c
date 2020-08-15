@@ -1216,7 +1216,7 @@ ieee80211_node_switch_bss(struct ieee80211com *ic, struct ieee80211_node *ni)
 }
 
 void
-ieee80211_node_join_bss(struct ieee80211com *ic, struct ieee80211_node *selbs)
+ieee80211_node_join_bss(struct ieee80211com *ic, struct ieee80211_node *selbs, int force_reauth)
 {
     XYLog("%s\n", __FUNCTION__);
     enum ieee80211_phymode mode;
@@ -1271,24 +1271,30 @@ ieee80211_node_join_bss(struct ieee80211com *ic, struct ieee80211_node *selbs)
                          ic->ic_state == IEEE80211_S_AUTH);
         int mgt = -1;
         
+        XYLog("%s ic_state=%d\n", __FUNCTION__, ic->ic_state);
+        
         timeout_del(&ic->ic_bgscan_timeout);
         ic->ic_flags &= ~IEEE80211_F_BGSCAN;
         
-        /*
-         * After a background scan, we have now switched APs.
-         * Pretend we were just de-authed, which makes
-         * ieee80211_new_state() try to re-auth and thus send
-         * an AUTH frame to our newly selected AP.
-         */
-        if (bgscan)
+        if (!force_reauth) {
+            /*
+             * After a background scan, we have now switched APs.
+             * Pretend we were just de-authed, which makes
+             * ieee80211_new_state() try to re-auth and thus send
+             * an AUTH frame to our newly selected AP.
+             */
+            if (bgscan)
+                mgt = IEEE80211_FC0_SUBTYPE_DEAUTH;
+            /*
+             * If we are trying another AP after the previous one
+             * failed (state transition AUTH->AUTH), ensure that
+             * ieee80211_new_state() tries to send another auth frame.
+             */
+            else if (auth_next)
+                mgt = IEEE80211_FC0_SUBTYPE_AUTH;
+        } else {
             mgt = IEEE80211_FC0_SUBTYPE_DEAUTH;
-        /*
-         * If we are trying another AP after the previous one
-         * failed (state transition AUTH->AUTH), ensure that
-         * ieee80211_new_state() tries to send another auth frame.
-         */
-        else if (auth_next)
-            mgt = IEEE80211_FC0_SUBTYPE_AUTH;
+        }
         
         ieee80211_new_state(ic, IEEE80211_S_AUTH, mgt);
     }
@@ -1483,6 +1489,10 @@ ieee80211_end_scan(struct ifnet *ifp)
                      ieee80211_chan2mode(ic, ni->ni_chan));
             return;
         }
+        //zxy disable roam when doing background scanning, because it will cause too much problems.
+#ifndef BGSCAN_ROAM
+        goto notfound;
+#else
         
         arg = (struct ieee80211_node_switch_bss_arg *)_MallocZero(sizeof(*arg));
         if (arg == NULL) {
@@ -1520,6 +1530,7 @@ ieee80211_end_scan(struct ifnet *ifp)
         ic->ic_bss->ni_unref_cb = ieee80211_node_switch_bss;
         /* F_BGSCAN flag gets cleared in ieee80211_node_join_bss(). */
         return;
+#endif //BGSCAN_ROAM
     } else if (selbs == NULL)
         goto notfound;
     
