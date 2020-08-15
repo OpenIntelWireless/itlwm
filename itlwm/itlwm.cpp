@@ -569,10 +569,11 @@ UInt32 itlwm::outputPacket(mbuf_t m, void *param)
         ifp->netStat->outputErrors++;
         return kIOReturnOutputDropped;
     }
-    ifp->if_snd->lockEnqueue(m);
-    (*ifp->if_start)(ifp);
-    
-    return kIOReturnOutputSuccess;
+    if (ifp->if_snd->lockEnqueue(m)) {
+        (*ifp->if_start)(ifp);
+        return kIOReturnOutputSuccess;
+    }
+    return kIOReturnOutputDropped;
 }
 
 //UInt32 itlwm::getFeatures() const

@@ -2165,6 +2165,7 @@ iwm_newstate_task(void *psc)
             break;
             
         case IEEE80211_S_ASSOC:
+            sc->sc_rx_ba_sessions = 0;
             err = that->iwm_assoc(sc);
             break;
             

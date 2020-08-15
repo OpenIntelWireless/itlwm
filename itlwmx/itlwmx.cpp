@@ -572,8 +572,10 @@ UInt32 itlwmx::outputPacket(mbuf_t m, void *param)
         ifp->netStat->outputErrors++;
         return kIOReturnOutputDropped;
     }
-    ifp->if_snd->lockEnqueue(m);
-    (*ifp->if_start)(ifp);
+    if (ifp->if_snd->lockEnqueue(m)) {
+        (*ifp->if_start)(ifp);
+        return kIOReturnOutputSuccess;
+    }
     
     return kIOReturnOutputSuccess;
 }
@@ -6727,6 +6729,7 @@ iwx_newstate_task(void *psc)
             break;
             
         case IEEE80211_S_ASSOC:
+            sc->sc_rx_ba_sessions = 0;
             err = that->iwx_assoc(sc);
             break;
             
@@ -8061,7 +8064,7 @@ iwx_rx_pkt(struct iwx_softc *sc, struct iwx_rx_data *data, struct mbuf_list *ml)
         offset += roundup(len, IWX_FH_RSCSR_FRAME_ALIGN);
     }
     
-    if (m0 && m0 != data->m)
+    if (m0 && m0 != data->m && mbuf_type(m0) != MBUF_TYPE_FREE)
         mbuf_freem(m0);
 }
 

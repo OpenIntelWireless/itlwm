@@ -906,7 +906,7 @@ iwm_rx_pkt(struct iwm_softc *sc, struct iwm_rx_data *data, struct mbuf_list *ml)
         offset += roundup(len, IWM_FH_RSCSR_FRAME_ALIGN);
     }
     
-    if (m0 && m0 != data->m) {
+    if (m0 && m0 != data->m && mbuf_type(m0) != MBUF_TYPE_FREE) {
         mbuf_freem(m0);
     }
 }
