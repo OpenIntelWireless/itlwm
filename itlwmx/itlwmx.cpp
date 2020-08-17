@@ -7336,7 +7336,7 @@ iwx_start(struct ifnet *ifp)
 {
     struct iwx_softc *sc = (struct iwx_softc*)ifp->if_softc;
     itlwmx *that = container_of(sc, itlwmx, com);
-    _fCommandGate->runAction(_iwx_start_task, &that->com.sc_ic.ic_ac.ac_if);
+    _fCommandGate->attemptAction(_iwx_start_task, &that->com.sc_ic.ic_ac.ac_if);
 }
 
 void itlwmx::

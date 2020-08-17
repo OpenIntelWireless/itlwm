@@ -2676,7 +2676,7 @@ iwm_start(struct ifnet *ifp)
 //        if (that->outputThreadSignal) {
 //            semaphore_signal(that->outputThreadSignal);
 //        }
-    _fCommandGate->runAction(_iwm_start_task, &that->com.sc_ic.ic_ac.ac_if);
+    _fCommandGate->attemptAction(_iwm_start_task, &that->com.sc_ic.ic_ac.ac_if);
 //    _iwm_start_task(that, &that->com.sc_ic.ic_ac.ac_if, NULL, NULL, NULL);
 }
 
