@@ -134,13 +134,14 @@ ieee80211_print_essid(const u_int8_t *essid, int len)
 	int i;
 	const u_int8_t *p;
 
-	if (len > IEEE80211_NWID_LEN)
-		len = IEEE80211_NWID_LEN;
-	/* determine printable or not */
-	for (i = 0, p = essid; i < len; i++, p++) {
-		if (*p < ' ' || *p > 0x7e)
-			break;
-	}
+    XYLog("%s\n", essid);
+//	if (len > IEEE80211_NWID_LEN)
+//		len = IEEE80211_NWID_LEN;
+//	/* determine printable or not */
+//	for (i = 0, p = essid; i < len; i++, p++) {
+//		if (*p < ' ' || *p > 0x7e)
+//			break;
+//	}
 //	if (i == len) {
 //		XYLog("\"");
 //		for (i = 0, p = essid; i < len; i++, p++)

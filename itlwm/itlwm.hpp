@@ -92,7 +92,7 @@ public:
     bool createMediumTables(const IONetworkMedium **primary);
     virtual IOReturn getPacketFilters(const OSSymbol *group, UInt32 *filters) const override;
     virtual IOReturn selectMedium(const IONetworkMedium *medium) override;
-//    UInt32 getFeatures() const override;
+    virtual UInt32 getFeatures() const override;
     
     //utils
     int    iwm_send_bt_init_conf(struct iwm_softc *);

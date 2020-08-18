@@ -326,12 +326,11 @@ bool itlwmx::start(IOService *provider)
     }
     _fWorkloop = getWorkLoop();
     _fCommandGate = IOCommandGate::commandGate(this, (IOCommandGate::Action)tsleepHandler);
-    if (_fCommandGate == 0) {
+    if (_fCommandGate == NULL) {
         XYLog("No command gate!!\n");
         releaseAll();
         return false;
     }
-    _fCommandGate->retain();
     _fWorkloop->addEventSource(_fCommandGate);
     const IONetworkMedium *primaryMedium;
     if (!createMediumTables(&primaryMedium) ||
@@ -543,13 +542,20 @@ IOReturn itlwmx::disable(IONetworkInterface *netif)
     return kIOReturnSuccess;
 }
 
-IOReturn itlwmx::getHardwareAddress(IOEthernetAddress *addrP) {
+IOReturn itlwmx::getHardwareAddress(IOEthernetAddress *addrP)
+{
     if (IEEE80211_ADDR_EQ(etheranyaddr, com.sc_ic.ic_myaddr)) {
         return kIOReturnError;
     } else {
         IEEE80211_ADDR_COPY(addrP, com.sc_ic.ic_myaddr);
         return kIOReturnSuccess;
     }
+}
+
+UInt32 itlwmx::getFeatures() const
+{
+    UInt32 features = (kIONetworkFeatureMultiPages);
+    return features;
 }
 
 UInt32 itlwmx::outputPacket(mbuf_t m, void *param)
@@ -6379,10 +6385,23 @@ iwx_disassoc(struct iwx_softc *sc)
     struct ieee80211com *ic = &sc->sc_ic;
     struct iwx_node *in = (struct iwx_node *)ic->ic_bss;
     int err;
+    struct iwx_add_sta_cmd cmd;
+    uint32_t status;
     
     splassert(IPL_NET);
     
     if (sc->sc_flags & IWX_FLAG_STA_ACTIVE) {
+        memset(&cmd, 0, sizeof(cmd));
+        
+        cmd.sta_id = htole32(IWX_STATION_ID);
+        cmd.mac_id_n_color
+        = htole32(IWX_FW_CMD_ID_AND_COLOR(in->in_id, in->in_color));
+        cmd.add_modify = IWX_STA_MODE_MODIFY;
+        cmd.station_flags = htole32(IWX_STA_FLG_DRAIN_FLOW);
+        cmd.station_flags_msk = htole32(IWX_STA_FLG_DRAIN_FLOW);
+        err = iwx_send_cmd_pdu_status(sc, IWX_ADD_STA, sizeof(cmd), &cmd,
+                                      &status);
+        err = iwx_flush_tx_path(sc);
         err = iwx_rm_sta_cmd(sc, in);
         if (err) {
             XYLog("%s: could not remove STA (error %d)\n",

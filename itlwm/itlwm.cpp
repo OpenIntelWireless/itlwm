@@ -573,13 +573,11 @@ UInt32 itlwm::outputPacket(mbuf_t m, void *param)
     return kIOReturnOutputDropped;
 }
 
-//UInt32 itlwm::getFeatures() const
-//{
-//    UInt32 features = (kIONetworkFeatureMultiPages | kIONetworkFeatureHardwareVlan);
-//    features |= kIONetworkFeatureTSOIPv4;
-//    features |= kIONetworkFeatureTSOIPv6;
-//    return features;
-//}
+UInt32 itlwm::getFeatures() const
+{
+    UInt32 features = (kIONetworkFeatureMultiPages);
+    return features;
+}
 
 IOReturn itlwm::setPromiscuousMode(IOEnetPromiscuousMode mode) {
     return kIOReturnSuccess;

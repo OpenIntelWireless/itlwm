@@ -73,6 +73,7 @@ public:
     virtual const OSString * newModelString() const override;
     virtual IOReturn getMaxPacketSize(UInt32* maxSize) const override;
     virtual IONetworkInterface * createInterface() override;
+    virtual UInt32 getFeatures() const override;
     
     bool configureInterface(IONetworkInterface *netif) override;
     static IOReturn tsleepHandler(OSObject* owner, void* arg0 = 0, void* arg1 = 0, void* arg2 = 0, void* arg3 = 0);
