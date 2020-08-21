@@ -370,6 +370,9 @@ bool itlwm::start(IOService *provider)
         }
         iterator->release();
     }
+    if (TAILQ_EMPTY(&com.sc_ic.ic_ess)) {
+        com.sc_ic.ic_flags |= IEEE80211_F_AUTO_JOIN;
+    }
     registerService();
     fNetIf->registerService();
     return true;

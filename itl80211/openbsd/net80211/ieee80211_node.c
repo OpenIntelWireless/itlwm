@@ -1127,7 +1127,7 @@ ieee80211_match_bss(struct ieee80211com *ic, struct ieee80211_node *ni,
             fail |= IEEE80211_NODE_ASSOCFAIL_WPA_PROTO;
     }
     
-    if (ic->ic_if.if_flags & IFF_DEBUG) {
+    if (ic->ic_if.if_flags & IFF_DEBUG && ieee80211_debug) {
         DPRINTF(("%s: %c %s%c", ic->ic_if.if_xname, fail ? '-' : '+',
               ether_sprintf(ni->ni_bssid),
               fail & IEEE80211_NODE_ASSOCFAIL_BSSID ? '!' : ' '));
