@@ -197,7 +197,9 @@ sDISASSOCIATE(OSObject* target, void* data, bool isSet)
     struct ieee80211com *ic = &that->fSoft->sc_ic;
     ieee80211_del_ess(ic, (char *)dis->ssid, strlen((char *)dis->ssid), 0);
     ieee80211_deselect_ess(&that->fSoft->sc_ic);
-    ic->ic_flags &= ~IEEE80211_F_AUTO_JOIN;
+    if (TAILQ_EMPTY(&ic->ic_ess)) {
+        ic->ic_flags |= IEEE80211_F_AUTO_JOIN;
+    }
     ieee80211_new_state(ic, IEEE80211_S_SCAN, -1);
     return kIOReturnSuccess;
 }
