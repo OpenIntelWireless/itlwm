@@ -11,7 +11,7 @@
 * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 * GNU General Public License for more details.
 */
-/*    $OpenBSD: if_iwxvar.h,v 1.6 2020/05/26 12:05:51 stsp Exp $    */
+/*    $OpenBSD: if_iwxvar.h,v 1.11 2020/08/01 16:14:05 stsp Exp $    */
 
 /*
  * Copyright (c) 2014 genua mbh <info@genua.de>

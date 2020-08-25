@@ -11,8 +11,7 @@
 * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 * GNU General Public License for more details.
 */
-
-/*    $OpenBSD: if_iwxreg.h,v 1.6 2020/05/26 11:59:48 stsp Exp $    */
+/*    $OpenBSD: if_iwxreg.h,v 1.17 2020/08/01 16:14:05 stsp Exp $    */
 
 /*-
  * Based on BSD-licensed source modules in the Linux iwlwifi driver,
@@ -71,7 +70,6 @@
  *
  *****************************************************************************
  */
-
 
 /* maximmum number of DRAM map entries supported by FW */
 #define IWX_MAX_DRAM_ENTRY    64

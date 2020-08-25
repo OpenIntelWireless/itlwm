@@ -11,7 +11,7 @@
 * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 * GNU General Public License for more details.
 */
-/*    $OpenBSD: if_iwmreg.h,v 1.46 2020/03/05 14:56:50 stsp Exp $    */
+/*    $OpenBSD: if_iwmreg.h,v 1.48 2020/05/18 17:56:41 stsp Exp $    */
 
 /******************************************************************************
  *
