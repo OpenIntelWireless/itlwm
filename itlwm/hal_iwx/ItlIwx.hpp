@@ -138,68 +138,29 @@
 #include <libkern/c++/OSMetaClass.h>
 #include <IOKit/IOFilterInterruptEventSource.h>
 
-enum
-{
-    kPowerStateOff = 0,
-    kPowerStateOn,
-    kPowerStateCount
-};
+#include "ItlHalService.hpp"
 
-class itlwmx : public IOEthernetController {
-    OSDeclareDefaultStructors(itlwmx)
+class ItlIwx : public ItlHalService {
+    OSDeclareDefaultStructors(ItlIwx)
     
 public:
     
     //kext
-    bool init(OSDictionary *properties) override;
     void free() override;
-    IOService* probe(IOService* provider, SInt32* score) override;
-    bool start(IOService *provider) override;
-    void stop(IOService *provider) override;
-    IOReturn getHardwareAddress(IOEthernetAddress* addrP) override;
+    IOService* probe(IOService* provider, SInt32* score);
+    virtual bool attach(IOPCIDevice *device) override;
+    virtual void detach(IOPCIDevice *device) override;
     IOReturn enable(IONetworkInterface *netif) override;
     IOReturn disable(IONetworkInterface *netif) override;
-    UInt32 outputPacket(mbuf_t, void * param) override;
-    IOReturn setPromiscuousMode(IOEnetPromiscuousMode mode) override;
-    IOReturn setMulticastMode(IOEnetMulticastMode mode) override;
-    IOReturn setMulticastList(IOEthernetAddress* addr, UInt32 len) override;
-    virtual const OSString * newVendorString() const override;
-    virtual const OSString * newModelString() const override;
-    virtual IOReturn getMaxPacketSize(UInt32* maxSize) const override;
-    virtual IONetworkInterface * createInterface() override;
-    virtual UInt32 getFeatures() const override;
+    virtual struct ieee80211com *get80211Controller() override;
     
-    bool configureInterface(IONetworkInterface *netif) override;
-    static IOReturn tsleepHandler(OSObject* owner, void* arg0 = 0, void* arg1 = 0, void* arg2 = 0, void* arg3 = 0);
-    int tsleep_nsec(void *ident, int priority, const char *wmesg, int timo);
-    void wakeupOn(void* ident);
     static bool intrFilter(OSObject *object, IOFilterInterruptEventSource *src);
-    static IOReturn _iwm_start_task(OSObject *target, void *arg0, void *arg1, void *arg2, void *arg3);
-    virtual bool createWorkLoop() override;
-    virtual IOWorkLoop* getWorkLoop() const override;
-    void watchdogAction(IOTimerEventSource *timer);
+    void watchdogAction(IOTimerEventSource *timer) override;
     static IOReturn _iwx_start_task(OSObject *target, void *arg0, void *arg1, void *arg2, void *arg3);
-    
-    virtual IOReturn getPacketFilters(const OSSymbol *group, UInt32 *filters) const override;
-    bool createMediumTables(const IONetworkMedium **primary);
-    virtual IOReturn selectMedium(const IONetworkMedium *medium) override;
-    
-    bool initPCIPowerManagment(IOPCIDevice *provider);
     
     struct ifnet *getIfp();
     struct iwx_softc *getSoft();
     IOEthernetInterface *getNetworkInterface();
-    
-    //-----------------------------------------------------------------------
-    // Power management support.
-    //-----------------------------------------------------------------------
-    virtual IOReturn registerWithPolicyMaker( IOService * policyMaker ) override;
-    virtual IOReturn setPowerState( unsigned long powerStateOrdinal,
-                                    IOService *   policyMaker) override;
-    virtual IOReturn setWakeOnMagicPacket( bool active ) override;
-    void setPowerStateOff(void);
-    void setPowerStateOn(void);
-    void unregistPM();
     
     void releaseAll();
     void joinSSID(const char *ssid, const char *pwd);
@@ -208,7 +169,7 @@ public:
     //utils
     static void *mallocarray(size_t, size_t, int, int);
     
-    static void onLoadFW(OSKextRequestTag requestTag, OSReturn result, const void *resourceData, uint32_t resourceDataLength, void *context);
+//    static void onLoadFW(OSKextRequestTag requestTag, OSReturn result, const void *resourceData, uint32_t resourceDataLength, void *context);
     
     uint8_t    iwx_lookup_cmd_ver(struct iwx_softc *, uint8_t, uint8_t);
     int    iwx_is_mimo_ht_plcp(uint8_t);
@@ -442,30 +403,8 @@ public:
     
 public:
     IOInterruptEventSource* fInterrupt;
-    IOTimerEventSource *watchdogTimer;
     struct pci_attach_args pci;
     struct iwx_softc com;
-    itlwmx_interface *fNetIf;
-    IONetworkStats *fpNetStats;
-    IOWorkLoop *fWatchdogWorkLoop;
-    
-    IOLock *_fwLoadLock;
-    void *lastSleepChan;
-    
-    //pm
-    thread_call_t powerOnThreadCall;
-    thread_call_t powerOffThreadCall;
-    UInt32 pmPowerState;
-    IOService *pmPolicyMaker;
-    UInt8 pmPCICapPtr;
-    bool magicPacketEnabled;
-    bool magicPacketSupported;
-};
-
-struct ResourceCallbackContext
-{
-    itlwmx* context;
-    OSData* resource;
 };
 
 #endif

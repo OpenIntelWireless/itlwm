@@ -119,13 +119,13 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include "itlwm.hpp"
+#include "ItlIwm.hpp"
 #include <net/ethernet.h>
 #include <IOKit/IOCommandGate.h>
 
 extern IOCommandGate *_fCommandGate;;
 
-int itlwm::
+int ItlIwm::
 iwm_is_valid_channel(uint16_t ch_id)
 {
     if (ch_id <= 14 ||
@@ -136,7 +136,7 @@ iwm_is_valid_channel(uint16_t ch_id)
     return 0;
 }
 
-uint8_t itlwm::
+uint8_t ItlIwm::
 iwm_ch_id_to_ch_index(uint16_t ch_id)
 {
     if (!iwm_is_valid_channel(ch_id))
@@ -152,7 +152,7 @@ iwm_ch_id_to_ch_index(uint16_t ch_id)
 }
 
 
-uint16_t itlwm::
+uint16_t ItlIwm::
 iwm_channel_id_to_papd(uint16_t ch_id)
 {
     if (!iwm_is_valid_channel(ch_id))
@@ -167,7 +167,7 @@ iwm_channel_id_to_papd(uint16_t ch_id)
     return 3;
 }
 
-uint16_t itlwm::
+uint16_t ItlIwm::
 iwm_channel_id_to_txp(struct iwm_softc *sc, uint16_t ch_id)
 {
     struct iwm_phy_db *phy_db = &sc->sc_phy_db;
@@ -192,7 +192,7 @@ iwm_channel_id_to_txp(struct iwm_softc *sc, uint16_t ch_id)
     return 0xff;
 }
 
-int itlwm::
+int ItlIwm::
 iwm_mimo_enabled(struct iwm_softc *sc)
 {
    struct ieee80211com *ic = &sc->sc_ic;
@@ -201,7 +201,7 @@ iwm_mimo_enabled(struct iwm_softc *sc)
        (ic->ic_userflags & IEEE80211_F_NOMIMO) == 0;
 }
 
-void itlwm::
+void ItlIwm::
 iwm_init_channel_map(struct iwm_softc *sc, const uint16_t * const nvm_ch_flags,
                      const uint8_t *nvm_channels, size_t nchan)
 {
@@ -249,7 +249,7 @@ iwm_init_channel_map(struct iwm_softc *sc, const uint16_t * const nvm_ch_flags,
     }
 }
 
-void itlwm::
+void ItlIwm::
 iwm_setup_ht_rates(struct iwm_softc *sc)
 {
     struct ieee80211com *ic = &sc->sc_ic;
@@ -272,7 +272,7 @@ iwm_setup_ht_rates(struct iwm_softc *sc)
 
 #define IWM_MAX_RX_BA_SESSIONS 16
 
-void itlwm::
+void ItlIwm::
 iwm_sta_rx_agg(struct iwm_softc *sc, struct ieee80211_node *ni, uint8_t tid,
                uint16_t ssn, uint16_t winsize, int start)
 {
@@ -326,7 +326,7 @@ iwm_sta_rx_agg(struct iwm_softc *sc, struct ieee80211_node *ni, uint8_t tid,
     splx(s);
 }
 
-void itlwm::
+void ItlIwm::
 iwm_set_hw_address_8000(struct iwm_softc *sc, struct iwm_nvm_data *data,
                         const uint16_t *mac_override, const uint16_t *nvm_hw)
 {
@@ -387,7 +387,7 @@ out:
 }
 
 #define IWM_RSSI_OFFSET 50
-int itlwm::
+int ItlIwm::
 iwm_calc_rssi(struct iwm_softc *sc, struct iwm_rx_phy_info *phy_info)
 {
     int rssi_a, rssi_b, rssi_a_dbm, rssi_b_dbm, max_rssi_dbm;
@@ -418,7 +418,7 @@ iwm_calc_rssi(struct iwm_softc *sc, struct iwm_rx_phy_info *phy_info)
  * to obtain their dBM.  Account for missing antennas by replacing 0
  * values by -256dBm: practically 0 power and a non-feasible 8 bit value.
  */
-int itlwm::
+int ItlIwm::
 iwm_get_signal_strength(struct iwm_softc *sc, struct iwm_rx_phy_info *phy_info)
 {
     int energy_a, energy_b, energy_c, max_energy;
@@ -440,7 +440,7 @@ iwm_get_signal_strength(struct iwm_softc *sc, struct iwm_rx_phy_info *phy_info)
     return max_energy;
 }
 
-int itlwm::
+int ItlIwm::
 iwm_rxmq_get_signal_strength(struct iwm_softc *sc,
                              struct iwm_rx_mpdu_desc *desc)
 {
@@ -456,7 +456,7 @@ iwm_rxmq_get_signal_strength(struct iwm_softc *sc,
 /*
  * Retrieve the average noise (in dBm) among receivers.
  */
-int itlwm::
+int ItlIwm::
 iwm_get_noise(const struct iwm_statistics_rx_non_phy *stats)
 {
     int i, total, nbant, noise;
@@ -474,7 +474,7 @@ iwm_get_noise(const struct iwm_statistics_rx_non_phy *stats)
     return (nbant == 0) ? -127 : (total / nbant) - 107;
 }
 
-int itlwm::
+int ItlIwm::
 iwm_ccmp_decap(struct iwm_softc *sc, mbuf_t m, struct ieee80211_node *ni)
 {
    struct ieee80211com *ic = &sc->sc_ic;
@@ -521,7 +521,7 @@ iwm_ccmp_decap(struct iwm_softc *sc, mbuf_t m, struct ieee80211_node *ni)
    return 0;
 }
 
-void itlwm::
+void ItlIwm::
 iwm_rx_frame(struct iwm_softc *sc, mbuf_t m, int chanidx,
              uint32_t rx_pkt_status, int is_shortpre, int rate_n_flags,
              uint32_t device_timestamp, struct ieee80211_rxinfo *rxi,
@@ -640,7 +640,7 @@ iwm_rx_frame(struct iwm_softc *sc, mbuf_t m, int chanidx,
     ieee80211_release_node(ic, ni);
 }
 
-void itlwm::
+void ItlIwm::
 iwm_rx_tx_cmd_single(struct iwm_softc *sc, struct iwm_rx_packet *pkt,
                      struct iwm_node *in, int txmcs, int txrate)
 {
@@ -705,7 +705,7 @@ iwm_rx_tx_cmd_single(struct iwm_softc *sc, struct iwm_rx_packet *pkt,
     }
 }
 
-void itlwm::
+void ItlIwm::
 iwm_txd_done(struct iwm_softc *sc, struct iwm_tx_data *txd)
 {
     struct ieee80211com *ic = &sc->sc_ic;
@@ -723,7 +723,7 @@ iwm_txd_done(struct iwm_softc *sc, struct iwm_tx_data *txd)
     txd->in = NULL;
 }
 
-void itlwm::
+void ItlIwm::
 iwm_rx_tx_cmd(struct iwm_softc *sc, struct iwm_rx_packet *pkt,
               struct iwm_rx_data *data)
 {
@@ -780,7 +780,7 @@ iwm_rx_tx_cmd(struct iwm_softc *sc, struct iwm_rx_packet *pkt,
     }
 }
 
-void itlwm::
+void ItlIwm::
 iwm_rx_bmiss(struct iwm_softc *sc, struct iwm_rx_packet *pkt,
              struct iwm_rx_data *data)
 {
@@ -818,7 +818,7 @@ iwm_rx_bmiss(struct iwm_softc *sc, struct iwm_rx_packet *pkt,
  * unfilled for data frames (firmware takes care of that).
  * Return the selected TX rate.
  */
-const struct iwm_rate * itlwm::
+const struct iwm_rate * ItlIwm::
 iwm_tx_fill_cmd(struct iwm_softc *sc, struct iwm_node *in,
                 struct ieee80211_frame *wh, struct iwm_tx_cmd *tx)
 {
@@ -886,7 +886,7 @@ iwm_tx_fill_cmd(struct iwm_softc *sc, struct iwm_node *in,
 }
 
 #define TB0_SIZE 16
-int itlwm::
+int ItlIwm::
 iwm_tx(struct iwm_softc *sc, mbuf_t m, struct ieee80211_node *ni, int ac)
 {
     struct ieee80211com *ic = &sc->sc_ic;
@@ -1137,7 +1137,7 @@ iwm_tx(struct iwm_softc *sc, mbuf_t m, struct ieee80211_node *ni, int ac)
     return 0;
 }
 
-int itlwm::
+int ItlIwm::
 iwm_flush_tx_path(struct iwm_softc *sc, int tfd_queue_msk)
 {
     struct iwm_tx_path_flush_cmd flush_cmd = {
@@ -1153,7 +1153,7 @@ iwm_flush_tx_path(struct iwm_softc *sc, int tfd_queue_msk)
     return err;
 }
 
-void itlwm::
+void ItlIwm::
 iwm_mac_ctxt_cmd_common(struct iwm_softc *sc, struct iwm_node *in,
                         struct iwm_mac_ctx_cmd *cmd, uint32_t action)
 {
@@ -1244,7 +1244,7 @@ iwm_mac_ctxt_cmd_common(struct iwm_softc *sc, struct iwm_node *in,
 #undef IWM_EXP2
 }
 
-void itlwm::
+void ItlIwm::
 iwm_mac_ctxt_cmd_fill_sta(struct iwm_softc *sc, struct iwm_node *in,
                           struct iwm_mac_data_sta *sta, int assoc)
 {
@@ -1268,7 +1268,7 @@ iwm_mac_ctxt_cmd_fill_sta(struct iwm_softc *sc, struct iwm_node *in,
     sta->assoc_beacon_arrive_time = htole32(ni->ni_rstamp);
 }
 
-int itlwm::
+int ItlIwm::
 iwm_mac_ctxt_cmd(struct iwm_softc *sc, struct iwm_node *in, uint32_t action,
                  int assoc)
 {
@@ -1305,7 +1305,7 @@ iwm_mac_ctxt_cmd(struct iwm_softc *sc, struct iwm_node *in, uint32_t action,
     return iwm_send_cmd_pdu(sc, IWM_MAC_CONTEXT_CMD, 0, sizeof(cmd), &cmd);
 }
 
-int itlwm::
+int ItlIwm::
 iwm_update_quotas(struct iwm_softc *sc, struct iwm_node *in, int running)
 {
     struct iwm_time_quota_cmd cmd;
@@ -1367,7 +1367,7 @@ iwm_update_quotas(struct iwm_softc *sc, struct iwm_node *in, int running)
                             sizeof(cmd), &cmd);
 }
 
-int itlwm::
+int ItlIwm::
 iwm_auth(struct iwm_softc *sc)
 {
     XYLog("%s\n", __FUNCTION__);
@@ -1443,7 +1443,7 @@ rm_mac_ctxt:
     return err;
 }
 
-int itlwm::
+int ItlIwm::
 iwm_deauth(struct iwm_softc *sc)
 {
     XYLog("%s\n", __FUNCTION__);
@@ -1503,7 +1503,7 @@ iwm_deauth(struct iwm_softc *sc)
     return 0;
 }
 
-int itlwm::
+int ItlIwm::
 iwm_assoc(struct iwm_softc *sc)
 {
     XYLog("%s\n", __FUNCTION__);
@@ -1524,7 +1524,7 @@ iwm_assoc(struct iwm_softc *sc)
     return 0;
 }
 
-int itlwm::
+int ItlIwm::
 iwm_disassoc(struct iwm_softc *sc)
 {
     XYLog("%s\n", __FUNCTION__);
@@ -1547,7 +1547,7 @@ iwm_disassoc(struct iwm_softc *sc)
     return 0;
 }
 
-int itlwm::
+int ItlIwm::
 iwm_run(struct iwm_softc *sc)
 {
     XYLog("%s\n", __FUNCTION__);
@@ -1660,7 +1660,7 @@ iwm_run(struct iwm_softc *sc)
     return 0;
 }
 
-int itlwm::
+int ItlIwm::
 iwm_run_stop(struct iwm_softc *sc)
 {
     struct ieee80211com *ic = &sc->sc_ic;
@@ -1705,13 +1705,13 @@ iwm_run_stop(struct iwm_softc *sc)
     return 0;
 }
 
-struct ieee80211_node *itlwm::
+struct ieee80211_node *ItlIwm::
 iwm_node_alloc(struct ieee80211com *ic)
 {
     return (struct ieee80211_node *)malloc(sizeof (struct iwm_node), M_DEVBUF, M_NOWAIT | M_ZERO);
 }
 
-int itlwm::
+int ItlIwm::
 iwm_set_key_v1(struct ieee80211com *ic, struct ieee80211_node *ni,
     struct ieee80211_key *k)
 {
@@ -1735,13 +1735,13 @@ iwm_set_key_v1(struct ieee80211com *ic, struct ieee80211_node *ni,
        sizeof(cmd), &cmd);
 }
 
-int itlwm::
+int ItlIwm::
 iwm_set_key(struct ieee80211com *ic, struct ieee80211_node *ni,
     struct ieee80211_key *k)
 {
     struct iwm_softc *sc = (struct iwm_softc *)ic->ic_softc;
     struct iwm_add_sta_key_cmd cmd;
-    itlwm *that = container_of(sc, itlwm, com);
+    ItlIwm *that = container_of(sc, ItlIwm, com);
     
     if ((k->k_flags & IEEE80211_KEY_GROUP) ||
         k->k_cipher != IEEE80211_CIPHER_CCMP)  {
@@ -1771,7 +1771,7 @@ iwm_set_key(struct ieee80211com *ic, struct ieee80211_node *ni,
                                   sizeof(cmd), &cmd);
 }
 
-void itlwm::
+void ItlIwm::
 iwm_delete_key_v1(struct ieee80211com *ic, struct ieee80211_node *ni,
     struct ieee80211_key *k)
 {
@@ -1791,13 +1791,13 @@ iwm_delete_key_v1(struct ieee80211com *ic, struct ieee80211_node *ni,
    iwm_send_cmd_pdu(sc, IWM_ADD_STA_KEY, IWM_CMD_ASYNC, sizeof(cmd), &cmd);
 }
 
-void itlwm::
+void ItlIwm::
 iwm_delete_key(struct ieee80211com *ic, struct ieee80211_node *ni,
     struct ieee80211_key *k)
 {
    struct iwm_softc *sc = (struct iwm_softc *)ic->ic_softc;
    struct iwm_add_sta_key_cmd cmd;
-    itlwm *that = container_of(sc, itlwm, com);
+    ItlIwm *that = container_of(sc, ItlIwm, com);
 
    if ((k->k_flags & IEEE80211_KEY_GROUP) ||
        (k->k_cipher != IEEE80211_CIPHER_CCMP)) {
@@ -1822,11 +1822,11 @@ iwm_delete_key(struct ieee80211com *ic, struct ieee80211_node *ni,
    that->iwm_send_cmd_pdu(sc, IWM_ADD_STA_KEY, IWM_CMD_ASYNC, sizeof(cmd), &cmd);
 }
 
-void itlwm::
+void ItlIwm::
 iwm_calib_timeout(void *arg)
 {
     struct iwm_softc *sc = (struct iwm_softc *)arg;
-    itlwm *that = container_of(sc, itlwm, com);
+    ItlIwm *that = container_of(sc, ItlIwm, com);
     struct ieee80211com *ic = &sc->sc_ic;
     struct iwm_node *in = (struct iwm_node *)ic->ic_bss;
     struct ieee80211_node *ni = &in->in_ni;
@@ -1855,7 +1855,7 @@ iwm_calib_timeout(void *arg)
     timeout_add_msec(&sc->sc_calib_to, 500);
 }
 
-void itlwm::
+void ItlIwm::
 iwm_setrates(struct iwm_node *in, int async)
 {
     struct ieee80211_node *ni = &in->in_ni;
@@ -1971,7 +1971,7 @@ iwm_setrates(struct iwm_node *in, int async)
 }
 
 /* Allow multicast from our BSSID. */
-int itlwm::
+int ItlIwm::
 iwm_allow_mcast(struct iwm_softc *sc)
 {
     struct ieee80211com *ic = &sc->sc_ic;
@@ -2000,13 +2000,13 @@ iwm_allow_mcast(struct iwm_softc *sc)
  * This function is called by upper layer when an ADDBA request is received
  * from another STA and before the ADDBA response is sent.
  */
-int itlwm::
+int ItlIwm::
 iwm_ampdu_rx_start(struct ieee80211com *ic, struct ieee80211_node *ni,
                    uint8_t tid)
 {
     struct ieee80211_rx_ba *ba = &ni->ni_rx_ba[tid];
     struct iwm_softc *sc = (struct iwm_softc *)IC2IFP(ic)->if_softc;
-    itlwm *that = container_of(sc, itlwm, com);
+    ItlIwm *that = container_of(sc, ItlIwm, com);
     
     if (sc->sc_rx_ba_sessions >= IWM_MAX_RX_BA_SESSIONS)
         return ENOSPC;
@@ -2024,12 +2024,12 @@ iwm_ampdu_rx_start(struct ieee80211com *ic, struct ieee80211_node *ni,
  * This function is called by upper layer on teardown of an HT-immediate
  * Block Ack agreement (eg. upon receipt of a DELBA frame).
  */
-void itlwm::
+void ItlIwm::
 iwm_ampdu_rx_stop(struct ieee80211com *ic, struct ieee80211_node *ni,
                   uint8_t tid)
 {
     struct iwm_softc *sc = (struct iwm_softc *)IC2IFP(ic)->if_softc;
-    itlwm *that = container_of(sc, itlwm, com);
+    ItlIwm *that = container_of(sc, ItlIwm, com);
     
     sc->ba_start = 0;
     sc->ba_tid = tid;
@@ -2040,17 +2040,17 @@ iwm_ampdu_rx_stop(struct ieee80211com *ic, struct ieee80211_node *ni,
  * This function is called by upper layer when HT protection settings in
  * beacons have changed.
  */
-void itlwm::
+void ItlIwm::
 iwm_update_htprot(struct ieee80211com *ic, struct ieee80211_node *ni)
 {
     struct iwm_softc *sc = (struct iwm_softc *)ic->ic_softc;
-    itlwm *that = container_of(sc, itlwm, com);
+    ItlIwm *that = container_of(sc, ItlIwm, com);
     
     /* assumes that ni == ic->ic_bss */
     that->iwm_add_task(sc, systq, &sc->htprot_task);
 }
 
-int itlwm::iwm_media_change(struct ifnet *ifp)
+int ItlIwm::iwm_media_change(struct ifnet *ifp)
 {
     XYLog("%s\n", __FUNCTION__);
     struct iwm_softc *sc = (struct iwm_softc*)ifp->if_softc;
@@ -2082,11 +2082,11 @@ int itlwm::iwm_media_change(struct ifnet *ifp)
     return err;
 }
 
-void itlwm::
+void ItlIwm::
 iwm_newstate_task(void *psc)
 {
     struct iwm_softc *sc = (struct iwm_softc *)psc;
-    itlwm *that = container_of(sc, itlwm, com);
+    ItlIwm *that = container_of(sc, ItlIwm, com);
     struct ieee80211com *ic = &sc->sc_ic;
     enum ieee80211_state nstate = sc->ns_nstate;
     enum ieee80211_state ostate = ic->ic_state;
@@ -2185,13 +2185,13 @@ out:
     splx(s);
 }
 
-int itlwm::
+int ItlIwm::
 iwm_newstate(struct ieee80211com *ic, enum ieee80211_state nstate, int arg)
 {
     XYLog("%s\n", __FUNCTION__);
     struct ifnet *ifp = IC2IFP(ic);
     struct iwm_softc *sc = (struct iwm_softc*)ifp->if_softc;
-    itlwm *that = container_of(sc, itlwm, com);
+    ItlIwm *that = container_of(sc, ItlIwm, com);
     struct iwm_node *in = (struct iwm_node *)ic->ic_bss;
     
     if (ic->ic_state == IEEE80211_S_RUN) {
@@ -2209,7 +2209,7 @@ iwm_newstate(struct ieee80211com *ic, enum ieee80211_state nstate, int arg)
     return 0;
 }
 
-void itlwm::
+void ItlIwm::
 iwm_endscan(struct iwm_softc *sc)
 {
     struct ieee80211_node *ni, *nextbs;
@@ -2284,7 +2284,7 @@ iwm_sf_full_timeout[IWM_SF_NUM_SCENARIO][IWM_SF_NUM_TIMEOUT_TYPES] = {
     },
 };
 
-void itlwm::
+void ItlIwm::
 iwm_fill_sf_command(struct iwm_softc *sc, struct iwm_sf_cfg_cmd *sf_cmd,
                     struct ieee80211_node *ni)
 {
@@ -2328,7 +2328,7 @@ iwm_fill_sf_command(struct iwm_softc *sc, struct iwm_sf_cfg_cmd *sf_cmd,
     
 }
 
-int itlwm::
+int ItlIwm::
 iwm_sf_config(struct iwm_softc *sc, int new_state)
 {
     XYLog("%s\n", __FUNCTION__);
@@ -2360,7 +2360,7 @@ iwm_sf_config(struct iwm_softc *sc, int new_state)
     return err;
 }
 
-int itlwm::
+int ItlIwm::
 iwm_init_hw(struct iwm_softc *sc)
 {
     XYLog("%s\n", __FUNCTION__);
@@ -2534,13 +2534,13 @@ err:
     return err;
 }
 
-int itlwm::
+int ItlIwm::
 iwm_init(struct ifnet *ifp)
 {
     XYLog("%s\n", __FUNCTION__);
     struct iwm_softc *sc = (struct iwm_softc*)ifp->if_softc;
     struct ieee80211com *ic = &sc->sc_ic;
-    itlwm *that = container_of(sc, itlwm, com);
+    ItlIwm *that = container_of(sc, ItlIwm, com);
     int err, generation;
     
     //    rw_assert_wrlock(&sc->ioctl_rwl);
@@ -2588,12 +2588,12 @@ iwm_init(struct ifnet *ifp)
     return 0;
 }
 
-IOReturn itlwm::
+IOReturn ItlIwm::
 _iwm_start_task(OSObject *target, void *arg0, void *arg1, void *arg2, void *arg3)
 {
     struct ifnet *ifp = (struct ifnet *)arg0;
     struct iwm_softc *sc = (struct iwm_softc*)ifp->if_softc;
-    itlwm *that = container_of(sc, itlwm, com);
+    ItlIwm *that = container_of(sc, ItlIwm, com);
     struct ieee80211com *ic = &sc->sc_ic;
     struct ieee80211_node *ni;
     struct ether_header *eh;
@@ -2668,19 +2668,19 @@ _iwm_start_task(OSObject *target, void *arg0, void *arg1, void *arg2, void *arg3
     return kIOReturnSuccess;
 }
 
-void itlwm::
+void ItlIwm::
 iwm_start(struct ifnet *ifp)
 {
     struct iwm_softc *sc = (struct iwm_softc*)ifp->if_softc;
-    itlwm *that = container_of(sc, itlwm, com);
+    ItlIwm *that = container_of(sc, ItlIwm, com);
 //        if (that->outputThreadSignal) {
 //            semaphore_signal(that->outputThreadSignal);
 //        }
-    _fCommandGate->attemptAction(_iwm_start_task, &that->com.sc_ic.ic_ac.ac_if);
+    that->getMainCommandGate()->attemptAction(_iwm_start_task, &that->com.sc_ic.ic_ac.ac_if);
 //    _iwm_start_task(that, &that->com.sc_ic.ic_ac.ac_if, NULL, NULL, NULL);
 }
 
-void itlwm::
+void ItlIwm::
 iwm_stop(struct ifnet *ifp)
 {
     XYLog("%s\n", __FUNCTION__);
@@ -2736,11 +2736,11 @@ iwm_stop(struct ifnet *ifp)
     splx(s);
 }
 
-void itlwm::
+void ItlIwm::
 iwm_watchdog(struct ifnet *ifp)
 {
     struct iwm_softc *sc = (struct iwm_softc *)ifp->if_softc;
-    itlwm *that = container_of(sc, itlwm, com);
+    ItlIwm *that = container_of(sc, ItlIwm, com);
     
     ifp->if_timer = 0;
     if (sc->sc_tx_timer > 0) {
@@ -2762,12 +2762,12 @@ iwm_watchdog(struct ifnet *ifp)
     ieee80211_watchdog(ifp);
 }
 
-int itlwm::
+int ItlIwm::
 iwm_ioctl(struct ifnet *ifp, u_long cmd, caddr_t data)
 {
     XYLog("%s\n", __FUNCTION__);
     struct iwm_softc *sc = (struct iwm_softc *)ifp->if_softc;
-    itlwm *that = container_of(sc, itlwm, com);
+    ItlIwm *that = container_of(sc, ItlIwm, com);
     int s, err = 0, generation = sc->sc_generation;
     
     /*
@@ -2900,7 +2900,7 @@ struct iwm_umac_error_event_table {
 #define ERROR_START_OFFSET  (1 * sizeof(uint32_t))
 #define ERROR_ELEM_SIZE     (7 * sizeof(uint32_t))
 
-void itlwm::
+void ItlIwm::
 iwm_nic_umac_error(struct iwm_softc *sc)
 {
     struct iwm_umac_error_event_table table;
@@ -2972,7 +2972,7 @@ static struct {
     { "ADVANCED_SYSASSERT", 0 },
 };
 
-const char *itlwm::
+const char *ItlIwm::
 iwm_desc_lookup(uint32_t num)
 {
     int i;
@@ -2993,7 +2993,7 @@ iwm_desc_lookup(uint32_t num)
  * I'll just leave it in, just in case e.g. the Intel guys want to
  * help us decipher some "ADVANCED_SYSASSERT" later.
  */
-void itlwm::
+void ItlIwm::
 iwm_nic_error(struct iwm_softc *sc)
 {
     struct iwm_error_event_table table;
@@ -3071,7 +3071,7 @@ iwm_nic_error(struct iwm_softc *sc)
 
 #define ADVANCE_RXQ(sc) (sc->rxq.cur = (sc->rxq.cur + 1) % count);
 
-void itlwm::
+void ItlIwm::
 iwm_notif_intr(struct iwm_softc *sc)
 {
     struct mbuf_list ml = MBUF_LIST_INITIALIZER();
@@ -3109,10 +3109,10 @@ iwm_notif_intr(struct iwm_softc *sc)
     IWM_WRITE(sc, wreg, hw & ~7);
 }
 
-int itlwm::
+int ItlIwm::
 iwm_intr(OSObject *arg, IOInterruptEventSource* sender, int count)
 {
-    itlwm *that = (itlwm*)arg;
+    ItlIwm *that = (ItlIwm*)arg;
     struct iwm_softc *sc = &that->com;
     int handled = 0;
     int rv = 0;
@@ -3256,10 +3256,10 @@ out:
     return rv;
 }
 
-int itlwm::
+int ItlIwm::
 iwm_intr_msix(OSObject *object, IOInterruptEventSource* sender, int count)
 {
-    itlwm *that = (itlwm*)object;
+    ItlIwm *that = (ItlIwm*)object;
     struct iwm_softc *sc = &that->com;
     uint32_t inta_fh, inta_hw;
     int vector = 0;
@@ -3402,7 +3402,7 @@ static const struct pci_matchid iwm_devices[] = {
     { PCI_VENDOR_INTEL, PCI_PRODUCT_INTEL_WL_9461_4 }
 };
 
-int itlwm::
+int ItlIwm::
 iwm_match(struct IOPCIDevice *device)
 {
     int devId = device->configRead16(kIOPCIConfigDeviceID);
@@ -3411,7 +3411,7 @@ iwm_match(struct IOPCIDevice *device)
                          nitems(iwm_devices));
 }
 
-int itlwm::
+int ItlIwm::
 iwm_preinit(struct iwm_softc *sc)
 {
     XYLog("%s\n", __FUNCTION__);
@@ -3472,7 +3472,7 @@ iwm_preinit(struct iwm_softc *sc)
     return 0;
 }
 
-void itlwm::
+void ItlIwm::
 iwm_attach_hook(struct device *self)
 {
     XYLog("%s\n", __FUNCTION__);
@@ -3483,15 +3483,15 @@ iwm_attach_hook(struct device *self)
     iwm_preinit(sc);
 }
 
-bool itlwm::
+bool ItlIwm::
 intrFilter(OSObject *object, IOFilterInterruptEventSource *src)
 {
-    itlwm *that = (itlwm*)object;
+    ItlIwm *that = (ItlIwm*)object;
     IWM_WRITE(&that->com, IWM_CSR_INT_MASK, 0);
     return true;
 }
 
-bool itlwm::
+bool ItlIwm::
 iwm_attach(struct iwm_softc *sc, struct pci_attach_args *pa)
 {
     XYLog("%s\n", __FUNCTION__);
@@ -3561,12 +3561,12 @@ iwm_attach(struct iwm_softc *sc, struct pci_attach_args *pa)
     if (sc->sc_msix)
         sc->sc_ih =
         IOFilterInterruptEventSource::filterInterruptEventSource(this,
-                                                                 (IOInterruptEventSource::Action)&itlwm::iwm_intr_msix,
-                                                                 &itlwm::intrFilter
+                                                                 (IOInterruptEventSource::Action)&ItlIwm::iwm_intr_msix,
+                                                                 &ItlIwm::intrFilter
                                                                  ,pa->pa_tag, msiIntrIndex);
     else
         sc->sc_ih = IOFilterInterruptEventSource::filterInterruptEventSource(this,
-                                                                             (IOInterruptEventSource::Action)&itlwm::iwm_intr, &itlwm::intrFilter
+                                                                             (IOInterruptEventSource::Action)&ItlIwm::iwm_intr, &ItlIwm::intrFilter
                                                                              ,pa->pa_tag, msiIntrIndex);
     if (sc->sc_ih == NULL || pa->workloop->addEventSource(sc->sc_ih) != kIOReturnSuccess) {
         XYLog("\n");
@@ -3832,7 +3832,7 @@ iwm_attach(struct iwm_softc *sc, struct pci_attach_args *pa)
     
     ic->ic_max_rssi = IWM_MAX_DBM - IWM_MIN_DBM;
     
-    ifp->controller = this;
+    ifp->controller = getController();
     ifp->if_snd = IOPacketQueue::withCapacity(4096);
     ifp->if_softc = sc;
     ifp->if_flags = IFF_BROADCAST | IFF_SIMPLEX | IFF_MULTICAST | IFF_DEBUG;
@@ -3895,7 +3895,7 @@ fail1:    iwm_dma_contig_free(&sc->fw_dma);
 }
 
 #if NBPFILTER > 0
-void itlwm::
+void ItlIwm::
 iwm_radiotap_attach(struct iwm_softc *sc)
 {
     XYLog("%s\n", __FUNCTION__);
@@ -3912,12 +3912,12 @@ iwm_radiotap_attach(struct iwm_softc *sc)
 }
 #endif
 
-void itlwm::
+void ItlIwm::
 iwm_init_task(void *arg1)
 {
     XYLog("%s\n", __FUNCTION__);
     struct iwm_softc *sc = (struct iwm_softc *)arg1;
-    itlwm *that = container_of(sc, itlwm, com);
+    ItlIwm *that = container_of(sc, ItlIwm, com);
     struct ifnet *ifp = &sc->sc_ic.ic_if;
     int s = splnet();
     int generation = sc->sc_generation;
@@ -3942,11 +3942,11 @@ iwm_init_task(void *arg1)
     splx(s);
 }
 
-void itlwm::
+void ItlIwm::
 iwm_htprot_task(void *arg)
 {
     struct iwm_softc *sc = (struct iwm_softc *)arg;
-    itlwm *that = container_of(sc, itlwm, com);
+    ItlIwm *that = container_of(sc, ItlIwm, com);
     struct ieee80211com *ic = &sc->sc_ic;
     struct iwm_node *in = (struct iwm_node *)ic->ic_bss;
     int err, s = splnet();
@@ -3967,11 +3967,11 @@ iwm_htprot_task(void *arg)
     splx(s);
 }
 
-void itlwm::
+void ItlIwm::
 iwm_ba_task(void *arg)
 {
     struct iwm_softc *sc = (struct iwm_softc *)arg;
-    itlwm *that = container_of(sc, itlwm, com);
+    ItlIwm *that = container_of(sc, ItlIwm, com);
     struct ieee80211com *ic = &sc->sc_ic;
     struct ieee80211_node *ni = ic->ic_bss;
     int s = splnet();
@@ -3992,7 +3992,7 @@ iwm_ba_task(void *arg)
     splx(s);
 }
 
-int itlwm::
+int ItlIwm::
 iwm_resume(struct iwm_softc *sc)
 {
     XYLog("%s\n", __FUNCTION__);
@@ -4011,7 +4011,7 @@ iwm_resume(struct iwm_softc *sc)
     return iwm_prepare_card_hw(sc);
 }
 
-void itlwm::
+void ItlIwm::
 iwm_add_task(struct iwm_softc *sc, struct taskq *taskq, struct task *task)
 {
     int s = splnet();
@@ -4028,7 +4028,7 @@ iwm_add_task(struct iwm_softc *sc, struct taskq *taskq, struct task *task)
     splx(s);
 }
 
-void itlwm::
+void ItlIwm::
 iwm_del_task(struct iwm_softc *sc, struct taskq *taskq, struct task *task)
 {
     if (task_del(taskq, task)) {
@@ -4036,7 +4036,7 @@ iwm_del_task(struct iwm_softc *sc, struct taskq *taskq, struct task *task)
     }
 }
 
-int itlwm::
+int ItlIwm::
 iwm_activate(struct iwm_softc *sc, int act)
 {
     struct ifnet *ifp = &sc->sc_ic.ic_if;

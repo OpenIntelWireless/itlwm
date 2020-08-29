@@ -119,7 +119,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include "itlwm.hpp"
+#include "ItlIwm.hpp"
 
 /*
  * NVM read access and content parsing.  We do not support
@@ -144,7 +144,7 @@ const int iwm_nvm_to_read[] = {
 #define IWM_NVM_WRITE_OPCODE 1
 #define IWM_NVM_READ_OPCODE 0
 
-int itlwm::
+int ItlIwm::
 iwm_nvm_read_chunk(struct iwm_softc *sc, uint16_t section, uint16_t offset,
                    uint16_t length, uint8_t *data, uint16_t *len)
 {
@@ -218,7 +218,7 @@ exit:
  * by uCode, we need to manually check in this case that we don't
  * overflow and try to read more than the EEPROM size.
  */
-int itlwm::
+int ItlIwm::
 iwm_nvm_read_section(struct iwm_softc *sc, uint16_t section, uint8_t *data,
                      uint16_t *len, size_t max_len)
 {
@@ -242,7 +242,7 @@ iwm_nvm_read_section(struct iwm_softc *sc, uint16_t section, uint8_t *data,
     return err;
 }
 
-int itlwm::
+int ItlIwm::
 iwm_parse_nvm_data(struct iwm_softc *sc, const uint16_t *nvm_hw,
                    const uint16_t *nvm_sw, const uint16_t *nvm_calib,
                    const uint16_t *mac_override, const uint16_t *phy_sku,
@@ -328,7 +328,7 @@ iwm_parse_nvm_data(struct iwm_softc *sc, const uint16_t *nvm_hw,
     return 0;
 }
 
-int itlwm::
+int ItlIwm::
 iwm_parse_nvm_sections(struct iwm_softc *sc, struct iwm_nvm_section *sections)
 {
     XYLog("%s\n", __FUNCTION__);
@@ -393,7 +393,7 @@ iwm_parse_nvm_sections(struct iwm_softc *sc, struct iwm_nvm_section *sections)
                               phy_sku, regulatory, n_regulatory);
 }
 
-int itlwm::
+int ItlIwm::
 iwm_nvm_init(struct iwm_softc *sc)
 {
     XYLog("%s\n", __FUNCTION__);

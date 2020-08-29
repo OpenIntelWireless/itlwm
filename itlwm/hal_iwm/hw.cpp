@@ -119,9 +119,9 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include "itlwm.hpp"
+#include "ItlIwm.hpp"
 
-void itlwm::
+void ItlIwm::
 iwm_enable_rfkill_int(struct iwm_softc *sc)
 {
     if (!sc->sc_msix) {
@@ -140,7 +140,7 @@ iwm_enable_rfkill_int(struct iwm_softc *sc)
                     IWM_CSR_GP_CNTRL_REG_FLAG_RFKILL_WAKE_L1A_EN);
 }
 
-int itlwm::
+int ItlIwm::
 iwm_check_rfkill(struct iwm_softc *sc)
 {
     uint32_t v;
@@ -168,7 +168,7 @@ iwm_check_rfkill(struct iwm_softc *sc)
     return rv;
 }
 
-void itlwm::
+void ItlIwm::
 iwm_enable_interrupts(struct iwm_softc *sc)
 {
     if (!sc->sc_msix) {
@@ -188,7 +188,7 @@ iwm_enable_interrupts(struct iwm_softc *sc)
     }
 }
 
-void itlwm::
+void ItlIwm::
 iwm_enable_fwload_interrupt(struct iwm_softc *sc)
 {
     if (!sc->sc_msix) {
@@ -209,7 +209,7 @@ iwm_restore_interrupts(struct iwm_softc *sc)
     IWM_WRITE(sc, IWM_CSR_INT_MASK, sc->sc_intmask);
 }
 
-void itlwm::
+void ItlIwm::
 iwm_disable_interrupts(struct iwm_softc *sc)
 {
     int s = splnet();
@@ -230,7 +230,7 @@ iwm_disable_interrupts(struct iwm_softc *sc)
     splx(s);
 }
 
-void itlwm::
+void ItlIwm::
 iwm_ict_reset(struct iwm_softc *sc)
 {
     iwm_disable_interrupts(sc);
@@ -253,7 +253,7 @@ iwm_ict_reset(struct iwm_softc *sc)
 }
 
 #define IWM_HW_READY_TIMEOUT 50
-int itlwm::
+int ItlIwm::
 iwm_set_hw_ready(struct iwm_softc *sc)
 {
     int ready;
@@ -273,7 +273,7 @@ iwm_set_hw_ready(struct iwm_softc *sc)
 }
 #undef IWM_HW_READY_TIMEOUT
 
-int itlwm::
+int ItlIwm::
 iwm_prepare_card_hw(struct iwm_softc *sc)
 {
     XYLog("%s\n", __FUNCTION__);
@@ -301,7 +301,7 @@ iwm_prepare_card_hw(struct iwm_softc *sc)
     return ETIMEDOUT;
 }
 
-void itlwm::
+void ItlIwm::
 iwm_apm_config(struct iwm_softc *sc)
 {
     pcireg_t lctl, cap;
@@ -329,7 +329,7 @@ iwm_apm_config(struct iwm_softc *sc)
  * e.g. after platform boot or shutdown.
  * NOTE:  This does not load uCode nor start the embedded processor
  */
-int itlwm::
+int ItlIwm::
 iwm_apm_init(struct iwm_softc *sc)
 {
     XYLog("%s\n", __FUNCTION__);
@@ -446,7 +446,7 @@ out:
     return err;
 }
 
-void itlwm::
+void ItlIwm::
 iwm_apm_stop(struct iwm_softc *sc)
 {
     IWM_SETBITS(sc, IWM_CSR_DBG_LINK_PWR_MGMT_REG,
@@ -475,7 +475,7 @@ iwm_apm_stop(struct iwm_softc *sc)
                 IWM_CSR_GP_CNTRL_REG_FLAG_INIT_DONE);
 }
 
-void itlwm::
+void ItlIwm::
 iwm_init_msix_hw(struct iwm_softc *sc)
 {
     XYLog("%s\n", __FUNCTION__);
@@ -490,7 +490,7 @@ iwm_init_msix_hw(struct iwm_softc *sc)
     sc->sc_hw_mask = sc->sc_hw_init_mask;
 }
 
-void itlwm::
+void ItlIwm::
 iwm_conf_msix_hw(struct iwm_softc *sc, int stopped)
 {
     XYLog("%s\n", __FUNCTION__);
@@ -578,7 +578,7 @@ iwm_conf_msix_hw(struct iwm_softc *sc, int stopped)
                 IWM_MSIX_HW_INT_CAUSES_REG_HAP);
 }
 
-int itlwm::
+int ItlIwm::
 iwm_start_hw(struct iwm_softc *sc)
 {
     XYLog("%s\n", __FUNCTION__);
@@ -605,7 +605,7 @@ iwm_start_hw(struct iwm_softc *sc)
 }
 
 
-void itlwm::
+void ItlIwm::
 iwm_stop_device(struct iwm_softc *sc)
 {
     XYLog("%s\n", __FUNCTION__);
@@ -689,7 +689,7 @@ iwm_stop_device(struct iwm_softc *sc)
     iwm_prepare_card_hw(sc);
 }
 
-void itlwm::
+void ItlIwm::
 iwm_nic_config(struct iwm_softc *sc)
 {
     uint8_t radio_cfg_type, radio_cfg_step, radio_cfg_dash;
@@ -736,7 +736,7 @@ iwm_nic_config(struct iwm_softc *sc)
                                ~IWM_APMG_PS_CTRL_EARLY_PWR_OFF_RESET_DIS);
 }
 
-int itlwm::
+int ItlIwm::
 iwm_nic_rx_init(struct iwm_softc *sc)
 {
     if (sc->sc_mqrx_supported)
@@ -745,7 +745,7 @@ iwm_nic_rx_init(struct iwm_softc *sc)
         return iwm_nic_rx_legacy_init(sc);
 }
 
-int itlwm::
+int ItlIwm::
 iwm_nic_rx_mq_init(struct iwm_softc *sc)
 {
     int enabled;
@@ -798,7 +798,7 @@ iwm_nic_rx_mq_init(struct iwm_softc *sc)
     return 0;
 }
 
-int itlwm::
+int ItlIwm::
 iwm_nic_rx_legacy_init(struct iwm_softc *sc)
 {
     memset(sc->rxq.stat, 0, sizeof(*sc->rxq.stat));
@@ -848,7 +848,7 @@ iwm_nic_rx_legacy_init(struct iwm_softc *sc)
     return 0;
 }
 
-int itlwm::
+int ItlIwm::
 iwm_nic_tx_init(struct iwm_softc *sc)
 {
     int qid;
@@ -879,7 +879,7 @@ iwm_nic_tx_init(struct iwm_softc *sc)
     return 0;
 }
 
-int itlwm::
+int ItlIwm::
 iwm_nic_init(struct iwm_softc *sc)
 {
     int err;
@@ -905,7 +905,7 @@ iwm_nic_init(struct iwm_softc *sc)
     return 0;
 }
 
-void itlwm::
+void ItlIwm::
 iwm_restore_interrupts(struct iwm_softc *sc)
 {
     IWM_WRITE(sc, IWM_CSR_INT_MASK, sc->sc_intmask);

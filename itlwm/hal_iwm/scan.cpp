@@ -119,9 +119,9 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include "itlwm.hpp"
+#include "ItlIwm.hpp"
 
-uint16_t itlwm::
+uint16_t ItlIwm::
 iwm_scan_rx_chain(struct iwm_softc *sc)
 {
     uint16_t rx_chain;
@@ -135,7 +135,7 @@ iwm_scan_rx_chain(struct iwm_softc *sc)
     return htole16(rx_chain);
 }
 
-uint32_t itlwm::
+uint32_t ItlIwm::
 iwm_scan_rate_n_flags(struct iwm_softc *sc, int flags, int no_cck)
 {
     uint32_t tx_ant;
@@ -158,7 +158,7 @@ iwm_scan_rate_n_flags(struct iwm_softc *sc, int flags, int no_cck)
         return htole32(IWM_RATE_6M_PLCP | tx_ant);
 }
 
-uint8_t itlwm::
+uint8_t ItlIwm::
 iwm_lmac_scan_fill_channels(struct iwm_softc *sc,
                             struct iwm_scan_channel_cfg_lmac *chan, int n_ssids, int bgscan)
 {
@@ -186,7 +186,7 @@ iwm_lmac_scan_fill_channels(struct iwm_softc *sc,
     return nchan;
 }
 
-uint8_t itlwm::
+uint8_t ItlIwm::
 iwm_umac_scan_fill_channels(struct iwm_softc *sc,
                             struct iwm_scan_channel_cfg_umac *chan, int n_ssids, int bgscan)
 {
@@ -213,7 +213,7 @@ iwm_umac_scan_fill_channels(struct iwm_softc *sc,
     return nchan;
 }
 
-int itlwm::
+int ItlIwm::
 iwm_fill_probe_req_v1(struct iwm_softc *sc, struct iwm_scan_probe_req_v1 *preq1)
 {
     struct iwm_scan_probe_req preq2;
@@ -231,7 +231,7 @@ iwm_fill_probe_req_v1(struct iwm_softc *sc, struct iwm_scan_probe_req_v1 *preq1)
     return 0;
 }
 
-int itlwm::
+int ItlIwm::
 iwm_fill_probe_req(struct iwm_softc *sc, struct iwm_scan_probe_req *preq)
 {
     struct ieee80211com *ic = &sc->sc_ic;
@@ -324,7 +324,7 @@ iwm_fill_probe_req(struct iwm_softc *sc, struct iwm_scan_probe_req *preq)
     return 0;
 }
 
-int itlwm::
+int ItlIwm::
 iwm_lmac_scan(struct iwm_softc *sc, int bgscan)
 {
     struct ieee80211com *ic = &sc->sc_ic;
@@ -436,7 +436,7 @@ iwm_lmac_scan(struct iwm_softc *sc, int bgscan)
     return err;
 }
 
-int itlwm::
+int ItlIwm::
 iwm_config_umac_scan(struct iwm_softc *sc)
 {
     XYLog("%s\n", __FUNCTION__);
@@ -511,7 +511,7 @@ iwm_config_umac_scan(struct iwm_softc *sc)
     return err;
 }
 
-int itlwm::
+int ItlIwm::
 iwm_umac_scan_size(struct iwm_softc *sc)
 {
     int base_size = IWM_SCAN_REQ_UMAC_SIZE_V1;
@@ -534,7 +534,7 @@ iwm_umac_scan_size(struct iwm_softc *sc)
     sc->sc_capa_n_scan_channels + tail_size;
 }
 
-struct iwm_scan_umac_chan_param *itlwm::
+struct iwm_scan_umac_chan_param *ItlIwm::
 iwm_get_scan_req_umac_chan_param(struct iwm_softc *sc,
                                  struct iwm_scan_req_umac *req)
 {
@@ -550,7 +550,7 @@ iwm_get_scan_req_umac_chan_param(struct iwm_softc *sc,
     return &req->v1.channel;
 }
 
-void *itlwm::
+void *ItlIwm::
 iwm_get_scan_req_umac_data(struct iwm_softc *sc, struct iwm_scan_req_umac *req)
 {
     if (isset(sc->sc_ucode_api, IWM_UCODE_TLV_API_ADAPTIVE_DWELL_V2))
@@ -577,7 +577,7 @@ iwm_get_scan_req_umac_data(struct iwm_softc *sc, struct iwm_scan_req_umac *req)
 /* adaptive dwell default APs number in social channels (1, 6, 11) */
 #define IWM_SCAN_ADWELL_DEFAULT_N_APS_SOCIAL 10
 
-int itlwm::
+int ItlIwm::
 iwm_umac_scan(struct iwm_softc *sc, int bgscan)
 {
     XYLog("%s\n", __FUNCTION__);
@@ -728,7 +728,7 @@ iwm_umac_scan(struct iwm_softc *sc, int bgscan)
     return err;
 }
 
-uint8_t itlwm::
+uint8_t ItlIwm::
 iwm_ridx2rate(struct ieee80211_rateset *rs, int ridx)
 {
     int i;
@@ -743,7 +743,7 @@ iwm_ridx2rate(struct ieee80211_rateset *rs, int ridx)
     return 0;
 }
 
-int itlwm::
+int ItlIwm::
 iwm_rval2ridx(int rval)
 {
     int ridx;
@@ -758,7 +758,7 @@ iwm_rval2ridx(int rval)
     return ridx;
 }
 
-void itlwm::
+void ItlIwm::
 iwm_ack_rates(struct iwm_softc *sc, struct iwm_node *in, int *cck_rates,
               int *ofdm_rates)
 {
@@ -844,7 +844,7 @@ iwm_ack_rates(struct iwm_softc *sc, struct iwm_node *in, int *cck_rates,
     *ofdm_rates = ofdm;
 }
 
-int itlwm::
+int ItlIwm::
 iwm_scan(struct iwm_softc *sc)
 {
     XYLog("%s\n", __FUNCTION__);
@@ -893,12 +893,12 @@ iwm_scan(struct iwm_softc *sc)
     return 0;
 }
 
-int itlwm::
+int ItlIwm::
 iwm_bgscan(struct ieee80211com *ic)
 {
     XYLog("%s\n", __FUNCTION__);
     struct iwm_softc *sc = (struct iwm_softc *)IC2IFP(ic)->if_softc;
-    itlwm *that = container_of(sc, itlwm, com);
+    ItlIwm *that = container_of(sc, ItlIwm, com);
     int err;
     
     if (sc->sc_flags & IWM_FLAG_SCANNING)
@@ -917,7 +917,7 @@ iwm_bgscan(struct ieee80211com *ic)
     return 0;
 }
 
-int itlwm::
+int ItlIwm::
 iwm_umac_scan_abort(struct iwm_softc *sc)
 {
     struct iwm_umac_scan_abort cmd = { 0 };
@@ -927,7 +927,7 @@ iwm_umac_scan_abort(struct iwm_softc *sc)
                             0, sizeof(cmd), &cmd);
 }
 
-int itlwm::
+int ItlIwm::
 iwm_lmac_scan_abort(struct iwm_softc *sc)
 {
     struct iwm_host_cmd cmd = {
@@ -954,7 +954,7 @@ iwm_lmac_scan_abort(struct iwm_softc *sc)
     return 0;
 }
 
-int itlwm::
+int ItlIwm::
 iwm_scan_abort(struct iwm_softc *sc)
 {
     int err;

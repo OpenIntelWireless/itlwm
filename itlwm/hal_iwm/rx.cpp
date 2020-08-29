@@ -119,9 +119,9 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include "itlwm.hpp"
+#include "ItlIwm.hpp"
 
-void itlwm::
+void ItlIwm::
 iwm_disable_rx_dma(struct iwm_softc *sc)
 {
     int ntries;
@@ -148,7 +148,7 @@ iwm_disable_rx_dma(struct iwm_softc *sc)
     }
 }
 
-void itlwm::
+void ItlIwm::
 iwm_reset_rx_ring(struct iwm_softc *sc, struct iwm_rx_ring *ring)
 {
     ring->cur = 0;
@@ -160,7 +160,7 @@ iwm_reset_rx_ring(struct iwm_softc *sc, struct iwm_rx_ring *ring)
     
 }
 
-void itlwm::
+void ItlIwm::
 iwm_free_rx_ring(struct iwm_softc *sc, struct iwm_rx_ring *ring)
 {
     int count, i;
@@ -189,7 +189,7 @@ iwm_free_rx_ring(struct iwm_softc *sc, struct iwm_rx_ring *ring)
     }
 }
 
-int itlwm::
+int ItlIwm::
 iwm_alloc_rx_ring(struct iwm_softc *sc, struct iwm_rx_ring *ring)
 {
     bus_size_t size;
@@ -260,7 +260,7 @@ fail:    iwm_free_rx_ring(sc, ring);
     return err;
 }
 
-int itlwm::
+int ItlIwm::
 iwm_rx_addbuf(struct iwm_softc *sc, int size, int idx)
 {
     struct iwm_rx_ring *ring = &sc->rxq;
@@ -273,7 +273,7 @@ iwm_rx_addbuf(struct iwm_softc *sc, int size, int idx)
     
 //    mbuf_allocpacket(MBUF_WAITOK, size, NULL, &m);
     
-    m = allocatePacket(size);
+    m = getController()->allocatePacket(size);
 //
     if (m == NULL) {
         XYLog("%s allocatePacket==NULL\n", __FUNCTION__);
@@ -333,7 +333,7 @@ iwm_rx_addbuf(struct iwm_softc *sc, int size, int idx)
     return 0;
 }
 
-void itlwm::
+void ItlIwm::
 iwm_rx_rx_phy_cmd(struct iwm_softc *sc, struct iwm_rx_packet *pkt,
                   struct iwm_rx_data *data)
 {
@@ -345,7 +345,7 @@ iwm_rx_rx_phy_cmd(struct iwm_softc *sc, struct iwm_rx_packet *pkt,
     memcpy(&sc->sc_last_phy_info, phy_info, sizeof(sc->sc_last_phy_info));
 }
 
-void itlwm::
+void ItlIwm::
 iwm_rx_mpdu(struct iwm_softc *sc, mbuf_t m, void *pktdata,
             size_t maxlen, struct mbuf_list *ml)
 {
@@ -418,7 +418,7 @@ iwm_rx_mpdu(struct iwm_softc *sc, mbuf_t m, void *pktdata,
                  rate_n_flags, device_timestamp, &rxi, ml);
 }
 
-void itlwm::
+void ItlIwm::
 iwm_rx_mpdu_mq(struct iwm_softc *sc, mbuf_t m, void *pktdata,
                size_t maxlen, struct mbuf_list *ml)
 {
@@ -513,7 +513,7 @@ iwm_rx_mpdu_mq(struct iwm_softc *sc, mbuf_t m, void *pktdata,
         rate_n_flags, device_timestamp, &rxi, ml);
 }
 
-int itlwm::
+int ItlIwm::
 iwm_rx_pkt_valid(struct iwm_rx_packet *pkt)
 {
     int qid, idx, code;
@@ -533,7 +533,7 @@ sizeof(*(_var_)), BUS_DMASYNC_POSTREAD);            \
 _var_ = (t)((_pkt_)+1);                    \
 } while (/*CONSTCOND*/0)
 
-void itlwm::
+void ItlIwm::
 iwm_rx_pkt(struct iwm_softc *sc, struct iwm_rx_data *data, struct mbuf_list *ml)
 {
     struct ifnet *ifp = IC2IFP(&sc->sc_ic);

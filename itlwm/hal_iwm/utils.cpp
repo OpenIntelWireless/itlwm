@@ -119,10 +119,10 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include "itlwm.hpp"
+#include "ItlIwm.hpp"
 #include <IOKit/IOLib.h>
 
-int itlwm::
+int ItlIwm::
 iwm_send_bt_init_conf(struct iwm_softc *sc)
 {
     XYLog("%s\n", __FUNCTION__);

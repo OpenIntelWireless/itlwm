@@ -119,17 +119,17 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include "itlwm.hpp"
+#include "ItlIwm.hpp"
 #include "FwData.h"
 
-int itlwm::
+int ItlIwm::
 iwm_is_mimo_ht_plcp(uint8_t ht_plcp)
 {
     return (ht_plcp != IWM_RATE_HT_SISO_MCS_INV_PLCP &&
             (ht_plcp & IWM_RATE_HT_MCS_NSS_MSK));
 }
 
-int itlwm::
+int ItlIwm::
 iwm_is_mimo_mcs(int mcs)
 {
     int ridx = iwm_mcs2ridx[mcs];
@@ -137,7 +137,7 @@ iwm_is_mimo_mcs(int mcs)
     
 }
 
-int itlwm::
+int ItlIwm::
 iwm_store_cscheme(struct iwm_softc *sc, uint8_t *data, size_t dlen)
 {
     struct iwm_fw_cscheme_list *l = (struct iwm_fw_cscheme_list *)data;
@@ -151,7 +151,7 @@ iwm_store_cscheme(struct iwm_softc *sc, uint8_t *data, size_t dlen)
     return 0;
 }
 
-int itlwm::
+int ItlIwm::
 iwm_firmware_store_section(struct iwm_softc *sc, enum iwm_ucode_type type,
                            uint8_t *data, size_t dlen)
 {
@@ -191,7 +191,7 @@ struct iwm_tlv_calib_data {
     struct iwm_tlv_calib_ctrl calib;
 } __packed;
 
-int itlwm::
+int ItlIwm::
 iwm_set_default_calib(struct iwm_softc *sc, const void *data)
 {
     const struct iwm_tlv_calib_data *def_calib = (const struct iwm_tlv_calib_data *)data;
@@ -208,7 +208,7 @@ iwm_set_default_calib(struct iwm_softc *sc, const void *data)
     return 0;
 }
 
-void itlwm::
+void ItlIwm::
 iwm_fw_info_free(struct iwm_fw_info *fw)
 {
     ::free(fw->fw_rawdata);
@@ -218,22 +218,7 @@ iwm_fw_info_free(struct iwm_fw_info *fw)
     memset(fw->fw_sects, 0, sizeof(fw->fw_sects));
 }
 
-void itlwm::
-onLoadFW(OSKextRequestTag requestTag, OSReturn result, const void *resourceData, uint32_t resourceDataLength, void *context)
-{
-    XYLog("onLoadFW callback ret=0x%08x length=%d", result, resourceDataLength);
-    ResourceCallbackContext *resourceContxt = (ResourceCallbackContext*)context;
-    IOLockLock(resourceContxt->context->fwLoadLock);
-    if (resourceDataLength > 0) {
-        XYLog("onLoadFW return success");
-        resourceContxt->resource = OSData::withBytes(resourceData, resourceDataLength);
-    }
-    IOLockUnlock(resourceContxt->context->fwLoadLock);
-    IOLockWakeup(resourceContxt->context->fwLoadLock, resourceContxt->context, false);
-    XYLog("onLoadFW wakeupOn");
-}
-
-int itlwm::
+int ItlIwm::
 iwm_read_firmware(struct iwm_softc *sc, enum iwm_ucode_type ucode_type)
 {
     struct iwm_fw_info *fw = &sc->sc_fw;
@@ -600,7 +585,7 @@ out:
     return err;
 }
 
-int itlwm::
+int ItlIwm::
 iwm_post_alive(struct iwm_softc *sc)
 {
     XYLog("%s\n", __FUNCTION__);
@@ -665,7 +650,7 @@ iwm_post_alive(struct iwm_softc *sc)
     return err;
 }
 
-uint8_t itlwm::
+uint8_t ItlIwm::
 iwm_fw_valid_tx_ant(struct iwm_softc *sc)
 {
     uint8_t tx_ant;
@@ -679,7 +664,7 @@ iwm_fw_valid_tx_ant(struct iwm_softc *sc)
     return tx_ant;
 }
 
-uint8_t itlwm::
+uint8_t ItlIwm::
 iwm_fw_valid_rx_ant(struct iwm_softc *sc)
 {
     uint8_t rx_ant;
@@ -693,7 +678,7 @@ iwm_fw_valid_rx_ant(struct iwm_softc *sc)
     return rx_ant;
 }
 
-int itlwm::
+int ItlIwm::
 iwm_firmware_load_sect(struct iwm_softc *sc, uint32_t dst_addr,
                        const uint8_t *section, uint32_t byte_cnt)
 {
@@ -718,7 +703,7 @@ iwm_firmware_load_sect(struct iwm_softc *sc, uint32_t dst_addr,
     return err;
 }
 
-int itlwm::
+int ItlIwm::
 iwm_firmware_load_chunk(struct iwm_softc *sc, uint32_t dst_addr,
                         const uint8_t *chunk, uint32_t byte_cnt)
 {
@@ -781,7 +766,7 @@ iwm_firmware_load_chunk(struct iwm_softc *sc, uint32_t dst_addr,
     return err;
 }
 
-int itlwm::
+int ItlIwm::
 iwm_load_firmware_7000(struct iwm_softc *sc, enum iwm_ucode_type ucode_type)
 {
     struct iwm_fw_sects *fws;
@@ -813,7 +798,7 @@ iwm_load_firmware_7000(struct iwm_softc *sc, enum iwm_ucode_type ucode_type)
     return 0;
 }
 
-int itlwm::
+int ItlIwm::
 iwm_load_cpu_sections_8000(struct iwm_softc *sc, struct iwm_fw_sects *fws,
                            int cpu, int *first_ucode_section)
 {
@@ -891,7 +876,7 @@ iwm_load_cpu_sections_8000(struct iwm_softc *sc, struct iwm_fw_sects *fws,
     return 0;
 }
 
-int itlwm::
+int ItlIwm::
 iwm_load_firmware_8000(struct iwm_softc *sc, enum iwm_ucode_type ucode_type)
 {
     struct iwm_fw_sects *fws;
@@ -922,7 +907,7 @@ iwm_load_firmware_8000(struct iwm_softc *sc, enum iwm_ucode_type ucode_type)
     return 0;
 }
 
-int itlwm::
+int ItlIwm::
 iwm_load_firmware(struct iwm_softc *sc, enum iwm_ucode_type ucode_type)
 {
     XYLog("%s\n", __FUNCTION__);
@@ -948,7 +933,7 @@ iwm_load_firmware(struct iwm_softc *sc, enum iwm_ucode_type ucode_type)
     return err;
 }
 
-int itlwm::
+int ItlIwm::
 iwm_start_fw(struct iwm_softc *sc, enum iwm_ucode_type ucode_type)
 {
     XYLog("%s ucode_type=%d\n", __FUNCTION__, ucode_type);
@@ -979,7 +964,7 @@ iwm_start_fw(struct iwm_softc *sc, enum iwm_ucode_type ucode_type)
     return iwm_load_firmware(sc, ucode_type);
 }
 
-int itlwm::
+int ItlIwm::
 iwm_send_tx_ant_cfg(struct iwm_softc *sc, uint8_t valid_tx_ant)
 {
     XYLog("%s\n", __FUNCTION__);
@@ -991,7 +976,7 @@ iwm_send_tx_ant_cfg(struct iwm_softc *sc, uint8_t valid_tx_ant)
                             0, sizeof(tx_ant_cmd), &tx_ant_cmd);
 }
 
-int itlwm::
+int ItlIwm::
 iwm_load_ucode_wait_alive(struct iwm_softc *sc,
                           enum iwm_ucode_type ucode_type)
 {
@@ -1045,7 +1030,7 @@ iwm_load_ucode_wait_alive(struct iwm_softc *sc,
     return 0;
 }
 
-int itlwm::
+int ItlIwm::
 iwm_run_init_mvm_ucode(struct iwm_softc *sc, int justnvm)
 {
     XYLog("%s justnvm=%d\n", __FUNCTION__, justnvm);
@@ -1120,7 +1105,7 @@ iwm_run_init_mvm_ucode(struct iwm_softc *sc, int justnvm)
     return err;
 }
 
-int itlwm::
+int ItlIwm::
 iwm_config_ltr(struct iwm_softc *sc)
 {
     XYLog("%s\n", __FUNCTION__);

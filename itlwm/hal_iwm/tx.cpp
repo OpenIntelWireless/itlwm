@@ -119,9 +119,9 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include "itlwm.hpp"
+#include "ItlIwm.hpp"
 
-void itlwm::
+void ItlIwm::
 iwm_free_tx_ring(iwm_softc *sc, struct iwm_tx_ring *ring)
 {
     int i;
@@ -140,7 +140,7 @@ iwm_free_tx_ring(iwm_softc *sc, struct iwm_tx_ring *ring)
     }
 }
 
-void itlwm::
+void ItlIwm::
 iwm_reset_tx_ring(struct iwm_softc *sc, struct iwm_tx_ring *ring)
 {
     int i;
@@ -171,7 +171,7 @@ iwm_reset_tx_ring(struct iwm_softc *sc, struct iwm_tx_ring *ring)
     ring->tail = 0;
 }
 
-int itlwm::
+int ItlIwm::
 iwm_alloc_tx_ring(iwm_softc *sc, struct iwm_tx_ring *ring, int qid)
 {
     bus_addr_t paddr;
@@ -258,7 +258,7 @@ fail:    iwm_free_tx_ring(sc, ring);
     return err;
 }
 
-int itlwm::
+int ItlIwm::
 iwm_enable_ac_txq(struct iwm_softc *sc, int qid, int fifo)
 {
     XYLog("%s\n", __FUNCTION__);
@@ -300,7 +300,7 @@ iwm_enable_ac_txq(struct iwm_softc *sc, int qid, int fifo)
     return 0;
 }
 
-int itlwm::
+int ItlIwm::
 iwm_enable_txq(struct iwm_softc *sc, int sta_id, int qid, int fifo)
 {
     XYLog("%s\n", __FUNCTION__);
@@ -327,7 +327,7 @@ iwm_enable_txq(struct iwm_softc *sc, int sta_id, int qid, int fifo)
     return 0;
 }
 
-int itlwm::
+int ItlIwm::
 iwm_send_update_mcc_cmd(struct iwm_softc *sc, const char *alpha2)
 {
     XYLog("%s\n", __FUNCTION__);
@@ -373,7 +373,7 @@ iwm_send_update_mcc_cmd(struct iwm_softc *sc, const char *alpha2)
     return 0;
 }
 
-void itlwm::
+void ItlIwm::
 iwm_tt_tx_backoff(struct iwm_softc *sc, uint32_t backoff)
 {
     XYLog("%s\n", __FUNCTION__);
@@ -386,7 +386,7 @@ iwm_tt_tx_backoff(struct iwm_softc *sc, uint32_t backoff)
     iwm_send_cmd(sc, &cmd);
 }
 
-void itlwm::
+void ItlIwm::
 iwm_free_fw_paging(struct iwm_softc *sc)
 {
     XYLog("%s\n", __FUNCTION__);
@@ -402,7 +402,7 @@ iwm_free_fw_paging(struct iwm_softc *sc)
     memset(sc->fw_paging_db, 0, sizeof(sc->fw_paging_db));
 }
 
-int itlwm::
+int ItlIwm::
 iwm_fill_paging_mem(struct iwm_softc *sc, const struct iwm_fw_sects *image)
 {
     int sec_idx, idx;
@@ -481,7 +481,7 @@ iwm_fill_paging_mem(struct iwm_softc *sc, const struct iwm_fw_sects *image)
     return 0;
 }
 
-int itlwm::
+int ItlIwm::
 iwm_alloc_fw_paging_mem(struct iwm_softc *sc, const struct iwm_fw_sects *image)
 {
     int blk_idx = 0;
@@ -563,7 +563,7 @@ iwm_alloc_fw_paging_mem(struct iwm_softc *sc, const struct iwm_fw_sects *image)
     return 0;
 }
 
-int itlwm::
+int ItlIwm::
 iwm_save_fw_paging(struct iwm_softc *sc, const struct iwm_fw_sects *fw)
 {
     XYLog("%s\n", __FUNCTION__);
@@ -577,7 +577,7 @@ iwm_save_fw_paging(struct iwm_softc *sc, const struct iwm_fw_sects *fw)
 }
 
 /* send paging cmd to FW in case CPU2 has paging image */
-int itlwm::
+int ItlIwm::
 iwm_send_paging_cmd(struct iwm_softc *sc, const struct iwm_fw_sects *fw)
 {
     XYLog("%s\n", __FUNCTION__);

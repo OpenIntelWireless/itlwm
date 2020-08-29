@@ -119,10 +119,10 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include "itlwm.hpp"
+#include "ItlIwm.hpp"
 #include <IOKit/IODMACommand.h>
 
-uint32_t itlwm::
+uint32_t ItlIwm::
 iwm_read_prph(struct iwm_softc *sc, uint32_t addr)
 {
     iwm_nic_assert_locked(sc);
@@ -132,7 +132,7 @@ iwm_read_prph(struct iwm_softc *sc, uint32_t addr)
     return IWM_READ(sc, IWM_HBUS_TARG_PRPH_RDAT);
 }
 
-void itlwm::
+void ItlIwm::
 iwm_write_prph(struct iwm_softc *sc, uint32_t addr, uint32_t val)
 {
     iwm_nic_assert_locked(sc);
@@ -142,14 +142,14 @@ iwm_write_prph(struct iwm_softc *sc, uint32_t addr, uint32_t val)
     IWM_WRITE(sc, IWM_HBUS_TARG_PRPH_WDAT, val);
 }
 
-void itlwm::
+void ItlIwm::
 iwm_write_prph64(struct iwm_softc *sc, uint64_t addr, uint64_t val)
 {
     iwm_write_prph(sc, (uint32_t)addr, val & 0xffffffff);
     iwm_write_prph(sc, (uint32_t)addr + 4, val >> 32);
 }
 
-int itlwm::
+int ItlIwm::
 iwm_read_mem(struct iwm_softc *sc, uint32_t addr, void *buf, int dwords)
 {
     int offs, err = 0;
@@ -166,7 +166,7 @@ iwm_read_mem(struct iwm_softc *sc, uint32_t addr, void *buf, int dwords)
     return err;
 }
 
-int itlwm::
+int ItlIwm::
 iwm_write_mem(struct iwm_softc *sc, uint32_t addr, const void *buf, int dwords)
 {
     int offs;
@@ -186,13 +186,13 @@ iwm_write_mem(struct iwm_softc *sc, uint32_t addr, const void *buf, int dwords)
     return 0;
 }
 
-int itlwm::
+int ItlIwm::
 iwm_write_mem32(struct iwm_softc *sc, uint32_t addr, uint32_t val)
 {
     return iwm_write_mem(sc, addr, &val, 1);
 }
 
-int itlwm::
+int ItlIwm::
 iwm_poll_bit(struct iwm_softc *sc, int reg, uint32_t bits, uint32_t mask,
     int timo)
 {
@@ -208,7 +208,7 @@ iwm_poll_bit(struct iwm_softc *sc, int reg, uint32_t bits, uint32_t mask,
     }
 }
 
-int itlwm::
+int ItlIwm::
 iwm_nic_lock(struct iwm_softc *sc)
 {
     if (sc->sc_nic_locks > 0) {
@@ -235,7 +235,7 @@ iwm_nic_lock(struct iwm_softc *sc)
     return 0;
 }
 
-void itlwm::
+void ItlIwm::
 iwm_nic_assert_locked(struct iwm_softc *sc)
 {
     uint32_t reg = IWM_READ(sc, IWM_CSR_GP_CNTRL);
@@ -247,7 +247,7 @@ iwm_nic_assert_locked(struct iwm_softc *sc)
         panic("%s: nic locks counter %d", DEVNAME(sc), sc->sc_nic_locks);
 }
 
-void itlwm::
+void ItlIwm::
 iwm_nic_unlock(struct iwm_softc *sc)
 {
     if (sc->sc_nic_locks > 0) {
@@ -258,7 +258,7 @@ iwm_nic_unlock(struct iwm_softc *sc)
         XYLog("%s: NIC already unlocked\n", DEVNAME(sc));
 }
 
-void itlwm::
+void ItlIwm::
 iwm_set_bits_mask_prph(struct iwm_softc *sc, uint32_t reg, uint32_t bits,
     uint32_t mask)
 {
@@ -273,13 +273,13 @@ iwm_set_bits_mask_prph(struct iwm_softc *sc, uint32_t reg, uint32_t bits,
     }
 }
 
-void itlwm::
+void ItlIwm::
 iwm_set_bits_prph(struct iwm_softc *sc, uint32_t reg, uint32_t bits)
 {
     iwm_set_bits_mask_prph(sc, reg, bits, ~0);
 }
 
-void itlwm::
+void ItlIwm::
 iwm_clear_bits_prph(struct iwm_softc *sc, uint32_t reg, uint32_t bits)
 {
     iwm_set_bits_mask_prph(sc, reg, 0, ~bits);
@@ -328,7 +328,7 @@ bool allocDmaMemory2(struct iwm_dma_info *dma, size_t size, int alignment)
     return true;
 }
 
-void itlwm::
+void ItlIwm::
 iwm_dma_contig_free(struct iwm_dma_info *dma)
 {
     if (dma == NULL || dma->cmd == NULL)
@@ -344,7 +344,7 @@ iwm_dma_contig_free(struct iwm_dma_info *dma)
     dma->vaddr = NULL;
 }
 
-int itlwm::
+int ItlIwm::
 iwm_dma_contig_alloc(bus_dma_tag_t tag, struct iwm_dma_info *dma, bus_size_t size, bus_size_t alignment)
 {
     if (!allocDmaMemory2(dma, size, alignment)) {

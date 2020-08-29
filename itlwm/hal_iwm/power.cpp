@@ -119,11 +119,11 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include "itlwm.hpp"
+#include "ItlIwm.hpp"
 
 #define IWM_POWER_KEEP_ALIVE_PERIOD_SEC    25
 
-int itlwm::
+int ItlIwm::
 iwm_beacon_filter_send_cmd(struct iwm_softc *sc,
                            struct iwm_beacon_filter_cmd *cmd)
 {
@@ -131,14 +131,14 @@ iwm_beacon_filter_send_cmd(struct iwm_softc *sc,
                             0, sizeof(struct iwm_beacon_filter_cmd), cmd);
 }
 
-void itlwm::
+void ItlIwm::
 iwm_beacon_filter_set_cqm_params(struct iwm_softc *sc, struct iwm_node *in,
                                  struct iwm_beacon_filter_cmd *cmd)
 {
     cmd->ba_enable_beacon_abort = htole32(sc->sc_bf.ba_enabled);
 }
 
-int itlwm::
+int ItlIwm::
 iwm_update_beacon_abort(struct iwm_softc *sc, struct iwm_node *in, int enable)
 {
     struct iwm_beacon_filter_cmd cmd = {
@@ -155,7 +155,7 @@ iwm_update_beacon_abort(struct iwm_softc *sc, struct iwm_node *in, int enable)
     return iwm_beacon_filter_send_cmd(sc, &cmd);
 }
 
-void itlwm::
+void ItlIwm::
 iwm_power_build_cmd(struct iwm_softc *sc, struct iwm_node *in,
                     struct iwm_mac_power_cmd *cmd)
 {
@@ -185,7 +185,7 @@ iwm_power_build_cmd(struct iwm_softc *sc, struct iwm_node *in,
         cmd->flags = htole16(IWM_POWER_FLAGS_POWER_SAVE_ENA_MSK);
 }
 
-int itlwm::
+int ItlIwm::
 iwm_power_mac_update_mode(struct iwm_softc *sc, struct iwm_node *in)
 {
     int err;
@@ -206,7 +206,7 @@ iwm_power_mac_update_mode(struct iwm_softc *sc, struct iwm_node *in)
     return iwm_update_beacon_abort(sc, in, ba_enable);
 }
 
-int itlwm::
+int ItlIwm::
 iwm_power_update_device(struct iwm_softc *sc)
 {
     XYLog("%s\n", __FUNCTION__);
@@ -220,7 +220,7 @@ iwm_power_update_device(struct iwm_softc *sc)
                             IWM_POWER_TABLE_CMD, 0, sizeof(cmd), &cmd);
 }
 
-int itlwm::
+int ItlIwm::
 iwm_enable_beacon_filter(struct iwm_softc *sc, struct iwm_node *in)
 {
     struct iwm_beacon_filter_cmd cmd = {
@@ -238,7 +238,7 @@ iwm_enable_beacon_filter(struct iwm_softc *sc, struct iwm_node *in)
     return err;
 }
 
-int itlwm::
+int ItlIwm::
 iwm_disable_beacon_filter(struct iwm_softc *sc)
 {
     XYLog("%s\n", __FUNCTION__);
@@ -254,7 +254,7 @@ iwm_disable_beacon_filter(struct iwm_softc *sc)
     return err;
 }
 
-int itlwm::
+int ItlIwm::
 iwm_add_sta_cmd(struct iwm_softc *sc, struct iwm_node *in, int update)
 {
     struct iwm_add_sta_cmd add_sta_cmd;
@@ -358,7 +358,7 @@ iwm_add_sta_cmd(struct iwm_softc *sc, struct iwm_node *in, int update)
     return err;
 }
 
-int itlwm::
+int ItlIwm::
 iwm_add_aux_sta(struct iwm_softc *sc)
 {
     XYLog("%s\n", __FUNCTION__);
@@ -400,7 +400,7 @@ iwm_add_aux_sta(struct iwm_softc *sc)
     return err;
 }
 
-int itlwm::
+int ItlIwm::
 iwm_rm_sta_cmd(struct iwm_softc *sc, struct iwm_node *in)
 {
     struct ieee80211com *ic = &sc->sc_ic;
