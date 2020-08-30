@@ -69,6 +69,10 @@
 		024A08D423FCF3E6009FBA6C /* power.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 024A08D323FCF3E6009FBA6C /* power.cpp */; };
 		024A08D623FCF4D7009FBA6C /* scan.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 024A08D523FCF4D7009FBA6C /* scan.cpp */; };
 		5076FA8124CC71E40011B2BB /* FwBinary.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5076FA7F24CC71E40011B2BB /* FwBinary.cpp */; };
+		F800DD9B24FBEBF000789320 /* ItlDriverController.h in Headers */ = {isa = PBXBuildFile; fileRef = F800DD9A24FBEBF000789320 /* ItlDriverController.h */; };
+		F800DD9C24FBEBF000789320 /* ItlDriverController.h in Headers */ = {isa = PBXBuildFile; fileRef = F800DD9A24FBEBF000789320 /* ItlDriverController.h */; };
+		F88CB91424FBE9130060B1A5 /* ItlDriverInfo.h in Headers */ = {isa = PBXBuildFile; fileRef = F88CB91324FBE9130060B1A5 /* ItlDriverInfo.h */; };
+		F88CB91524FBE9130060B1A5 /* ItlDriverInfo.h in Headers */ = {isa = PBXBuildFile; fileRef = F88CB91324FBE9130060B1A5 /* ItlDriverInfo.h */; };
 		F88D2B3D2414E64000BBE700 /* sha1-pbkdf2.c in Sources */ = {isa = PBXBuildFile; fileRef = F88D2B3B2414E64000BBE700 /* sha1-pbkdf2.c */; };
 		F8A33574244AED060039DA12 /* IOTaskQueue.cpp in Sources */ = {isa = PBXBuildFile; fileRef = F8A33572244AED060039DA12 /* IOTaskQueue.cpp */; };
 		F8A33576244AED060039DA12 /* IOTaskQueue.cpp in Sources */ = {isa = PBXBuildFile; fileRef = F8A33572244AED060039DA12 /* IOTaskQueue.cpp */; };
@@ -163,6 +167,7 @@
 		F8C772F12443444600A1B8A0 /* rmd160.c in Sources */ = {isa = PBXBuildFile; fileRef = 024A07F323FCBC6C009FBA6C /* rmd160.c */; };
 		F8C772F22443444600A1B8A0 /* idgen.c in Sources */ = {isa = PBXBuildFile; fileRef = 024A07F423FCBC6C009FBA6C /* idgen.c */; };
 		F8C772F32443444600A1B8A0 /* compat.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 024A07BA23FCBC6C009FBA6C /* compat.cpp */; };
+		F8CD3BC024FBD85300A20849 /* FwBinary.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5076FA7F24CC71E40011B2BB /* FwBinary.cpp */; };
 		F8CFB31B244BF0FE00B86738 /* bitfield.h in Headers */ = {isa = PBXBuildFile; fileRef = F8F92573240974EE0088B8D5 /* bitfield.h */; };
 		F8CFB31C244BF0FE00B86738 /* cfg80211.h in Headers */ = {isa = PBXBuildFile; fileRef = F8F92572240974ED0088B8D5 /* cfg80211.h */; };
 		F8CFB31D244BF0FE00B86738 /* kernel.h in Headers */ = {isa = PBXBuildFile; fileRef = F8F92574240974EE0088B8D5 /* kernel.h */; };
@@ -239,6 +244,7 @@
 		F8E49A11249B8DE500BE6868 /* itlwmx_interface.hpp in Headers */ = {isa = PBXBuildFile; fileRef = F8E49A0F249B8DE500BE6868 /* itlwmx_interface.hpp */; };
 		F8E49A14249B923500BE6868 /* ItlNetworkUserClient.cpp in Sources */ = {isa = PBXBuildFile; fileRef = F8E49A12249B923500BE6868 /* ItlNetworkUserClient.cpp */; };
 		F8E49A15249B923500BE6868 /* ItlNetworkUserClient.hpp in Headers */ = {isa = PBXBuildFile; fileRef = F8E49A13249B923500BE6868 /* ItlNetworkUserClient.hpp */; };
+		F8ED134424FBB5B70068C831 /* ItlIwx.cpp in Sources */ = {isa = PBXBuildFile; fileRef = F8D6CD642442E8F200D2A454 /* ItlIwx.cpp */; };
 		F8F9257D240974EF0088B8D5 /* cfg80211.h in Headers */ = {isa = PBXBuildFile; fileRef = F8F92572240974ED0088B8D5 /* cfg80211.h */; };
 		F8F9257E240974EF0088B8D5 /* bitfield.h in Headers */ = {isa = PBXBuildFile; fileRef = F8F92573240974EE0088B8D5 /* bitfield.h */; };
 		F8F9257F240974EF0088B8D5 /* kernel.h in Headers */ = {isa = PBXBuildFile; fileRef = F8F92574240974EE0088B8D5 /* kernel.h */; };
@@ -317,10 +323,12 @@
 		024A08D323FCF3E6009FBA6C /* power.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = power.cpp; sourceTree = "<group>"; };
 		024A08D523FCF4D7009FBA6C /* scan.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = scan.cpp; sourceTree = "<group>"; };
 		5076FA7F24CC71E40011B2BB /* FwBinary.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = FwBinary.cpp; sourceTree = "<group>"; };
+		F800DD9A24FBEBF000789320 /* ItlDriverController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ItlDriverController.h; sourceTree = "<group>"; };
 		F889443424D670EE001DF7B7 /* iwlwifi-Qu-b0-jf-b0-48.ucode */ = {isa = PBXFileReference; lastKnownFileType = file; path = "iwlwifi-Qu-b0-jf-b0-48.ucode"; sourceTree = "<group>"; };
 		F889443524D670EE001DF7B7 /* iwlwifi-Qu-c0-jf-b0-48.ucode */ = {isa = PBXFileReference; lastKnownFileType = file; path = "iwlwifi-Qu-c0-jf-b0-48.ucode"; sourceTree = "<group>"; };
 		F889443624D670EE001DF7B7 /* iwlwifi-Qu-c0-hr-b0-48.ucode */ = {isa = PBXFileReference; lastKnownFileType = file; path = "iwlwifi-Qu-c0-hr-b0-48.ucode"; sourceTree = "<group>"; };
 		F889443A24D67DDD001DF7B7 /* iwlwifi-QuZ-a0-jf-b0-48.ucode */ = {isa = PBXFileReference; lastKnownFileType = file; path = "iwlwifi-QuZ-a0-jf-b0-48.ucode"; sourceTree = "<group>"; };
+		F88CB91324FBE9130060B1A5 /* ItlDriverInfo.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ItlDriverInfo.h; sourceTree = "<group>"; };
 		F88D2B3B2414E64000BBE700 /* sha1-pbkdf2.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "sha1-pbkdf2.c"; sourceTree = "<group>"; };
 		F8A33572244AED060039DA12 /* IOTaskQueue.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = IOTaskQueue.cpp; sourceTree = "<group>"; };
 		F8A33573244AED060039DA12 /* IOTaskQueue.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = IOTaskQueue.hpp; sourceTree = "<group>"; };
@@ -684,6 +692,8 @@
 			children = (
 				F8D364F624F93AFD0029340B /* ItlHalService.cpp */,
 				F8D364F724F93AFD0029340B /* ItlHalService.hpp */,
+				F88CB91324FBE9130060B1A5 /* ItlDriverInfo.h */,
+				F800DD9A24FBEBF000789320 /* ItlDriverController.h */,
 			);
 			path = hal;
 			sourceTree = "<group>";
@@ -749,6 +759,7 @@
 				F8D257782495DEFC00872E4F /* Common.h in Headers */,
 				F8C2EC9124080557007A9422 /* _buf.h in Headers */,
 				024A084123FCBC6C009FBA6C /* idgen.h in Headers */,
+				F88CB91424FBE9130060B1A5 /* ItlDriverInfo.h in Headers */,
 				F8F92586240974EF0088B8D5 /* types.h in Headers */,
 				024A083523FCBC6C009FBA6C /* des_locl.h in Headers */,
 				024A088B23FCBE38009FBA6C /* if_iwmreg.h in Headers */,
@@ -770,6 +781,7 @@
 				024A083723FCBC6C009FBA6C /* key_wrap.h in Headers */,
 				F8A33577244AED060039DA12 /* IOTaskQueue.hpp in Headers */,
 				F8F92583240974EF0088B8D5 /* random.h in Headers */,
+				F800DD9B24FBEBF000789320 /* ItlDriverController.h in Headers */,
 				F8C2EC9324080557007A9422 /* _arc4random.h in Headers */,
 				024A084823FCBC6C009FBA6C /* michael.h in Headers */,
 				024A085423FCBC6C009FBA6C /* podd.h in Headers */,
@@ -830,6 +842,7 @@
 				F8CFB34F244BF15C00B86738 /* podd.h in Headers */,
 				F8CFB350244BF15C00B86738 /* cmac.h in Headers */,
 				F8CFB351244BF15C00B86738 /* compat.h in Headers */,
+				F88CB91524FBE9130060B1A5 /* ItlDriverInfo.h in Headers */,
 				F8CFB32D244BF13A00B86738 /* ieee80211_amrr.h in Headers */,
 				F8CFB32E244BF13A00B86738 /* ieee80211_node.h in Headers */,
 				F8CFB32F244BF13A00B86738 /* ieee80211_regdomain.h in Headers */,
@@ -857,6 +870,7 @@
 				F8CFB32A244BF12500B86738 /* timeout.h in Headers */,
 				F8D2577B2495DEFC00872E4F /* IoctlId.h in Headers */,
 				F8CFB32B244BF12500B86738 /* _task.h in Headers */,
+				F800DD9C24FBEBF000789320 /* ItlDriverController.h in Headers */,
 				F8CFB32C244BF12500B86738 /* _ifq.h in Headers */,
 				F8CFB31B244BF0FE00B86738 /* bitfield.h in Headers */,
 				F8CFB31C244BF0FE00B86738 /* cfg80211.h in Headers */,
@@ -1011,6 +1025,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				F8CD3BC024FBD85300A20849 /* FwBinary.cpp in Sources */,
+				F8ED134424FBB5B70068C831 /* ItlIwx.cpp in Sources */,
 				F8C772922443439A00A1B8A0 /* compat.cpp in Sources */,
 				024A085223FCBC6C009FBA6C /* poly1305.c in Sources */,
 				024A083023FCBC6C009FBA6C /* sha2.c in Sources */,

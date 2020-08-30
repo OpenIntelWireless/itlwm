@@ -138,96 +138,6 @@ int iwx_debug = 1;
 #define DPRINTFN(n, x)    do { ; } while (0)
 #endif
 
-IOWorkLoop *_fWorkloop;
-IOCommandGate *_fCommandGate;
-
-#define  PCI_MSI_FLAGS        2    /* Message Control */
-#define  PCI_CAP_ID_MSI        0x05    /* Message Signalled Interrupts */
-#define  PCI_MSIX_FLAGS        2    /* Message Control */
-#define  PCI_CAP_ID_MSIX    0x11    /* MSI-X */
-#define  PCI_MSIX_FLAGS_ENABLE    0x8000    /* MSI-X enable */
-#define  PCI_MSI_FLAGS_ENABLE    0x0001    /* MSI feature enabled */
-
-static void pciMsiSetEnable(IOPCIDevice *device, UInt8 msiCap, int enable)
-{
-    u16 control;
-    
-    control = device->configRead16(msiCap + PCI_MSI_FLAGS);
-    control &= ~PCI_MSI_FLAGS_ENABLE;
-    if (enable)
-        control |= PCI_MSI_FLAGS_ENABLE;
-    device->configWrite16(msiCap + PCI_MSI_FLAGS, control);
-}
-
-static void pciMsiXClearAndSet(IOPCIDevice *device, UInt8 msixCap, UInt16 clear, UInt16 set)
-{
-    u16 ctrl;
-    
-    ctrl = device->configRead16(msixCap + PCI_MSIX_FLAGS);
-    ctrl &= ~clear;
-    ctrl |= set;
-    device->configWrite16(msixCap + PCI_MSIX_FLAGS, ctrl);
-}
-
-//IOService* ItlIwx::probe(IOService *provider, SInt32 *score)
-//{
-//    super::probe(provider, score);
-//    UInt8 msiCap;
-//    UInt8 msixCap;
-//    IOPCIDevice* device = OSDynamicCast(IOPCIDevice, provider);
-//    if (!device) {
-//        return NULL;
-//    }
-//    if (iwx_match(device)) {
-//        device->findPCICapability(PCI_CAP_ID_MSI, &msiCap);
-//        if (msiCap) {
-//            XYLog("%s msi capa exists\n", __FUNCTION__);
-//            pciMsiSetEnable(device, msiCap, 0);
-//        }
-//        device->findPCICapability(PCI_CAP_ID_MSIX, &msixCap);
-//        if (msixCap) {
-//            XYLog("%s msix capa exists\n", __FUNCTION__);
-//            pciMsiXClearAndSet(device, msixCap, PCI_MSIX_FLAGS_ENABLE, 0);
-//        }
-//        return this;
-//    }
-//    return NULL;
-//}
-
-//bool ItlIwx::configureInterface(IONetworkInterface *netif) {
-//    IONetworkData *nd;
-//
-//    if (super::configureInterface(netif) == false) {
-//        XYLog("super failed\n");
-//        return false;
-//    }
-//
-//    nd = netif->getParameter(kIONetworkStatsKey);
-//    if (!nd || !(fpNetStats = (IONetworkStats *)nd->getBuffer())) {
-//        XYLog("network statistics buffer unavailable?\n");
-//        return false;
-//    }
-//
-//    com.sc_ic.ic_ac.ac_if.netStat = fpNetStats;
-//    com.sc_ic.ic_ac.ac_if.iface = OSDynamicCast(IOEthernetInterface, netif);
-//    fpNetStats->collisions = 0;
-//
-//    return true;
-//}
-//
-//IONetworkInterface *ItlIwx::createInterface()
-//{
-//    itlwmx_interface *netif = new itlwmx_interface;
-//    if (!netif) {
-//        return NULL;
-//    }
-//    if (!netif->init(this)) {
-//        netif->release();
-//        return NULL;
-//    }
-//    return netif;
-//}
-
 struct ifnet *ItlIwx::getIfp()
 {
     return &com.sc_ic.ic_ac.ac_if;
@@ -243,290 +153,53 @@ IOEthernetInterface *ItlIwx::getNetworkInterface()
     return getIfp()->iface;
 }
 
-//bool ItlIwx::createMediumTables(const IONetworkMedium **primary)
-//{
-//    IONetworkMedium    *medium;
-//
-//    OSDictionary *mediumDict = OSDictionary::withCapacity(1);
-//    if (mediumDict == NULL) {
-//        XYLog("Cannot allocate OSDictionary\n");
-//        return false;
-//    }
-//
-//    medium = IONetworkMedium::medium(kIOMediumEthernetAuto, 100 * 1000000);
-//    IONetworkMedium::addMedium(mediumDict, medium);
-//    medium->release();
-//    if (primary) {
-//        *primary = medium;
-//    }
-//
-//    bool result = publishMediumDictionary(mediumDict);
-//    if (!result) {
-//        XYLog("Cannot publish medium dictionary!\n");
-//    }
-//
-//    mediumDict->release();
-//    return result;
-//}
-
-ieee80211_wpaparams wpa;
-ieee80211_wpapsk psk;
-ieee80211_nwkey nwkey;
-ieee80211_join join;
-
-void ItlIwx::joinSSID(const char *ssid_name, const char *ssid_pwd)
-{
-    struct ieee80211com *ic = &com.sc_ic;
-    
-    if (strlen(ssid_pwd) == 0) {
-        memset(&nwkey, 0, sizeof(ieee80211_nwkey));
-        nwkey.i_wepon = IEEE80211_NWKEY_OPEN;
-        nwkey.i_defkid = 0;
-        memcpy(join.i_nwid, ssid_name, strlen(ssid_name));
-        join.i_len = strlen(ssid_name);
-        join.i_flags = IEEE80211_JOIN_NWKEY;
-    } else {
-        memset(&wpa, 0, sizeof(ieee80211_wpaparams));
-        wpa.i_enabled = 1;
-        wpa.i_ciphers = 0;
-        wpa.i_groupcipher = 0;
-        wpa.i_protos = IEEE80211_WPA_PROTO_WPA1 | IEEE80211_WPA_PROTO_WPA2;
-        wpa.i_akms = IEEE80211_WPA_AKM_PSK | IEEE80211_WPA_AKM_8021X | IEEE80211_WPA_AKM_SHA256_PSK | IEEE80211_WPA_AKM_SHA256_8021X;
-        memcpy(wpa.i_name, "zxy", strlen("zxy"));
-        memset(&psk, 0, sizeof(ieee80211_wpapsk));
-        memcpy(psk.i_name, "zxy", strlen("zxy"));
-        psk.i_enabled = 1;
-        pbkdf2_sha1(ssid_pwd, (const uint8_t*)ssid_name, strlen(ssid_name),
-                    4096, psk.i_psk , 32);
-        memset(&nwkey, 0, sizeof(ieee80211_nwkey));
-        nwkey.i_wepon = 0;
-        nwkey.i_defkid = 0;
-        memset(&join, 0, sizeof(ieee80211_join));
-        join.i_wpaparams = wpa;
-        join.i_wpapsk = psk;
-        join.i_flags = IEEE80211_JOIN_WPAPSK | IEEE80211_JOIN_ANY | IEEE80211_JOIN_WPA | IEEE80211_JOIN_8021X;
-        join.i_nwkey = nwkey;
-        join.i_len = strlen(ssid_name);
-        memcpy(join.i_nwid, ssid_name, join.i_len);
-    }
-    if (ieee80211_add_ess(ic, &join) == 0)
-        ic->ic_flags |= IEEE80211_F_AUTO_JOIN;
-}
-
-struct ieee80211_nwid nwid;
-
-void ItlIwx::associateSSID(const char *ssid, const char *pwd)
-{
-    struct ieee80211com *ic = &com.sc_ic;
-    if (strlen(pwd) == 0) {
-        memcpy(nwid.i_nwid, ssid, 32);
-        nwid.i_len = strlen((char *)nwid.i_nwid);
-        memset(ic->ic_des_essid, 0, IEEE80211_NWID_LEN);
-        ic->ic_des_esslen = nwid.i_len;
-        memcpy(ic->ic_des_essid, nwid.i_nwid, nwid.i_len);
-        if (ic->ic_des_esslen > 0) {
-            /* 'nwid' disables auto-join magic */
-            ic->ic_flags &= ~IEEE80211_F_AUTO_JOIN;
-        } else if (!TAILQ_EMPTY(&ic->ic_ess)) {
-            /* '-nwid' re-enables auto-join */
-            ic->ic_flags |= IEEE80211_F_AUTO_JOIN;
-        }
-        /* disable WPA/WEP */
-        ieee80211_disable_rsn(ic);
-        ieee80211_disable_wep(ic);
-    } else {
-        memset(&psk, 0, sizeof(psk));
-        memcpy(nwid.i_nwid, ssid, 32);
-        nwid.i_len = strlen((char *)nwid.i_nwid);
-        memset(ic->ic_des_essid, 0, IEEE80211_NWID_LEN);
-        ic->ic_des_esslen = nwid.i_len;
-        memcpy(ic->ic_des_essid, nwid.i_nwid, nwid.i_len);
-        if (ic->ic_des_esslen > 0) {
-            /* 'nwid' disables auto-join magic */
-            ic->ic_flags &= ~IEEE80211_F_AUTO_JOIN;
-        } else if (!TAILQ_EMPTY(&ic->ic_ess)) {
-            /* '-nwid' re-enables auto-join */
-            ic->ic_flags |= IEEE80211_F_AUTO_JOIN;
-        }
-        /* disable WPA/WEP */
-        ieee80211_disable_rsn(ic);
-        ieee80211_disable_wep(ic);
-        size_t passlen = strlen(pwd);
-        /* Parse a WPA passphrase */
-        if (passlen < 8 || passlen > 63)
-            XYLog("wpakey: passphrase must be between "
-                  "8 and 63 characters");
-        if (nwid.i_len == 0)
-            XYLog("wpakey: nwid not set");
-        pbkdf2_sha1(pwd, (const uint8_t*)ssid, nwid.i_len, 4096,
-                    psk.i_psk, 32);
-        psk.i_enabled = 1;
-        if (psk.i_enabled) {
-            ic->ic_flags |= IEEE80211_F_PSK;
-            memcpy(ic->ic_psk, psk.i_psk, sizeof(ic->ic_psk));
-            if (ic->ic_flags & IEEE80211_F_WEPON)
-                ieee80211_disable_wep(ic);
-        } else {
-            ic->ic_flags &= ~IEEE80211_F_PSK;
-            memset(ic->ic_psk, 0, sizeof(ic->ic_psk));
-        }
-        memset(&wpa, 0, sizeof(wpa));
-        ieee80211_ioctl_getwpaparms(ic, &wpa);
-        wpa.i_enabled = psk.i_enabled;
-        wpa.i_ciphers = 0;
-        wpa.i_groupcipher = 0;
-        wpa.i_protos = IEEE80211_WPA_PROTO_WPA1 | IEEE80211_WPA_PROTO_WPA2;
-        wpa.i_akms = IEEE80211_WPA_AKM_PSK | IEEE80211_WPA_AKM_8021X | IEEE80211_WPA_AKM_SHA256_PSK | IEEE80211_WPA_AKM_SHA256_8021X;
-        ieee80211_ioctl_setwpaparms(ic, &wpa);
-    }
-    ieee80211_del_ess(ic, NULL, 0, 1);
-    struct ieee80211_node *selbs = ieee80211_node_choose_bss(ic, 0, NULL);
-    if (selbs == NULL) {
-        ieee80211_new_state(ic, IEEE80211_S_SCAN, -1);
-    } else {
-        ieee80211_node_join_bss(ic, selbs, 1);
-        com.sc_flags &= ~(IWX_FLAG_SCANNING | IWX_FLAG_BGSCAN);
-    }
-}
-
 bool ItlIwx::attach(IOPCIDevice *device)
 {
-    struct ifnet *ifp = &com.sc_ic.ic_ac.ac_if;
-    device->setBusMasterEnable(true);
-    device->setIOEnable(true);
-    device->setMemoryEnable(true);
-    device->configWrite8(0x41, 0);
     pci.pa_tag = device;
     pci.workloop = getMainWorkLoop();
     if (!iwx_attach(&com, &pci)) {
-//        super::stop(provider);
-//        ieee80211_ifdetach(ifp);
-//        taskq_destroy(systq);
-//        taskq_destroy(com.sc_nswq);
-//        releaseAll();
+        detach(device);
+        releaseAll();
         return false;
     }
-//    if (!getController()->attachInterface((IONetworkInterface **)interface)) {
-//        XYLog("attach to interface fail\n");
-//        super::stop(provider);
-//        ieee80211_ifdetach(ifp);
-//        taskq_destroy(systq);
-//        taskq_destroy(com.sc_nswq);
-//        releaseAll();
-//        return false;
-//    }
     return true;
 }
 
-//const OSString * ItlIwx::newVendorString() const
-//{
-//    return OSString::withCString("Apple");
-//}
-//
-//const OSString * ItlIwx::newModelString() const
-//{
-//    return OSString::withCString("Intel Wireless Card");
-//}
-//
-//bool ItlIwx::initPCIPowerManagment(IOPCIDevice *provider)
-//{
-//    UInt16 reg16;
-//
-//    reg16 = provider->configRead16(kIOPCIConfigCommand);
-//
-//    reg16 |= ( kIOPCICommandBusMaster       |
-//               kIOPCICommandMemorySpace     |
-//               kIOPCICommandMemWrInvalidate );
-//
-//    reg16 &= ~kIOPCICommandIOSpace;  // disable I/O space
-//
-//    provider->configWrite16( kIOPCIConfigCommand, reg16 );
-//    provider->findPCICapability(kIOPCIPowerManagementCapability,
-//                                &pmPCICapPtr);
-//    if (pmPCICapPtr) {
-//        UInt16 pciPMCReg = provider->configRead32( pmPCICapPtr ) >> 16;
-//        if (pciPMCReg & kPCIPMCPMESupportFromD3Cold) {
-//            magicPacketSupported = true;
-//        }
-//        provider->configWrite16((pmPCICapPtr + 4), 0x8000 );
-//        IOSleep(10);
-//    }
-//    return true;
-//}
-//
-//bool ItlIwx::createWorkLoop()
-//{
-//    _fWorkloop = IOWorkLoop::workLoop();
-//    return _fWorkloop != 0;
-//}
-//
-//IOWorkLoop *ItlIwx::getWorkLoop() const
-//{
-//    return _fWorkloop;
-//}
-//
-//IOReturn ItlIwx::selectMedium(const IONetworkMedium *medium) {
-//    setSelectedMedium(medium);
-//    return kIOReturnSuccess;
-//}
-//
-//void ItlIwx::stop(IOService *provider)
-//{
-//    XYLog("%s\n", __FUNCTION__);
-//    struct ifnet *ifp = &com.sc_ic.ic_ac.ac_if;
-//    super::stop(provider);
-//    setLinkStatus(kIONetworkLinkValid);
-//    ieee80211_ifdetach(ifp);
-//    detachInterface(fNetIf);
-//    OSSafeReleaseNULL(fNetIf);
-//    ifp->iface = NULL;
-//    taskq_destroy(systq);
-//    taskq_destroy(com.sc_nswq);
-//    releaseAll();
-//}
+void ItlIwx::
+detach(IOPCIDevice *device)
+{
+    struct ifnet *ifp = &com.sc_ic.ic_ac.ac_if;
+    ieee80211_ifdetach(ifp);
+    taskq_destroy(systq);
+    taskq_destroy(com.sc_nswq);
+    releaseAll();
+}
+
+void ItlIwx::
+releaseAll()
+{
+    pci_intr_handle *intrHandler = com.ih;
+    
+    if (intrHandler && intrHandler->workloop) {
+        if (intrHandler->intr) {
+            intrHandler->intr->disable();
+            intrHandler->workloop->removeEventSource(intrHandler->intr);
+            intrHandler->intr->release();
+        }
+        intrHandler->intr = NULL;
+        intrHandler->workloop = NULL;
+        intrHandler->arg = NULL;
+        intrHandler->dev = NULL;
+        intrHandler->func = NULL;
+        intrHandler->release();
+        com.ih = NULL;
+    }
+}
 
 void ItlIwx::free()
 {
     XYLog("%s\n", __FUNCTION__);
     super::free();
-}
-
-void ItlIwx::releaseAll()
-{
-    pci_intr_handle *intrHandler = com.ih;
-    
-    if (_fWorkloop) {
-        if (intrHandler) {
-            if (intrHandler->intr) {
-                intrHandler->intr->disable();
-                intrHandler->workloop->removeEventSource(intrHandler->intr);
-                intrHandler->intr->release();
-            }
-            intrHandler->intr = NULL;
-            intrHandler->workloop = NULL;
-            intrHandler->arg = NULL;
-            intrHandler->dev = NULL;
-            intrHandler->func = NULL;
-            intrHandler->release();
-            intrHandler = NULL;
-        }
-        if (_fCommandGate) {
-//            _fCommandGate->disable();
-            _fWorkloop->removeEventSource(_fCommandGate);
-            _fCommandGate->release();
-            _fCommandGate = NULL;
-        }
-//        if (fWatchdogWorkLoop && watchdogTimer) {
-//            watchdogTimer->cancelTimeout();
-//            fWatchdogWorkLoop->removeEventSource(watchdogTimer);
-//            watchdogTimer->release();
-//            watchdogTimer = NULL;
-//            fWatchdogWorkLoop->release();
-//            fWatchdogWorkLoop = NULL;
-//        }
-        _fWorkloop->release();
-        _fWorkloop = NULL;
-    }
 }
 
 IOReturn ItlIwx::enable(IONetworkInterface *netif)
@@ -535,10 +208,7 @@ IOReturn ItlIwx::enable(IONetworkInterface *netif)
     struct ifnet *ifp = &com.sc_ic.ic_ac.ac_if;
     super::enable(netif);
     ifp->if_flags |= IFF_UP;
-    _fCommandGate->enable();
     iwx_activate(&com, DVACT_WAKEUP);
-//    watchdogTimer->setTimeoutMS(1000);
-//    watchdogTimer->enable();
     return kIOReturnSuccess;
 }
 
@@ -547,11 +217,20 @@ IOReturn ItlIwx::disable(IONetworkInterface *netif)
     XYLog("%s\n", __FUNCTION__);
     struct ifnet *ifp = &com.sc_ic.ic_ac.ac_if;
     super::disable(netif);
-//    watchdogTimer->cancelTimeout();
-//    watchdogTimer->disable();
     iwx_activate(&com, DVACT_QUIESCE);
-//    setLinkStatus(kIONetworkLinkValid);
     return kIOReturnSuccess;
+}
+
+void ItlIwx::
+clearScanningFlags()
+{
+    com.sc_flags &= ~(IWX_FLAG_SCANNING | IWX_FLAG_BGSCAN);
+}
+
+char *ItlIwx::
+getFirmwareVersion()
+{
+    return com.sc_fwver;
 }
 
 struct ieee80211com *ItlIwx::
@@ -559,207 +238,6 @@ get80211Controller()
 {
     return &com.sc_ic;
 }
-
-//IOReturn ItlIwx::getHardwareAddress(IOEthernetAddress *addrP)
-//{
-//    if (IEEE80211_ADDR_EQ(etheranyaddr, com.sc_ic.ic_myaddr)) {
-//        return kIOReturnError;
-//    } else {
-//        IEEE80211_ADDR_COPY(addrP, com.sc_ic.ic_myaddr);
-//        return kIOReturnSuccess;
-//    }
-//}
-
-//UInt32 ItlIwx::getFeatures() const
-//{
-//    UInt32 features = (kIONetworkFeatureMultiPages);
-//    return features;
-//}
-//
-//UInt32 ItlIwx::outputPacket(mbuf_t m, void *param)
-//{
-//    ifnet *ifp = &com.sc_ic.ic_ac.ac_if;
-//
-//    if (com.sc_ic.ic_state != IEEE80211_S_RUN || ifp == NULL || ifp->if_snd == NULL) {
-//        freePacket(m);
-//        return kIOReturnOutputDropped;
-//    }
-//    if (m == NULL) {
-//        XYLog("%s m==NULL!!\n", __FUNCTION__);
-//        ifp->netStat->outputErrors++;
-//        return kIOReturnOutputDropped;
-//    }
-//    if (!(mbuf_flags(m) & MBUF_PKTHDR) ){
-//        XYLog("%s pkthdr is NULL!!\n", __FUNCTION__);
-//        ifp->netStat->outputErrors++;
-//        return kIOReturnOutputDropped;
-//    }
-//    if (mbuf_type(m) == MBUF_TYPE_FREE) {
-//        XYLog("%s mbuf is FREE!!\n", __FUNCTION__);
-//        ifp->netStat->outputErrors++;
-//        return kIOReturnOutputDropped;
-//    }
-//    if (ifp->if_snd->lockEnqueue(m)) {
-//        (*ifp->if_start)(ifp);
-//        return kIOReturnOutputSuccess;
-//    }
-//
-//    return kIOReturnOutputSuccess;
-//}
-//
-//IOReturn ItlIwx::setPromiscuousMode(IOEnetPromiscuousMode mode) {
-//    return kIOReturnSuccess;
-//}
-//
-//IOReturn ItlIwx::setMulticastMode(IOEnetMulticastMode mode) {
-//    return kIOReturnSuccess;
-//}
-//
-//IOReturn ItlIwx::setMulticastList(IOEthernetAddress* addr, UInt32 len) {
-//    return kIOReturnSuccess;
-//}
-//
-//IOReturn ItlIwx::getMaxPacketSize(UInt32 *maxSize) const {
-//    return super::getMaxPacketSize(maxSize);
-//}
-
-//IOReturn ItlIwx::getPacketFilters(const OSSymbol *group, UInt32 *filters) const {
-//    IOReturn    rtn = kIOReturnSuccess;
-//    if (group == gIOEthernetWakeOnLANFilterGroup && magicPacketSupported) {
-//        *filters = kIOEthernetWakeOnMagicPacket;
-//    } else if (group == gIONetworkFilterGroup) {
-//        *filters = kIOPacketFilterUnicast | kIOPacketFilterBroadcast
-//        | kIOPacketFilterPromiscuous | kIOPacketFilterMulticast
-//        | kIOPacketFilterMulticastAll;
-//    } else {
-//        rtn = IOEthernetController::getPacketFilters(group, filters);
-//    }
-//    return rtn;
-//}
-
-static IOPMPowerState powerStateArray[kPowerStateCount] =
-{
-    {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-    {1, kIOPMDeviceUsable, kIOPMPowerOn, kIOPMPowerOn, 0, 0, 0, 0, 0, 0, 0, 0}
-};
-
-//void ItlIwx::unregistPM()
-//{
-//    if (powerOffThreadCall) {
-//        thread_call_free(powerOffThreadCall);
-//        powerOffThreadCall = NULL;
-//    }
-//    if (powerOnThreadCall) {
-//        thread_call_free(powerOnThreadCall);
-//        powerOnThreadCall = NULL;
-//    }
-//}
-//
-//IOReturn ItlIwx::setPowerState(unsigned long powerStateOrdinal, IOService *policyMaker)
-//{
-//    IOReturn result = IOPMAckImplied;
-//
-//    if (pmPowerState == powerStateOrdinal) {
-//        return result;
-//    }
-//    switch (powerStateOrdinal) {
-//        case kPowerStateOff:
-//            if (powerOffThreadCall) {
-//                retain();
-//                if (thread_call_enter(powerOffThreadCall)) {
-//                    release();
-//                }
-//                result = 5000000;
-//            }
-//            break;
-//        case kPowerStateOn:
-//            if (powerOnThreadCall) {
-//                retain();
-//                if (thread_call_enter(powerOnThreadCall)) {
-//                    release();
-//                }
-//                result = 5000000;
-//            }
-//            break;
-//
-//        default:
-//            break;
-//    }
-//    return result;
-//}
-//
-//IOReturn ItlIwx::setWakeOnMagicPacket(bool active)
-//{
-//    magicPacketEnabled = active;
-//    return kIOReturnSuccess;
-//}
-//
-//static void handleSetPowerStateOff(thread_call_param_t param0,
-//                             thread_call_param_t param1)
-//{
-//    ItlIwx *self = (ItlIwx *)param0;
-//
-//    if (param1 == 0)
-//    {
-//        self->getCommandGate()->runAction((IOCommandGate::Action)
-//                                           handleSetPowerStateOff,
-//                                           (void *) 1);
-//    }
-//    else
-//    {
-//        self->setPowerStateOff();
-//        self->release();
-//    }
-//}
-//
-//static void handleSetPowerStateOn(thread_call_param_t param0,
-//                            thread_call_param_t param1)
-//{
-//    ItlIwx *self = (ItlIwx *) param0;
-//
-//    if (param1 == 0)
-//    {
-//        self->getCommandGate()->runAction((IOCommandGate::Action)
-//                                           handleSetPowerStateOn,
-//                                           (void *) 1);
-//    }
-//    else
-//    {
-//        self->setPowerStateOn();
-//        self->release();
-//    }
-//}
-//
-//IOReturn ItlIwx::registerWithPolicyMaker(IOService *policyMaker)
-//{
-//    IOReturn ret;
-//
-//    pmPowerState = kPowerStateOn;
-//    pmPolicyMaker = policyMaker;
-//
-//    powerOffThreadCall = thread_call_allocate(
-//                                            (thread_call_func_t)handleSetPowerStateOff,
-//                                            (thread_call_param_t)this);
-//    powerOnThreadCall  = thread_call_allocate(
-//                                            (thread_call_func_t)handleSetPowerStateOn,
-//                                              (thread_call_param_t)this);
-//    ret = pmPolicyMaker->registerPowerDriver(this,
-//                                             powerStateArray,
-//                                             kPowerStateCount);
-//    return ret;
-//}
-//
-//void ItlIwx::setPowerStateOff()
-//{
-//    pmPowerState = kPowerStateOff;
-//    pmPolicyMaker->acknowledgeSetPowerState();
-//}
-//
-//void ItlIwx::setPowerStateOn()
-//{
-//    pmPowerState = kPowerStateOn;
-//    pmPolicyMaker->acknowledgeSetPowerState();
-//}
 
 void ItlIwx::watchdogAction(IOTimerEventSource *timer)
 {
@@ -7323,7 +6801,7 @@ iwx_start(struct ifnet *ifp)
 {
     struct iwx_softc *sc = (struct iwx_softc*)ifp->if_softc;
     ItlIwx *that = container_of(sc, ItlIwx, com);
-    _fCommandGate->attemptAction(_iwx_start_task, &that->com.sc_ic.ic_ac.ac_if);
+    that->getMainCommandGate()->attemptAction(_iwx_start_task, &that->com.sc_ic.ic_ac.ac_if);
 }
 
 void ItlIwx::

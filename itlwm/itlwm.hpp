@@ -30,6 +30,10 @@
 #include <IOKit/IOFilterInterruptEventSource.h>
 
 #include "ItlHalService.hpp"
+#include "ItlDriverInfo.h"
+#include "ItlDriverController.h"
+#include "ItlIwm.hpp"
+#include "ItlIwx.hpp"
 
 enum
 {
@@ -102,8 +106,6 @@ public:
     itlwm_interface *fNetIf;
     IOWorkLoop *fWatchdogWorkLoop;
     ItlHalService *fHalService;
-    
-    IOLock *fwLoadLock;
     semaphore_t outputThreadSignal;
     
     //pm

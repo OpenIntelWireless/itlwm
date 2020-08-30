@@ -139,8 +139,10 @@
 #include <IOKit/IOFilterInterruptEventSource.h>
 
 #include "ItlHalService.hpp"
+#include "ItlDriverController.h"
+#include "ItlDriverInfo.h"
 
-class ItlIwx : public ItlHalService {
+class ItlIwx : public ItlHalService, ItlDriverInfo, ItlDriverController {
     OSDeclareDefaultStructors(ItlIwx)
     
 public:
@@ -161,6 +163,12 @@ public:
     struct ifnet *getIfp();
     struct iwx_softc *getSoft();
     IOEthernetInterface *getNetworkInterface();
+    
+    //driver info
+    virtual char *getFirmwareVersion() override;
+    
+    //driver controller
+    virtual void clearScanningFlags() override;
     
     void releaseAll();
     void joinSSID(const char *ssid, const char *pwd);
@@ -393,7 +401,7 @@ public:
     void    iwx_notif_intr(struct iwx_softc *);
     static int    iwx_intr(OSObject *object, IOInterruptEventSource* sender, int count);
     static int    iwx_intr_msix(OSObject *object, IOInterruptEventSource* sender, int count);
-    int    iwx_match(IOPCIDevice *);
+    static int    iwx_match(IOPCIDevice *);
     int    iwx_preinit(struct iwx_softc *);
     void    iwx_attach_hook(struct device *);
     bool    iwx_attach(struct iwx_softc *, struct pci_attach_args *);

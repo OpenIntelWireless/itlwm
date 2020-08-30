@@ -701,7 +701,7 @@
 /*
  * Causes for the FH register interrupts
  */
-enum msix_fh_int_causes {
+enum iwm_msix_fh_int_causes {
     IWM_MSIX_FH_INT_CAUSES_Q0        = (1 << 0),
     IWM_MSIX_FH_INT_CAUSES_Q1        = (1 << 1),
     IWM_MSIX_FH_INT_CAUSES_D2S_CH0_NUM    = (1 << 16),
@@ -713,7 +713,7 @@ enum msix_fh_int_causes {
 /*
  * Causes for the HW register interrupts
  */
-enum msix_hw_int_causes {
+enum iwm_msix_hw_int_causes {
     IWM_MSIX_HW_INT_CAUSES_REG_ALIVE    = (1 << 0),
     IWM_MSIX_HW_INT_CAUSES_REG_WAKEUP    = (1 << 1),
     IWM_MSIX_HW_INT_CAUSES_REG_IPC        = (1 << 1),
@@ -732,7 +732,7 @@ enum msix_hw_int_causes {
 /*
  * Registers to map causes to vectors
  */
-enum msix_ivar_for_cause {
+enum iwm_msix_ivar_for_cause {
     IWM_MSIX_IVAR_CAUSE_D2S_CH0_NUM        = 0x0,
     IWM_MSIX_IVAR_CAUSE_D2S_CH1_NUM        = 0x1,
     IWM_MSIX_IVAR_CAUSE_S2D            = 0x3,

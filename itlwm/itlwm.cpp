@@ -33,7 +33,6 @@ IOCommandGate *_fCommandGate;
 bool itlwm::init(OSDictionary *properties)
 {
     super::init(properties);
-    fwLoadLock = IOLockAlloc();
     return true;
 }
 
@@ -67,6 +66,7 @@ static void pciMsiXClearAndSet(IOPCIDevice *device, UInt8 msixCap, UInt16 clear,
 
 IOService* itlwm::probe(IOService *provider, SInt32 *score)
 {
+    bool isMatch = false;
     super::probe(provider, score);
     UInt8 msiCap;
     UInt8 msixCap;
@@ -74,17 +74,25 @@ IOService* itlwm::probe(IOService *provider, SInt32 *score)
     if (!device) {
         return NULL;
     }
-//    if (iwm_match(device)) {
-//        device->findPCICapability(PCI_CAP_ID_MSI, &msiCap);
-//        if (msiCap) {
-//            pciMsiSetEnable(device, msiCap, 0);
-//        }
-//        device->findPCICapability(PCI_CAP_ID_MSIX, &msixCap);
-//        if (msixCap) {
-//            pciMsiXClearAndSet(device, msixCap, PCI_MSIX_FLAGS_ENABLE, 0);
-//        }
-//        return this;
-//    }
+    if (ItlIwm::iwm_match(device)) {
+        isMatch = true;
+        fHalService = new ItlIwm;
+    }
+    if (ItlIwx::iwx_match(device)) {
+        isMatch = true;
+        fHalService = new ItlIwx;
+    }
+    if (isMatch) {
+        device->findPCICapability(PCI_CAP_ID_MSI, &msiCap);
+        if (msiCap) {
+            pciMsiSetEnable(device, msiCap, 0);
+        }
+        device->findPCICapability(PCI_CAP_ID_MSIX, &msixCap);
+        if (msixCap) {
+            pciMsiXClearAndSet(device, msixCap, PCI_MSIX_FLAGS_ENABLE, 0);
+        }
+        return this;
+    }
     return NULL;
 }
 
@@ -128,7 +136,7 @@ struct ifnet *itlwm::getIfp()
 
 struct iwm_softc *itlwm::getSoft()
 {
-    return NULL;
+    return &((ItlIwm*)fHalService)->com;
 }
 
 IOEthernetInterface *itlwm::getNetworkInterface()
@@ -278,8 +286,7 @@ void itlwm::associateSSID(const char *ssid, const char *pwd)
         ieee80211_new_state(ic, IEEE80211_S_SCAN, -1);
     } else {
         ieee80211_node_join_bss(ic, selbs, 1);
-        /* TODO */
-//        com.sc_flags &= ~(IWM_FLAG_SCANNING | IWM_FLAG_BGSCAN);
+        ((ItlDriverController*)fHalService)->clearScanningFlags();
     }
 }
 
@@ -319,26 +326,33 @@ bool itlwm::start(IOService *provider)
     const IONetworkMedium *primaryMedium;
     if (!createMediumTables(&primaryMedium) ||
         !setCurrentMedium(primaryMedium) || !setSelectedMedium(primaryMedium)) {
+        XYLog("setup medium fail\n");
         releaseAll();
         return false;
     }
+    fHalService->initWithController(this, _fWorkloop, _fCommandGate);
     if (!fHalService->attach(pciNub)) {
+        XYLog("attach fail\n");
         releaseAll();
         return false;
     }
     if (!attachInterface((IONetworkInterface **)&fNetIf, true)) {
         XYLog("attach to interface fail\n");
+        fHalService->detach(pciNub);
         releaseAll();
         return false;
     }
     fWatchdogWorkLoop = IOWorkLoop::workLoop();
     if (fWatchdogWorkLoop == NULL) {
+        XYLog("init watchdog workloop fail\n");
+        fHalService->detach(pciNub);
         releaseAll();
         return false;
     }
     watchdogTimer = IOTimerEventSource::timerEventSource(this, OSMemberFunctionCast(IOTimerEventSource::Action, fHalService, &ItlHalService::watchdogAction));
     if (!watchdogTimer) {
         XYLog("init watchdog fail\n");
+        fHalService->detach(pciNub);
         releaseAll();
         return false;
     }
@@ -433,75 +447,50 @@ void itlwm::stop(IOService *provider)
 {
     XYLog("%s\n", __FUNCTION__);
     struct ifnet *ifp = &fHalService->get80211Controller()->ic_ac.ac_if;
-    
     super::stop(provider);
     setLinkStatus(kIONetworkLinkValid);
-    ieee80211_ifdetach(ifp);
+    fHalService->detach(pciNub);
     detachInterface(fNetIf);
     OSSafeReleaseNULL(fNetIf);
     ifp->iface = NULL;
-//    taskq_destroy(systq);
-//    taskq_destroy(com.sc_nswq);
     releaseAll();
 }
 
 void itlwm::releaseAll()
 {
-//    pci_intr_handle *intrHandler = com.ih;
-//
-//    if (com.sc_calib_to) {
-//        timeout_del(&com.sc_calib_to);
-//        timeout_free(&com.sc_calib_to);
-//    }
-//    if (com.sc_led_blink_to) {
-//        timeout_del(&com.sc_led_blink_to);
-//        timeout_free(&com.sc_led_blink_to);
-//    }
-//    if (_fWorkloop) {
-//        if (intrHandler) {
-//            if (intrHandler->intr) {
-//                intrHandler->intr->disable();
-//                intrHandler->workloop->removeEventSource(intrHandler->intr);
-//                intrHandler->intr->release();
-//            }
-//            intrHandler->intr = NULL;
-//            intrHandler->workloop = NULL;
-//            intrHandler->arg = NULL;
-//            intrHandler->dev = NULL;
-//            intrHandler->func = NULL;
-//            intrHandler->release();
-//            intrHandler = NULL;
-//        }
-//        if (_fCommandGate) {
-//            if (lastSleepChan) {
-//                wakeupOn(lastSleepChan);
-//            }
-////            _fCommandGate->disable();
-//            _fWorkloop->removeEventSource(_fCommandGate);
-//            _fCommandGate->release();
-//            _fCommandGate = NULL;
-//        }
-//        if (fWatchdogWorkLoop && watchdogTimer) {
-//            watchdogTimer->cancelTimeout();
-//            fWatchdogWorkLoop->removeEventSource(watchdogTimer);
-//            watchdogTimer->release();
-//            watchdogTimer = NULL;
-//            fWatchdogWorkLoop->release();
-//            fWatchdogWorkLoop = NULL;
-//        }
-//        _fWorkloop->release();
-//        _fWorkloop = NULL;
-//    }
+    if (_fWorkloop) {
+        if (_fCommandGate) {
+//            _fCommandGate->disable();
+            _fWorkloop->removeEventSource(_fCommandGate);
+            XYLog("%s _fCommandGate=%d\n", __FUNCTION__, _fCommandGate->getRetainCount());
+            _fCommandGate->release();
+            _fCommandGate = NULL;
+        }
+        if (fWatchdogWorkLoop && watchdogTimer) {
+            watchdogTimer->cancelTimeout();
+            fWatchdogWorkLoop->removeEventSource(watchdogTimer);
+            XYLog("%s watchdogTimer=%d\n", __FUNCTION__, watchdogTimer->getRetainCount());
+            watchdogTimer->release();
+            watchdogTimer = NULL;
+            XYLog("%s fWatchdogWorkLoop=%d\n", __FUNCTION__, fWatchdogWorkLoop->getRetainCount());
+            fWatchdogWorkLoop->release();
+            fWatchdogWorkLoop = NULL;
+        }
+        XYLog("%s _fWorkloop=%d\n", __FUNCTION__, _fWorkloop->getRetainCount());
+        _fWorkloop->release();
+        _fWorkloop = NULL;
+    }
+    if (fHalService != NULL) {
+        XYLog("%s fHalService=%d\n", __FUNCTION__, fHalService->getRetainCount());
+        fHalService->release();
+        fHalService = NULL;
+    }
     unregistPM();
 }
 
 void itlwm::free()
 {
     XYLog("%s\n", __FUNCTION__);
-    if (fwLoadLock) {
-        IOLockFree(fwLoadLock);
-        fwLoadLock = NULL;
-    }
     super::free();
 }
 

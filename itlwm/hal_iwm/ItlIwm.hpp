@@ -24,8 +24,10 @@
 #include <IOKit/IOFilterInterruptEventSource.h>
 
 #include "ItlHalService.hpp"
+#include "ItlDriverInfo.h"
+#include "ItlDriverController.h"
 
-class ItlIwm : public ItlHalService {
+class ItlIwm : public ItlHalService, ItlDriverInfo, ItlDriverController {
     OSDeclareDefaultStructors(ItlIwm)
     
 public:
@@ -47,6 +49,12 @@ public:
     struct ifnet *getIfp();
     struct iwm_softc *getSoft();
     IOEthernetInterface *getNetworkInterface();
+    
+    //driver info
+    virtual char *getFirmwareVersion() override;
+    
+    //driver controller
+    virtual void clearScanningFlags() override;
     
     //utils
     int    iwm_send_bt_init_conf(struct iwm_softc *);
@@ -325,7 +333,7 @@ public:
     void    iwm_notif_intr(struct iwm_softc *);
     static int    iwm_intr(OSObject *object, IOInterruptEventSource* sender, int count);
     static int    iwm_intr_msix(OSObject *object, IOInterruptEventSource* sender, int count);
-    int    iwm_match(IOPCIDevice *);
+    static int    iwm_match(IOPCIDevice *);
     int    iwm_preinit(struct iwm_softc *);
     void    iwm_attach_hook(struct device *);
     bool    iwm_attach(struct iwm_softc *, struct pci_attach_args *);

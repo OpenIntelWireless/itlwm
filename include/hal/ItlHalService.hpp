@@ -42,6 +42,8 @@ public:
     virtual void watchdogAction(IOTimerEventSource *timer) = 0;
     
     virtual struct ieee80211com *get80211Controller() = 0;
+    
+    virtual void free() override;
 
 public:
     virtual bool initWithController(IOEthernetController *controller, IOWorkLoop *workloop, IOCommandGate *commandGate);

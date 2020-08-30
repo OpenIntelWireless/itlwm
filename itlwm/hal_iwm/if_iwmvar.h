@@ -584,21 +584,3 @@ struct iwm_node {
 #define IWM_ICT_SIZE        4096
 #define IWM_ICT_COUNT        (IWM_ICT_SIZE / sizeof (uint32_t))
 #define IWM_ICT_PADDR_SHIFT    12
-
-struct pci_matchid {
-    int        pm_vid;
-    int    pm_pid;
-};
-
-static inline int
-pci_matchbyid(int vid, int pid, const struct pci_matchid *ids, int nent)
-{
-    const struct pci_matchid *pm;
-    int i;
-
-    for (i = 0, pm = ids; i < nent; i++, pm++)
-        if (vid == pm->pm_vid &&
-            pid == pm->pm_pid)
-            return (1);
-    return (0);
-}

@@ -14,6 +14,9 @@
 
 #include "ItlHalService.hpp"
 
+#define super OSObject
+OSDefineMetaClassAndAbstractStructors(ItlHalService, OSObject)
+
 bool ItlHalService::
 initWithController(IOEthernetController *controller, IOWorkLoop *workloop, IOCommandGate *commandGate)
 {
@@ -69,4 +72,10 @@ tsleep_nsec(void *ident, int priority, const char *wmesg, int timo)
         return 0;
     else
         return 1;
+}
+
+void ItlHalService::
+free()
+{
+    super::free();
 }

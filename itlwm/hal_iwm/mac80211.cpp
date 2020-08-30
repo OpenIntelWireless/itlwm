@@ -123,8 +123,6 @@
 #include <net/ethernet.h>
 #include <IOKit/IOCommandGate.h>
 
-extern IOCommandGate *_fCommandGate;;
-
 int ItlIwm::
 iwm_is_valid_channel(uint16_t ch_id)
 {
@@ -3560,14 +3558,14 @@ iwm_attach(struct iwm_softc *sc, struct pci_attach_args *pa)
     }
     if (sc->sc_msix)
         sc->sc_ih =
-        IOFilterInterruptEventSource::filterInterruptEventSource(this,
+        IOFilterInterruptEventSource::filterInterruptEventSource(getController(),
                                                                  (IOInterruptEventSource::Action)&ItlIwm::iwm_intr_msix,
                                                                  &ItlIwm::intrFilter
                                                                  ,pa->pa_tag, msiIntrIndex);
     else
         sc->sc_ih = IOFilterInterruptEventSource::filterInterruptEventSource(this,
                                                                              (IOInterruptEventSource::Action)&ItlIwm::iwm_intr, &ItlIwm::intrFilter
-                                                                             ,pa->pa_tag, msiIntrIndex);
+                                                                             , pa->pa_tag, msiIntrIndex);
     if (sc->sc_ih == NULL || pa->workloop->addEventSource(sc->sc_ih) != kIOReturnSuccess) {
         XYLog("\n");
         XYLog("%s: can't establish interrupt", DEVNAME(sc));
@@ -3875,7 +3873,9 @@ iwm_attach(struct iwm_softc *sc, struct pci_attach_args *pa)
      * firmware from disk. Postpone until mountroot is done.
      */
     //    config_mountroot(self, iwm_attach_hook);
-    iwm_preinit(sc);
+    if (iwm_preinit(sc)) {
+        goto fail4;
+    }
     
     XYLog("attach succeed.\n");
     

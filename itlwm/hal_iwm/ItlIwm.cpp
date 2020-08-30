@@ -11,8 +11,101 @@
 #define super ItlHalService
 OSDefineMetaClassAndStructors(ItlIwm, ItlHalService)
 
-void ItlIwm::watchdogAction(IOTimerEventSource *timer)
+void ItlIwm::
+watchdogAction(IOTimerEventSource *timer)
 {
     iwm_watchdog(&com.sc_ic.ic_ac.ac_if);
     timer->setTimeoutMS(1000);
+}
+
+void ItlIwm::
+detach(IOPCIDevice *device)
+{
+    struct ifnet *ifp = &com.sc_ic.ic_ac.ac_if;
+    ieee80211_ifdetach(ifp);
+    taskq_destroy(systq);
+    taskq_destroy(com.sc_nswq);
+    releaseAll();
+}
+
+bool ItlIwm::
+attach(IOPCIDevice *device)
+{
+    pci.pa_tag = device;
+    pci.workloop = getMainWorkLoop();
+    if (!iwm_attach(&com, &pci)) {
+        detach(device);
+        releaseAll();
+        return false;
+    }
+    return true;
+}
+
+void ItlIwm::
+free()
+{
+    super::free();
+}
+
+void ItlIwm::
+releaseAll()
+{
+    XYLog("%s\n", __FUNCTION__);
+    pci_intr_handle *intrHandler = com.ih;
+    if (com.sc_calib_to) {
+        timeout_del(&com.sc_calib_to);
+        timeout_free(&com.sc_calib_to);
+    }
+    if (com.sc_led_blink_to) {
+        timeout_del(&com.sc_led_blink_to);
+        timeout_free(&com.sc_led_blink_to);
+    }
+    if (intrHandler && intrHandler->workloop) {
+        if (intrHandler->intr) {
+            intrHandler->intr->disable();
+            intrHandler->workloop->removeEventSource(intrHandler->intr);
+            intrHandler->intr->release();
+        }
+        intrHandler->intr = NULL;
+        intrHandler->workloop = NULL;
+        intrHandler->arg = NULL;
+        intrHandler->dev = NULL;
+        intrHandler->func = NULL;
+        intrHandler->release();
+        com.ih = NULL;
+    }
+}
+
+IOReturn ItlIwm::
+enable(IONetworkInterface *netif)
+{
+    struct ifnet *ifp = &com.sc_ic.ic_ac.ac_if;
+    ifp->if_flags |= IFF_UP;
+    iwm_activate(&com, DVACT_WAKEUP);
+    return kIOReturnSuccess;
+}
+
+IOReturn ItlIwm::
+disable(IONetworkInterface *netif)
+{
+    iwm_activate(&com, DVACT_QUIESCE);
+    return kIOReturnSuccess;
+}
+
+struct ieee80211com *ItlIwm::
+get80211Controller()
+{
+    return &com.sc_ic;
+}
+
+void ItlIwm::
+clearScanningFlags()
+{
+    com.sc_flags &= ~(IWM_FLAG_SCANNING | IWM_FLAG_BGSCAN);
+}
+
+char *ItlIwm::
+getFirmwareVersion()
+{
+    return com.sc_fwver;
 }
