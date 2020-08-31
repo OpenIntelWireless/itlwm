@@ -5,7 +5,8 @@ on:
     branches: master
 
 env:
-  BUILD_OUTPUT: 'build/Build/Products/Debug'
+  BUILD_OUTPUT_DEBUG: 'build/Build/Products/Debug'
+  BUILD_OUTPUT_RELEASE: 'build/Build/Products/Release'
 
 jobs:
 
@@ -40,6 +41,7 @@ jobs:
         echo '***This alpha version is for testing only.***' >> ReleaseNotes.md
         echo 'It is not ready for daily use and we do not guarantee its usability.' >> ReleaseNotes.md
         echo 'If you discovered an issue and you do not have debugging skills, please check with the [Gitter Chat Room](https://gitter.im/OpenIntelWireless/itlwm) in advance before opening an Issue.' >> ReleaseNotes.md
+        echo 'IMPORTANT: Always use the DEBUG version to create an Issue or to get some help on [Gitter Chat Room](https://gitter.im/OpenIntelWireless/itlwm). We won't help without logs, which are only provided by the DEBUG version of itlwm(x).' >> ReleaseNotes.md
         echo '### The latest five updates are:' >> ReleaseNotes.md
         git log -"5" --format="- %H %s" | sed '/^$/d' >> ReleaseNotes.md
 
@@ -51,17 +53,27 @@ jobs:
       run: |
         xcodebuild -scheme fw_gen
         xcodebuild -scheme itlwm -configuration Debug -sdk macosx10.12 -derivedDataPath build CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO | xcpretty && exit ${PIPESTATUS[0]}
+        rm itlwm/FwBinary.cpp
+        xcodebuild -scheme fw_gen -configuration Release -sdk macosx10.12
+        xcodebuild -scheme itlwm -configuration Release -sdk macosx10.12 -derivedDataPath build CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO | xcpretty && exit ${PIPESTATUS[0]}
 
     - name: Build itlwmx
       run: |
+        rm itlwm/FwBinary.cpp
         xcodebuild -scheme fw_genx
         xcodebuild -scheme itlwmx -configuration Debug -sdk macosx10.12 -derivedDataPath build CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO | xcpretty && exit ${PIPESTATUS[0]}
+        rm itlwm/FwBinary.cpp
+        xcodebuild -scheme fw_genx -configuration Release -sdk macosx10.12
+        xcodebuild -scheme itlwmx -configuration Release -sdk macosx10.12 -derivedDataPath build CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO | xcpretty && exit ${PIPESTATUS[0]}
 
     - name: Pack Artifacts
       run: |
-        cd $BUILD_OUTPUT
-        zip -r itlwm-v${ITLWM_VER}-DEBUG-alpha-${SHORT_SHA}.zip itlwm.kext
-        zip -r itlwmx-v${ITLWM_VER}-DEBUG-alpha-${SHORT_SHA}.zip itlwmx.kext
+        cd $BUILD_OUTPUT_DEBUG
+        zip -r itlwm-v${ITLWM_VER}-DEBUG-alpha-${SHORT_SHA}.zip itlwm-DEBUG.kext
+        zip -r itlwmx-v${ITLWM_VER}-DEBUG-alpha-${SHORT_SHA}.zip itlwmx-DEBUG.kext
+        cd $BUILD_OUTPUT_RELEASE
+        zip -r itlwm-v${ITLWM_VER}-RELEASE-alpha-${SHORT_SHA}.zip itlwm-RELEASE.kext
+        zip -r itlwmx-v${ITLWM_VER}-RELEASE-alpha-${SHORT_SHA}.zip itlwmx-RELEASE.kext
         cd -
 
     - name: Delete Old Prerelease
@@ -76,7 +88,7 @@ jobs:
       with:
         prerelease: true
         bodyFile: ReleaseNotes.md
-        artifacts: "${{ env.BUILD_OUTPUT }}/*.zip"
+        artifacts: "${{ env.BUILD_OUTPUT_DEBUG }}/*.zip","${{ env.BUILD_OUTPUT_RELEASE }}/*.zip"
         tag: "v${{ env.ITLWM_VER }}-alpha"
         token: ${{ secrets.GITHUB_TOKEN }}
 
