@@ -1262,6 +1262,7 @@
 				MARKETING_VERSION = 1.1.0;
 				MODULE_NAME = com.zxystd.itlwm;
 				MODULE_VERSION = "$(MARKETING_VERSION)";
+				ONLY_ACTIVE_ARCH = YES;
 				PRODUCT_BUNDLE_IDENTIFIER = com.zxystd.itlwm;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx10.12;
@@ -1293,6 +1294,7 @@
 				MARKETING_VERSION = 1.1.0;
 				MODULE_NAME = com.zxystd.itlwm;
 				MODULE_VERSION = "$(MARKETING_VERSION)";
+				ONLY_ACTIVE_ARCH = YES;
 				PRODUCT_BUNDLE_IDENTIFIER = com.zxystd.itlwm;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx10.12;
