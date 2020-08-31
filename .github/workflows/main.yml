@@ -87,8 +87,8 @@ jobs:
       uses: ncipollo/release-action@v1
       with:
         prerelease: true
-        bodyFile: "ReleaseNotes.md"
-        artifacts: "${{ env.BUILD_OUTPUT_DEBUG }}/*.zip","${{ env.BUILD_OUTPUT_RELEASE }}/*.zip"
+        bodyFile: ReleaseNotes.md
+        artifacts: "${{ env.BUILD_OUTPUT_DEBUG }}/*.zip,${{ env.BUILD_OUTPUT_RELEASE }}/*.zip"
         tag: "v${{ env.ITLWM_VER }}-alpha"
         token: ${{ secrets.GITHUB_TOKEN }}
 
