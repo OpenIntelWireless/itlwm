@@ -3558,12 +3558,12 @@ iwm_attach(struct iwm_softc *sc, struct pci_attach_args *pa)
     }
     if (sc->sc_msix)
         sc->sc_ih =
-        IOFilterInterruptEventSource::filterInterruptEventSource(getController(),
+        IOFilterInterruptEventSource::filterInterruptEventSource(this,
                                                                  (IOInterruptEventSource::Action)&ItlIwm::iwm_intr_msix,
                                                                  &ItlIwm::intrFilter
                                                                  ,pa->pa_tag, msiIntrIndex);
     else
-        sc->sc_ih = IOFilterInterruptEventSource::filterInterruptEventSource(getController(),
+        sc->sc_ih = IOFilterInterruptEventSource::filterInterruptEventSource(this,
                                                                              (IOInterruptEventSource::Action)&ItlIwm::iwm_intr, &ItlIwm::intrFilter
                                                                              , pa->pa_tag, msiIntrIndex);
     if (sc->sc_ih == NULL || pa->workloop->addEventSource(sc->sc_ih) != kIOReturnSuccess) {

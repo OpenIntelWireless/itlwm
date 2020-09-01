@@ -603,7 +603,7 @@ IOReturn itlwm::getMaxPacketSize(UInt32 *maxSize) const {
 IOReturn itlwm::
 tsleepHandler(OSObject* owner, void* arg0, void* arg1, void* arg2, void* arg3)
 {
-    ItlHalService* dev = OSDynamicCast(ItlHalService, owner);
+    itlwm* dev = OSDynamicCast(itlwm, owner);
     if (dev == 0)
         return kIOReturnError;
     
