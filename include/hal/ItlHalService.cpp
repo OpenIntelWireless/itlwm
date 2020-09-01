@@ -20,9 +20,11 @@ OSDefineMetaClassAndAbstractStructors(ItlHalService, OSObject)
 bool ItlHalService::
 initWithController(IOEthernetController *controller, IOWorkLoop *workloop, IOCommandGate *commandGate)
 {
+    XYLog("%s %d workloop=%d\n", __FUNCTION__, __LINE__, workloop->getRetainCount());
     this->controller = controller;
     this->mainWorkLoop = workloop;
     this->mainCommandGate = commandGate;
+    XYLog("%s %d workloop=%d\n", __FUNCTION__, __LINE__, workloop->getRetainCount());
     return true;
 }
 
@@ -41,6 +43,7 @@ getMainCommandGate()
 IOWorkLoop *ItlHalService::
 getMainWorkLoop()
 {
+    XYLog("%s %d workloop=%d\n", __FUNCTION__, __LINE__, this->mainWorkLoop->getRetainCount());
     return this->mainWorkLoop;
 }
 
@@ -77,5 +80,8 @@ tsleep_nsec(void *ident, int priority, const char *wmesg, int timo)
 void ItlHalService::
 free()
 {
+    this->mainWorkLoop = NULL;
+    this->mainCommandGate = NULL;
+    this->controller = NULL;
     super::free();
 }

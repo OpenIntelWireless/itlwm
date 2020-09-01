@@ -75,7 +75,6 @@ public:
     bool initPCIPowerManagment(IOPCIDevice *provider);
     
     struct ifnet *getIfp();
-    struct iwm_softc *getSoft();
     IOEthernetInterface *getNetworkInterface();
     
     static IOReturn tsleepHandler(OSObject* owner, void* arg0 = 0, void* arg1 = 0, void* arg2 = 0, void* arg3 = 0);

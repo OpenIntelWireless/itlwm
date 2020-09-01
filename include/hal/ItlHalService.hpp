@@ -24,6 +24,9 @@
 #include <IOKit/network/IOEthernetController.h>
 #include <IOKit/network/IOEthernetInterface.h>
 
+#include "ItlDriverInfo.h"
+#include "ItlDriverController.h"
+
 #include <net80211/ieee80211_var.h>
 
 class ItlHalService : public OSObject {
@@ -42,6 +45,10 @@ public:
     virtual void watchdogAction(IOTimerEventSource *timer) = 0;
     
     virtual struct ieee80211com *get80211Controller() = 0;
+    
+    virtual ItlDriverInfo *getDriverInfo() = 0;
+    
+    virtual ItlDriverController *getDriverController() = 0;
     
     virtual void free() override;
 

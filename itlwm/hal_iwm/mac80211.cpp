@@ -3361,7 +3361,7 @@ typedef void *iwm_match_t;
 #define    PCI_PRODUCT_INTEL_WL_9462_2    0x00a0        /* Dual Band Wireless AC 9462 */
 #define    PCI_PRODUCT_INTEL_WL_9462_3    0x00a4        /* Dual Band Wireless AC 9462 */
 #define    PCI_PRODUCT_INTEL_WL_9462_4    0x02a0        /* Dual Band Wireless AC 9462 */
-#define    PCI_PRODUCT_INTEL_WL_9462_5    0x02a4        /* Dual Band Wireless AC 9462 */
+//#define    PCI_PRODUCT_INTEL_WL_9462_5    0x02a4        /* Dual Band Wireless AC 9462 */
 #define    PCI_PRODUCT_INTEL_WL_9462_6    0x40a4        /* Dual Band Wireless AC 9462 */
 #define    PCI_PRODUCT_INTEL_WL_9461_1    0x0060        /* Dual Band Wireless AC 9461 */
 #define    PCI_PRODUCT_INTEL_WL_9461_2    0x0064        /* Dual Band Wireless AC 9461 */
@@ -3392,7 +3392,7 @@ static const struct pci_matchid iwm_devices[] = {
     { PCI_VENDOR_INTEL, PCI_PRODUCT_INTEL_WL_9462_2 },
     { PCI_VENDOR_INTEL, PCI_PRODUCT_INTEL_WL_9462_3 },
     { PCI_VENDOR_INTEL, PCI_PRODUCT_INTEL_WL_9462_4 },
-    { PCI_VENDOR_INTEL, PCI_PRODUCT_INTEL_WL_9462_5 },
+    //{ PCI_VENDOR_INTEL, PCI_PRODUCT_INTEL_WL_9462_5 },
     { PCI_VENDOR_INTEL, PCI_PRODUCT_INTEL_WL_9462_6 },
     { PCI_VENDOR_INTEL, PCI_PRODUCT_INTEL_WL_9461_1 },
     { PCI_VENDOR_INTEL, PCI_PRODUCT_INTEL_WL_9461_2 },
@@ -3659,7 +3659,7 @@ iwm_attach(struct iwm_softc *sc, struct pci_attach_args *pa)
         case PCI_PRODUCT_INTEL_WL_9462_2:
         case PCI_PRODUCT_INTEL_WL_9462_3:
         case PCI_PRODUCT_INTEL_WL_9462_4:
-        case PCI_PRODUCT_INTEL_WL_9462_5:
+        //case PCI_PRODUCT_INTEL_WL_9462_5:
         case PCI_PRODUCT_INTEL_WL_9462_6:
         case PCI_PRODUCT_INTEL_WL_9461_1:
         case PCI_PRODUCT_INTEL_WL_9461_2:

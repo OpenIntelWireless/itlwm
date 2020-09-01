@@ -74,13 +74,13 @@ IOService* itlwm::probe(IOService *provider, SInt32 *score)
     if (!device) {
         return NULL;
     }
-    if (ItlIwm::iwm_match(device)) {
-        isMatch = true;
-        fHalService = new ItlIwm;
-    }
     if (ItlIwx::iwx_match(device)) {
         isMatch = true;
         fHalService = new ItlIwx;
+    }
+    if (!isMatch && ItlIwm::iwm_match(device)) {
+        isMatch = true;
+        fHalService = new ItlIwm;
     }
     if (isMatch) {
         device->findPCICapability(PCI_CAP_ID_MSI, &msiCap);
@@ -90,6 +90,12 @@ IOService* itlwm::probe(IOService *provider, SInt32 *score)
         device->findPCICapability(PCI_CAP_ID_MSIX, &msixCap);
         if (msixCap) {
             pciMsiXClearAndSet(device, msixCap, PCI_MSIX_FLAGS_ENABLE, 0);
+        }
+        if (!msiCap && !msixCap) {
+            XYLog("%s No MSI cap\n", __FUNCTION__);
+            fHalService->release();
+            fHalService = NULL;
+            return NULL;
         }
         return this;
     }
@@ -132,11 +138,6 @@ IONetworkInterface *itlwm::createInterface()
 struct ifnet *itlwm::getIfp()
 {
     return &fHalService->get80211Controller()->ic_ac.ac_if;
-}
-
-struct iwm_softc *itlwm::getSoft()
-{
-    return &((ItlIwm*)fHalService)->com;
 }
 
 IOEthernetInterface *itlwm::getNetworkInterface()
@@ -286,7 +287,7 @@ void itlwm::associateSSID(const char *ssid, const char *pwd)
         ieee80211_new_state(ic, IEEE80211_S_SCAN, -1);
     } else {
         ieee80211_node_join_bss(ic, selbs, 1);
-        ((ItlDriverController*)fHalService)->clearScanningFlags();
+        fHalService->getDriverController()->clearScanningFlags();
     }
 }
 
@@ -310,12 +311,12 @@ bool itlwm::start(IOService *provider)
     if (initPCIPowerManagment(pciNub) == false) {
         return false;
     }
-    _fWorkloop = getWorkLoop();
     if (_fWorkloop == NULL) {
         XYLog("No _fWorkloop!!\n");
         releaseAll();
         return false;
     }
+    XYLog("%s %d _fWorkloop=%d\n", __FUNCTION__, __LINE__, _fWorkloop->getRetainCount());
     _fCommandGate = IOCommandGate::commandGate(this, (IOCommandGate::Action)itlwm::tsleepHandler);
     if (_fCommandGate == 0) {
         XYLog("No command gate!!\n");
@@ -330,6 +331,7 @@ bool itlwm::start(IOService *provider)
         releaseAll();
         return false;
     }
+    XYLog("%s %d _fWorkloop=%d\n", __FUNCTION__, __LINE__, _fWorkloop->getRetainCount());
     fHalService->initWithController(this, _fWorkloop, _fCommandGate);
     if (!fHalService->attach(pciNub)) {
         XYLog("attach fail\n");
@@ -430,11 +432,13 @@ bool itlwm::initPCIPowerManagment(IOPCIDevice *provider)
 bool itlwm::createWorkLoop()
 {
     _fWorkloop = IOWorkLoop::workLoop();
+    XYLog("%s %d _fWorkloop=%d\n", __FUNCTION__, __LINE__, _fWorkloop->getRetainCount());
     return _fWorkloop != 0;
 }
 
 IOWorkLoop *itlwm::getWorkLoop() const
 {
+    XYLog("%s %d _fWorkloop=%d\n", __FUNCTION__, __LINE__, _fWorkloop->getRetainCount());
     return _fWorkloop;
 }
 
@@ -458,6 +462,11 @@ void itlwm::stop(IOService *provider)
 
 void itlwm::releaseAll()
 {
+    if (fHalService) {
+        XYLog("%s fHalService=%d\n", __FUNCTION__, fHalService->getRetainCount());
+        fHalService->release();
+        fHalService = NULL;
+    }
     if (_fWorkloop) {
         if (_fCommandGate) {
 //            _fCommandGate->disable();
@@ -476,14 +485,9 @@ void itlwm::releaseAll()
             fWatchdogWorkLoop->release();
             fWatchdogWorkLoop = NULL;
         }
-        XYLog("%s _fWorkloop=%d\n", __FUNCTION__, _fWorkloop->getRetainCount());
+        XYLog("%s %d _fWorkloop=%d\n", __FUNCTION__, __LINE__, _fWorkloop->getRetainCount());
         _fWorkloop->release();
         _fWorkloop = NULL;
-    }
-    if (fHalService != NULL) {
-        XYLog("%s fHalService=%d\n", __FUNCTION__, fHalService->getRetainCount());
-        fHalService->release();
-        fHalService = NULL;
     }
     unregistPM();
 }
@@ -491,6 +495,10 @@ void itlwm::releaseAll()
 void itlwm::free()
 {
     XYLog("%s\n", __FUNCTION__);
+    if (fHalService != NULL) {
+        fHalService->release();
+        fHalService = NULL;
+    }
     super::free();
 }
 

@@ -58,7 +58,8 @@ private:
     itlwm *fDriver;
     IOEthernetInterface *fInf;
     struct ifnet *fIfp;
-    struct iwm_softc *fSoft;
+    ItlDriverController *fDriverController;
+    ItlDriverInfo *fDriverInfo;
     
 protected:
     bool fScanResultWrapping;

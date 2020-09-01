@@ -50,8 +50,14 @@ public:
     struct iwm_softc *getSoft();
     IOEthernetInterface *getNetworkInterface();
     
+    virtual ItlDriverInfo *getDriverInfo() override;
+    
+    virtual ItlDriverController *getDriverController() override;
+    
     //driver info
     virtual char *getFirmwareVersion() override;
+    
+    virtual int16_t getBSSNoise() override;
     
     //driver controller
     virtual void clearScanningFlags() override;

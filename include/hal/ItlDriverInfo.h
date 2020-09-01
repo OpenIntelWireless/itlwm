@@ -20,6 +20,8 @@ class ItlDriverInfo {
 public:
     
     virtual char *getFirmwareVersion() = 0;
+    
+    virtual int16_t getBSSNoise() = 0;
 };
 
 #endif /* ItlDriverInfo_h */

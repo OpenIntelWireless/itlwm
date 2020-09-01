@@ -46,7 +46,8 @@ bool ItlNetworkUserClient::start(IOService *provider)
     fDriver = OSDynamicCast(itlwm, provider);
     fInf = fDriver->getNetworkInterface();
     fIfp = fDriver->getIfp();
-    fSoft = fDriver->getSoft();
+    fDriverInfo = fDriver->fHalService->getDriverInfo();
+    fDriverController = fDriver->fHalService->getDriverController();
     if (fDriver == NULL) {
         return false;
     }
@@ -96,7 +97,7 @@ sDRIVER_INFO(OSObject* target, void* data, bool isSet)
     memset(drv_info, 0, sizeof(*drv_info));
     drv_info->version = IOCTL_VERSION;
     snprintf(drv_info->bsd_name, sizeof(drv_info->bsd_name), "%s%d", ifnet_name(that->fInf->getIfnet()), ifnet_unit(that->fInf->getIfnet()));
-    strncpy(drv_info->fw_version, that->fSoft->sc_fwver, sizeof(drv_info->fw_version));
+    strncpy(drv_info->fw_version, that->fDriverInfo->getFirmwareVersion(), sizeof(drv_info->fw_version));
     memcpy(drv_info->driver_version, ITLWM_VERSION, sizeof(drv_info->driver_version));
     return kIOReturnSuccess;
 }
@@ -106,8 +107,8 @@ sSTA_INFO(OSObject* target, void* data, bool isSet)
 {
     ItlNetworkUserClient *that = OSDynamicCast(ItlNetworkUserClient, target);
     struct ioctl_sta_info *st = (struct ioctl_sta_info *)data;
-    struct ieee80211com *ic = &that->fSoft->sc_ic;
-    struct ieee80211_node *ic_bss = that->fSoft->sc_ic.ic_bss;
+    struct ieee80211com *ic = that->fDriver->fHalService->get80211Controller();
+    struct ieee80211_node *ic_bss = ic->ic_bss;
     if (isSet) {
         return kIOReturnError;
     }
@@ -121,11 +122,11 @@ sSTA_INFO(OSObject* target, void* data, bool isSet)
     st->op_mode = ITL80211_MODE_11N;
     st->max_mcs = ic_bss->ni_txmcs;
     st->cur_mcs = ic_bss->ni_txmcs;
-    st->channel = ieee80211_chan2ieee(&that->fSoft->sc_ic, ic_bss->ni_chan);
+    st->channel = ieee80211_chan2ieee(ic, ic_bss->ni_chan);
     //TODO only support 20mhz band width now
     st->band_width = 20;
     st->rssi = -(0 - IWM_MIN_DBM - ic_bss->ni_rssi);
-    st->noise = that->fSoft->sc_noise;
+    st->noise = that->fDriverInfo->getBSSNoise();
     st->rate = ic_bss->ni_rates.rs_rates[ic_bss->ni_txrate];
     memset(st->ssid, 0, sizeof(st->ssid));
     bcopy(ic->ic_des_essid, st->ssid, ic->ic_des_esslen);
@@ -164,7 +165,7 @@ sSTATE(OSObject* target, void* data, bool isSet)
     }
     memset(st, 0, sizeof(*st));
     st->version = IOCTL_VERSION;
-    st->state = (itl_80211_state)that->fSoft->sc_ic.ic_state;
+    st->state = (itl_80211_state)that->fDriver->fHalService->get80211Controller()->ic_state;
     return kIOReturnSuccess;
 }
 
@@ -194,9 +195,9 @@ sDISASSOCIATE(OSObject* target, void* data, bool isSet)
 {
     ItlNetworkUserClient *that = OSDynamicCast(ItlNetworkUserClient, target);
     struct ioctl_disassociate *dis = (struct ioctl_disassociate *)data;
-    struct ieee80211com *ic = &that->fSoft->sc_ic;
+    struct ieee80211com *ic = that->fDriver->fHalService->get80211Controller();
     ieee80211_del_ess(ic, (char *)dis->ssid, strlen((char *)dis->ssid), 0);
-    ieee80211_deselect_ess(&that->fSoft->sc_ic);
+    ieee80211_deselect_ess(ic);
     if (TAILQ_EMPTY(&ic->ic_ess)) {
         ic->ic_flags |= IEEE80211_F_AUTO_JOIN;
     }
@@ -226,7 +227,7 @@ sSCAN_RESULT(OSObject* target, void* data, bool isSet)
 {
     ItlNetworkUserClient *that = OSDynamicCast(ItlNetworkUserClient, target);
     struct ioctl_network_info *ni = (struct ioctl_network_info *)data;
-    ieee80211com *ic = &that->fSoft->sc_ic;
+    ieee80211com *ic = that->fDriver->fHalService->get80211Controller();
     if (that->fNextNodeToSend == NULL) {
         if (that->fScanResultWrapping) {
             that->fScanResultWrapping = false;
@@ -241,7 +242,7 @@ sSCAN_RESULT(OSObject* target, void* data, bool isSet)
     bzero(ni, sizeof(*ni));
     
     ni->ni_rsncaps = that->fNextNodeToSend->ni_capinfo;;
-    ni->channel = ieee80211_chan2ieee(&that->fSoft->sc_ic, that->fNextNodeToSend->ni_chan);
+    ni->channel = ieee80211_chan2ieee(ic, that->fNextNodeToSend->ni_chan);
     ni->ni_rsncipher = (enum itl80211_cipher)that->fNextNodeToSend->ni_rsncipher;
     ni->rsn_akms = that->fNextNodeToSend->ni_rsnakms;
     ni->rsn_ciphers = that->fNextNodeToSend->ni_rsnciphers;

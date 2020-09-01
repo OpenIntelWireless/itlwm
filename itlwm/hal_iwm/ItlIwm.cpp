@@ -44,6 +44,8 @@ attach(IOPCIDevice *device)
 void ItlIwm::
 free()
 {
+    pci.pa_tag = NULL;
+    pci.workloop = NULL;
     super::free();
 }
 
@@ -60,9 +62,9 @@ releaseAll()
         timeout_del(&com.sc_led_blink_to);
         timeout_free(&com.sc_led_blink_to);
     }
-    if (intrHandler && intrHandler->workloop) {
-        if (intrHandler->intr) {
-            intrHandler->intr->disable();
+    if (intrHandler) {
+        if (intrHandler->intr && intrHandler->workloop) {
+//            intrHandler->intr->disable();
             intrHandler->workloop->removeEventSource(intrHandler->intr);
             intrHandler->intr->release();
         }
@@ -98,6 +100,18 @@ get80211Controller()
     return &com.sc_ic;
 }
 
+ItlDriverInfo *ItlIwm::
+getDriverInfo()
+{
+    return this;
+}
+
+ItlDriverController *ItlIwm::
+getDriverController()
+{
+    return this;
+}
+
 void ItlIwm::
 clearScanningFlags()
 {
@@ -108,4 +122,10 @@ char *ItlIwm::
 getFirmwareVersion()
 {
     return com.sc_fwver;
+}
+
+int16_t ItlIwm::
+getBSSNoise()
+{
+    return com.sc_noise;;
 }

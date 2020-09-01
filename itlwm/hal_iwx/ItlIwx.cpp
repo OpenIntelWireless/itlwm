@@ -180,9 +180,9 @@ releaseAll()
 {
     pci_intr_handle *intrHandler = com.ih;
     
-    if (intrHandler && intrHandler->workloop) {
-        if (intrHandler->intr) {
-            intrHandler->intr->disable();
+    if (intrHandler) {
+        if (intrHandler->intr && intrHandler->workloop) {
+//            intrHandler->intr->disable();
             intrHandler->workloop->removeEventSource(intrHandler->intr);
             intrHandler->intr->release();
         }
@@ -200,6 +200,18 @@ void ItlIwx::free()
 {
     XYLog("%s\n", __FUNCTION__);
     super::free();
+}
+
+ItlDriverInfo *ItlIwx::
+getDriverInfo()
+{
+    return this;
+}
+
+ItlDriverController *ItlIwx::
+getDriverController()
+{
+    return this;
 }
 
 IOReturn ItlIwx::enable(IONetworkInterface *netif)
@@ -231,6 +243,12 @@ char *ItlIwx::
 getFirmwareVersion()
 {
     return com.sc_fwver;
+}
+
+int16_t ItlIwx::
+getBSSNoise()
+{
+    return com.sc_noise;;
 }
 
 struct ieee80211com *ItlIwx::
@@ -8542,6 +8560,7 @@ iwx_attach(struct iwx_softc *sc, struct pci_attach_args *pa)
         sc->sc_ih = IOFilterInterruptEventSource::filterInterruptEventSource(this,
                                                                              (IOInterruptEventSource::Action)&ItlIwx::iwx_intr, &ItlIwx::intrFilter
                                                                              ,pa->pa_tag, msiIntrIndex);
+    XYLog("%s %d workloop=%d\n", __FUNCTION__, __LINE__, pa->workloop->getRetainCount());
     if (sc->sc_ih == NULL || pa->workloop->addEventSource(sc->sc_ih) != kIOReturnSuccess) {
         XYLog("%s: can't establish interrupt", DEVNAME(sc));
         return false;
