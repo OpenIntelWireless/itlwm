@@ -22,8 +22,11 @@ initWithController(IOEthernetController *controller, IOWorkLoop *workloop, IOCom
 {
     XYLog("%s %d workloop=%d\n", __FUNCTION__, __LINE__, workloop->getRetainCount());
     this->controller = controller;
+    this->controller->retain();
     this->mainWorkLoop = workloop;
+    this->mainWorkLoop->retain();
     this->mainCommandGate = commandGate;
+    this->mainCommandGate->retain();
     XYLog("%s %d workloop=%d\n", __FUNCTION__, __LINE__, workloop->getRetainCount());
     return true;
 }
@@ -43,7 +46,7 @@ getMainCommandGate()
 IOWorkLoop *ItlHalService::
 getMainWorkLoop()
 {
-    XYLog("%s %d workloop=%d\n", __FUNCTION__, __LINE__, this->mainWorkLoop->getRetainCount());
+    XYLog("ItlHalService %s %d workloop=%d\n", __FUNCTION__, __LINE__, this->mainWorkLoop->getRetainCount());
     return this->mainWorkLoop;
 }
 
@@ -80,8 +83,18 @@ tsleep_nsec(void *ident, int priority, const char *wmesg, int timo)
 void ItlHalService::
 free()
 {
+    XYLog("ItlHalService %s\n", __FUNCTION__);
+    if (this->mainWorkLoop) {
+        this->mainWorkLoop->release();
+    }
     this->mainWorkLoop = NULL;
+    if (this->mainCommandGate) {
+        this->mainCommandGate->release();
+    }
     this->mainCommandGate = NULL;
+    if (this->controller) {
+        this->controller->release();
+    }
     this->controller = NULL;
     super::free();
 }

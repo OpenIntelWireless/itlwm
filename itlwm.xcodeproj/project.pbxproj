@@ -251,16 +251,6 @@
 		F8FC31D0247E797E00FB456B /* itlwm_interface.hpp in Headers */ = {isa = PBXBuildFile; fileRef = F8FC31CE247E797E00FB456B /* itlwm_interface.hpp */; };
 /* End PBXBuildFile section */
 
-/* Begin PBXContainerItemProxy section */
-		F8294FE224FCBF4A00239253 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 024A07A323FCBC3C009FBA6C /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = F8B8F15E2493C1E90059FAA8;
-			remoteInfo = fw_genx;
-		};
-/* End PBXContainerItemProxy section */
-
 /* Begin PBXFileReference section */
 		024A07AC23FCBC3C009FBA6C /* itlwm.kext */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = itlwm.kext; sourceTree = BUILT_PRODUCTS_DIR; };
 		024A07AF23FCBC3C009FBA6C /* itlwm.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = itlwm.hpp; sourceTree = "<group>"; };
@@ -927,7 +917,6 @@
 			buildRules = (
 			);
 			dependencies = (
-				F8294FE324FCBF4A00239253 /* PBXTargetDependency */,
 			);
 			name = itlwm;
 			productName = itlwm;
@@ -1147,14 +1136,6 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
-
-/* Begin PBXTargetDependency section */
-		F8294FE324FCBF4A00239253 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = F8B8F15E2493C1E90059FAA8 /* fw_genx */;
-			targetProxy = F8294FE224FCBF4A00239253 /* PBXContainerItemProxy */;
-		};
-/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		024A07B423FCBC3C009FBA6C /* Debug */ = {

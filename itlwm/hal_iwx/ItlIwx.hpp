@@ -148,7 +148,6 @@ public:
     
     //kext
     void free() override;
-    IOService* probe(IOService* provider, SInt32* score);
     virtual bool attach(IOPCIDevice *device) override;
     virtual void detach(IOPCIDevice *device) override;
     IOReturn enable(IONetworkInterface *netif) override;
