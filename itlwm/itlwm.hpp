@@ -116,9 +116,3 @@ public:
     bool magicPacketEnabled;
     bool magicPacketSupported;
 };
-
-struct ResourceCallbackContext
-{
-    itlwm* context;
-    OSData* resource;
-};

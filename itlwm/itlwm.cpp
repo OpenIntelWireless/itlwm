@@ -470,7 +470,6 @@ void itlwm::releaseAll()
         fHalService = NULL;
     }
     if (fWatchdogWorkLoop && watchdogTimer) {
-        watchdogTimer->cancelTimeout();
         fWatchdogWorkLoop->removeEventSource(watchdogTimer);
         watchdogTimer->release();
         watchdogTimer = NULL;
