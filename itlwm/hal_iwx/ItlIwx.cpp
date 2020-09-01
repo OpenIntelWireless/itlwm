@@ -194,6 +194,8 @@ releaseAll()
         intrHandler->release();
         com.ih = NULL;
     }
+    pci.pa_tag = NULL;
+    pci.workloop = NULL;
 }
 
 void ItlIwx::free()
@@ -8560,7 +8562,6 @@ iwx_attach(struct iwx_softc *sc, struct pci_attach_args *pa)
         sc->sc_ih = IOFilterInterruptEventSource::filterInterruptEventSource(this,
                                                                              (IOInterruptEventSource::Action)&ItlIwx::iwx_intr, &ItlIwx::intrFilter
                                                                              ,pa->pa_tag, msiIntrIndex);
-    XYLog("%s %d workloop=%d\n", __FUNCTION__, __LINE__, pa->workloop->getRetainCount());
     if (sc->sc_ih == NULL || pa->workloop->addEventSource(sc->sc_ih) != kIOReturnSuccess) {
         XYLog("%s: can't establish interrupt", DEVNAME(sc));
         return false;

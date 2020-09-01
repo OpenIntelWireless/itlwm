@@ -20,14 +20,12 @@ OSDefineMetaClassAndAbstractStructors(ItlHalService, OSObject)
 bool ItlHalService::
 initWithController(IOEthernetController *controller, IOWorkLoop *workloop, IOCommandGate *commandGate)
 {
-    XYLog("%s %d workloop=%d\n", __FUNCTION__, __LINE__, workloop->getRetainCount());
     this->controller = controller;
     this->controller->retain();
     this->mainWorkLoop = workloop;
     this->mainWorkLoop->retain();
     this->mainCommandGate = commandGate;
     this->mainCommandGate->retain();
-    XYLog("%s %d workloop=%d\n", __FUNCTION__, __LINE__, workloop->getRetainCount());
     return true;
 }
 
@@ -46,7 +44,6 @@ getMainCommandGate()
 IOWorkLoop *ItlHalService::
 getMainWorkLoop()
 {
-    XYLog("ItlHalService %s %d workloop=%d\n", __FUNCTION__, __LINE__, this->mainWorkLoop->getRetainCount());
     return this->mainWorkLoop;
 }
 

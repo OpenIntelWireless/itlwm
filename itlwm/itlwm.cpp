@@ -82,7 +82,6 @@ IOService* itlwm::probe(IOService *provider, SInt32 *score)
         isMatch = true;
         fHalService = new ItlIwm;
     }
-    XYLog("%s this=%d\n", __FUNCTION__, this->getRetainCount());
     if (isMatch) {
         device->findPCICapability(PCI_CAP_ID_MSI, &msiCap);
         if (msiCap) {
@@ -294,11 +293,9 @@ void itlwm::associateSSID(const char *ssid, const char *pwd)
 
 bool itlwm::start(IOService *provider)
 {
-    XYLog("%s %d this=%d\n", __FUNCTION__, __LINE__, this->getRetainCount());
     if (!super::start(provider)) {
         return false;
     }
-    XYLog("%s %d this=%d\n", __FUNCTION__, __LINE__, this->getRetainCount());
     pciNub = OSDynamicCast(IOPCIDevice, provider);
     if (!pciNub) {
         return false;
@@ -312,17 +309,19 @@ bool itlwm::start(IOService *provider)
         return false;
     }
     if (initPCIPowerManagment(pciNub) == false) {
+        super::stop(pciNub);
         return false;
     }
     if (_fWorkloop == NULL) {
         XYLog("No _fWorkloop!!\n");
+        super::stop(pciNub);
         releaseAll();
         return false;
     }
-    XYLog("%s %d _fWorkloop=%d\n", __FUNCTION__, __LINE__, _fWorkloop->getRetainCount());
     _fCommandGate = IOCommandGate::commandGate(this, (IOCommandGate::Action)itlwm::tsleepHandler);
     if (_fCommandGate == 0) {
         XYLog("No command gate!!\n");
+        super::stop(pciNub);
         releaseAll();
         return false;
     }
@@ -334,16 +333,17 @@ bool itlwm::start(IOService *provider)
         releaseAll();
         return false;
     }
-    XYLog("%s %d _fWorkloop=%d\n", __FUNCTION__, __LINE__, _fWorkloop->getRetainCount());
     fHalService->initWithController(this, _fWorkloop, _fCommandGate);
     if (!fHalService->attach(pciNub)) {
         XYLog("attach fail\n");
+        super::stop(pciNub);
         releaseAll();
         return false;
     }
     if (!attachInterface((IONetworkInterface **)&fNetIf, true)) {
         XYLog("attach to interface fail\n");
         fHalService->detach(pciNub);
+        super::stop(pciNub);
         releaseAll();
         return false;
     }
@@ -351,6 +351,7 @@ bool itlwm::start(IOService *provider)
     if (fWatchdogWorkLoop == NULL) {
         XYLog("init watchdog workloop fail\n");
         fHalService->detach(pciNub);
+        super::stop(pciNub);
         releaseAll();
         return false;
     }
@@ -358,6 +359,7 @@ bool itlwm::start(IOService *provider)
     if (!watchdogTimer) {
         XYLog("init watchdog fail\n");
         fHalService->detach(pciNub);
+        super::stop(pciNub);
         releaseAll();
         return false;
     }
@@ -391,10 +393,8 @@ bool itlwm::start(IOService *provider)
     if (TAILQ_EMPTY(&fHalService->get80211Controller()->ic_ess)) {
         fHalService->get80211Controller()->ic_flags |= IEEE80211_F_AUTO_JOIN;
     }
-    XYLog("%s %d fHalService=%d\n", __FUNCTION__, __LINE__, fHalService->getRetainCount());
     registerService();
     fNetIf->registerService();
-    XYLog("%s %d fHalService=%d\n", __FUNCTION__, __LINE__, fHalService->getRetainCount());
     return true;
 }
 
@@ -437,13 +437,11 @@ bool itlwm::initPCIPowerManagment(IOPCIDevice *provider)
 bool itlwm::createWorkLoop()
 {
     _fWorkloop = IOWorkLoop::workLoop();
-    XYLog("%s %d _fWorkloop=%d\n", __FUNCTION__, __LINE__, _fWorkloop->getRetainCount());
     return _fWorkloop != 0;
 }
 
 IOWorkLoop *itlwm::getWorkLoop() const
 {
-    XYLog("%s %d _fWorkloop=%d\n", __FUNCTION__, __LINE__, _fWorkloop->getRetainCount());
     return _fWorkloop;
 }
 
@@ -467,19 +465,15 @@ void itlwm::stop(IOService *provider)
 
 void itlwm::releaseAll()
 {
-    XYLog("%s %d fHalService=%d\n", __FUNCTION__, __LINE__, fHalService->getRetainCount());
     if (fHalService) {
-        XYLog("%s fHalService=%d\n", __FUNCTION__, fHalService->getRetainCount());
         fHalService->release();
         fHalService = NULL;
     }
     if (fWatchdogWorkLoop && watchdogTimer) {
         watchdogTimer->cancelTimeout();
         fWatchdogWorkLoop->removeEventSource(watchdogTimer);
-        XYLog("%s watchdogTimer=%d\n", __FUNCTION__, watchdogTimer->getRetainCount());
         watchdogTimer->release();
         watchdogTimer = NULL;
-        XYLog("%s fWatchdogWorkLoop=%d\n", __FUNCTION__, fWatchdogWorkLoop->getRetainCount());
         fWatchdogWorkLoop->release();
         fWatchdogWorkLoop = NULL;
     }
@@ -487,15 +481,12 @@ void itlwm::releaseAll()
         if (_fCommandGate) {
 //            _fCommandGate->disable();
             _fWorkloop->removeEventSource(_fCommandGate);
-            XYLog("%s _fCommandGate=%d\n", __FUNCTION__, _fCommandGate->getRetainCount());
             _fCommandGate->release();
             _fCommandGate = NULL;
         }
-        XYLog("%s %d _fWorkloop=%d\n", __FUNCTION__, __LINE__, _fWorkloop->getRetainCount());
         _fWorkloop->release();
         _fWorkloop = NULL;
     }
-    XYLog("%s this=%d\n", __FUNCTION__, this->getRetainCount());
     unregistPM();
 }
 
@@ -503,7 +494,6 @@ void itlwm::free()
 {
     XYLog("%s\n", __FUNCTION__);
     if (fHalService != NULL) {
-        XYLog("%s %d fHalService=%d\n", __FUNCTION__, __LINE__, fHalService->getRetainCount());
         fHalService->release();
         fHalService = NULL;
     }

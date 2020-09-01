@@ -3563,7 +3563,7 @@ iwm_attach(struct iwm_softc *sc, struct pci_attach_args *pa)
                                                                  &ItlIwm::intrFilter
                                                                  ,pa->pa_tag, msiIntrIndex);
     else
-        sc->sc_ih = IOFilterInterruptEventSource::filterInterruptEventSource(this,
+        sc->sc_ih = IOFilterInterruptEventSource::filterInterruptEventSource(getController(),
                                                                              (IOInterruptEventSource::Action)&ItlIwm::iwm_intr, &ItlIwm::intrFilter
                                                                              , pa->pa_tag, msiIntrIndex);
     if (sc->sc_ih == NULL || pa->workloop->addEventSource(sc->sc_ih) != kIOReturnSuccess) {
