@@ -127,6 +127,8 @@ sSTA_INFO(OSObject* target, void* data, bool isSet)
     st->rssi = -(0 - IWX_MIN_DBM - ic_bss->ni_rssi);
     st->noise = that->fSoft->sc_noise;
     st->rate = ic_bss->ni_rates.rs_rates[ic_bss->ni_txrate];
+    st->supported_rsnprotos = ic->ic_bss->ni_supported_rsnprotos;
+    st->rsn_akms = ic->ic_bss->ni_rsnakms;
     memset(st->ssid, 0, sizeof(st->ssid));
     bcopy(ic->ic_des_essid, st->ssid, ic->ic_des_esslen);
     memset(st->bssid, 0, sizeof(st->bssid));

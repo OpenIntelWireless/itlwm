@@ -18,7 +18,7 @@
 #include "IoctlId.h"
 
 #define IOCTL_MASK 0x800000
-#define IOCTL_VERSION 1
+#define IOCTL_VERSION 2
 #define NWID_LEN 32
 #define WPA_KEY_LEN 128
 
@@ -52,6 +52,8 @@ struct ioctl_sta_info {
     uint rate;
     unsigned char ssid[NWID_LEN];
     uint8_t bssid[ETHER_ADDR_LEN];
+    unsigned int supported_rsnprotos;   //itl80211_proto
+    unsigned int rsn_akms;              //rsn_akms
 };
 
 struct ioctl_power {
