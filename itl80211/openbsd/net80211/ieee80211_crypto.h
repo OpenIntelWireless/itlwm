@@ -124,8 +124,8 @@ struct ieee80211_pmk {
 struct	ieee80211com;
 struct	ieee80211_node;
 
-void	ieee80211_crypto_attach(struct ifnet *);
-void	ieee80211_crypto_detach(struct ifnet *);
+void	ieee80211_crypto_attach(struct _ifnet *);
+void	ieee80211_crypto_detach(struct _ifnet *);
 
 void	ieee80211_crypto_clear_groupkeys(struct ieee80211com *);
 struct	ieee80211_key *ieee80211_get_txkey(struct ieee80211com *,

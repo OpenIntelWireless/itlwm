@@ -138,21 +138,6 @@ int iwx_debug = 1;
 #define DPRINTFN(n, x)    do { ; } while (0)
 #endif
 
-struct ifnet *ItlIwx::getIfp()
-{
-    return &com.sc_ic.ic_ac.ac_if;
-}
-
-struct iwx_softc *ItlIwx::getSoft()
-{
-    return &com;
-}
-
-IOEthernetInterface *ItlIwx::getNetworkInterface()
-{
-    return getIfp()->iface;
-}
-
 bool ItlIwx::attach(IOPCIDevice *device)
 {
     pci.pa_tag = device;
@@ -168,7 +153,7 @@ bool ItlIwx::attach(IOPCIDevice *device)
 void ItlIwx::
 detach(IOPCIDevice *device)
 {
-    struct ifnet *ifp = &com.sc_ic.ic_ac.ac_if;
+    struct _ifnet *ifp = &com.sc_ic.ic_ac.ac_if;
     ieee80211_ifdetach(ifp);
     taskq_destroy(systq);
     taskq_destroy(com.sc_nswq);
@@ -219,8 +204,7 @@ getDriverController()
 IOReturn ItlIwx::enable(IONetworkInterface *netif)
 {
     XYLog("%s\n", __FUNCTION__);
-    struct ifnet *ifp = &com.sc_ic.ic_ac.ac_if;
-    super::enable(netif);
+    struct _ifnet *ifp = &com.sc_ic.ic_ac.ac_if;
     ifp->if_flags |= IFF_UP;
     iwx_activate(&com, DVACT_WAKEUP);
     return kIOReturnSuccess;
@@ -229,8 +213,6 @@ IOReturn ItlIwx::enable(IONetworkInterface *netif)
 IOReturn ItlIwx::disable(IONetworkInterface *netif)
 {
     XYLog("%s\n", __FUNCTION__);
-    struct ifnet *ifp = &com.sc_ic.ic_ac.ac_if;
-    super::disable(netif);
     iwx_activate(&com, DVACT_QUIESCE);
     return kIOReturnSuccess;
 }
@@ -3318,7 +3300,7 @@ iwx_rx_frame(struct iwx_softc *sc, mbuf_t m, int chanidx,
     struct ieee80211_node *ni;
     struct ieee80211_channel *bss_chan;
     uint8_t saved_bssid[IEEE80211_ADDR_LEN] = { 0 };
-    struct ifnet *ifp = IC2IFP(ic);
+    struct _ifnet *ifp = IC2IFP(ic);
     
     if (chanidx < 0 || chanidx >= nitems(ic->ic_channels))
         chanidx = ieee80211_chan2ieee(ic, ic->ic_ibss_chan);
@@ -3529,7 +3511,7 @@ iwx_rx_tx_cmd_single(struct iwx_softc *sc, struct iwx_rx_packet *pkt,
                      struct iwx_node *in)
 {
     struct ieee80211com *ic = &sc->sc_ic;
-    struct ifnet *ifp = IC2IFP(ic);
+    struct _ifnet *ifp = IC2IFP(ic);
     struct iwx_tx_resp *tx_resp = (struct iwx_tx_resp *)pkt->data;
     int status = le16toh(tx_resp->status.status) & IWX_TX_STATUS_MSK;
     int txfail;
@@ -3566,7 +3548,7 @@ iwx_rx_tx_cmd(struct iwx_softc *sc, struct iwx_rx_packet *pkt,
               struct iwx_rx_data *data)
 {
     struct ieee80211com *ic = &sc->sc_ic;
-    struct ifnet *ifp = IC2IFP(ic);
+    struct _ifnet *ifp = IC2IFP(ic);
     struct iwx_cmd_header *cmd_hdr = &pkt->hdr;
     int idx = cmd_hdr->idx;
     int qid = cmd_hdr->qid;
@@ -4650,7 +4632,7 @@ int ItlIwx::
 iwx_fill_probe_req(struct iwx_softc *sc, struct iwx_scan_probe_req *preq)
 {
     struct ieee80211com *ic = &sc->sc_ic;
-    struct ifnet *ifp = IC2IFP(ic);
+    struct _ifnet *ifp = IC2IFP(ic);
     struct ieee80211_frame *wh = (struct ieee80211_frame *)preq->buf;
     struct ieee80211_rateset *rs;
     size_t remain = sizeof(preq->buf);
@@ -5054,7 +5036,7 @@ void ItlIwx::
 iwx_mcc_update(struct iwx_softc *sc, struct iwx_mcc_chub_notif *notif)
 {
    struct ieee80211com *ic = &sc->sc_ic;
-   struct ifnet *ifp = IC2IFP(ic);
+   struct _ifnet *ifp = IC2IFP(ic);
    char alpha2[3];
 
    snprintf(alpha2, sizeof(alpha2), "%c%c",
@@ -5454,7 +5436,7 @@ iwx_scan(struct iwx_softc *sc)
 {
     XYLog("%s\n", __FUNCTION__);
     struct ieee80211com *ic = &sc->sc_ic;
-    struct ifnet *ifp = IC2IFP(ic);
+    struct _ifnet *ifp = IC2IFP(ic);
     int err;
     
     if (sc->sc_flags & IWX_FLAG_BGSCAN) {
@@ -6102,7 +6084,7 @@ iwx_delete_key(struct ieee80211com *ic, struct ieee80211_node *ni,
 }
 
 int ItlIwx::
-iwx_media_change(struct ifnet *ifp)
+iwx_media_change(struct _ifnet *ifp)
 {
     struct iwx_softc *sc = (struct iwx_softc *)ifp->if_softc;
     struct ieee80211com *ic = &sc->sc_ic;
@@ -6240,7 +6222,7 @@ out:
 int ItlIwx::
 iwx_newstate(struct ieee80211com *ic, enum ieee80211_state nstate, int arg)
 {
-    struct ifnet *ifp = IC2IFP(ic);
+    struct _ifnet *ifp = IC2IFP(ic);
     struct iwx_softc *sc = (struct iwx_softc *)ifp->if_softc;
     ItlIwx *that = container_of(sc, ItlIwx, com);
     
@@ -6691,7 +6673,7 @@ iwx_allow_mcast(struct iwx_softc *sc)
 }
 
 int ItlIwx::
-iwx_init(struct ifnet *ifp)
+iwx_init(struct _ifnet *ifp)
 {
     XYLog("%s\n", __FUNCTION__);
     struct iwx_softc *sc = (struct iwx_softc *)ifp->if_softc;
@@ -6746,7 +6728,7 @@ iwx_init(struct ifnet *ifp)
 IOReturn ItlIwx::
 _iwx_start_task(OSObject *target, void *arg0, void *arg1, void *arg2, void *arg3)
 {
-    struct ifnet *ifp = (struct ifnet *)arg0;
+    struct _ifnet *ifp = (struct _ifnet *)arg0;
     struct iwx_softc *sc = (struct iwx_softc *)ifp->if_softc;
     ItlIwx *that = container_of(sc, ItlIwx, com);
     struct ieee80211com *ic = &sc->sc_ic;
@@ -6817,7 +6799,7 @@ _iwx_start_task(OSObject *target, void *arg0, void *arg1, void *arg2, void *arg3
 }
 
 void ItlIwx::
-iwx_start(struct ifnet *ifp)
+iwx_start(struct _ifnet *ifp)
 {
     struct iwx_softc *sc = (struct iwx_softc*)ifp->if_softc;
     ItlIwx *that = container_of(sc, ItlIwx, com);
@@ -6825,7 +6807,7 @@ iwx_start(struct ifnet *ifp)
 }
 
 void ItlIwx::
-iwx_stop(struct ifnet *ifp)
+iwx_stop(struct _ifnet *ifp)
 {
     struct iwx_softc *sc = (struct iwx_softc *)ifp->if_softc;
     struct ieee80211com *ic = &sc->sc_ic;
@@ -6878,7 +6860,7 @@ iwx_stop(struct ifnet *ifp)
 }
 
 void ItlIwx::
-iwx_watchdog(struct ifnet *ifp)
+iwx_watchdog(struct _ifnet *ifp)
 {
     struct iwx_softc *sc = (struct iwx_softc *)ifp->if_softc;
     ItlIwx *that = container_of(sc, ItlIwx, com);
@@ -6897,12 +6879,12 @@ iwx_watchdog(struct ifnet *ifp)
         }
         ifp->if_timer = 1;
     }
-    
+
     ieee80211_watchdog(ifp);
 }
 
 int ItlIwx::
-iwx_ioctl(struct ifnet *ifp, u_long cmd, caddr_t data)
+iwx_ioctl(struct _ifnet *ifp, u_long cmd, caddr_t data)
 {
     struct iwx_softc *sc = (struct iwx_softc *)ifp->if_softc;
     int s, err = 0, generation = sc->sc_generation;
@@ -7244,7 +7226,7 @@ iwx_rx_pkt_valid(struct iwx_rx_packet *pkt)
 void ItlIwx::
 iwx_rx_pkt(struct iwx_softc *sc, struct iwx_rx_data *data, struct mbuf_list *ml)
 {
-    struct ifnet *ifp = IC2IFP(&sc->sc_ic);
+    struct _ifnet *ifp = IC2IFP(&sc->sc_ic);
     struct iwx_rx_packet *pkt, *nextpkt;
     uint32_t offset = 0, nextoff = 0, nmpdu = 0, len;
     mbuf_t m0, m;
@@ -8411,7 +8393,7 @@ int ItlIwx::
 iwx_preinit(struct iwx_softc *sc)
 {
     struct ieee80211com *ic = &sc->sc_ic;
-    struct ifnet *ifp = IC2IFP(ic);
+    struct _ifnet *ifp = IC2IFP(ic);
     int err;
     static int attached;
     
@@ -8493,7 +8475,7 @@ iwx_attach(struct iwx_softc *sc, struct pci_attach_args *pa)
     pci_intr_handle_t ih;
     pcireg_t reg, memtype;
     struct ieee80211com *ic = &sc->sc_ic;
-    struct ifnet *ifp = &ic->ic_if;
+    struct _ifnet *ifp = &ic->ic_if;
     int err;
     int txq_i, i;
     
@@ -8863,7 +8845,7 @@ iwx_init_task(void *arg1)
 {
     XYLog("%s\n", __FUNCTION__);
     struct iwx_softc *sc = (struct iwx_softc *)arg1;
-    struct ifnet *ifp = &sc->sc_ic.ic_if;
+    struct _ifnet *ifp = &sc->sc_ic.ic_if;
     ItlIwx *that = container_of(sc, ItlIwx, com);
     int s = splnet();
     int generation = sc->sc_generation;
@@ -8911,7 +8893,7 @@ iwx_resume(struct iwx_softc *sc)
 int ItlIwx::
 iwx_activate(struct iwx_softc *sc, int act)
 {
-    struct ifnet *ifp = &sc->sc_ic.ic_if;
+    struct _ifnet *ifp = &sc->sc_ic.ic_if;
     int err = 0;
     
     switch (act) {

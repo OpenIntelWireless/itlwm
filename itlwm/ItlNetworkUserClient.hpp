@@ -57,7 +57,7 @@ private:
     task_t fTask;
     itlwm *fDriver;
     IOEthernetInterface *fInf;
-    struct ifnet *fIfp;
+    struct _ifnet *fIfp;
     ItlDriverController *fDriverController;
     ItlDriverInfo *fDriverInfo;
     

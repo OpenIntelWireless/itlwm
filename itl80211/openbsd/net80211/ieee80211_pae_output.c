@@ -76,7 +76,7 @@ ieee80211_send_eapol_key(struct ieee80211com *ic, mbuf_t m,
                          struct ieee80211_node *ni, const struct ieee80211_ptk *ptk)
 {
     XYLog("%s\n", __FUNCTION__);
-    struct ifnet *ifp = &ic->ic_if;
+    struct _ifnet *ifp = &ic->ic_if;
     struct ether_header *eh;
     struct ieee80211_eapol_key *key;
     u_int16_t info;

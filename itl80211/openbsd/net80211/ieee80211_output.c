@@ -74,7 +74,7 @@
 #include <net80211/ieee80211_var.h>
 #include <net80211/ieee80211_priv.h>
 
-int	ieee80211_mgmt_output(struct ifnet *, struct ieee80211_node *,
+int	ieee80211_mgmt_output(struct _ifnet *, struct ieee80211_node *,
 	    mbuf_t, int);
 int	ieee80211_can_use_ampdu(struct ieee80211com *,
 	    struct ieee80211_node *);
@@ -121,7 +121,7 @@ mbuf_t ieee80211_get_action(struct ieee80211com *,
  * if the mbuf has been tagged with a 802.11 data link type.
  */
 int
-ieee80211_output(struct ifnet *ifp, mbuf_t m, struct sockaddr *dst,
+ieee80211_output(struct _ifnet *ifp, mbuf_t m, struct sockaddr *dst,
     struct rtentry *rt)
 {
     XYLog("%s 啊啊啊啊\n", __FUNCTION__);
@@ -177,7 +177,7 @@ ieee80211_output(struct ifnet *ifp, mbuf_t m, struct sockaddr *dst,
  * reference (and potentially free'ing up any associated storage).
  */
 int
-ieee80211_mgmt_output(struct ifnet *ifp, struct ieee80211_node *ni,
+ieee80211_mgmt_output(struct _ifnet *ifp, struct ieee80211_node *ni,
     mbuf_t m, int type)
 {
 	struct ieee80211com *ic = (struct ieee80211com *)ifp;
@@ -500,7 +500,7 @@ void
 ieee80211_tx_compressed_bar(struct ieee80211com *ic, struct ieee80211_node *ni,
     int tid, uint16_t ssn)
 {
-	struct ifnet *ifp = &ic->ic_if;
+	struct _ifnet *ifp = &ic->ic_if;
 	mbuf_t m;
 
 	m = ieee80211_get_compressed_bar(ic, ni, tid, ssn);
@@ -524,7 +524,7 @@ ieee80211_tx_compressed_bar(struct ieee80211com *ic, struct ieee80211_node *ni,
  *     maintain that.
  */
 mbuf_t
-ieee80211_encap(struct ifnet *ifp, mbuf_t m, struct ieee80211_node **pni)
+ieee80211_encap(struct _ifnet *ifp, mbuf_t m, struct ieee80211_node **pni)
 {
 	struct ieee80211com *ic = (struct ieee80211com *)ifp;
 	struct ether_header eh;
@@ -1805,7 +1805,7 @@ ieee80211_send_mgmt(struct ieee80211com *ic, struct ieee80211_node *ni,
     int type, int arg1, int arg2)
 {
 #define	senderr(_x, _v)	do { ic->ic_stats._v++; ret = _x; goto bad; } while (0)
-	struct ifnet *ifp = &ic->ic_if;
+	struct _ifnet *ifp = &ic->ic_if;
 	mbuf_t m;
 	int ret, timer;
 

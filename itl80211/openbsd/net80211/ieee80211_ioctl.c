@@ -465,7 +465,7 @@ ieee80211_ess_getwpaparms(struct ieee80211_ess *ess,
 }
 
 int
-ieee80211_ioctl(struct ifnet *ifp, u_long cmd, caddr_t data)
+ieee80211_ioctl(struct _ifnet *ifp, u_long cmd, caddr_t data)
 {
 	struct ieee80211com *ic = (struct ieee80211com *)ifp;
 	struct ifreq *ifr = (struct ifreq *)data;

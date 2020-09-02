@@ -21,7 +21,7 @@ watchdogAction(IOTimerEventSource *timer)
 void ItlIwm::
 detach(IOPCIDevice *device)
 {
-    struct ifnet *ifp = &com.sc_ic.ic_ac.ac_if;
+    struct _ifnet *ifp = &com.sc_ic.ic_ac.ac_if;
     ieee80211_ifdetach(ifp);
     taskq_destroy(systq);
     taskq_destroy(com.sc_nswq);
@@ -81,7 +81,7 @@ releaseAll()
 IOReturn ItlIwm::
 enable(IONetworkInterface *netif)
 {
-    struct ifnet *ifp = &com.sc_ic.ic_ac.ac_if;
+    struct _ifnet *ifp = &com.sc_ic.ic_ac.ac_if;
     ifp->if_flags |= IFF_UP;
     iwm_activate(&com, DVACT_WAKEUP);
     return kIOReturnSuccess;

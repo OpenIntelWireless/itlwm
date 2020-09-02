@@ -29,7 +29,7 @@ static IOReturn _if_input(OSObject *target, void *arg0, void *arg1, void *arg2, 
 {
     mbuf_t m;
     bool isEmpty = true;
-    struct ifnet *ifq = (struct ifnet *)arg0;
+    struct _ifnet *ifq = (struct _ifnet *)arg0;
     struct mbuf_list *ml = (struct mbuf_list *)arg1;
     
     MBUF_LIST_FOREACH(ml, m) {
@@ -54,7 +54,7 @@ static IOReturn _if_input(OSObject *target, void *arg0, void *arg1, void *arg2, 
     return kIOReturnSuccess;
 }
 
-int if_input(struct ifnet *ifq, struct mbuf_list *ml)
+int if_input(struct _ifnet *ifq, struct mbuf_list *ml)
 {
     return _fCommandGate->runAction((IOCommandGate::Action)_if_input, ifq, ml);
 }

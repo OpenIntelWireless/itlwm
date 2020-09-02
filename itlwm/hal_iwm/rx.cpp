@@ -536,7 +536,7 @@ _var_ = (t)((_pkt_)+1);                    \
 void ItlIwm::
 iwm_rx_pkt(struct iwm_softc *sc, struct iwm_rx_data *data, struct mbuf_list *ml)
 {
-    struct ifnet *ifp = IC2IFP(&sc->sc_ic);
+    struct _ifnet *ifp = IC2IFP(&sc->sc_ic);
     struct iwm_rx_packet *pkt, *nextpkt;
     uint32_t offset = 0, nextoff = 0, nmpdu = 0, len;
     mbuf_t m0, m = NULL;

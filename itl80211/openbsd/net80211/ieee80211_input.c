@@ -262,7 +262,7 @@ ieee80211_input_hwdecrypt(struct ieee80211com *ic, struct ieee80211_node *ni,
  * unnecessarily.
  */
 void
-ieee80211_inputm(struct ifnet *ifp, mbuf_t m, struct ieee80211_node *ni,
+ieee80211_inputm(struct _ifnet *ifp, mbuf_t m, struct ieee80211_node *ni,
                  struct ieee80211_rxinfo *rxi, struct mbuf_list *ml)
 {
     struct ieee80211com *ic = (struct ieee80211com *)ifp;
@@ -674,7 +674,7 @@ out:
 
 /* Input handler for drivers which only receive one frame per interrupt. */
 void
-ieee80211_input(struct ifnet *ifp, mbuf_t m, struct ieee80211_node *ni,
+ieee80211_input(struct _ifnet *ifp, mbuf_t m, struct ieee80211_node *ni,
                 struct ieee80211_rxinfo *rxi)
 {
     struct mbuf_list ml = MBUF_LIST_INITIALIZER();
@@ -782,7 +782,7 @@ ieee80211_input_ba(struct ieee80211com *ic, mbuf_t m,
                    struct ieee80211_node *ni, int tid, struct ieee80211_rxinfo *rxi,
                    struct mbuf_list *ml)
 {
-    struct ifnet *ifp = &ic->ic_if;
+    struct _ifnet *ifp = &ic->ic_if;
     struct ieee80211_rx_ba *ba = &ni->ni_rx_ba[tid];
     struct ieee80211_frame *wh;
     int idx, count;
@@ -872,7 +872,7 @@ void
 ieee80211_input_ba_seq(struct ieee80211com *ic, struct ieee80211_node *ni,
                        uint8_t tid, uint16_t max_seq, struct mbuf_list *ml)
 {
-    struct ifnet *ifp = &ic->ic_if;
+    struct _ifnet *ifp = &ic->ic_if;
     struct ieee80211_rx_ba *ba = &ni->ni_rx_ba[tid];
     struct ieee80211_frame *wh;
     uint16_t seq;
@@ -906,7 +906,7 @@ ieee80211_input_ba_flush(struct ieee80211com *ic, struct ieee80211_node *ni,
                          struct ieee80211_rx_ba *ba, struct mbuf_list *ml)
 
 {
-    struct ifnet *ifp = &ic->ic_if;
+    struct _ifnet *ifp = &ic->ic_if;
     
     /* pass reordered MPDUs up to the next MAC process */
     while (ba->ba_buf[ba->ba_head].m != NULL) {
@@ -966,7 +966,7 @@ void
 ieee80211_ba_move_window(struct ieee80211com *ic, struct ieee80211_node *ni,
                          u_int8_t tid, u_int16_t ssn, struct mbuf_list *ml)
 {
-    struct ifnet *ifp = &ic->ic_if;
+    struct _ifnet *ifp = &ic->ic_if;
     struct ieee80211_rx_ba *ba = &ni->ni_rx_ba[tid];
     int count;
     
@@ -995,7 +995,7 @@ void
 ieee80211_enqueue_data(struct ieee80211com *ic, mbuf_t m,
                        struct ieee80211_node *ni, int mcast, struct mbuf_list *ml)
 {
-    struct ifnet *ifp = &ic->ic_if;
+    struct _ifnet *ifp = &ic->ic_if;
     struct ether_header *eh;
     mbuf_t m1;
     
@@ -2559,7 +2559,7 @@ void
 ieee80211_recv_assoc_resp(struct ieee80211com *ic, mbuf_t m,
                           struct ieee80211_node *ni, int reassoc)
 {
-    struct ifnet *ifp = &ic->ic_if;
+    struct _ifnet *ifp = &ic->ic_if;
     const struct ieee80211_frame *wh;
     const u_int8_t *frm, *efrm;
     const u_int8_t *rates, *xrates, *edcaie, *wmmie, *htcaps, *htop;
@@ -3360,7 +3360,7 @@ void
 ieee80211_recv_pspoll(struct ieee80211com *ic, mbuf_t m,
                       struct ieee80211_node *ni)
 {
-    struct ifnet *ifp = &ic->ic_if;
+    struct _ifnet *ifp = &ic->ic_if;
     struct ieee80211_frame_pspoll *psp;
     struct ieee80211_frame *wh;
     u_int16_t aid;

@@ -235,7 +235,7 @@ int ItlIwm::
 iwm_fill_probe_req(struct iwm_softc *sc, struct iwm_scan_probe_req *preq)
 {
     struct ieee80211com *ic = &sc->sc_ic;
-    struct ifnet *ifp = IC2IFP(ic);
+    struct _ifnet *ifp = IC2IFP(ic);
     struct ieee80211_frame *wh = (struct ieee80211_frame *)preq->buf;
     struct ieee80211_rateset *rs;
     size_t remain = sizeof(preq->buf);
@@ -849,7 +849,7 @@ iwm_scan(struct iwm_softc *sc)
 {
     XYLog("%s\n", __FUNCTION__);
     struct ieee80211com *ic = &sc->sc_ic;
-    struct ifnet *ifp = IC2IFP(ic);
+    struct _ifnet *ifp = IC2IFP(ic);
     int err;
     
     if (sc->sc_flags & IWM_FLAG_BGSCAN) {

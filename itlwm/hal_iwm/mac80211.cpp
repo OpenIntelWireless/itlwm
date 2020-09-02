@@ -530,7 +530,7 @@ iwm_rx_frame(struct iwm_softc *sc, mbuf_t m, int chanidx,
     struct ieee80211_node *ni;
     struct ieee80211_channel *bss_chan;
     uint8_t saved_bssid[IEEE80211_ADDR_LEN] = { 0 };
-    struct ifnet *ifp = IC2IFP(ic);
+    struct _ifnet *ifp = IC2IFP(ic);
     
     if (chanidx < 0 || chanidx >= nitems(ic->ic_channels))
         chanidx = ieee80211_chan2ieee(ic, ic->ic_ibss_chan);
@@ -644,7 +644,7 @@ iwm_rx_tx_cmd_single(struct iwm_softc *sc, struct iwm_rx_packet *pkt,
 {
     struct ieee80211com *ic = &sc->sc_ic;
     struct ieee80211_node *ni = &in->in_ni;
-    struct ifnet *ifp = IC2IFP(ic);
+    struct _ifnet *ifp = IC2IFP(ic);
     struct iwm_tx_resp *tx_resp = (struct iwm_tx_resp *)pkt->data;
     int status = le16toh(tx_resp->status.status) & IWM_TX_STATUS_MSK;
     int txfail;
@@ -726,7 +726,7 @@ iwm_rx_tx_cmd(struct iwm_softc *sc, struct iwm_rx_packet *pkt,
               struct iwm_rx_data *data)
 {
     struct ieee80211com *ic = &sc->sc_ic;
-    struct ifnet *ifp = IC2IFP(ic);
+    struct _ifnet *ifp = IC2IFP(ic);
     struct iwm_cmd_header *cmd_hdr = &pkt->hdr;
     int idx = cmd_hdr->idx;
     int qid = cmd_hdr->qid;
@@ -2048,7 +2048,7 @@ iwm_update_htprot(struct ieee80211com *ic, struct ieee80211_node *ni)
     that->iwm_add_task(sc, systq, &sc->htprot_task);
 }
 
-int ItlIwm::iwm_media_change(struct ifnet *ifp)
+int ItlIwm::iwm_media_change(struct _ifnet *ifp)
 {
     XYLog("%s\n", __FUNCTION__);
     struct iwm_softc *sc = (struct iwm_softc*)ifp->if_softc;
@@ -2187,7 +2187,7 @@ int ItlIwm::
 iwm_newstate(struct ieee80211com *ic, enum ieee80211_state nstate, int arg)
 {
     XYLog("%s\n", __FUNCTION__);
-    struct ifnet *ifp = IC2IFP(ic);
+    struct _ifnet *ifp = IC2IFP(ic);
     struct iwm_softc *sc = (struct iwm_softc*)ifp->if_softc;
     ItlIwm *that = container_of(sc, ItlIwm, com);
     struct iwm_node *in = (struct iwm_node *)ic->ic_bss;
@@ -2533,7 +2533,7 @@ err:
 }
 
 int ItlIwm::
-iwm_init(struct ifnet *ifp)
+iwm_init(struct _ifnet *ifp)
 {
     XYLog("%s\n", __FUNCTION__);
     struct iwm_softc *sc = (struct iwm_softc*)ifp->if_softc;
@@ -2589,7 +2589,7 @@ iwm_init(struct ifnet *ifp)
 IOReturn ItlIwm::
 _iwm_start_task(OSObject *target, void *arg0, void *arg1, void *arg2, void *arg3)
 {
-    struct ifnet *ifp = (struct ifnet *)arg0;
+    struct _ifnet *ifp = (struct _ifnet *)arg0;
     struct iwm_softc *sc = (struct iwm_softc*)ifp->if_softc;
     ItlIwm *that = container_of(sc, ItlIwm, com);
     struct ieee80211com *ic = &sc->sc_ic;
@@ -2667,7 +2667,7 @@ _iwm_start_task(OSObject *target, void *arg0, void *arg1, void *arg2, void *arg3
 }
 
 void ItlIwm::
-iwm_start(struct ifnet *ifp)
+iwm_start(struct _ifnet *ifp)
 {
     struct iwm_softc *sc = (struct iwm_softc*)ifp->if_softc;
     ItlIwm *that = container_of(sc, ItlIwm, com);
@@ -2679,7 +2679,7 @@ iwm_start(struct ifnet *ifp)
 }
 
 void ItlIwm::
-iwm_stop(struct ifnet *ifp)
+iwm_stop(struct _ifnet *ifp)
 {
     XYLog("%s\n", __FUNCTION__);
     struct iwm_softc *sc = (struct iwm_softc*)ifp->if_softc;
@@ -2735,7 +2735,7 @@ iwm_stop(struct ifnet *ifp)
 }
 
 void ItlIwm::
-iwm_watchdog(struct ifnet *ifp)
+iwm_watchdog(struct _ifnet *ifp)
 {
     struct iwm_softc *sc = (struct iwm_softc *)ifp->if_softc;
     ItlIwm *that = container_of(sc, ItlIwm, com);
@@ -2763,7 +2763,7 @@ iwm_watchdog(struct ifnet *ifp)
 }
 
 int ItlIwm::
-iwm_ioctl(struct ifnet *ifp, u_long cmd, caddr_t data)
+iwm_ioctl(struct _ifnet *ifp, u_long cmd, caddr_t data)
 {
     XYLog("%s\n", __FUNCTION__);
     struct iwm_softc *sc = (struct iwm_softc *)ifp->if_softc;
@@ -3416,7 +3416,7 @@ iwm_preinit(struct iwm_softc *sc)
 {
     XYLog("%s\n", __FUNCTION__);
     struct ieee80211com *ic = &sc->sc_ic;
-    struct ifnet *ifp = IC2IFP(ic);
+    struct _ifnet *ifp = IC2IFP(ic);
     int err;
     static int attached;
     
@@ -3497,7 +3497,7 @@ iwm_attach(struct iwm_softc *sc, struct pci_attach_args *pa)
     XYLog("%s\n", __FUNCTION__);
     pcireg_t reg, memtype;
     struct ieee80211com *ic = &sc->sc_ic;
-    struct ifnet *ifp = &ic->ic_if;
+    struct _ifnet *ifp = &ic->ic_if;
     const char *intrstr = {0};
     int err;
     int txq_i, i;
@@ -3922,7 +3922,7 @@ iwm_init_task(void *arg1)
     XYLog("%s\n", __FUNCTION__);
     struct iwm_softc *sc = (struct iwm_softc *)arg1;
     ItlIwm *that = container_of(sc, ItlIwm, com);
-    struct ifnet *ifp = &sc->sc_ic.ic_if;
+    struct _ifnet *ifp = &sc->sc_ic.ic_if;
     int s = splnet();
     int generation = sc->sc_generation;
     int fatal = (sc->sc_flags & (IWM_FLAG_HW_ERR | IWM_FLAG_RFKILL));
@@ -4043,7 +4043,7 @@ iwm_del_task(struct iwm_softc *sc, struct taskq *taskq, struct task *task)
 int ItlIwm::
 iwm_activate(struct iwm_softc *sc, int act)
 {
-    struct ifnet *ifp = &sc->sc_ic.ic_if;
+    struct _ifnet *ifp = &sc->sc_ic.ic_if;
     int err = 0;
     
     switch (act) {

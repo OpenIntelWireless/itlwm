@@ -135,7 +135,7 @@ IONetworkInterface *itlwm::createInterface()
     return netif;
 }
 
-struct ifnet *itlwm::getIfp()
+struct _ifnet *itlwm::getIfp()
 {
     return &fHalService->get80211Controller()->ic_ac.ac_if;
 }
@@ -293,6 +293,7 @@ void itlwm::associateSSID(const char *ssid, const char *pwd)
 
 bool itlwm::start(IOService *provider)
 {
+    itlwm_interface *fNetIf;
     if (!super::start(provider)) {
         return false;
     }
@@ -453,12 +454,12 @@ IOReturn itlwm::selectMedium(const IONetworkMedium *medium) {
 void itlwm::stop(IOService *provider)
 {
     XYLog("%s\n", __FUNCTION__);
-    struct ifnet *ifp = &fHalService->get80211Controller()->ic_ac.ac_if;
+    struct _ifnet *ifp = &fHalService->get80211Controller()->ic_ac.ac_if;
     super::stop(provider);
     setLinkStatus(kIONetworkLinkValid);
     fHalService->detach(pciNub);
-    detachInterface(fNetIf);
-    OSSafeReleaseNULL(fNetIf);
+    detachInterface(ifp->iface);
+    OSSafeReleaseNULL(ifp->iface);
     ifp->iface = NULL;
     releaseAll();
 }
@@ -469,19 +470,20 @@ void itlwm::releaseAll()
         fHalService->release();
         fHalService = NULL;
     }
-    if (fWatchdogWorkLoop && watchdogTimer) {
-        fWatchdogWorkLoop->removeEventSource(watchdogTimer);
-        watchdogTimer->release();
-        watchdogTimer = NULL;
-        fWatchdogWorkLoop->release();
-        fWatchdogWorkLoop = NULL;
-    }
     if (_fWorkloop) {
         if (_fCommandGate) {
 //            _fCommandGate->disable();
             _fWorkloop->removeEventSource(_fCommandGate);
             _fCommandGate->release();
             _fCommandGate = NULL;
+        }
+        if (fWatchdogWorkLoop && watchdogTimer) {
+            watchdogTimer->cancelTimeout();
+            fWatchdogWorkLoop->removeEventSource(watchdogTimer);
+            watchdogTimer->release();
+            watchdogTimer = NULL;
+            fWatchdogWorkLoop->release();
+            fWatchdogWorkLoop = NULL;
         }
         _fWorkloop->release();
         _fWorkloop = NULL;
@@ -502,9 +504,7 @@ void itlwm::free()
 IOReturn itlwm::enable(IONetworkInterface *netif)
 {
     XYLog("%s\n", __FUNCTION__);
-    struct ifnet *ifp = &fHalService->get80211Controller()->ic_ac.ac_if;
     super::enable(netif);
-    ifp->if_flags |= IFF_UP;
     _fCommandGate->enable();
     fHalService->enable(netif);
     watchdogTimer->setTimeoutMS(1000);
@@ -516,9 +516,9 @@ IOReturn itlwm::disable(IONetworkInterface *netif)
 {
     XYLog("%s\n", __FUNCTION__);
     super::disable(netif);
+    fHalService->disable(netif);
     watchdogTimer->cancelTimeout();
     watchdogTimer->disable();
-    fHalService->disable(netif);
     setLinkStatus(kIONetworkLinkValid);
     return kIOReturnSuccess;
 }
@@ -535,7 +535,7 @@ IOReturn itlwm::getHardwareAddress(IOEthernetAddress *addrP) {
 UInt32 itlwm::outputPacket(mbuf_t m, void *param)
 {
 //    XYLog("%s\n", __FUNCTION__);
-    ifnet *ifp = &fHalService->get80211Controller()->ic_ac.ac_if;
+    _ifnet *ifp = &fHalService->get80211Controller()->ic_ac.ac_if;
     
     if (fHalService->get80211Controller()->ic_state != IEEE80211_S_RUN || ifp == NULL || ifp->if_snd == NULL) {
         freePacket(m);

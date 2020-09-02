@@ -45,7 +45,7 @@ public:
     
     void releaseAll();
     
-    struct ifnet *getIfp();
+    struct _ifnet *getIfp();
     struct iwm_softc *getSoft();
     IOEthernetInterface *getNetworkInterface();
     
@@ -305,7 +305,7 @@ public:
                                   struct ieee80211_node *, struct ieee80211_key *);
     static void    iwm_calib_timeout(void *);
     void    iwm_setrates(struct iwm_node *, int);
-    int    iwm_media_change(struct ifnet *);
+    int    iwm_media_change(struct _ifnet *);
     static void    iwm_newstate_task(void *);
     static int    iwm_newstate(struct ieee80211com *, enum ieee80211_state, int);
     void    iwm_endscan(struct iwm_softc *);
@@ -320,11 +320,11 @@ public:
     int    iwm_save_fw_paging(struct iwm_softc *, const struct iwm_fw_sects *);
     int    iwm_send_paging_cmd(struct iwm_softc *, const struct iwm_fw_sects *);
     int    iwm_init_hw(struct iwm_softc *);
-    int    iwm_init(struct ifnet *);
-    static void    iwm_start(struct ifnet *);
-    void    iwm_stop(struct ifnet *);
-    static void    iwm_watchdog(struct ifnet *);
-    static int    iwm_ioctl(struct ifnet *, u_long, caddr_t);
+    int    iwm_init(struct _ifnet *);
+    static void    iwm_start(struct _ifnet *);
+    void    iwm_stop(struct _ifnet *);
+    static void    iwm_watchdog(struct _ifnet *);
+    static int    iwm_ioctl(struct _ifnet *, u_long, caddr_t);
 #ifdef IWM_DEBUG
     const char *iwm_desc_lookup(uint32_t);
     void    iwm_nic_error(struct iwm_softc *);

@@ -74,7 +74,7 @@ public:
     
     bool initPCIPowerManagment(IOPCIDevice *provider);
     
-    struct ifnet *getIfp();
+    struct _ifnet *getIfp();
     IOEthernetInterface *getNetworkInterface();
     
     static IOReturn tsleepHandler(OSObject* owner, void* arg0 = 0, void* arg1 = 0, void* arg2 = 0, void* arg3 = 0);
@@ -102,7 +102,6 @@ public:
     IOPCIDevice *pciNub;
     IONetworkMedium *mediumTable[1];
     IONetworkStats *fpNetStats;
-    itlwm_interface *fNetIf;
     IOWorkLoop *fWatchdogWorkLoop;
     ItlHalService *fHalService;
     semaphore_t outputThreadSignal;

@@ -95,7 +95,7 @@ void ieee80211_set_beacon_miss_threshold(struct ieee80211com *);
 int ieee80211_newstate(struct ieee80211com *, enum ieee80211_state, int);
 
 void
-ieee80211_proto_attach(struct ifnet *ifp)
+ieee80211_proto_attach(struct _ifnet *ifp)
 {
 	struct ieee80211com *ic = (struct ieee80211com *)ifp;
 
@@ -119,7 +119,7 @@ ieee80211_proto_attach(struct ifnet *ifp)
 }
 
 void
-ieee80211_proto_detach(struct ifnet *ifp)
+ieee80211_proto_detach(struct _ifnet *ifp)
 {
     XYLog("%s\n", __FUNCTION__);
 	struct ieee80211com *ic = (struct ieee80211com *)ifp;
@@ -774,7 +774,7 @@ void
 ieee80211_auth_open_confirm(struct ieee80211com *ic,
     struct ieee80211_node *ni, uint16_t seq)
 {
-	struct ifnet *ifp = &ic->ic_if;
+	struct _ifnet *ifp = &ic->ic_if;
 
 	IEEE80211_SEND_MGMT(ic, ni, IEEE80211_FC0_SUBTYPE_AUTH, seq + 1);
 	if (ifp->if_flags & IFF_DEBUG)
@@ -792,7 +792,7 @@ ieee80211_try_another_bss(struct ieee80211com *ic)
 {
     XYLog("%s\n", __FUNCTION__);
 	struct ieee80211_node *curbs, *selbs;
-	struct ifnet *ifp = &ic->ic_if;
+	struct _ifnet *ifp = &ic->ic_if;
 
 	/* Don't select our current AP again. */
 	curbs = ieee80211_find_node(ic, ic->ic_bss->ni_macaddr);
@@ -835,7 +835,7 @@ ieee80211_auth_open(struct ieee80211com *ic, const struct ieee80211_frame *wh,
     u_int16_t status)
 {
     XYLog("%s\n", __FUNCTION__);
-	struct ifnet *ifp = &ic->ic_if;
+	struct _ifnet *ifp = &ic->ic_if;
 	switch (ic->ic_opmode) {
 #ifndef IEEE80211_STA_ONLY
 	case IEEE80211_M_IBSS:
@@ -934,7 +934,7 @@ ieee80211_auth_open(struct ieee80211com *ic, const struct ieee80211_frame *wh,
 void
 ieee80211_set_beacon_miss_threshold(struct ieee80211com *ic)
 {
-	struct ifnet *ifp = &ic->ic_if;
+	struct _ifnet *ifp = &ic->ic_if;
 
 	/*
 	 * Scale the missed beacon counter threshold to the AP's actual
@@ -1000,7 +1000,7 @@ int
 ieee80211_newstate(struct ieee80211com *ic, enum ieee80211_state nstate,
     int mgt)
 {
-	struct ifnet *ifp = &ic->ic_if;
+	struct _ifnet *ifp = &ic->ic_if;
 	struct ieee80211_node *ni;
 	enum ieee80211_state ostate;
 	u_int rate;
@@ -1294,7 +1294,7 @@ justcleanup:
 void
 ieee80211_set_link_state(struct ieee80211com *ic, int nstate)
 {
-	struct ifnet *ifp = &ic->ic_if;
+	struct _ifnet *ifp = &ic->ic_if;
     int link_state;
     XYLog("%s nstate=%d, old_state=%d\n", __FUNCTION__, nstate, ifp->if_link_state);
     

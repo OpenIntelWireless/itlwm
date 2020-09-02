@@ -208,7 +208,7 @@ ieee80211_tkip_encrypt(struct ieee80211com *ic, mbuf_t m0,
 	int left, moff, noff, len, hdrlen;
     mbuf_t temp;
     unsigned int max_chunks = 1;
-    struct ifnet *ifp = &ic->ic_ac.ac_if;
+    struct _ifnet *ifp = &ic->ic_ac.ac_if;
 
     if (m0 == NULL) {
         XYLog("%s, m0==NULL\n", __FUNCTION__);
@@ -389,7 +389,7 @@ ieee80211_tkip_decrypt(struct ieee80211com *ic, mbuf_t m0,
 	int hdrlen, left, moff, noff, len;
     mbuf_t temp;
     unsigned int max_chunks = 1;
-    struct ifnet *ifp = &ic->ic_ac.ac_if;
+    struct _ifnet *ifp = &ic->ic_ac.ac_if;
 
 	wh = mtod(m0, struct ieee80211_frame *);
 	hdrlen = ieee80211_get_hdrlen(wh);

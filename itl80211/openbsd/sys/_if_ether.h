@@ -160,7 +160,7 @@ struct ether_multi {
     LIST_ENTRY(ether_multi) enm_list;
 };
 
-struct ifnet {                /* and the entries */
+struct _ifnet {                /* and the entries */
     IOEthernetInterface *iface;
     IOOutputQueue* output_queue;
     IOEthernetController* controller;
@@ -168,7 +168,7 @@ struct ifnet {                /* and the entries */
     void *if_softc;
 //    struct    refcnt if_refcnt;
     int if_hdrlen;
-    TAILQ_ENTRY(ifnet) if_list;    /* [k] all struct ifnets are chained */
+    TAILQ_ENTRY(_ifnet) if_list;    /* [k] all struct ifnets are chained */
     TAILQ_HEAD(, ifaddr) if_addrlist; /* [N] list of addresses per if */
     TAILQ_HEAD(, ifmaddr) if_maddrlist; /* [N] list of multicast records */
     TAILQ_HEAD(, ifg_list) if_groups; /* [N] list of groups per if */
@@ -176,7 +176,7 @@ struct ifnet {                /* and the entries */
 //    struct hook_desc_head *if_linkstatehooks; /* [I] link change callbacks*/
 //    struct hook_desc_head *if_detachhooks; /* [I] detach callbacks */
                 /* [I] check or clean routes (+ or -)'d */
-    void    (*if_rtrequest)(struct ifnet *, int, struct rtentry *);
+    void    (*if_rtrequest)(struct _ifnet *, int, struct rtentry *);
     char    if_xname[IFNAMSIZ];    /* [I] external name (name + unit) */
     int    if_pcount;        /* [k] # of promiscuous listeners */
     unsigned int if_bridgeidx;    /* [k] used by bridge ports */
@@ -197,7 +197,7 @@ struct ifnet {                /* and the entries */
     
 //    union {
 //        struct srpl carp_s;    /* carp if list (used by !carp ifs) */
-//        struct ifnet *carp_d;    /* ptr to carpdev (used by carp ifs) */
+//        struct _ifnet *carp_d;    /* ptr to carpdev (used by carp ifs) */
 //    } if_carp_ptr;
 #define if_carp        if_carp_ptr.carp_s
 #define if_carpdev    if_carp_ptr.carp_d
@@ -218,16 +218,16 @@ struct ifnet {                /* and the entries */
 //
 //    /* procedure handles */
 //    SRPL_HEAD(, ifih) if_inputs;    /* [k] input routines (dequeue) */
-    int    (*if_output)(struct ifnet *, mbuf_t, struct sockaddr *,
+    int    (*if_output)(struct _ifnet *, mbuf_t, struct sockaddr *,
              struct rtentry *);    /* output routine (enqueue) */
                     /* link level output function */
-    int    (*if_ll_output)(struct ifnet *, mbuf_t,
+    int    (*if_ll_output)(struct _ifnet *, mbuf_t,
             struct sockaddr *, struct rtentry *);
-    int    (*if_enqueue)(struct ifnet *, mbuf_t);
-    void    (*if_start)(struct ifnet *);    /* initiate output */
-    int    (*if_ioctl)(struct ifnet *, u_long, caddr_t); /* ioctl hook */
-    void    (*if_watchdog)(struct ifnet *);    /* timer routine */
-    int    (*if_wol)(struct ifnet *, int);    /* WoL routine **/
+    int    (*if_enqueue)(struct _ifnet *, mbuf_t);
+    void    (*if_start)(struct _ifnet *);    /* initiate output */
+    int    (*if_ioctl)(struct _ifnet *, u_long, caddr_t); /* ioctl hook */
+    void    (*if_watchdog)(struct _ifnet *);    /* timer routine */
+    int    (*if_wol)(struct _ifnet *, int);    /* WoL routine **/
 
     /* queues */
     IOPacketQueue *if_snd;        /* transmit queue */
@@ -251,7 +251,7 @@ struct ifnet {                /* and the entries */
  * begins with this structure.
  */
 struct  arpcom {
-    struct     ifnet ac_if;            /* network-visible interface */
+    struct     _ifnet ac_if;            /* network-visible interface */
     u_int8_t ac_enaddr[ETHER_ADDR_LEN];    /* ethernet hardware address */
     char     ac__pad[2];            /* pad for some machines */
     LIST_HEAD(, ether_multi) ac_multiaddrs;    /* list of multicast addrs */
@@ -268,14 +268,14 @@ static inline u_int8_t etheranyaddr[ETHER_ADDR_LEN] =
 #define senderr(e) { error = (e); goto bad;}
 
 static inline int
-if_setlladdr(struct ifnet *ifp, const uint8_t *lladdr)
+if_setlladdr(struct _ifnet *ifp, const uint8_t *lladdr)
 {
     memcpy(((struct arpcom *)ifp)->ac_enaddr, lladdr, ETHER_ADDR_LEN);
     return (0);
 }
 
 static inline int
-if_attach(struct ifnet *ifp)
+if_attach(struct _ifnet *ifp)
 {
     ifp->if_link_state = -1;
     return 0;

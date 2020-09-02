@@ -67,7 +67,7 @@ void    ieee80211_derive_pmkid(enum ieee80211_akm, const u_int8_t *,
         const u_int8_t *, const u_int8_t *, u_int8_t *);
 
 void
-ieee80211_crypto_attach(struct ifnet *ifp)
+ieee80211_crypto_attach(struct _ifnet *ifp)
 {
     struct ieee80211com *ic = (struct ieee80211com *)ifp;
 
@@ -88,7 +88,7 @@ ieee80211_crypto_attach(struct ifnet *ifp)
 }
 
 void
-ieee80211_crypto_detach(struct ifnet *ifp)
+ieee80211_crypto_detach(struct _ifnet *ifp)
 {
     XYLog("%s\n", __FUNCTION__);
 	struct ieee80211com *ic = (struct ieee80211com *)ifp;

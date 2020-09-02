@@ -87,12 +87,11 @@ struct ifmediareq {
     uint64_t    *ifm_ulist;        /* media words */
 };
 
-struct ifnet;
 /*
  * Driver callbacks for media status and change requests.
  */
-typedef    int (*ifm_change_cb_t)(struct ifnet *);
-typedef    void (*ifm_stat_cb_t)(struct ifnet *, struct ifmediareq *);
+typedef    int (*ifm_change_cb_t)(struct _ifnet *);
+typedef    void (*ifm_stat_cb_t)(struct _ifnet *, struct ifmediareq *);
 
 /*
  * In-kernel representation of a single supported media type.
@@ -137,7 +136,7 @@ static inline void ifmedia_init(struct ifmedia *ifm, uint64_t dontcare_mask)
 //
 
 ///* Common ioctl function for getting/setting media, called by driver. */
-//int    ifmedia_ioctl(struct ifnet *, struct ifreq *, struct ifmedia *,
+//int    ifmedia_ioctl(struct _ifnet *, struct ifreq *, struct ifmedia *,
 //        u_long);
 //
 ///* Locate a media entry */

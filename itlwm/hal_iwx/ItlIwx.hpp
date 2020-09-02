@@ -158,10 +158,6 @@ public:
     void watchdogAction(IOTimerEventSource *timer) override;
     static IOReturn _iwx_start_task(OSObject *target, void *arg0, void *arg1, void *arg2, void *arg3);
     
-    struct ifnet *getIfp();
-    struct iwx_softc *getSoft();
-    IOEthernetInterface *getNetworkInterface();
-    
     virtual ItlDriverInfo *getDriverInfo() override;
     
     virtual ItlDriverController *getDriverController() override;
@@ -379,7 +375,7 @@ public:
            struct ieee80211_key *);
     static void    iwx_delete_key(struct ieee80211com *,
            struct ieee80211_node *, struct ieee80211_key *);
-    int    iwx_media_change(struct ifnet *);
+    int    iwx_media_change(struct _ifnet *);
     static void    iwx_newstate_task(void *);
     static int    iwx_newstate(struct ieee80211com *, enum ieee80211_state, int);
     void    iwx_endscan(struct iwx_softc *);
@@ -391,11 +387,11 @@ public:
     int    iwx_send_update_mcc_cmd(struct iwx_softc *, const char *);
     int    iwx_send_temp_report_ths_cmd(struct iwx_softc *);
     int    iwx_init_hw(struct iwx_softc *);
-    int    iwx_init(struct ifnet *);
-    static void    iwx_start(struct ifnet *);
-    void    iwx_stop(struct ifnet *);
-    static void    iwx_watchdog(struct ifnet *);
-    static int    iwx_ioctl(struct ifnet *, u_long, caddr_t);
+    int    iwx_init(struct _ifnet *);
+    static void    iwx_start(struct _ifnet *);
+    void    iwx_stop(struct _ifnet *);
+    static void    iwx_watchdog(struct _ifnet *);
+    static int    iwx_ioctl(struct _ifnet *, u_long, caddr_t);
     const char *iwx_desc_lookup(uint32_t);
     void    iwx_nic_error(struct iwx_softc *);
     void    iwx_nic_umac_error(struct iwx_softc *);
