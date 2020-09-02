@@ -42,8 +42,6 @@ public:
     
     virtual IOReturn disable(IONetworkInterface *interface) = 0;
     
-    virtual void watchdogAction(IOTimerEventSource *timer) = 0;
-    
     virtual struct ieee80211com *get80211Controller() = 0;
     
     virtual ItlDriverInfo *getDriverInfo() = 0;

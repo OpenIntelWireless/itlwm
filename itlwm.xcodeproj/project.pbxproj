@@ -252,12 +252,12 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
-		F89CE33B24FF6219001A0F5B /* PBXContainerItemProxy */ = {
+		F830B09124FFDE9B0058BAE4 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 024A07A323FCBC3C009FBA6C /* Project object */;
 			proxyType = 1;
-			remoteGlobalIDString = F8B8F15E2493C1E90059FAA8;
-			remoteInfo = fw_genx;
+			remoteGlobalIDString = F8EE4D1B24178BF0002FA666;
+			remoteInfo = fw_gen;
 		};
 /* End PBXContainerItemProxy section */
 
@@ -927,7 +927,7 @@
 			buildRules = (
 			);
 			dependencies = (
-				F89CE33C24FF6219001A0F5B /* PBXTargetDependency */,
+				F830B09224FFDE9B0058BAE4 /* PBXTargetDependency */,
 			);
 			name = itlwm;
 			productName = itlwm;
@@ -1149,10 +1149,10 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
-		F89CE33C24FF6219001A0F5B /* PBXTargetDependency */ = {
+		F830B09224FFDE9B0058BAE4 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = F8B8F15E2493C1E90059FAA8 /* fw_genx */;
-			targetProxy = F89CE33B24FF6219001A0F5B /* PBXContainerItemProxy */;
+			target = F8EE4D1B24178BF0002FA666 /* fw_gen */;
+			targetProxy = F830B09124FFDE9B0058BAE4 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 

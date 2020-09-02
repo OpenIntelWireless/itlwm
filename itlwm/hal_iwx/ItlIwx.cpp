@@ -241,12 +241,6 @@ get80211Controller()
     return &com.sc_ic;
 }
 
-void ItlIwx::watchdogAction(IOTimerEventSource *timer)
-{
-    iwx_watchdog(&com.sc_ic.ic_ac.ac_if);
-    timer->setTimeoutMS(1000);
-}
-
 #define MUL_NO_OVERFLOW    (1UL << (sizeof(size_t) * 4))
 
 #define    M_CANFAIL    0x0004

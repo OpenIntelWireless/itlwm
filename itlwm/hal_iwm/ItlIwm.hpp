@@ -40,7 +40,6 @@ public:
     virtual struct ieee80211com *get80211Controller() override;
     
     static bool intrFilter(OSObject *object, IOFilterInterruptEventSource *src);
-    void watchdogAction(IOTimerEventSource *timer) override;
     static IOReturn _iwm_start_task(OSObject *target, void *arg0, void *arg1, void *arg2, void *arg3);
     
     void releaseAll();

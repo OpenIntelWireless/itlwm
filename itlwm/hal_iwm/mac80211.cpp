@@ -2740,24 +2740,22 @@ iwm_watchdog(struct _ifnet *ifp)
     struct iwm_softc *sc = (struct iwm_softc *)ifp->if_softc;
     ItlIwm *that = container_of(sc, ItlIwm, com);
     
-    XYLog("%s ifp=0x%X", __FUNCTION__, (uint64_t)ifp);
-    XYLog("%s: %s sc=0x%X\n", __FUNCTION__, sc == NULL ? "sc==NULL":"sc!=NULL", (uint64_t)&ifp->if_softc);
-//    ifp->if_timer = 0;
-//    if (sc->sc_tx_timer > 0) {
-//        if (--sc->sc_tx_timer == 0) {
-//            XYLog("%s: device timeout\n", DEVNAME(sc));
-//#ifdef IWM_DEBUG
-//            that->iwm_nic_error(sc);
-//#endif
-//            if ((sc->sc_flags & IWM_FLAG_SHUTDOWN) == 0) {
-//                task_add(systq, &sc->init_task);
-//            }
-//            XYLog("%s %d OUTPUT_ERROR\n", __FUNCTION__, __LINE__);
-//            ifp->netStat->outputErrors++;
-//            return;
-//        }
-//        ifp->if_timer = 1;
-//    }
+    ifp->if_timer = 0;
+    if (sc->sc_tx_timer > 0) {
+        if (--sc->sc_tx_timer == 0) {
+            XYLog("%s: device timeout\n", DEVNAME(sc));
+#ifdef IWM_DEBUG
+            that->iwm_nic_error(sc);
+#endif
+            if ((sc->sc_flags & IWM_FLAG_SHUTDOWN) == 0) {
+                task_add(systq, &sc->init_task);
+            }
+            XYLog("%s %d OUTPUT_ERROR\n", __FUNCTION__, __LINE__);
+            ifp->netStat->outputErrors++;
+            return;
+        }
+        ifp->if_timer = 1;
+    }
     
     ieee80211_watchdog(ifp);
 }
@@ -3835,8 +3833,6 @@ iwm_attach(struct iwm_softc *sc, struct pci_attach_args *pa)
     ifp->controller = getController();
     ifp->if_snd = IOPacketQueue::withCapacity(4096);
     ifp->if_softc = sc;
-    XYLog("%s ifp=0x%X", __FUNCTION__, (uint64_t)ifp);
-    XYLog("%s: %s sc=0x%X\n", __FUNCTION__, sc == NULL ? "sc==NULL":"sc!=NULL", (uint64_t)&ifp->if_softc);
     ifp->if_flags = IFF_BROADCAST | IFF_SIMPLEX | IFF_MULTICAST | IFF_DEBUG;
     ifp->if_ioctl = iwm_ioctl;
     ifp->if_start = iwm_start;

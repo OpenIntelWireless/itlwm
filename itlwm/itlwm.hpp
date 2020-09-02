@@ -71,6 +71,7 @@ public:
     void releaseAll();
     void joinSSID(const char *ssid, const char *pwd);
     void associateSSID(const char *ssid, const char *pwd);
+    void watchdogAction(IOTimerEventSource *timer);
     
     bool initPCIPowerManagment(IOPCIDevice *provider);
     

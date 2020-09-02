@@ -356,7 +356,7 @@ bool itlwm::start(IOService *provider)
         releaseAll();
         return false;
     }
-    watchdogTimer = IOTimerEventSource::timerEventSource(this, OSMemberFunctionCast(IOTimerEventSource::Action, fHalService, &ItlHalService::watchdogAction));
+    watchdogTimer = IOTimerEventSource::timerEventSource(this, OSMemberFunctionCast(IOTimerEventSource::Action, this, &itlwm::watchdogAction));
     if (!watchdogTimer) {
         XYLog("init watchdog fail\n");
         fHalService->detach(pciNub);
@@ -397,6 +397,13 @@ bool itlwm::start(IOService *provider)
     registerService();
     fNetIf->registerService();
     return true;
+}
+
+void itlwm::watchdogAction(IOTimerEventSource *timer)
+{
+    struct _ifnet *ifp = getIfp();
+    (*ifp->if_watchdog)(ifp);
+    watchdogTimer->setTimeoutMS(1000);
 }
 
 const OSString * itlwm::newVendorString() const

@@ -12,13 +12,6 @@
 OSDefineMetaClassAndStructors(ItlIwm, ItlHalService)
 
 void ItlIwm::
-watchdogAction(IOTimerEventSource *timer)
-{
-    iwm_watchdog(&com.sc_ic.ic_ac.ac_if);
-    timer->setTimeoutMS(1000);
-}
-
-void ItlIwm::
 detach(IOPCIDevice *device)
 {
     struct _ifnet *ifp = &com.sc_ic.ic_ac.ac_if;
@@ -44,8 +37,7 @@ attach(IOPCIDevice *device)
 void ItlIwm::
 free()
 {
-    pci.pa_tag = NULL;
-    pci.workloop = NULL;
+    XYLog("%s\n", __FUNCTION__);
     super::free();
 }
 
@@ -76,6 +68,8 @@ releaseAll()
         intrHandler->release();
         com.ih = NULL;
     }
+    pci.pa_tag = NULL;
+    pci.workloop = NULL;
 }
 
 IOReturn ItlIwm::
