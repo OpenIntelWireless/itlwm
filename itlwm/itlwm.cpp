@@ -293,7 +293,6 @@ void itlwm::associateSSID(const char *ssid, const char *pwd)
 
 bool itlwm::start(IOService *provider)
 {
-    itlwm_interface *fNetIf;
     if (!super::start(provider)) {
         return false;
     }
@@ -465,8 +464,8 @@ void itlwm::stop(IOService *provider)
     super::stop(provider);
     setLinkStatus(kIONetworkLinkValid);
     fHalService->detach(pciNub);
-    detachInterface(ifp->iface);
-    OSSafeReleaseNULL(ifp->iface);
+    detachInterface(fNetIf);
+    OSSafeReleaseNULL(fNetIf);
     ifp->iface = NULL;
     releaseAll();
 }

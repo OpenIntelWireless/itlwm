@@ -103,6 +103,7 @@ public:
     IOPCIDevice *pciNub;
     IONetworkMedium *mediumTable[1];
     IONetworkStats *fpNetStats;
+    itlwm_interface *fNetIf;
     IOWorkLoop *fWatchdogWorkLoop;
     ItlHalService *fHalService;
     semaphore_t outputThreadSignal;
