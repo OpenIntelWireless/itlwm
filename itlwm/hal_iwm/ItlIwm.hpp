@@ -29,9 +29,9 @@
 #include <libkern/c++/OSMetaClass.h>
 #include <IOKit/IOFilterInterruptEventSource.h>
 
-#include "ItlHalService.hpp"
-#include "ItlDriverInfo.h"
-#include "ItlDriverController.h"
+#include <HAL/ItlHalService.hpp>
+#include <HAL/ItlDriverInfo.hpp>
+#include <HAL/ItlDriverController.hpp>
 
 class ItlIwm : public ItlHalService, ItlDriverInfo, ItlDriverController {
     OSDeclareDefaultStructors(ItlIwm)

@@ -29,9 +29,6 @@
 #include <libkern/c++/OSMetaClass.h>
 #include <IOKit/IOFilterInterruptEventSource.h>
 
-#include "ItlHalService.hpp"
-#include "ItlDriverInfo.h"
-#include "ItlDriverController.h"
 #include "ItlIwm.hpp"
 #include "ItlIwx.hpp"
 

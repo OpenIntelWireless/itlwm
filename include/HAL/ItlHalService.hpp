@@ -24,8 +24,8 @@
 #include <IOKit/network/IOEthernetController.h>
 #include <IOKit/network/IOEthernetInterface.h>
 
-#include "ItlDriverInfo.h"
-#include "ItlDriverController.h"
+#include "ItlDriverInfo.hpp"
+#include "ItlDriverController.hpp"
 
 #include <net80211/ieee80211_var.h>
 

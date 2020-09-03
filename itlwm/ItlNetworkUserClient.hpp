@@ -20,7 +20,7 @@
 #include <IOKit/IOBufferMemoryDescriptor.h>
 #include <IOKit/network/IOEthernetInterface.h>
 #include "itlwm.hpp"
-#include "Common.h"
+#include <ClientKit/Common.h>
 
 typedef IOReturn (*IOControlMethodAction)(OSObject * target, void *data, bool isSet);
 
