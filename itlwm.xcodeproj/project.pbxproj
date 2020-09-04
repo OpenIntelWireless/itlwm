@@ -135,12 +135,14 @@
 		F8F92583240974EF0088B8D5 /* random.h in Headers */ = {isa = PBXBuildFile; fileRef = F8F92578240974EE0088B8D5 /* random.h */; };
 		F8F92586240974EF0088B8D5 /* types.h in Headers */ = {isa = PBXBuildFile; fileRef = F8F9257B240974EF0088B8D5 /* types.h */; };
 		F8F9EDE1240B7415009CB8E7 /* _task.cpp in Sources */ = {isa = PBXBuildFile; fileRef = F8F9EDE0240B7415009CB8E7 /* _task.cpp */; };
+		F8FA0EEC2501E7EE00B1822E /* zutil.h in Headers */ = {isa = PBXBuildFile; fileRef = F8FA0EEB2501E7EE00B1822E /* zutil.h */; };
+		F8FA0EEE2501E8C100B1822E /* zutil.c in Sources */ = {isa = PBXBuildFile; fileRef = F8FA0EED2501E8C100B1822E /* zutil.c */; };
 		F8FC31CF247E797E00FB456B /* itlwm_interface.cpp in Sources */ = {isa = PBXBuildFile; fileRef = F8FC31CD247E797E00FB456B /* itlwm_interface.cpp */; };
 		F8FC31D0247E797E00FB456B /* itlwm_interface.hpp in Headers */ = {isa = PBXBuildFile; fileRef = F8FC31CE247E797E00FB456B /* itlwm_interface.hpp */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
-		F8585CC42500EDDB00485C5A /* PBXContainerItemProxy */ = {
+		F8585CC62501E05100485C5A /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 024A07A323FCBC3C009FBA6C /* Project object */;
 			proxyType = 1;
@@ -309,6 +311,8 @@
 		F8F9257B240974EF0088B8D5 /* types.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = types.h; sourceTree = "<group>"; };
 		F8F9EDDF240B4741009CB8E7 /* _task.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = _task.h; sourceTree = "<group>"; };
 		F8F9EDE0240B7415009CB8E7 /* _task.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = _task.cpp; sourceTree = "<group>"; };
+		F8FA0EEB2501E7EE00B1822E /* zutil.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = zutil.h; sourceTree = "<group>"; };
+		F8FA0EED2501E8C100B1822E /* zutil.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = zutil.c; sourceTree = "<group>"; };
 		F8FC31CD247E797E00FB456B /* itlwm_interface.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = itlwm_interface.cpp; sourceTree = "<group>"; };
 		F8FC31CE247E797E00FB456B /* itlwm_interface.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = itlwm_interface.hpp; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -583,6 +587,8 @@
 				024A07C723FCBC6C009FBA6C /* openbsd */,
 				024A07BA23FCBC6C009FBA6C /* compat.cpp */,
 				024A082123FCBC6C009FBA6C /* compat.h */,
+				F8FA0EEB2501E7EE00B1822E /* zutil.h */,
+				F8FA0EED2501E8C100B1822E /* zutil.c */,
 				F8C2EC9D24080796007A9422 /* libkmod.a */,
 				F8D6CD502442E0D100D2A454 /* itl80211.hpp */,
 				F8D6CD522442E0D100D2A454 /* itl80211.cpp */,
@@ -669,6 +675,7 @@
 				F8C2EC632408031A007A9422 /* ieee80211.h in Headers */,
 				024A085623FCBC6C009FBA6C /* cmac.h in Headers */,
 				F8F9257E240974EF0088B8D5 /* bitfield.h in Headers */,
+				F8FA0EEC2501E7EE00B1822E /* zutil.h in Headers */,
 				F8C2EC642408031A007A9422 /* ieee80211_priv.h in Headers */,
 				024A07B023FCBC3C009FBA6C /* itlwm.hpp in Headers */,
 				F8C2EC5A2408031A007A9422 /* ieee80211_crypto.h in Headers */,
@@ -682,7 +689,7 @@
 /* Begin PBXLegacyTarget section */
 		F8EE4D1B24178BF0002FA666 /* fw_gen */ = {
 			isa = PBXLegacyTarget;
-			buildArgumentsString = "-P ${PROJECT_DIR}/itlwm/firmware/*";
+			buildArgumentsString = "-P ${PROJECT_DIR}/itlwm/firmware/";
 			buildConfigurationList = F8EE4D1C24178BF0002FA666 /* Build configuration list for PBXLegacyTarget "fw_gen" */;
 			buildPhases = (
 			);
@@ -709,7 +716,7 @@
 			buildRules = (
 			);
 			dependencies = (
-				F8585CC52500EDDB00485C5A /* PBXTargetDependency */,
+				F8585CC72501E05100485C5A /* PBXTargetDependency */,
 			);
 			name = itlwm;
 			productName = itlwm;
@@ -792,6 +799,7 @@
 				F8D364F824F93AFD0029340B /* ItlHalService.cpp in Sources */,
 				F8C2EC6C2408031A007A9422 /* ieee80211_node.c in Sources */,
 				024A08C623FCDC3B009FBA6C /* tx.cpp in Sources */,
+				F8FA0EEE2501E8C100B1822E /* zutil.c in Sources */,
 				024A083423FCBC6C009FBA6C /* cast.c in Sources */,
 				024A08CA23FCE537009FBA6C /* phy.cpp in Sources */,
 				F8C2EC502408031A007A9422 /* _string.c in Sources */,
@@ -841,10 +849,10 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
-		F8585CC52500EDDB00485C5A /* PBXTargetDependency */ = {
+		F8585CC72501E05100485C5A /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = F8EE4D1B24178BF0002FA666 /* fw_gen */;
-			targetProxy = F8585CC42500EDDB00485C5A /* PBXContainerItemProxy */;
+			targetProxy = F8585CC62501E05100485C5A /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 

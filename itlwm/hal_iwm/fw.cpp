@@ -267,11 +267,12 @@ iwm_read_firmware(struct iwm_softc *sc, enum iwm_ucode_type ucode_type)
     fwData = getFWDescByName(sc->sc_fwname);
     if (fwData == NULL) {
         XYLog("%s resource load fail.\n", sc->sc_fwname);
+        err = EINVAL;
         goto out;
     }
-    fw->fw_rawdata = malloc(fwData->getLength(), 1, 1);
-    memcpy(fw->fw_rawdata, (u_char*)fwData->getBytesNoCopy(), fwData->getLength());
-    fw->fw_rawsize = fwData->getLength();
+    fw->fw_rawsize = fwData->getLength() * 4;
+    fw->fw_rawdata = malloc(fw->fw_rawsize, 1, 1);
+    uncompressFirmware((u_char *)fw->fw_rawdata, (uint *)&fw->fw_rawsize, (u_char *)fwData->getBytesNoCopy(), fwData->getLength());
     XYLog("load firmware %s done\n", sc->sc_fwname);
     sc->sc_capaflags = 0;
     sc->sc_capa_n_scan_channels = IWM_DEFAULT_SCAN_CHANNELS;
