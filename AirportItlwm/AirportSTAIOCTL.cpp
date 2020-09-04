@@ -8,13 +8,20 @@
 
 #include "AirportItlwm.hpp"
 
+extern IOCommandGate *_fCommandGate;
+
 SInt32 AirportItlwm::apple80211Request(unsigned int request_type,
                                        int request_number,
                                        IO80211Interface *interface,
                                        void *data)
 {
+    if (request_type != SIOCGA80211 && request_type != SIOCSA80211) {
+        return kIOReturnError;
+    }
     // This funciton is not only called by IPC, but will called by IO80211Family internal functions, so we should call it in gate.
-    return getCommandGate()->runAction(&apple80211RequestGated, &request_type, &request_number, interface, data);
+    return _fCommandGate->runActionBlock(^IOReturn{
+        return apple80211RequestGated(this, (void *)&request_type, (void *)&request_number, interface, data);
+    });
 }
 
 IOReturn AirportItlwm::
@@ -28,10 +35,10 @@ apple80211RequestGated(OSObject *target, void *arg0, void *arg1, void *arg2, voi
     AirportItlwm *that = (AirportItlwm *)target;
     bool isGet = (request_type == SIOCGA80211);
     
-    XYLog("%s: IOCTL %s(%d) %s", __FUNCTION__,
-          isGet ? "get" : "set",
-          request_number,
-          IOCTL_NAMES[request_number]);
+//    XYLog("%s: IOCTL %s(%d) %s", __FUNCTION__,
+//          isGet ? "get" : "set",
+//          request_number,
+//          IOCTL_NAMES[request_number]);
     
     switch (request_number) {
         case APPLE80211_IOC_SSID:  // 1
@@ -149,8 +156,8 @@ apple80211RequestGated(OSObject *target, void *arg0, void *arg1, void *arg2, voi
             IOCTL_SET(request_type, SCANCACHE_CLEAR, apple80211req);
             break;
         default:
-            XYLog("%s Unhandled IOCTL %s (%d)\n", __FUNCTION__, IOCTL_NAMES[request_number],
-                  request_number);
+//            XYLog("%s Unhandled IOCTL %s (%d)\n", __FUNCTION__, IOCTL_NAMES[request_number],
+//                  request_number);
             break;
     }
     
@@ -710,7 +717,7 @@ getSCAN_RESULT(OSObject *object, struct apple80211_scan_result **sr)
             }
         }
     }
-    XYLog("%s ni_bssid=%s ni_essid=%s channel=%d flags=%d asr_cap=%d asr_nrates=%d asr_ssid_len=%d asr_ie_len=%d asr_rssi=%d\n", __FUNCTION__, ether_sprintf(fNextNodeToSend->ni_bssid), fNextNodeToSend->ni_essid, ieee80211_chan2ieee(ic, fNextNodeToSend->ni_chan), ieeeChanFlag2apple(fNextNodeToSend->ni_chan->ic_flags), fNextNodeToSend->ni_capinfo, fNextNodeToSend->ni_rates.rs_nrates, fNextNodeToSend->ni_esslen, fNextNodeToSend->ni_rsnie_tlv == NULL ? 0 : fNextNodeToSend->ni_rsnie_tlv_len, fNextNodeToSend->ni_rssi);
+//    XYLog("%s ni_bssid=%s ni_essid=%s channel=%d flags=%d asr_cap=%d asr_nrates=%d asr_ssid_len=%d asr_ie_len=%d asr_rssi=%d\n", __FUNCTION__, ether_sprintf(fNextNodeToSend->ni_bssid), fNextNodeToSend->ni_essid, ieee80211_chan2ieee(ic, fNextNodeToSend->ni_chan), ieeeChanFlag2apple(fNextNodeToSend->ni_chan->ic_flags), fNextNodeToSend->ni_capinfo, fNextNodeToSend->ni_rates.rs_nrates, fNextNodeToSend->ni_esslen, fNextNodeToSend->ni_rsnie_tlv == NULL ? 0 : fNextNodeToSend->ni_rsnie_tlv_len, fNextNodeToSend->ni_rssi);
     apple80211_scan_result* result = (apple80211_scan_result* )fNextNodeToSend->verb;
 //    apple80211_scan_result* result = (apple80211_scan_result*)kzalloc(sizeof(struct apple80211_scan_result));
     bzero(result, sizeof(*result));

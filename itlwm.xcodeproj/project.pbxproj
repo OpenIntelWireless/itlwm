@@ -221,6 +221,13 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
+		F80FC8BB250294D70077A368 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 024A07A323FCBC3C009FBA6C /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = F8EE4D1B24178BF0002FA666;
+			remoteInfo = fw_gen;
+		};
 		F8585CC62501E05100485C5A /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 024A07A323FCBC3C009FBA6C /* Project object */;
@@ -918,6 +925,7 @@
 			buildRules = (
 			);
 			dependencies = (
+				F80FC8BC250294D70077A368 /* PBXTargetDependency */,
 			);
 			name = AirportItlwm;
 			productName = AirportItlwm;
@@ -1136,6 +1144,11 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
+		F80FC8BC250294D70077A368 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = F8EE4D1B24178BF0002FA666 /* fw_gen */;
+			targetProxy = F80FC8BB250294D70077A368 /* PBXContainerItemProxy */;
+		};
 		F8585CC72501E05100485C5A /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = F8EE4D1B24178BF0002FA666 /* fw_gen */;
