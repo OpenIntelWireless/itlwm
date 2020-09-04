@@ -10,6 +10,7 @@
 #define Apple80211_h
 
 #include "apple_private_spi.h"
+#include "debug.h"
 
 #ifdef Catalina
 #include "Catalina/IO80211WorkLoop.h"

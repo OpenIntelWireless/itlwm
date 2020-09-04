@@ -1628,6 +1628,11 @@ ieee80211_node_cleanup(struct ieee80211com *ic, struct ieee80211_node *ni)
         IOFree(ni->ni_rsnie, 2 + ni->ni_rsnie[1]);
         ni->ni_rsnie = NULL;
     }
+    if (ni->ni_rsnie_tlv != NULL && ni->ni_rsnie_tlv_len > 0) {
+        free(ni->ni_rsnie_tlv);
+        ni->ni_rsnie_tlv = NULL;
+        ni->ni_rsnie_tlv_len = 0;
+    }
     ieee80211_ba_del(ni);
     ieee80211_ba_free(ni);
     IOFree(ni->ni_unref_arg, ni->ni_unref_arg_size);
@@ -1655,6 +1660,11 @@ ieee80211_node_copy(struct ieee80211com *ic,
     dst->ni_rsnie = NULL;
     if (src->ni_rsnie != NULL)
         ieee80211_save_ie(src->ni_rsnie, &dst->ni_rsnie);
+    dst->ni_rsnie_tlv = NULL;
+    dst->ni_rsnie_tlv_len = 0;
+    if (src->ni_rsnie_tlv != NULL) {
+        ieee80211_save_ie_tlv(src->ni_rsnie_tlv, &dst->ni_rsnie_tlv, &dst->ni_rsnie_tlv_len, src->ni_rsnie_tlv_len);
+    }
     ieee80211_node_set_timeouts(dst);
 #ifndef IEEE80211_STA_ONLY
     mq_init(&dst->ni_savedq, IEEE80211_PS_MAX_QUEUE, IPL_NET);

@@ -1473,6 +1473,26 @@ ieee80211_save_ie(const u_int8_t *frm, u_int8_t **ie)
 }
 
 /*
+ * zxy, save tlv ie for Apple80211
+ */
+int
+ieee80211_save_ie_tlv(const u_int8_t *frm, u_int8_t **ie, uint32_t *accept_len, uint32_t len)
+{
+    int olen = *accept_len;
+    
+    if (*ie == NULL || olen != len) {
+        if (*ie != NULL && *accept_len > 0)
+            free(*ie);
+        *ie = (u_int8_t *)malloc(len, 1, 1);
+        if (*ie == NULL)
+            return ENOMEM;
+    }
+    *accept_len = len;
+    memcpy(*ie, frm, len);
+    return 0;
+}
+
+/*
  * Parse an 802.11ac VHT operation IE.
  */
 void
@@ -1949,6 +1969,8 @@ ieee80211_recv_probe_resp(struct ieee80211com *ic, mbuf_t m,
         (ic->ic_flags & IEEE80211_F_BGSCAN)) {
         struct ieee80211_rsnparams rsn, wpa;
         
+        uint32_t tlv_len = (mtod(m, u_int8_t *) + mbuf_len(m)) - (u_int8_t *)&wh[1] + 1 - 8 - 2 - 2;
+        ieee80211_save_ie_tlv(((u_int8_t *)&wh[1]) + 8 + 2 + 2, &ni->ni_rsnie_tlv, &ni->ni_rsnie_tlv_len, tlv_len);
         ni->ni_rsnprotos = IEEE80211_PROTO_NONE;
         ni->ni_supported_rsnprotos = IEEE80211_PROTO_NONE;
         ni->ni_rsnakms = 0;
@@ -2254,6 +2276,8 @@ ieee80211_recv_assoc_req(struct ieee80211com *ic, mbuf_t m,
     }
     capinfo = LE_READ_2(frm); frm += 2;
     bintval = LE_READ_2(frm); frm += 2;
+//    uint32_t tlv_len = (mtod(m, u_int8_t *) + mbuf_len(m)) - (u_int8_t *)&wh[1] + 1 - 2 - 2;
+//    ieee80211_save_ie_tlv(frm, &ni->ni_rsnie_tlv, &ni->ni_rsnie_tlv_len, tlv_len);
     if (reassoc) {
         frm += IEEE80211_ADDR_LEN;    /* skip current AP address */
         resp = IEEE80211_FC0_SUBTYPE_REASSOC_RESP;

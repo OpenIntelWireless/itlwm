@@ -408,6 +408,13 @@ void AirportItlwm::releaseAll()
             _fCommandGate->release();
             _fCommandGate = NULL;
         }
+        if (scanSource) {
+            scanSource->cancelTimeout();
+            scanSource->disable();
+            _fWorkloop->removeEventSource(scanSource);
+            scanSource->release();
+            scanSource = NULL;
+        }
         if (fWatchdogWorkLoop && watchdogTimer) {
             watchdogTimer->cancelTimeout();
             fWatchdogWorkLoop->removeEventSource(watchdogTimer);

@@ -235,6 +235,12 @@ getBSSNoise()
     return com.sc_noise;;
 }
 
+bool ItlIwx::
+is5GBandSupport()
+{
+    return com.sc_nvm.sku_cap_band_52GHz_enable;
+}
+
 struct ieee80211com *ItlIwx::
 get80211Controller()
 {

@@ -35,6 +35,28 @@ enum
 
 class AirportItlwm : public IO80211Controller {
     OSDeclareDefaultStructors(AirportItlwm)
+#define IOCTL(REQ_TYPE, REQ, DATA_TYPE) \
+if (REQ_TYPE == SIOCGA80211) { \
+ret = that->get##REQ(interface, (struct DATA_TYPE* )data); \
+} else { \
+ret = that->set##REQ(interface, (struct DATA_TYPE* )data); \
+}
+    
+#define IOCTL_GET(REQ_TYPE, REQ, DATA_TYPE) \
+if (REQ_TYPE == SIOCGA80211) { \
+ret = that->get##REQ(interface, (struct DATA_TYPE* )data); \
+}
+#define IOCTL_SET(REQ_TYPE, REQ, DATA_TYPE) \
+if (REQ_TYPE == SIOCSA80211) { \
+ret = that->set##REQ(interface, (struct DATA_TYPE* )data); \
+}
+#define FUNC_IOCTL(REQ, DATA_TYPE) \
+FUNC_IOCTL_GET(REQ, DATA_TYPE) \
+FUNC_IOCTL_SET(REQ, DATA_TYPE)
+#define FUNC_IOCTL_GET(REQ, DATA_TYPE) \
+IOReturn get##REQ(OSObject *object, struct DATA_TYPE *data);
+#define FUNC_IOCTL_SET(REQ, DATA_TYPE) \
+IOReturn set##REQ(OSObject *object, struct DATA_TYPE *data);
     
 public:
     bool init(OSDictionary *properties) override;
@@ -75,6 +97,49 @@ public:
     
     
     //AirportSTAInfo
+    FUNC_IOCTL(SSID, apple80211_ssid_data)
+    FUNC_IOCTL_GET(AUTH_TYPE, apple80211_authtype_data)
+    FUNC_IOCTL_GET(CHANNEL, apple80211_channel_data)
+    FUNC_IOCTL(PROTMODE, apple80211_protmode_data)
+    FUNC_IOCTL_GET(TXPOWER, apple80211_txpower_data)
+    FUNC_IOCTL_GET(RATE, apple80211_rate_data)
+    FUNC_IOCTL_GET(BSSID, apple80211_bssid_data)
+    FUNC_IOCTL_SET(SCAN_REQ, apple80211_scan_data)
+    FUNC_IOCTL_SET(SCAN_REQ_MULTIPLE, apple80211_scan_multiple_data)
+    FUNC_IOCTL_GET(SCAN_RESULT, apple80211_scan_result*)
+    FUNC_IOCTL_GET(CARD_CAPABILITIES, apple80211_capability_data)
+    FUNC_IOCTL_GET(STATE, apple80211_state_data)
+    FUNC_IOCTL_GET(PHY_MODE, apple80211_phymode_data)
+    FUNC_IOCTL_GET(OP_MODE, apple80211_opmode_data)
+    FUNC_IOCTL_GET(RSSI, apple80211_rssi_data)
+    FUNC_IOCTL_GET(NOISE, apple80211_noise_data)
+    FUNC_IOCTL_GET(INT_MIT, apple80211_intmit_data)
+    FUNC_IOCTL(POWER, apple80211_power_data)
+    FUNC_IOCTL_SET(ASSOCIATE, apple80211_assoc_data)
+    FUNC_IOCTL_GET(ASSOCIATE_RESULT, apple80211_assoc_result_data)
+    FUNC_IOCTL_GET(RATE_SET, apple80211_rate_set_data)
+    FUNC_IOCTL_GET(MCS_INDEX_SET, apple80211_mcs_index_set_data)
+    FUNC_IOCTL_GET(SUPPORTED_CHANNELS, apple80211_sup_channel_data)
+    FUNC_IOCTL_GET(LOCALE, apple80211_locale_data)
+    FUNC_IOCTL(DEAUTH, apple80211_deauth_data)
+    FUNC_IOCTL_GET(TX_ANTENNA, apple80211_antenna_data)
+    FUNC_IOCTL_GET(ANTENNA_DIVERSITY, apple80211_antenna_data)
+    FUNC_IOCTL_GET(DRIVER_VERSION, apple80211_version_data)
+    FUNC_IOCTL_GET(HARDWARE_VERSION, apple80211_version_data)
+    FUNC_IOCTL_GET(ASSOCIATION_STATUS, apple80211_assoc_status_data)
+    FUNC_IOCTL_GET(COUNTRY_CODE, apple80211_country_code_data)
+    FUNC_IOCTL_GET(RADIO_INFO, apple80211_radio_info_data)
+    FUNC_IOCTL_GET(MCS, apple80211_mcs_data)
+    FUNC_IOCTL_SET(VIRTUAL_IF_CREATE, apple80211_virt_if_create_data)
+    FUNC_IOCTL_GET(ROAM_THRESH, apple80211_roam_threshold_data)
+    FUNC_IOCTL_GET(POWERSAVE, apple80211_powersave_data)
+    FUNC_IOCTL_SET(CIPHER_KEY, apple80211_key)
+    FUNC_IOCTL_SET(SCANCACHE_CLEAR, apple80211req)
+    
+    
+    //AirportSTAIOCTL
+    static IOReturn apple80211RequestGated(OSObject* target, void* arg0, void* arg1,
+    void* arg2, void* arg3);
     
     
     //-----------------------------------------------------------------------

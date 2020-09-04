@@ -129,3 +129,9 @@ getBSSNoise()
 {
     return com.sc_noise;;
 }
+
+bool ItlIwm::
+is5GBandSupport()
+{
+    return com.sc_nvm.sku_cap_band_52GHz_enable;
+}

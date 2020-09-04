@@ -324,6 +324,8 @@ struct ieee80211_node {
 	u_int64_t		ni_reqreplaycnt;
 	u_int8_t		ni_reqreplaycnt_ok;
 	u_int8_t		*ni_rsnie;
+    u_int8_t        *ni_rsnie_tlv;
+    uint32_t        ni_rsnie_tlv_len;
 	struct ieee80211_key	ni_pairwise_key;
 	struct ieee80211_ptk	ni_ptk;
 	u_int8_t		ni_key_count;
@@ -430,6 +432,8 @@ struct ieee80211_node {
 					struct ieee80211_node *);
 	void *			ni_unref_arg;
 	size_t 			ni_unref_arg_size;
+    
+    uint8_t verb[0x1024];//冗余信息 zxy
 };
 
 RB_HEAD(ieee80211_tree, ieee80211_node);
