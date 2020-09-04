@@ -1,25 +1,8 @@
 /* add your code here */
+#define Catalina
 
-/*
-* Copyright (C) 2020  钟先耀
-*
-* This program is free software; you can redistribute it and/or modify
-* it under the terms of the GNU General Public License as published by
-* the Free Software Foundation; either version 2 of the License, or
-* (at your option) any later version.
-*
-* This program is distributed in the hope that it will be useful,
-* but WITHOUT ANY WARRANTY; without even the implied warranty of
-* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-* GNU General Public License for more details.
-*/
-#include "compat.h"
-#include "itlhdr.h"
-#include "kernel.h"
+#include "Apple80211.h"
 
-#include "itlwm_interface.hpp"
-#include <IOKit/network/IOEthernetController.h>
-#include <IOKit/IOWorkLoop.h>
 #include "IOKit/network/IOGatedOutputQueue.h"
 #include <libkern/c++/OSString.h>
 #include <IOKit/IOService.h>
@@ -32,6 +15,17 @@
 #include "ItlIwm.hpp"
 #include "ItlIwx.hpp"
 
+typedef enum {
+  MEDIUM_TYPE_NONE = 0,
+  MEDIUM_TYPE_AUTO,
+  MEDIUM_TYPE_1MBIT,
+  MEDIUM_TYPE_2MBIT,
+  MEDIUM_TYPE_5MBIT,
+  MEDIUM_TYPE_11MBIT,
+  MEDIUM_TYPE_54MBIT,
+  MEDIUM_TYPE_INVALID
+} mediumType_t;
+
 enum
 {
     kPowerStateOff = 0,
@@ -39,12 +33,10 @@ enum
     kPowerStateCount
 };
 
-class itlwm : public IOEthernetController {
-    OSDeclareDefaultStructors(itlwm)
+class AirportItlwm : public IO80211Controller {
+    OSDeclareDefaultStructors(AirportItlwm)
     
 public:
-    
-    //kext
     bool init(OSDictionary *properties) override;
     void free() override;
     IOService* probe(IOService* provider, SInt32* score) override;
@@ -66,16 +58,24 @@ public:
     virtual IONetworkInterface * createInterface() override;
     
     void releaseAll();
-    void joinSSID(const char *ssid, const char *pwd);
     void associateSSID(const char *ssid, const char *pwd);
     void watchdogAction(IOTimerEventSource *timer);
-    
     bool initPCIPowerManagment(IOPCIDevice *provider);
-    
-    struct _ifnet *getIfp();
-    IOEthernetInterface *getNetworkInterface();
-    
     static IOReturn tsleepHandler(OSObject* owner, void* arg0 = 0, void* arg1 = 0, void* arg2 = 0, void* arg3 = 0);
+    
+    //IO80211
+    bool addMediumType(UInt32 type, UInt32 speed, UInt32 code, char* name = 0);
+    IOReturn getHardwareAddressForInterface(IO80211Interface* netif,
+                                            IOEthernetAddress* addr) override;
+    SInt32 monitorModeSetEnabled(IO80211Interface* interface, bool enabled,
+                                 UInt32 dlt) override;
+    SInt32 apple80211Request(unsigned int request_type, int request_number,
+                             IO80211Interface* interface, void* data) override;
+    static void fakeScanDone(OSObject *owner, IOTimerEventSource *sender);
+    
+    
+    //AirportSTAInfo
+    
     
     //-----------------------------------------------------------------------
     // Power management support.
@@ -88,7 +88,6 @@ public:
     void setPowerStateOn(void);
     void unregistPM();
     
-    bool createMediumTables(const IONetworkMedium **primary);
     virtual IOReturn getPacketFilters(const OSSymbol *group, UInt32 *filters) const override;
     virtual IOReturn selectMedium(const IONetworkMedium *medium) override;
     virtual UInt32 getFeatures() const override;
@@ -98,7 +97,7 @@ public:
     IOTimerEventSource *watchdogTimer;
     IOPCIDevice *pciNub;
     IONetworkStats *fpNetStats;
-    itlwm_interface *fNetIf;
+    IO80211Interface *fNetIf;
     IOWorkLoop *fWatchdogWorkLoop;
     ItlHalService *fHalService;
     
@@ -110,4 +109,12 @@ public:
     UInt8 pmPCICapPtr;
     bool magicPacketEnabled;
     bool magicPacketSupported;
+    
+    //IO80211
+    OSDictionary* mediumDict;
+    IONetworkMedium* mediumTable[MEDIUM_TYPE_INVALID];
+    uint8_t power_state;
+    struct ieee80211_node *fNextNodeToSend;
+    bool fScanResultWrapping;
+    IOTimerEventSource *scanSource;
 };
