@@ -395,6 +395,22 @@ void AirportItlwm::stop(IOService *provider)
     releaseAll();
 }
 
+bool AirportItlwm::
+setLinkStatus(UInt32 status, const IONetworkMedium * activeMedium, UInt64 speed, OSData * data)
+{
+    bool ret = super::setLinkStatus(status, activeMedium, speed, data);
+    if (fNetIf) {
+        if (status & kIONetworkLinkActive) {
+            fNetIf->setLinkState(kIO80211NetworkLinkUp, 4);
+            fNetIf->postMessage(APPLE80211_M_LINK_CHANGED);
+        } else if (!(status & kIONetworkLinkNoNetworkChange)) {
+            fNetIf->setLinkState(kIO80211NetworkLinkDown, 8);
+            fNetIf->postMessage(APPLE80211_M_LINK_CHANGED);
+        }
+    }
+    return ret;
+}
+
 void AirportItlwm::releaseAll()
 {
     if (fHalService) {
@@ -493,6 +509,7 @@ UInt32 AirportItlwm::outputPacket(mbuf_t m, void *param)
     if (!(mbuf_flags(m) & MBUF_PKTHDR) ){
         XYLog("%s pkthdr is NULL!!\n", __FUNCTION__);
         ifp->netStat->outputErrors++;
+        freePacket(m);
         return kIOReturnOutputDropped;
     }
     if (mbuf_type(m) == MBUF_TYPE_FREE) {
@@ -503,8 +520,10 @@ UInt32 AirportItlwm::outputPacket(mbuf_t m, void *param)
     if (ifp->if_snd->lockEnqueue(m)) {
         (*ifp->if_start)(ifp);
         return kIOReturnOutputSuccess;
+    } else {
+        freePacket(m);
+        return kIOReturnOutputDropped;
     }
-    return kIOReturnOutputDropped;
 }
 
 UInt32 AirportItlwm::getFeatures() const

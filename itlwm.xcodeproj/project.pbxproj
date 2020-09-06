@@ -215,20 +215,19 @@
 		F8F92586240974EF0088B8D5 /* types.h in Headers */ = {isa = PBXBuildFile; fileRef = F8F9257B240974EF0088B8D5 /* types.h */; };
 		F8F9EDE1240B7415009CB8E7 /* _task.cpp in Sources */ = {isa = PBXBuildFile; fileRef = F8F9EDE0240B7415009CB8E7 /* _task.cpp */; };
 		F8FA0EEC2501E7EE00B1822E /* zutil.h in Headers */ = {isa = PBXBuildFile; fileRef = F8FA0EEB2501E7EE00B1822E /* zutil.h */; };
-		F8FA0EEE2501E8C100B1822E /* zutil.c in Sources */ = {isa = PBXBuildFile; fileRef = F8FA0EED2501E8C100B1822E /* zutil.c */; };
 		F8FC31CF247E797E00FB456B /* itlwm_interface.cpp in Sources */ = {isa = PBXBuildFile; fileRef = F8FC31CD247E797E00FB456B /* itlwm_interface.cpp */; };
 		F8FC31D0247E797E00FB456B /* itlwm_interface.hpp in Headers */ = {isa = PBXBuildFile; fileRef = F8FC31CE247E797E00FB456B /* itlwm_interface.hpp */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
-		F80FC8BB250294D70077A368 /* PBXContainerItemProxy */ = {
+		F8585CC62501E05100485C5A /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 024A07A323FCBC3C009FBA6C /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = F8EE4D1B24178BF0002FA666;
 			remoteInfo = fw_gen;
 		};
-		F8585CC62501E05100485C5A /* PBXContainerItemProxy */ = {
+		F8EB867C2504D3E000ED863C /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 024A07A323FCBC3C009FBA6C /* Project object */;
 			proxyType = 1;
@@ -925,7 +924,7 @@
 			buildRules = (
 			);
 			dependencies = (
-				F80FC8BC250294D70077A368 /* PBXTargetDependency */,
+				F8EB867D2504D3E000ED863C /* PBXTargetDependency */,
 			);
 			name = AirportItlwm;
 			productName = AirportItlwm;
@@ -1020,7 +1019,6 @@
 				F8D364F824F93AFD0029340B /* ItlHalService.cpp in Sources */,
 				F8C2EC6C2408031A007A9422 /* ieee80211_node.c in Sources */,
 				024A08C623FCDC3B009FBA6C /* tx.cpp in Sources */,
-				F8FA0EEE2501E8C100B1822E /* zutil.c in Sources */,
 				024A083423FCBC6C009FBA6C /* cast.c in Sources */,
 				024A08CA23FCE537009FBA6C /* phy.cpp in Sources */,
 				F8C2EC502408031A007A9422 /* _string.c in Sources */,
@@ -1144,15 +1142,15 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
-		F80FC8BC250294D70077A368 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = F8EE4D1B24178BF0002FA666 /* fw_gen */;
-			targetProxy = F80FC8BB250294D70077A368 /* PBXContainerItemProxy */;
-		};
 		F8585CC72501E05100485C5A /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = F8EE4D1B24178BF0002FA666 /* fw_gen */;
 			targetProxy = F8585CC62501E05100485C5A /* PBXContainerItemProxy */;
+		};
+		F8EB867D2504D3E000ED863C /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = F8EE4D1B24178BF0002FA666 /* fw_gen */;
+			targetProxy = F8EB867C2504D3E000ED863C /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 

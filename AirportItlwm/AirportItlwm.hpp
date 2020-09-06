@@ -37,18 +37,18 @@ class AirportItlwm : public IO80211Controller {
     OSDeclareDefaultStructors(AirportItlwm)
 #define IOCTL(REQ_TYPE, REQ, DATA_TYPE) \
 if (REQ_TYPE == SIOCGA80211) { \
-ret = that->get##REQ(interface, (struct DATA_TYPE* )data); \
+ret = get##REQ(interface, (struct DATA_TYPE* )data); \
 } else { \
-ret = that->set##REQ(interface, (struct DATA_TYPE* )data); \
+ret = set##REQ(interface, (struct DATA_TYPE* )data); \
 }
     
 #define IOCTL_GET(REQ_TYPE, REQ, DATA_TYPE) \
 if (REQ_TYPE == SIOCGA80211) { \
-ret = that->get##REQ(interface, (struct DATA_TYPE* )data); \
+ret = get##REQ(interface, (struct DATA_TYPE* )data); \
 }
 #define IOCTL_SET(REQ_TYPE, REQ, DATA_TYPE) \
 if (REQ_TYPE == SIOCSA80211) { \
-ret = that->set##REQ(interface, (struct DATA_TYPE* )data); \
+ret = set##REQ(interface, (struct DATA_TYPE* )data); \
 }
 #define FUNC_IOCTL(REQ, DATA_TYPE) \
 FUNC_IOCTL_GET(REQ, DATA_TYPE) \
@@ -78,6 +78,11 @@ public:
     virtual const OSString * newModelString() const override;
     virtual IOReturn getMaxPacketSize(UInt32* maxSize) const override;
     virtual IONetworkInterface * createInterface() override;
+    virtual bool setLinkStatus(
+                               UInt32                  status,
+                               const IONetworkMedium * activeMedium = 0,
+                               UInt64                  speed        = 0,
+                               OSData *                data         = 0) override;
     
     void releaseAll();
     void associateSSID(const char *ssid, const char *pwd);
@@ -138,8 +143,6 @@ public:
     
     
     //AirportSTAIOCTL
-    static IOReturn apple80211RequestGated(OSObject* target, void* arg0, void* arg1,
-    void* arg2, void* arg3);
     
     
     //-----------------------------------------------------------------------

@@ -555,6 +555,7 @@ UInt32 itlwm::outputPacket(mbuf_t m, void *param)
     if (!(mbuf_flags(m) & MBUF_PKTHDR) ){
         XYLog("%s pkthdr is NULL!!\n", __FUNCTION__);
         ifp->netStat->outputErrors++;
+        freePacket(m);
         return kIOReturnOutputDropped;
     }
     if (mbuf_type(m) == MBUF_TYPE_FREE) {
@@ -565,8 +566,10 @@ UInt32 itlwm::outputPacket(mbuf_t m, void *param)
     if (ifp->if_snd->lockEnqueue(m)) {
         (*ifp->if_start)(ifp);
         return kIOReturnOutputSuccess;
+    } else {
+        freePacket(m);
+        return kIOReturnOutputDropped;
     }
-    return kIOReturnOutputDropped;
 }
 
 UInt32 itlwm::getFeatures() const

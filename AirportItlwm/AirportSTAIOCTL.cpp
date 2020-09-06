@@ -18,27 +18,13 @@ SInt32 AirportItlwm::apple80211Request(unsigned int request_type,
     if (request_type != SIOCGA80211 && request_type != SIOCSA80211) {
         return kIOReturnError;
     }
-    // This funciton is not only called by IPC, but will called by IO80211Family internal functions, so we should call it in gate.
-    return _fCommandGate->runActionBlock(^IOReturn{
-        return apple80211RequestGated(this, (void *)&request_type, (void *)&request_number, interface, data);
-    });
-}
-
-IOReturn AirportItlwm::
-apple80211RequestGated(OSObject *target, void *arg0, void *arg1, void *arg2, void *arg3)
-{
     IOReturn ret = kIOReturnError;
-    uint request_type = *(uint*)arg0;
-    int request_number = *(int*)arg1;
-    IO80211Interface *interface = (IO80211Interface*)arg2;
-    void *data = arg3;
-    AirportItlwm *that = (AirportItlwm *)target;
     bool isGet = (request_type == SIOCGA80211);
     
-//    XYLog("%s: IOCTL %s(%d) %s", __FUNCTION__,
-//          isGet ? "get" : "set",
-//          request_number,
-//          IOCTL_NAMES[request_number]);
+    //    XYLog("%s: IOCTL %s(%d) %s", __FUNCTION__,
+    //          isGet ? "get" : "set",
+    //          request_number,
+    //          IOCTL_NAMES[request_number]);
     
     switch (request_number) {
         case APPLE80211_IOC_SSID:  // 1
@@ -156,8 +142,8 @@ apple80211RequestGated(OSObject *target, void *arg0, void *arg1, void *arg2, voi
             IOCTL_SET(request_type, SCANCACHE_CLEAR, apple80211req);
             break;
         default:
-//            XYLog("%s Unhandled IOCTL %s (%d)\n", __FUNCTION__, IOCTL_NAMES[request_number],
-//                  request_number);
+            //            XYLog("%s Unhandled IOCTL %s (%d)\n", __FUNCTION__, IOCTL_NAMES[request_number],
+            //                  request_number);
             break;
     }
     
