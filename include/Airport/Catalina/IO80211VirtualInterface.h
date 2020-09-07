@@ -85,6 +85,13 @@ public:
     OSMetaClassDeclareReservedUnused( IO80211VirtualInterface, 14);
     OSMetaClassDeclareReservedUnused( IO80211VirtualInterface, 15);
 public:
+    
+    static void startOutputQueues();
+    
+    static void stopOutputQueues();
+    
+    static int getInterfaceRole();
+public:
     char buf[0x500];
 };
 

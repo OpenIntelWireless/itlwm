@@ -1,6 +1,3 @@
-/* add your code here */
-#define Catalina
-
 #include "Apple80211.h"
 
 #include "IOKit/network/IOGatedOutputQueue.h"
@@ -14,6 +11,8 @@
 
 #include "ItlIwm.hpp"
 #include "ItlIwx.hpp"
+
+#include "AirportItlwmInterface.hpp"
 
 typedef enum {
   MEDIUM_TYPE_NONE = 0,
@@ -59,19 +58,19 @@ IOReturn get##REQ(OSObject *object, struct DATA_TYPE *data);
 IOReturn set##REQ(OSObject *object, struct DATA_TYPE *data);
     
 public:
-    bool init(OSDictionary *properties) override;
-    void free() override;
-    IOService* probe(IOService* provider, SInt32* score) override;
-    bool start(IOService *provider) override;
-    void stop(IOService *provider) override;
-    IOReturn getHardwareAddress(IOEthernetAddress* addrP) override;
-    IOReturn enable(IONetworkInterface *netif) override;
-    IOReturn disable(IONetworkInterface *netif) override;
-    UInt32 outputPacket(mbuf_t, void * param) override;
-    IOReturn setPromiscuousMode(IOEnetPromiscuousMode mode) override;
-    IOReturn setMulticastMode(IOEnetMulticastMode mode) override;
-    IOReturn setMulticastList(IOEthernetAddress* addr, UInt32 len) override;
-    bool configureInterface(IONetworkInterface *netif) override;
+    virtual bool init(OSDictionary *properties) override;
+    virtual void free() override;
+    virtual IOService* probe(IOService* provider, SInt32* score) override;
+    virtual bool start(IOService *provider) override;
+    virtual void stop(IOService *provider) override;
+    virtual IOReturn getHardwareAddress(IOEthernetAddress* addrP) override;
+    virtual IOReturn enable(IONetworkInterface *netif) override;
+    virtual IOReturn disable(IONetworkInterface *netif) override;
+    virtual UInt32 outputPacket(mbuf_t, void * param) override;
+    virtual IOReturn setPromiscuousMode(IOEnetPromiscuousMode mode) override;
+    virtual IOReturn setMulticastMode(IOEnetMulticastMode mode) override;
+    virtual IOReturn setMulticastList(IOEthernetAddress* addr, UInt32 len) override;
+    virtual bool configureInterface(IONetworkInterface *netif) override;
     virtual bool createWorkLoop() override;
     virtual IOWorkLoop* getWorkLoop() const override;
     virtual const OSString * newVendorString() const override;
@@ -85,20 +84,21 @@ public:
                                OSData *                data         = 0) override;
     
     void releaseAll();
-    void associateSSID(const char *ssid, const char *pwd);
+    void associateSSID(const char *ssid, uint8_t *key, uint16_t keyLen);
     void watchdogAction(IOTimerEventSource *timer);
     bool initPCIPowerManagment(IOPCIDevice *provider);
     static IOReturn tsleepHandler(OSObject* owner, void* arg0 = 0, void* arg1 = 0, void* arg2 = 0, void* arg3 = 0);
     
     //IO80211
     bool addMediumType(UInt32 type, UInt32 speed, UInt32 code, char* name = 0);
-    IOReturn getHardwareAddressForInterface(IO80211Interface* netif,
+    virtual IOReturn getHardwareAddressForInterface(IO80211Interface* netif,
                                             IOEthernetAddress* addr) override;
-    SInt32 monitorModeSetEnabled(IO80211Interface* interface, bool enabled,
+    virtual SInt32 monitorModeSetEnabled(IO80211Interface* interface, bool enabled,
                                  UInt32 dlt) override;
-    SInt32 apple80211Request(unsigned int request_type, int request_number,
+    virtual SInt32 apple80211Request(unsigned int request_type, int request_number,
                              IO80211Interface* interface, void* data) override;
     static void fakeScanDone(OSObject *owner, IOTimerEventSource *sender);
+    virtual bool useAppleRSNSupplicant(IO80211Interface *) override;
     
     
     //AirportSTAInfo
@@ -131,6 +131,7 @@ public:
     FUNC_IOCTL_GET(ANTENNA_DIVERSITY, apple80211_antenna_data)
     FUNC_IOCTL_GET(DRIVER_VERSION, apple80211_version_data)
     FUNC_IOCTL_GET(HARDWARE_VERSION, apple80211_version_data)
+    FUNC_IOCTL(RSN_IE, apple80211_rsn_ie_data)
     FUNC_IOCTL_GET(ASSOCIATION_STATUS, apple80211_assoc_status_data)
     FUNC_IOCTL_GET(COUNTRY_CODE, apple80211_country_code_data)
     FUNC_IOCTL_GET(RADIO_INFO, apple80211_radio_info_data)
@@ -165,7 +166,7 @@ public:
     IOTimerEventSource *watchdogTimer;
     IOPCIDevice *pciNub;
     IONetworkStats *fpNetStats;
-    IO80211Interface *fNetIf;
+    AirportItlwmInterface *fNetIf;
     IOWorkLoop *fWatchdogWorkLoop;
     ItlHalService *fHalService;
     
@@ -185,4 +186,7 @@ public:
     struct ieee80211_node *fNextNodeToSend;
     bool fScanResultWrapping;
     IOTimerEventSource *scanSource;
+    
+    u_int32_t current_authtype_lower;
+    u_int32_t current_authtype_upper;
 };

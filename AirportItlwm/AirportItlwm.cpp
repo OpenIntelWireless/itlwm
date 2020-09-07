@@ -104,7 +104,7 @@ bool AirportItlwm::configureInterface(IONetworkInterface *netif) {
 
 IONetworkInterface *AirportItlwm::createInterface()
 {
-    IO80211Interface *netif = new IO80211Interface;
+    AirportItlwmInterface *netif = new AirportItlwmInterface;
     if (!netif) {
         return NULL;
     }
@@ -135,10 +135,10 @@ ieee80211_nwkey nwkey;
 ieee80211_join join;
 struct ieee80211_nwid nwid;
 
-void AirportItlwm::associateSSID(const char *ssid, const char *pwd)
+void AirportItlwm::associateSSID(const char *ssid, uint8_t *key, uint16_t keyLen)
 {
     struct ieee80211com *ic = fHalService->get80211Controller();
-    if (strlen(pwd) == 0) {
+    if (keyLen == 0) {
         memcpy(nwid.i_nwid, ssid, 32);
         nwid.i_len = strlen((char *)nwid.i_nwid);
         memset(ic->ic_des_essid, 0, IEEE80211_NWID_LEN);
@@ -171,15 +171,7 @@ void AirportItlwm::associateSSID(const char *ssid, const char *pwd)
         /* disable WPA/WEP */
         ieee80211_disable_rsn(ic);
         ieee80211_disable_wep(ic);
-        size_t passlen = strlen(pwd);
-        /* Parse a WPA passphrase */
-        if (passlen < 8 || passlen > 63)
-            XYLog("wpakey: passphrase must be between "
-                  "8 and 63 characters");
-        if (nwid.i_len == 0)
-            XYLog("wpakey: nwid not set");
-        pbkdf2_sha1(pwd, (const uint8_t*)ssid, nwid.i_len, 4096,
-                    psk.i_psk, 32);
+        memcpy(psk.i_psk, key, keyLen);
         psk.i_enabled = 1;
         if (psk.i_enabled) {
             ic->ic_flags |= IEEE80211_F_PSK;
@@ -306,8 +298,8 @@ bool AirportItlwm::start(IOService *provider)
     }
     fWatchdogWorkLoop->addEventSource(watchdogTimer);
     scanSource = IOTimerEventSource::timerEventSource(this, &fakeScanDone);
-       _fWorkloop->addEventSource(scanSource);
-       scanSource->enable();
+    _fWorkloop->addEventSource(scanSource);
+    scanSource->enable();
     setLinkStatus(kIONetworkLinkValid);
     if (TAILQ_EMPTY(&fHalService->get80211Controller()->ic_ess)) {
         fHalService->get80211Controller()->ic_flags |= IEEE80211_F_AUTO_JOIN;
@@ -395,10 +387,18 @@ void AirportItlwm::stop(IOService *provider)
     releaseAll();
 }
 
+UInt64 currentSpeed;
+UInt32 currentStatus;
+
 bool AirportItlwm::
 setLinkStatus(UInt32 status, const IONetworkMedium * activeMedium, UInt64 speed, OSData * data)
 {
+    if (status == currentStatus && activeMedium == getCurrentMedium() && speed == currentSpeed) {
+        return true;
+    }
     bool ret = super::setLinkStatus(status, activeMedium, speed, data);
+    currentSpeed = speed;
+    currentStatus = status;
     if (fNetIf) {
         if (status & kIONetworkLinkActive) {
             fNetIf->setLinkState(kIO80211NetworkLinkUp, 4);
@@ -548,6 +548,12 @@ SInt32 AirportItlwm::monitorModeSetEnabled(
                                     IO80211Interface *interface, bool enabled, UInt32 dlt)
 {
     return kIOReturnSuccess;
+}
+
+bool AirportItlwm::
+useAppleRSNSupplicant(IO80211Interface *interface)
+{
+    return false;
 }
 
 IOReturn AirportItlwm::getPacketFilters(const OSSymbol *group, UInt32 *filters) const {
