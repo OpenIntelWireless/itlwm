@@ -21,10 +21,12 @@ SInt32 AirportItlwm::apple80211Request(unsigned int request_type,
     IOReturn ret = kIOReturnError;
     bool isGet = (request_type == SIOCGA80211);
     
-    //    XYLog("%s: IOCTL %s(%d) %s", __FUNCTION__,
-    //          isGet ? "get" : "set",
-    //          request_number,
-    //          IOCTL_NAMES[request_number]);
+//    if (ml_at_interrupt_context()) {
+//            XYLog("%s: IOCTL %s(%d) %s", __FUNCTION__,
+//                  isGet ? "get" : "set",
+//                  request_number,
+//                  IOCTL_NAMES[request_number]);
+//    }
     
     switch (request_number) {
         case APPLE80211_IOC_SSID:  // 1
@@ -145,8 +147,10 @@ SInt32 AirportItlwm::apple80211Request(unsigned int request_type,
             IOCTL_SET(request_type, SCANCACHE_CLEAR, apple80211req);
             break;
         default:
-            //            XYLog("%s Unhandled IOCTL %s (%d)\n", __FUNCTION__, IOCTL_NAMES[request_number],
-            //                  request_number);
+//            if (ml_at_interrupt_context()) {
+//                XYLog("%s Unhandled IOCTL %s (%d)\n", __FUNCTION__, IOCTL_NAMES[request_number],
+//                request_number);
+//            }
             break;
     }
     
@@ -416,7 +420,7 @@ getRSSI(OSObject *object,
         rd->rssi[0] = rd->aggregate_rssi
         = rd->rssi_ext[0]
         = rd->aggregate_rssi_ext
-        = ic->ic_bss->ni_rssi;
+        = -ic->ic_bss->ni_rssi;
         return kIOReturnSuccess;
     }
     return kIOReturnError;
@@ -489,12 +493,16 @@ setPOWER(OSObject *object,
                          struct apple80211_power_data *pd)
 {
     if (pd->num_radios > 0) {
-        power_state = (pd->power_state[0]);
-        if (power_state == 0) {
+        bool isRunning = (fHalService->get80211Controller()->ic_ac.ac_if.if_flags & (IFF_UP | IFF_RUNNING)) ==
+        (IFF_UP | IFF_RUNNING);
+        if (pd->power_state[0] == 0 && isRunning) {
             disable(fNetIf);
         } else {
-            enable(fNetIf);
+            if (!isRunning) {
+                enable(fNetIf);
+            }
         }
+        power_state = (pd->power_state[0]);
     }
     
     return kIOReturnSuccess;
@@ -734,7 +742,7 @@ getSCAN_RESULT(OSObject *object, struct apple80211_scan_result **sr)
     result->asr_channel.channel = ieee80211_chan2ieee(ic, fNextNodeToSend->ni_chan);
     result->asr_channel.flags = ieeeChanFlag2apple(fNextNodeToSend->ni_chan->ic_flags);
     result->asr_noise = 0;
-    result->asr_rssi = fNextNodeToSend->ni_rssi;
+    result->asr_rssi = -fNextNodeToSend->ni_rssi;
     memcpy(result->asr_bssid, fNextNodeToSend->ni_bssid, IEEE80211_ADDR_LEN);
     result->asr_ssid_len = fNextNodeToSend->ni_esslen;
     if (result->asr_ssid_len != 0) {
