@@ -1,11 +1,3 @@
-//
-//  IOSkywalkEthernetInterface.h
-//  AppleIntelWifiAdapter
-//
-//  Created by 钟先耀 on 2019/10/18.
-//  Copyright © 2019 钟先耀. All rights reserved.
-//
-
 #ifndef IOSkywalkEthernetInterface_h
 #define IOSkywalkEthernetInterface_h
 

@@ -1,12 +1,3 @@
-/*
- *  IO80211WorkLoop.h
- *  Family
- *
- *  Created by Pete on 5/31/06.
- *  Copyright 2006 Apple Computer, Inc. All rights reserved.
- *
- */
-
 #ifndef _IO80211WORKLOOP_H
 #define _IO80211WORKLOOP_H
 #include <IOKit/IOWorkLoop.h>

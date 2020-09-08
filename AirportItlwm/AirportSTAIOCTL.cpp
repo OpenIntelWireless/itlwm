@@ -579,6 +579,8 @@ getASSOCIATION_STATUS(OSObject *object, struct apple80211_assoc_status_data *hv)
 IOReturn AirportItlwm::
 setSCANCACHE_CLEAR(OSObject *object, struct apple80211req *req)
 {
+    ieee80211com *ic = fHalService->get80211Controller();
+    ieee80211_free_allnodes(ic, 0);
     return kIOReturnSuccess;
 }
 

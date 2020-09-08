@@ -25,13 +25,6 @@
 *
 * @APPLE_OSREFERENCE_LICENSE_HEADER_END@
 */
-//
-//  apple_private_spi.h
-//  itlwm
-//
-//  Created by qcwap on 2020/9/4.
-//  Copyright © 2020 钟先耀. All rights reserved.
-//
 
 #ifndef apple_private_spi_h
 #define apple_private_spi_h

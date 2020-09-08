@@ -1,11 +1,3 @@
-//
-//  IO80211VirtualInterface.h
-//  Black80211_Catalina
-//
-//  Created by qcwap on 2020/8/27.
-//  Copyright © 2020 Roman Peshkov. All rights reserved.
-//
-
 #ifndef IO80211VirtualInterface_h
 #define IO80211VirtualInterface_h
 

@@ -1,12 +1,3 @@
-/*
- *  wps_eap.h
- *  Family
- *
- *  Created by Pete on 6/20/06.
- *  Copyright 2006 Apple Computer, Inc. All rights reserved.
- *
- */
-
 #include <sys/types.h>
 #include <net/ethernet.h>
 //#include "eap_defs.h"
