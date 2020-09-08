@@ -54,7 +54,7 @@
 #define	IEEE80211_TRANS_WAIT	5		/* transition wait */
 #define	IEEE80211_INACT_WAIT	5		/* inactivity timer interval */
 #define	IEEE80211_INACT_MAX	(300/IEEE80211_INACT_WAIT)
-#define	IEEE80211_CACHE_SIZE	100
+#define	IEEE80211_CACHE_SIZE	200
 #define	IEEE80211_CACHE_WAIT	30
 #define	IEEE80211_INACT_SCAN	10		/* for station mode */
 
