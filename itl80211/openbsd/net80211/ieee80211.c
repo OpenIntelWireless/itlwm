@@ -99,12 +99,17 @@ ieee80211_begin_bgscan(struct _ifnet *ifp)
 {
     struct ieee80211com *ic = (struct ieee80211com *)ifp;
     
-    if ((ic->ic_flags & IEEE80211_F_BGSCAN) ||
-        ic->ic_state != IEEE80211_S_RUN || ic->ic_mgt_timer != 0)
+    if (ic->ic_state != IEEE80211_S_RUN || ic->ic_mgt_timer != 0)
         return;
     
     if ((ic->ic_flags & IEEE80211_F_RSNON) && !ic->ic_bss->ni_port_valid)
         return;
+    
+    if ((ic->ic_flags & IEEE80211_F_BGSCAN)) {
+        //clear disable flag, because we need to switch a better wifi now.
+        ic->ic_flags &= ~IEEE80211_F_DISABLE_BG_AUTO_CONNECT;
+        return;
+    }
     
     if (ic->ic_bgscan_start != NULL && ic->ic_bgscan_start(ic) == 0) {
         /*
@@ -117,6 +122,7 @@ ieee80211_begin_bgscan(struct _ifnet *ifp)
         ieee80211_free_allnodes(ic, 0 /* keep ic->ic_bss */);
         
         ic->ic_flags |= IEEE80211_F_BGSCAN;
+        ic->ic_flags &= ~IEEE80211_F_DISABLE_BG_AUTO_CONNECT;
         if (ifp->if_flags & IFF_DEBUG)
             XYLog("%s: begin background scan\n", ifp->if_xname);
         
@@ -136,6 +142,8 @@ ieee80211_begin_cache_bgscan(struct _ifnet *ifp)
     
     if ((ic->ic_flags & IEEE80211_F_RSNON) && !ic->ic_bss->ni_port_valid)
         return;
+    
+    ic->ic_flags |= IEEE80211_F_DISABLE_BG_AUTO_CONNECT;
     
     //if last cache scan is 5 minutes ago, clear the nodes and rescan.
     microtime(&tv);

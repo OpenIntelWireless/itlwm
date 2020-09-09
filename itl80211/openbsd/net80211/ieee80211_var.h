@@ -592,6 +592,7 @@ struct ieee80211_ess {
 #define	IEEE80211_F_BGSCAN	0x08000000	/* STATUS: background scan */
 #define IEEE80211_F_AUTO_JOIN	0x10000000	/* CONF: auto-join active */
 #define	IEEE80211_F_VHTON	0x20000000	/* CONF: VHT enabled */
+#define IEEE80211_F_DISABLE_BG_AUTO_CONNECT 0x40000000  /* CONF: disable auto connect to wifi when doing backgound scan */
 
 /* ic_xflags */
 #define	IEEE80211_F_TX_MGMT_ONLY 0x00000001	/* leave data frames on ifq */

@@ -52,16 +52,10 @@ jobs:
         xcodebuild -scheme fw_gen
         xcodebuild -scheme itlwm -configuration Debug -sdk macosx10.12 -derivedDataPath build CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO | xcpretty && exit ${PIPESTATUS[0]}
 
-    - name: Build itlwmx
-      run: |
-        xcodebuild -scheme fw_genx
-        xcodebuild -scheme itlwmx -configuration Debug -sdk macosx10.12 -derivedDataPath build CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO | xcpretty && exit ${PIPESTATUS[0]}
-
     - name: Pack Artifacts
       run: |
         cd $BUILD_OUTPUT
         zip -r itlwm-v${ITLWM_VER}-DEBUG-alpha-${SHORT_SHA}.zip itlwm.kext
-        zip -r itlwmx-v${ITLWM_VER}-DEBUG-alpha-${SHORT_SHA}.zip itlwmx.kext
         cd -
 
     - name: Delete Old Prerelease

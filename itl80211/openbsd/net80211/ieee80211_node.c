@@ -1461,6 +1461,7 @@ ieee80211_end_scan(struct _ifnet *ifp)
         /* AP disappeared? Should not happen. */
         if (selbs == NULL || curbs == NULL) {
             ic->ic_flags &= ~IEEE80211_F_BGSCAN;
+            ic->ic_flags &= ~IEEE80211_F_DISABLE_BG_AUTO_CONNECT;
             goto notfound;
         }
         
@@ -1473,6 +1474,7 @@ ieee80211_end_scan(struct _ifnet *ifp)
             if (ic->ic_bgscan_fail < IEEE80211_BGSCAN_FAIL_MAX)
                 ic->ic_bgscan_fail++;
             ic->ic_flags &= ~IEEE80211_F_BGSCAN;
+            ic->ic_flags &= ~IEEE80211_F_DISABLE_BG_AUTO_CONNECT;
             /*
               * HT is negotiated during association so we must use
               * ic_bss to check HT. The nodes tree was re-populated
@@ -1489,10 +1491,12 @@ ieee80211_end_scan(struct _ifnet *ifp)
                      ieee80211_chan2mode(ic, ni->ni_chan));
             return;
         }
-        //zxy disable roam when doing background scanning, because it will cause too much problems.
-#ifndef BGSCAN_ROAM
-        goto notfound;
-#else
+        
+        if (ic->ic_flags & IEEE80211_F_DISABLE_BG_AUTO_CONNECT) {
+            ic->ic_flags &= ~IEEE80211_F_BGSCAN;
+            ic->ic_flags &= ~IEEE80211_F_DISABLE_BG_AUTO_CONNECT;
+            return;
+        }
         
         arg = (struct ieee80211_node_switch_bss_arg *)_MallocZero(sizeof(*arg));
         if (arg == NULL) {
@@ -1530,7 +1534,6 @@ ieee80211_end_scan(struct _ifnet *ifp)
         ic->ic_bss->ni_unref_cb = ieee80211_node_switch_bss;
         /* F_BGSCAN flag gets cleared in ieee80211_node_join_bss(). */
         return;
-#endif //BGSCAN_ROAM
     } else if (selbs == NULL)
         goto notfound;
     
