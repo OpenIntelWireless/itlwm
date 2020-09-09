@@ -12,8 +12,6 @@
 #include "ItlIwm.hpp"
 #include "ItlIwx.hpp"
 
-#include "AirportItlwmInterface.hpp"
-
 typedef enum {
   MEDIUM_TYPE_NONE = 0,
   MEDIUM_TYPE_AUTO,
@@ -93,22 +91,32 @@ public:
     bool addMediumType(UInt32 type, UInt32 speed, UInt32 code, char* name = 0);
     virtual IOReturn getHardwareAddressForInterface(IO80211Interface* netif,
                                             IOEthernetAddress* addr) override;
+#ifndef Mojave
     virtual SInt32 monitorModeSetEnabled(IO80211Interface* interface, bool enabled,
                                  UInt32 dlt) override;
+#endif
     virtual SInt32 apple80211Request(unsigned int request_type, int request_number,
                              IO80211Interface* interface, void* data) override;
+    //scan
     static void fakeScanDone(OSObject *owner, IOTimerEventSource *sender);
-    virtual bool useAppleRSNSupplicant(IO80211Interface *) override;
+    //authentication
+    virtual bool useAppleRSNSupplicant(IO80211Interface *interface) override;
+    virtual int outputRaw80211Packet(IO80211Interface *interface, mbuf_t m) override;
+    virtual int outputActionFrame(IO80211Interface *interface, mbuf_t m) override;
+    //virtual interface
+    virtual SInt32 enableVirtualInterface(IO80211VirtualInterface *interface) override;
+    virtual SInt32 disableVirtualInterface(IO80211VirtualInterface *interface) override;
+    virtual IO80211VirtualInterface* createVirtualInterface(ether_addr *eth,uint role) override;
+    virtual SInt32 apple80211VirtualRequest(uint request_type, int request_number,IO80211VirtualInterface *interface,void *data) override;
     
-    
-    //AirportSTAInfo
+    //AirportSTAIOCTL
     FUNC_IOCTL(SSID, apple80211_ssid_data)
-    FUNC_IOCTL_GET(AUTH_TYPE, apple80211_authtype_data)
-    FUNC_IOCTL_GET(CHANNEL, apple80211_channel_data)
+    FUNC_IOCTL(AUTH_TYPE, apple80211_authtype_data)
+    FUNC_IOCTL(CHANNEL, apple80211_channel_data)
     FUNC_IOCTL(PROTMODE, apple80211_protmode_data)
     FUNC_IOCTL_GET(TXPOWER, apple80211_txpower_data)
     FUNC_IOCTL_GET(RATE, apple80211_rate_data)
-    FUNC_IOCTL_GET(BSSID, apple80211_bssid_data)
+    FUNC_IOCTL(BSSID, apple80211_bssid_data)
     FUNC_IOCTL_SET(SCAN_REQ, apple80211_scan_data)
     FUNC_IOCTL_SET(SCAN_REQ_MULTIPLE, apple80211_scan_multiple_data)
     FUNC_IOCTL_GET(SCAN_RESULT, apple80211_scan_result*)
@@ -141,9 +149,7 @@ public:
     FUNC_IOCTL_GET(POWERSAVE, apple80211_powersave_data)
     FUNC_IOCTL_SET(CIPHER_KEY, apple80211_key)
     FUNC_IOCTL_SET(SCANCACHE_CLEAR, apple80211req)
-    
-    
-    //AirportSTAIOCTL
+    FUNC_IOCTL(TX_NSS, apple80211_tx_nss_data)
     
     
     //-----------------------------------------------------------------------
@@ -166,7 +172,7 @@ public:
     IOTimerEventSource *watchdogTimer;
     IOPCIDevice *pciNub;
     IONetworkStats *fpNetStats;
-    AirportItlwmInterface *fNetIf;
+    IO80211Interface *fNetIf;
     IOWorkLoop *fWatchdogWorkLoop;
     ItlHalService *fHalService;
     

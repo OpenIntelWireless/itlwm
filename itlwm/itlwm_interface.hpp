@@ -23,13 +23,13 @@ class itlwm_interface : public IOEthernetInterface {
     OSDeclareDefaultStructors( itlwm_interface )
     
 public:
-    virtual bool init( IONetworkController * controller ) APPLE_KEXT_OVERRIDE;
+    virtual bool init( IONetworkController * controller ) override;
     
 protected:
     
-    virtual void free() APPLE_KEXT_OVERRIDE;
+    virtual void free() override;
     
-    virtual bool setMaxTransferUnit(UInt32 mtu) APPLE_KEXT_OVERRIDE;
+    virtual bool setMaxTransferUnit(UInt32 mtu) override;
 };
 
 #endif /* itlwm_interface_hpp */

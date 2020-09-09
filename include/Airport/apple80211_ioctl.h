@@ -766,5 +766,11 @@ struct apple80211_40mhz_intolerant_data
     u_int32_t    enabled;    // bit enabled or not
 };
 
+struct apple80211_tx_nss_data
+{
+    uint32_t version;
+    uint8_t nss;
+};
+
 #endif // _APPLE80211_IOCTL_H_
 

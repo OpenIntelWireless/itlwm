@@ -241,6 +241,12 @@ is5GBandSupport()
     return com.sc_nvm.sku_cap_band_52GHz_enable;
 }
 
+int ItlIwx::
+getTxNSS()
+{
+    return !com.sc_nvm.sku_cap_mimo_disable ? (iwx_mimo_enabled(&com) ? 2 : 1) : 1;
+}
+
 struct ieee80211com *ItlIwx::
 get80211Controller()
 {

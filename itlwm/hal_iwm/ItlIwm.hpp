@@ -65,6 +65,8 @@ public:
     
     virtual bool is5GBandSupport() override;
     
+    virtual int getTxNSS() override;
+    
     //driver controller
     virtual void clearScanningFlags() override;
     

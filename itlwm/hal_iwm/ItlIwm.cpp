@@ -135,3 +135,9 @@ is5GBandSupport()
 {
     return com.sc_nvm.sku_cap_band_52GHz_enable;
 }
+
+int ItlIwm::
+getTxNSS()
+{
+    return !com.sc_nvm.sku_cap_mimo_disable ? (iwm_mimo_enabled(&com) ? 2 : 1) : 1;
+}

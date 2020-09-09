@@ -65,21 +65,21 @@ class IO80211Interface : public IOEthernetInterface
     OSDeclareDefaultStructors( IO80211Interface );
     
 public:
-    virtual bool terminate(unsigned int) APPLE_KEXT_OVERRIDE;
-    virtual bool attach(IOService*) APPLE_KEXT_OVERRIDE;
-    virtual void detach(IOService*) APPLE_KEXT_OVERRIDE;
-    virtual bool init(IONetworkController*) APPLE_KEXT_OVERRIDE;
+    virtual bool terminate(unsigned int) override;
+    virtual bool attach(IOService*) override;
+    virtual void detach(IOService*) override;
+    virtual bool init(IONetworkController*) override;
     virtual IOReturn updateReport(IOReportChannelList *,uint,void *,void *) override;
     virtual IOReturn configureReport(IOReportChannelList *,uint,void *,void *) override;
     virtual UInt32 inputPacket(mbuf_t          packet,
                                UInt32          length  = 0,
                                IOOptionBits    options = 0,
-                               void *          param   = 0) APPLE_KEXT_OVERRIDE;
-    virtual bool inputEvent(unsigned int, void*) APPLE_KEXT_OVERRIDE;
-    virtual IOReturn newUserClient(task_t, void*, UInt32 type, OSDictionary*, IOUserClient**) APPLE_KEXT_OVERRIDE;
-    virtual SInt32 performCommand(IONetworkController*, unsigned long, void*, void*) APPLE_KEXT_OVERRIDE;
-    virtual IOReturn attachToDataLinkLayer(IOOptionBits, void*) APPLE_KEXT_OVERRIDE;
-    virtual void detachFromDataLinkLayer(unsigned int, void*) APPLE_KEXT_OVERRIDE;
+                               void *          param   = 0) override;
+    virtual bool inputEvent(unsigned int, void*) override;
+    virtual IOReturn newUserClient(task_t, void*, UInt32 type, OSDictionary*, IOUserClient**) override;
+    virtual SInt32 performCommand(IONetworkController*, unsigned long, void*, void*) override;
+    virtual IOReturn attachToDataLinkLayer(IOOptionBits, void*) override;
+    virtual void detachFromDataLinkLayer(unsigned int, void*) override;
     virtual int errnoFromReturn(int) override;
     virtual const char* stringFromReturn(int) override;
     

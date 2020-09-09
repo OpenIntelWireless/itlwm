@@ -33,10 +33,10 @@ SInt32 AirportItlwm::apple80211Request(unsigned int request_type,
             IOCTL(request_type, SSID, apple80211_ssid_data);
             break;
         case APPLE80211_IOC_AUTH_TYPE:  // 2
-            IOCTL_GET(request_type, AUTH_TYPE, apple80211_authtype_data);
+            IOCTL(request_type, AUTH_TYPE, apple80211_authtype_data);
             break;
         case APPLE80211_IOC_CHANNEL:  // 4
-            IOCTL_GET(request_type, CHANNEL, apple80211_channel_data);
+            IOCTL(request_type, CHANNEL, apple80211_channel_data);
             break;
         case APPLE80211_IOC_PROTMODE:
             IOCTL(request_type, PROTMODE, apple80211_protmode_data);
@@ -48,7 +48,7 @@ SInt32 AirportItlwm::apple80211Request(unsigned int request_type,
             IOCTL_GET(request_type, RATE, apple80211_rate_data);
             break;
         case APPLE80211_IOC_BSSID:  // 9
-            IOCTL_GET(request_type, BSSID, apple80211_bssid_data);
+            IOCTL(request_type, BSSID, apple80211_bssid_data);
             break;
         case APPLE80211_IOC_SCAN_REQ:  // 10
             IOCTL_SET(request_type, SCAN_REQ, apple80211_scan_data);
@@ -188,6 +188,14 @@ getAUTH_TYPE(OSObject *object, struct apple80211_authtype_data *ad)
 }
 
 IOReturn AirportItlwm::
+setAUTH_TYPE(OSObject *object, struct apple80211_authtype_data *ad)
+{
+    current_authtype_lower = ad->authtype_lower;
+    current_authtype_upper = ad->authtype_upper;
+    return kIOReturnSuccess;
+}
+
+IOReturn AirportItlwm::
 setCIPHER_KEY(OSObject *object, struct apple80211_key *ck)
 {
     XYLog("%s", __FUNCTION__);
@@ -220,6 +228,13 @@ getCHANNEL(OSObject *object,
         return kIOReturnSuccess;
     }
     return kIOReturnError;
+}
+
+IOReturn AirportItlwm::
+setCHANNEL(OSObject *object, struct apple80211_channel_data *data)
+{
+    XYLog("%s channel=%d\n", __FUNCTION__, data->channel.channel);
+    return kIOReturnSuccess;
 }
 
 IOReturn AirportItlwm::
@@ -258,6 +273,15 @@ getTXPOWER(OSObject *object,
 }
 
 IOReturn AirportItlwm::
+getTX_NSS(OSObject *object, struct apple80211_tx_nss_data *data)
+{
+    memset(data, 0, sizeof(*data));
+    data->version = APPLE80211_VERSION;
+    data->nss = fHalService->getDriverInfo()->getTxNSS();
+    return kIOReturnSuccess;
+}
+
+IOReturn AirportItlwm::
 getRATE(OSObject *object, struct apple80211_rate_data *rd)
 {
     ieee80211com *ic = fHalService->get80211Controller();
@@ -283,6 +307,13 @@ getBSSID(OSObject *object,
         return kIOReturnSuccess;
     }
     return kIOReturnError;
+}
+
+IOReturn AirportItlwm::
+setBSSID(OSObject *object, struct apple80211_bssid_data *data)
+{
+    XYLog("%s bssid=%s\n", __FUNCTION__, ether_sprintf(data->bssid.octet));
+    return kIOReturnSuccess;
 }
 
 IOReturn AirportItlwm::

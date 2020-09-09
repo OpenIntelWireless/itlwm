@@ -43,7 +43,7 @@ static IOReturn _if_input(OSObject *target, void *arg0, void *arg1, void *arg2, 
         }
         //        XYLog("%s %d 啊啊啊啊 ifq->iface->inputPacket(m) hdr_len=%d len=%d\n", __FUNCTION__, __LINE__, mbuf_pkthdr_len(m), mbuf_len(m));
         isEmpty = false;
-        ifq->iface->inputPacket(m, 0, IONetworkInterface::kInputOptionQueuePacket);
+        ifq->iface->inputPacket(m, mbuf_len(m), IONetworkInterface::kInputOptionQueuePacket);
         if (ifq->netStat != NULL) {
             ifq->netStat->inputPackets++;
         }

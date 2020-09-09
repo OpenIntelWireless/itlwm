@@ -104,7 +104,7 @@ bool AirportItlwm::configureInterface(IONetworkInterface *netif) {
 
 IONetworkInterface *AirportItlwm::createInterface()
 {
-    AirportItlwmInterface *netif = new AirportItlwmInterface;
+    IO80211Interface *netif = new IO80211Interface;
     if (!netif) {
         return NULL;
     }
@@ -544,11 +544,13 @@ IOReturn AirportItlwm::setMulticastList(IOEthernetAddress* addr, UInt32 len) {
     return kIOReturnSuccess;
 }
 
+#ifndef Mojave
 SInt32 AirportItlwm::monitorModeSetEnabled(
                                     IO80211Interface *interface, bool enabled, UInt32 dlt)
 {
     return kIOReturnSuccess;
 }
+#endif
 
 bool AirportItlwm::
 useAppleRSNSupplicant(IO80211Interface *interface)
@@ -718,4 +720,62 @@ void AirportItlwm::setPowerStateOn()
 {
     pmPowerState = kPowerStateOn;
     pmPolicyMaker->acknowledgeSetPowerState();
+}
+
+int AirportItlwm::
+outputRaw80211Packet(IO80211Interface *interface, mbuf_t m)
+{
+    XYLog("%s len=%d\n", __FUNCTION__, mbuf_len(m));
+    freePacket(m);
+    return kIOReturnOutputDropped;
+}
+
+int AirportItlwm::
+outputActionFrame(IO80211Interface *interface, mbuf_t m)
+{
+    XYLog("%s len=%d\n", __FUNCTION__, mbuf_len(m));
+    freePacket(m);
+    return kIOReturnOutputDropped;
+}
+
+SInt32 AirportItlwm::
+enableVirtualInterface(IO80211VirtualInterface *interface)
+{
+    XYLog("%s role=%d\n", __FUNCTION__, interface->getInterfaceRole());
+    SInt32 ret = super::enableVirtualInterface(interface);
+    if (!ret) {
+        interface->startOutputQueues();
+        return 0;
+    }
+    return ret;
+}
+
+SInt32 AirportItlwm::
+disableVirtualInterface(IO80211VirtualInterface *interface)
+{
+    XYLog("%s role=%d\n", __FUNCTION__, interface->getInterfaceRole());
+    SInt32 ret = super::disableVirtualInterface(interface);
+    if (!ret) {
+        interface->stopOutputQueues();
+        return 0;
+    }
+    return ret;
+}
+
+IO80211VirtualInterface *AirportItlwm::
+createVirtualInterface(ether_addr *ether, UInt role)
+{
+    if (role - 1 > 3) {
+        return super::createVirtualInterface(ether, role);
+    }
+    IO80211VirtualInterface *inf = new IO80211VirtualInterface;
+    if (inf) {
+        if (inf->init(this, ether, role, role == 4 ? "awdl" : "p2p")) {
+            XYLog("%s role=%d succeed\n", __FUNCTION__, role);
+        } else {
+            inf->release();
+            return NULL;
+        }
+    }
+    return inf;
 }
