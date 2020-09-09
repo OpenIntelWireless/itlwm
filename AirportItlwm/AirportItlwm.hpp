@@ -12,6 +12,8 @@
 #include "ItlIwm.hpp"
 #include "ItlIwx.hpp"
 
+#include "AirportItlwmInterface.hpp"
+
 typedef enum {
   MEDIUM_TYPE_NONE = 0,
   MEDIUM_TYPE_AUTO,
@@ -172,7 +174,7 @@ public:
     IOTimerEventSource *watchdogTimer;
     IOPCIDevice *pciNub;
     IONetworkStats *fpNetStats;
-    IO80211Interface *fNetIf;
+    AirportItlwmInterface *fNetIf;
     IOWorkLoop *fWatchdogWorkLoop;
     ItlHalService *fHalService;
     

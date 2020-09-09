@@ -104,7 +104,7 @@ bool AirportItlwm::configureInterface(IONetworkInterface *netif) {
 
 IONetworkInterface *AirportItlwm::createInterface()
 {
-    IO80211Interface *netif = new IO80211Interface;
+    AirportItlwmInterface *netif = new AirportItlwmInterface;
     if (!netif) {
         return NULL;
     }

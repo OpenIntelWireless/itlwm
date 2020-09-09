@@ -205,6 +205,8 @@
 		F8C2EC9A24080557007A9422 /* timeout.h in Headers */ = {isa = PBXBuildFile; fileRef = F8C2EC9024080556007A9422 /* timeout.h */; };
 		F8C2EC9C2408062D007A9422 /* pcireg.h in Headers */ = {isa = PBXBuildFile; fileRef = F8C2EC9B2408062D007A9422 /* pcireg.h */; };
 		F8C772922443439A00A1B8A0 /* compat.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 024A07BA23FCBC6C009FBA6C /* compat.cpp */; };
+		F8CA44A325091AF60036119A /* AirportItlwmInterface.cpp in Sources */ = {isa = PBXBuildFile; fileRef = F8CA44A125091AF60036119A /* AirportItlwmInterface.cpp */; };
+		F8CA44A425091AF60036119A /* AirportItlwmInterface.hpp in Headers */ = {isa = PBXBuildFile; fileRef = F8CA44A225091AF60036119A /* AirportItlwmInterface.hpp */; };
 		F8D257742495A33500872E4F /* _mbuf.cpp in Sources */ = {isa = PBXBuildFile; fileRef = F8D257732495A33500872E4F /* _mbuf.cpp */; };
 		F8D257782495DEFC00872E4F /* Common.h in Headers */ = {isa = PBXBuildFile; fileRef = F8D257762495DEFC00872E4F /* Common.h */; };
 		F8D2577A2495DEFC00872E4F /* IoctlId.h in Headers */ = {isa = PBXBuildFile; fileRef = F8D257772495DEFC00872E4F /* IoctlId.h */; };
@@ -403,6 +405,8 @@
 		F8C4BF8C2420FAED007F410E /* iwm-7265-17 */ = {isa = PBXFileReference; lastKnownFileType = file; path = "iwm-7265-17"; sourceTree = "<group>"; };
 		F8C4BF8E2420FAED007F410E /* iwm-7260-16 */ = {isa = PBXFileReference; lastKnownFileType = file; path = "iwm-7260-16"; sourceTree = "<group>"; };
 		F8C4BF8F2420FAED007F410E /* iwm-7260-17 */ = {isa = PBXFileReference; lastKnownFileType = file; path = "iwm-7260-17"; sourceTree = "<group>"; };
+		F8CA44A125091AF60036119A /* AirportItlwmInterface.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = AirportItlwmInterface.cpp; sourceTree = "<group>"; };
+		F8CA44A225091AF60036119A /* AirportItlwmInterface.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = AirportItlwmInterface.hpp; sourceTree = "<group>"; };
 		F8D257732495A33500872E4F /* _mbuf.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = _mbuf.cpp; sourceTree = "<group>"; };
 		F8D257762495DEFC00872E4F /* Common.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Common.h; sourceTree = "<group>"; };
 		F8D257772495DEFC00872E4F /* IoctlId.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = IoctlId.h; sourceTree = "<group>"; };
@@ -647,6 +651,8 @@
 				F89B6BDC25022F8C000F77FF /* AirportSTAIOCTL.cpp */,
 				F89B6BDE25022FB5000F77FF /* AirportVirtualIOCTL.cpp */,
 				F89B6BE025022FC7000F77FF /* AirportAWDL.cpp */,
+				F8CA44A125091AF60036119A /* AirportItlwmInterface.cpp */,
+				F8CA44A225091AF60036119A /* AirportItlwmInterface.hpp */,
 			);
 			path = AirportItlwm;
 			sourceTree = "<group>";
@@ -889,6 +895,7 @@
 				F89B6BD325021E66000F77FF /* IO80211SkywalkInterface.h in Headers */,
 				F89B6BC925021DED000F77FF /* apple80211_var.h in Headers */,
 				F8A0C791250896E30015E6E6 /* IO80211VirtualInterface.h in Headers */,
+				F8CA44A425091AF60036119A /* AirportItlwmInterface.hpp in Headers */,
 				F8A0C78C2507D6BD0015E6E6 /* IO80211Interface.h in Headers */,
 				F89B6BBC25021C9C000F77FF /* AirportItlwm.hpp in Headers */,
 				F89B6BD525021E66000F77FF /* IO80211Controller.h in Headers */,
@@ -1102,6 +1109,7 @@
 				F89B6BF3250231E3000F77FF /* FwBinary.cpp in Sources */,
 				F89B6BF4250231E3000F77FF /* IOTaskQueue.cpp in Sources */,
 				F89B6BF5250231E3000F77FF /* ieee80211_proto.c in Sources */,
+				F8CA44A325091AF60036119A /* AirportItlwmInterface.cpp in Sources */,
 				F89B6BF6250231E3000F77FF /* _string.c in Sources */,
 				F89B6BF7250231E3000F77FF /* ieee80211_ioctl.c in Sources */,
 				F89B6BF8250231E3000F77FF /* ieee80211.c in Sources */,
