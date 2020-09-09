@@ -744,8 +744,8 @@ enableVirtualInterface(IO80211VirtualInterface *interface)
     XYLog("%s role=%d\n", __FUNCTION__, interface->getInterfaceRole());
     SInt32 ret = super::enableVirtualInterface(interface);
     if (!ret) {
-        interface->startOutputQueues();
-        return 0;
+//        interface->startOutputQueues();
+        return kIOReturnSuccess;
     }
     return ret;
 }
@@ -756,8 +756,8 @@ disableVirtualInterface(IO80211VirtualInterface *interface)
     XYLog("%s role=%d\n", __FUNCTION__, interface->getInterfaceRole());
     SInt32 ret = super::disableVirtualInterface(interface);
     if (!ret) {
-        interface->stopOutputQueues();
-        return 0;
+//        interface->stopOutputQueues();
+        return kIOReturnSuccess;
     }
     return ret;
 }

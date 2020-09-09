@@ -146,6 +146,9 @@ SInt32 AirportItlwm::apple80211Request(unsigned int request_type,
         case APPLE80211_IOC_SCANCACHE_CLEAR:
             IOCTL_SET(request_type, SCANCACHE_CLEAR, apple80211req);
             break;
+        case APPLE80211_IOC_TX_NSS:
+            IOCTL(request_type, TX_NSS, apple80211_tx_nss_data);
+            break;
         default:
 //            if (ml_at_interrupt_context()) {
 //                XYLog("%s Unhandled IOCTL %s (%d)\n", __FUNCTION__, IOCTL_NAMES[request_number],
@@ -279,6 +282,12 @@ getTX_NSS(OSObject *object, struct apple80211_tx_nss_data *data)
     data->version = APPLE80211_VERSION;
     data->nss = fHalService->getDriverInfo()->getTxNSS();
     return kIOReturnSuccess;
+}
+
+IOReturn AirportItlwm::
+setTX_NSS(OSObject *object, struct apple80211_tx_nss_data *data)
+{
+    return kIOReturnError;
 }
 
 IOReturn AirportItlwm::
@@ -599,8 +608,7 @@ getDEAUTH(OSObject *object,
 
 IOReturn AirportItlwm::
 getASSOCIATION_STATUS(OSObject *object, struct apple80211_assoc_status_data *hv) {
-    XYLog("%s\n", __FUNCTION__);
-    ieee80211com *ic = fHalService->get80211Controller();
+//    XYLog("%s\n", __FUNCTION__);
     memset(hv, 0, sizeof(*hv));
     hv->version = APPLE80211_VERSION;
     hv->status = APPLE80211_STATUS_SUCCESS;
