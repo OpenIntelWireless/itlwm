@@ -147,6 +147,7 @@ public:
     FUNC_IOCTL_GET(RADIO_INFO, apple80211_radio_info_data)
     FUNC_IOCTL_GET(MCS, apple80211_mcs_data)
     FUNC_IOCTL_SET(VIRTUAL_IF_CREATE, apple80211_virt_if_create_data)
+    FUNC_IOCTL_SET(VIRTUAL_IF_DELETE, apple80211_virt_if_delete_data)
     FUNC_IOCTL_GET(ROAM_THRESH, apple80211_roam_threshold_data)
     FUNC_IOCTL_GET(POWERSAVE, apple80211_powersave_data)
     FUNC_IOCTL_SET(CIPHER_KEY, apple80211_key)
@@ -197,4 +198,8 @@ public:
     
     u_int32_t current_authtype_lower;
     u_int32_t current_authtype_upper;
+    
+    IO80211P2PInterface *fP2PDISCInterface;
+    IO80211P2PInterface *fP2PGOInterface;
+    IO80211P2PInterface *fAWDLInterface;
 };

@@ -464,7 +464,7 @@ void itlwm::stop(IOService *provider)
     super::stop(provider);
     setLinkStatus(kIONetworkLinkValid);
     fHalService->detach(pciNub);
-    detachInterface(fNetIf);
+    detachInterface(fNetIf, true);
     OSSafeReleaseNULL(fNetIf);
     ifp->iface = NULL;
     releaseAll();

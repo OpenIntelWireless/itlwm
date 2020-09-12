@@ -134,6 +134,9 @@ SInt32 AirportItlwm::apple80211Request(unsigned int request_type,
         case APPLE80211_IOC_VIRTUAL_IF_CREATE: // 94
             IOCTL_SET(request_type, VIRTUAL_IF_CREATE, apple80211_virt_if_create_data);
             break;
+        case APPLE80211_IOC_VIRTUAL_IF_DELETE:
+            IOCTL_SET(request_type, VIRTUAL_IF_DELETE, apple80211_virt_if_delete_data);
+            break;
         case APPLE80211_IOC_ROAM_THRESH:
             IOCTL_GET(request_type, ROAM_THRESH, apple80211_roam_threshold_data);
             break;
@@ -804,6 +807,9 @@ setVIRTUAL_IF_CREATE(OSObject *object, struct apple80211_virt_if_create_data* da
     struct ether_addr addr;
     IOLog("%s role=%d, bsd_name=%s, mac=%s, unk1=%d\n", __FUNCTION__, data->role, data->bsd_name,
           ether_sprintf(data->mac), data->unk1);
+    if (data->role - 2 < 2) {
+        //TODO check awdl coexist
+    }
     if (data->role == 1) {
         IO80211P2PInterface *inf = new IO80211P2PInterface;
         if (inf == NULL) {
@@ -811,17 +817,46 @@ setVIRTUAL_IF_CREATE(OSObject *object, struct apple80211_virt_if_create_data* da
         }
         memcpy(addr.octet, data->mac, 6);
         inf->init(this, &addr, data->role, "p2p");
-        inf->setEnabledBySystem(true);
-        IOLog("啊啊啊啊 虚拟接口调用成功\n");
+        fP2PDISCInterface = inf;
+        IOLog("啊啊啊啊 虚拟接口fP2PDISCInterface调用成功\n");
+    } else if(data->role == 2) {
+        
+    } else if (data->role == 3) {
+        IO80211P2PInterface *inf = new IO80211P2PInterface;
+        if (inf == NULL) {
+            return kIOReturnError;
+        }
+        memcpy(addr.octet, data->mac, 6);
+        inf->init(this, &addr, data->role, "p2p");
+        fP2PGOInterface = inf;
+        IOLog("啊啊啊啊 虚拟接口fP2PGOInterface调用成功\n");
     } else if (data->role == 4) {
+        if (fAWDLInterface != NULL && strncmp((const char *)data->bsd_name, "awdl", 4) == 0) {
+            XYLog("%s awdl interface already exists!\n", __FUNCTION__);
+            return kIOReturnSuccess;
+        }
         IO80211P2PInterface *inf = new IO80211P2PInterface;
         if (inf == NULL) {
             return kIOReturnError;
         }
         memcpy(addr.octet, data->mac, 6);
         inf->init(this, &addr, data->role, "awdl");
-        inf->setEnabledBySystem(true);
-        IOLog("啊啊啊啊 虚拟接口调用成功\n");
+        fAWDLInterface = inf;
+        IOLog("啊啊啊啊 虚拟接口fAWDLInterface调用成功\n");
     }
+    return kIOReturnSuccess;
+}
+
+IOReturn AirportItlwm::
+setVIRTUAL_IF_DELETE(OSObject *object, struct apple80211_virt_if_delete_data *data)
+{
+    XYLog("%s bsd_name=%s\n", __FUNCTION__, data->bsd_name);
+    //TODO find vif according to the bsd_name
+    IO80211VirtualInterface *vif = OSDynamicCast(IO80211VirtualInterface, object);
+    if (vif == NULL) {
+        return kIOReturnError;
+    }
+    detachVirtualInterface(vif, false);
+    vif->release();
     return kIOReturnSuccess;
 }

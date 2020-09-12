@@ -80,8 +80,10 @@ public:
     static void stopOutputQueues();
     
     static int getInterfaceRole();
+    
+    const char *getBSDName();
 public:
-    char buf[0x500];
+    char buf[0x1024];
 };
 
 

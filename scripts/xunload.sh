@@ -1,1 +1,1 @@
-sudo kextunload -b com.zxystd.itlwmx
+sudo kextunload -b com.zxystd.AirportItlwm

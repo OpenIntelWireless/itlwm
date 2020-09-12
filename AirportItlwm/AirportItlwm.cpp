@@ -381,7 +381,7 @@ void AirportItlwm::stop(IOService *provider)
     super::stop(provider);
     setLinkStatus(kIONetworkLinkValid);
     fHalService->detach(pciNub);
-    detachInterface(fNetIf);
+    detachInterface(fNetIf, true);
     OSSafeReleaseNULL(fNetIf);
     ifp->iface = NULL;
     releaseAll();
@@ -741,7 +741,7 @@ outputActionFrame(IO80211Interface *interface, mbuf_t m)
 SInt32 AirportItlwm::
 enableVirtualInterface(IO80211VirtualInterface *interface)
 {
-    XYLog("%s role=%d\n", __FUNCTION__, interface->getInterfaceRole());
+    XYLog("%s interface=%s role=%d", __FUNCTION__, interface->getBSDName(), interface->getInterfaceRole());
     SInt32 ret = super::enableVirtualInterface(interface);
     if (!ret) {
 //        interface->startOutputQueues();
@@ -753,7 +753,7 @@ enableVirtualInterface(IO80211VirtualInterface *interface)
 SInt32 AirportItlwm::
 disableVirtualInterface(IO80211VirtualInterface *interface)
 {
-    XYLog("%s role=%d\n", __FUNCTION__, interface->getInterfaceRole());
+    XYLog("%s interface=%s role=%d", __FUNCTION__, interface->getBSDName(), interface->getInterfaceRole());
     SInt32 ret = super::disableVirtualInterface(interface);
     if (!ret) {
 //        interface->stopOutputQueues();

@@ -75,7 +75,7 @@ public:
     OSMetaClassDeclareReservedUnused( IO80211P2PInterface, 14);
     OSMetaClassDeclareReservedUnused( IO80211P2PInterface, 15);
 public:
-    char buf[0x500];
+    char buf[0x1024];
 };
 
 #endif /* IO80211P2PInterface_h */

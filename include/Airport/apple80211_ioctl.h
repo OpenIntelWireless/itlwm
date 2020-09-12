@@ -365,6 +365,11 @@ struct apple80211_virt_if_create_data {
     uint8_t bsd_name[15];
 } __attribute__((packed));
 
+struct apple80211_virt_if_delete_data {
+    uint32_t version;
+    uint8_t bsd_name[15];
+} __attribute__((packed));
+
 struct apple80211_ht_capability {
     uint32_t version;
     uint8_t unk1;
@@ -767,6 +772,12 @@ struct apple80211_40mhz_intolerant_data
 };
 
 struct apple80211_tx_nss_data
+{
+    uint32_t version;
+    uint8_t nss;
+};
+
+struct apple80211_nss_data
 {
     uint32_t version;
     uint8_t nss;
