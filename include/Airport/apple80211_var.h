@@ -555,8 +555,13 @@ struct apple80211_status_msg_hdr
 #define APPLE80211_M_COUNTRY_CODE_CHANGED    11
 #define APPLE80211_M_STA_ARRIVE                12
 #define APPLE80211_M_STA_LEAVE                13
+#define APPLE80211_M_DRIVER_AVAILABLE           0x37
+#define APPLE80211_M_LINK_ADDRESS_CHANGED       0x3B
+#define APPLE80211_M_ROAM_START                 0x46
+#define APPLE80211_M_ROAM_END                   0x47
+#define APPLE80211_M_INTERFACE_STATE            0x3A
 
-#define APPLE80211_M_MAX                    13
+#define APPLE80211_M_MAX                    0x3A
 #define APPLE80211_M_BUFF_SIZE                APPLE80211_MAP_SIZE( APPLE80211_M_MAX )
 
 // Registry Information

@@ -70,11 +70,15 @@ apple80211VirtualRequest(UInt request_type, int request_number, IO80211VirtualIn
         case APPLE80211_IOC_HT_CAPABILITY:
             IOCTL_GET(request_type, AWDL_HT_CAPABILITY, apple80211_ht_capability);
             break;
-            
+        case APPLE80211_IOC_VHT_CAPABILITY:
+            *(uint32_t*)data = 1;
+            ret = kIOReturnSuccess;
+            break;
         case APPLE80211_IOC_AWDL_ELECTION_METRIC:
             IOCTL(request_type, AWDL_ELECTION_METRIC, apple80211_awdl_election_metric);
             break;
         default:
+            XYLog("%s Unhandled IOCTL %s (%d)\n", __FUNCTION__, IOCTL_NAMES[request_number], request_number);
             break;
     }
     
