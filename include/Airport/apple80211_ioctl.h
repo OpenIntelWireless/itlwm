@@ -341,7 +341,7 @@ struct apple80211req
 #define APPLE80211_IOC_OFFLOAD_TCPKA_ENABLE 265
 #define APPLE80211_IOC_RANGING_CAPS 266
 #define APPLE80211_IOC_PER_CORE_RSSI_REPORT 267
-#define APPLE80211_IOC_NSS
+#define APPLE80211_IOC_NSS  353
 
 #define APPLE80211_IOC_CARD_SPECIFIC            0xffffffff    // req_type
 
@@ -782,6 +782,35 @@ struct apple80211_nss_data
     uint32_t version;
     uint8_t nss;
 };
+
+struct apple80211_awdl_peer_traffic_registration
+{
+    uint32_t version;
+    void *addr;
+    uint32_t name_len;
+    char name[152];
+    uint32_t active;
+} __attribute__((packed));
+
+struct apple80211_awdl_election_metric
+{
+    uint32_t version;
+    uint32_t metric;
+} __attribute__((packed));
+
+struct apple80211_awdl_sync_enabled
+{
+    uint32_t version;
+    uint32_t unk1;
+    uint32_t enabled;
+} __attribute__((packed));
+
+struct apple80211_awdl_sync_frame_template
+{
+    uint32_t version;
+    uint32_t payload_len;
+    void *payload;
+} __attribute__((packed));
 
 #endif // _APPLE80211_IOCTL_H_
 

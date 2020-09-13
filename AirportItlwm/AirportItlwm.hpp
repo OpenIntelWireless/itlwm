@@ -153,6 +153,14 @@ public:
     FUNC_IOCTL_SET(CIPHER_KEY, apple80211_key)
     FUNC_IOCTL_SET(SCANCACHE_CLEAR, apple80211req)
     FUNC_IOCTL(TX_NSS, apple80211_tx_nss_data)
+    FUNC_IOCTL_GET(NSS, apple80211_nss_data)
+    
+    //AirportVirtualIOCTL
+    FUNC_IOCTL(AWDL_PEER_TRAFFIC_REGISTRATION, apple80211_awdl_peer_traffic_registration)
+    FUNC_IOCTL(AWDL_ELECTION_METRIC, apple80211_awdl_election_metric)
+    FUNC_IOCTL(SYNC_ENABLED, apple80211_awdl_sync_enabled)
+    FUNC_IOCTL(SYNC_FRAME_TEMPLATE, apple80211_awdl_sync_frame_template)
+    FUNC_IOCTL_GET(AWDL_HT_CAPABILITY, apple80211_ht_capability)
     
     
     //-----------------------------------------------------------------------
@@ -202,4 +210,8 @@ public:
     IO80211P2PInterface *fP2PDISCInterface;
     IO80211P2PInterface *fP2PGOInterface;
     IO80211P2PInterface *fAWDLInterface;
+    
+    //AWDL
+    uint8_t *syncFrameTemplate;
+    uint32_t syncFrameTemplateLength;
 };

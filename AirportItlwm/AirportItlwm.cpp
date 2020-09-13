@@ -206,8 +206,14 @@ bool AirportItlwm::start(IOService *provider)
     if (!super::start(provider)) {
         return false;
     }
+    if (!serviceMatching("AppleSMC")) {
+        super::stop(provider);
+        XYLog("No matching AppleSMC dictionary, failing\n");
+        return false;
+    }
     pciNub = OSDynamicCast(IOPCIDevice, provider);
     if (!pciNub) {
+        super::stop(provider);
         return false;
     }
     pciNub->setBusMasterEnable(true);
@@ -216,6 +222,7 @@ bool AirportItlwm::start(IOService *provider)
     pciNub->configWrite8(0x41, 0);
     if (pciNub->requestPowerDomainState(kIOPMPowerOn,
                                         (IOPowerConnection *) getParentEntry(gIOPowerPlane), IOPMLowestState) != IOPMNoErr) {
+        super::stop(provider);
         return false;
     }
     if (initPCIPowerManagment(pciNub) == false) {
@@ -451,6 +458,11 @@ void AirportItlwm::free()
     if (fHalService != NULL) {
         fHalService->release();
         fHalService = NULL;
+    }
+    if (syncFrameTemplate != NULL && syncFrameTemplateLength > 0) {
+        IOFree(syncFrameTemplate, syncFrameTemplateLength);
+        syncFrameTemplateLength = 0;
+        syncFrameTemplate = NULL;
     }
     super::free();
 }

@@ -58,9 +58,128 @@ apple80211VirtualRequest(UInt request_type, int request_number, IO80211VirtualIn
         case APPLE80211_IOC_SSID:
             IOCTL(request_type, SSID, apple80211_ssid_data);
             break;
+        case APPLE80211_IOC_AWDL_PEER_TRAFFIC_REGISTRATION:
+            IOCTL(request_type, AWDL_PEER_TRAFFIC_REGISTRATION, apple80211_awdl_peer_traffic_registration);
+            break;
+        case APPLE80211_IOC_AWDL_SYNC_ENABLED:
+            IOCTL(request_type, SYNC_ENABLED, apple80211_awdl_sync_enabled);
+            break;
+        case APPLE80211_IOC_AWDL_SYNC_FRAME_TEMPLATE:
+            IOCTL(request_type, SYNC_FRAME_TEMPLATE, apple80211_awdl_sync_frame_template);
+            break;
+        case APPLE80211_IOC_HT_CAPABILITY:
+            IOCTL_GET(request_type, AWDL_HT_CAPABILITY, apple80211_ht_capability);
+            break;
+            
+        case APPLE80211_IOC_AWDL_ELECTION_METRIC:
+            IOCTL(request_type, AWDL_ELECTION_METRIC, apple80211_awdl_election_metric);
+            break;
         default:
             break;
     }
     
     return ret;
+}
+
+IOReturn AirportItlwm::
+setAWDL_PEER_TRAFFIC_REGISTRATION(OSObject *object, struct apple80211_awdl_peer_traffic_registration *data)
+{
+    char name[255];
+    if (data->name_len > 0 && data->name_len < 255) {
+        bzero(name, 255);
+        memcpy(name, data->name, data->name_len);
+    }
+    XYLog("%s name=%s, name_len=%d, active=%d\n", __FUNCTION__, name, data->name_len, data->active);
+    if (!strncmp(data->name, "wifid-assisted-discovery", data->name_len)) {
+        if (data->active) {
+            
+        } else {
+            
+        }
+    } else if (!strncmp(data->name, "sidecar", data->name_len)) {
+        
+    }
+    return kIOReturnSuccess;
+}
+
+IOReturn AirportItlwm::
+getAWDL_PEER_TRAFFIC_REGISTRATION(OSObject *object, struct apple80211_awdl_peer_traffic_registration *)
+{
+    XYLog("%s\n", __FUNCTION__);
+    if (fAWDLInterface) {
+        return 45;
+    }
+    return 22;
+}
+
+IOReturn AirportItlwm::
+setAWDL_ELECTION_METRIC(OSObject *object, struct apple80211_awdl_election_metric *data)
+{
+    XYLog("%s metric=%d\n", __FUNCTION__, data->metric);
+    return kIOReturnSuccess;
+}
+
+IOReturn AirportItlwm::
+getAWDL_ELECTION_METRIC(OSObject *object, struct apple80211_awdl_election_metric *data)
+{
+    XYLog("%s\n", __FUNCTION__);
+    return kIOReturnError;
+}
+
+IOReturn AirportItlwm::
+getSYNC_ENABLED(OSObject *object, struct apple80211_awdl_sync_enabled *data)
+{
+    XYLog("%s\n", __FUNCTION__);
+    data->version = APPLE80211_VERSION;
+    data->enabled = 1;
+    data->unk1 = 0;
+    return kIOReturnSuccess;
+}
+
+IOReturn AirportItlwm::
+setSYNC_ENABLED(OSObject *object, struct apple80211_awdl_sync_enabled *data)
+{
+    XYLog("%s sync_enabled=%d\n", __FUNCTION__, data->enabled);
+    
+    return kIOReturnSuccess;
+}
+
+IOReturn AirportItlwm::
+getSYNC_FRAME_TEMPLATE(OSObject *object, struct apple80211_awdl_sync_frame_template *data)
+{
+    XYLog("%s\n", __FUNCTION__);
+    if (syncFrameTemplate == NULL || syncFrameTemplateLength == 0) {
+        return kIOReturnError;
+    }
+    data->version = APPLE80211_VERSION;
+    data->payload_len = syncFrameTemplateLength;
+    memcpy(data->payload, syncFrameTemplate, syncFrameTemplateLength);
+    return kIOReturnSuccess;
+}
+
+IOReturn AirportItlwm::
+setSYNC_FRAME_TEMPLATE(OSObject *object, struct apple80211_awdl_sync_frame_template *data)
+{
+    XYLog("%s payload_len=%d\n", __FUNCTION__, data->payload_len);
+    if (data->payload_len <= 0) {
+        return kIOReturnError;
+    }
+    if (syncFrameTemplate != NULL && syncFrameTemplateLength > 0) {
+        IOFree(syncFrameTemplate, syncFrameTemplateLength);
+        syncFrameTemplateLength = 0;
+        syncFrameTemplate = NULL;
+    }
+    syncFrameTemplate = (uint8_t *)IOMalloc(data->payload_len);
+    syncFrameTemplateLength = data->payload_len;
+    memset(syncFrameTemplate, 0, data->payload_len);
+    memcpy(syncFrameTemplate, data->payload, data->payload_len);
+    return kIOReturnSuccess;
+}
+
+IOReturn AirportItlwm::
+getAWDL_HT_CAPABILITY(OSObject *object, struct apple80211_ht_capability *data)
+{
+    memset(data, 0, sizeof(*data));
+    data->version = APPLE80211_VERSION;
+    return kIOReturnSuccess;
 }

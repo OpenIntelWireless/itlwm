@@ -96,6 +96,7 @@ SInt32 AirportItlwm::apple80211Request(unsigned int request_type,
             IOCTL_GET(request_type, MCS_INDEX_SET, apple80211_mcs_index_set_data);
             break;
         case APPLE80211_IOC_SUPPORTED_CHANNELS:  // 27
+        case APPLE80211_IOC_HW_SUPPORTED_CHANNELS:
             IOCTL_GET(request_type, SUPPORTED_CHANNELS, apple80211_sup_channel_data);
             break;
         case APPLE80211_IOC_LOCALE:  // 28
@@ -151,6 +152,9 @@ SInt32 AirportItlwm::apple80211Request(unsigned int request_type,
             break;
         case APPLE80211_IOC_TX_NSS:
             IOCTL(request_type, TX_NSS, apple80211_tx_nss_data);
+            break;
+        case APPLE80211_IOC_NSS:
+            IOCTL_GET(request_type, NSS, apple80211_nss_data);
             break;
         default:
 //            if (ml_at_interrupt_context()) {
@@ -280,6 +284,15 @@ getTXPOWER(OSObject *object,
 
 IOReturn AirportItlwm::
 getTX_NSS(OSObject *object, struct apple80211_tx_nss_data *data)
+{
+    memset(data, 0, sizeof(*data));
+    data->version = APPLE80211_VERSION;
+    data->nss = fHalService->getDriverInfo()->getTxNSS();
+    return kIOReturnSuccess;
+}
+
+IOReturn AirportItlwm::
+getNSS(OSObject *object, struct apple80211_nss_data *data)
 {
     memset(data, 0, sizeof(*data));
     data->version = APPLE80211_VERSION;
