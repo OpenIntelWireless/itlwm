@@ -1412,9 +1412,9 @@
 					"DEBUG=1",
 					"$(inherited)",
 					disable_Catalina,
-					disable_BigSur,
+					BigSur,
 					disable_Mojave,
-					HighSierra,
+					disable_HighSierra,
 				);
 				INFOPLIST_FILE = AirportItlwm/Info.plist;
 				LIBRARY_SEARCH_PATHS = (
