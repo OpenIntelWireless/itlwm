@@ -84,7 +84,7 @@ public:
     virtual void setEnabledBySystem(bool);
     virtual bool setLinkState(IO80211LinkState, unsigned int);
     virtual bool setLinkState(IO80211LinkState, int, unsigned int);
-    virtual UInt32 outputPacket(mbuf_t*, void*);
+    virtual UInt32 outputPacket(mbuf_t, void*);
 
     virtual bool setLinkQualityMetric(int);
     virtual void handleDebugCmd(apple80211_debug_command*);

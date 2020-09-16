@@ -93,10 +93,8 @@ public:
     bool addMediumType(UInt32 type, UInt32 speed, UInt32 code, char* name = 0);
     virtual IOReturn getHardwareAddressForInterface(IO80211Interface* netif,
                                             IOEthernetAddress* addr) override;
-#ifndef Mojave
     virtual SInt32 monitorModeSetEnabled(IO80211Interface* interface, bool enabled,
                                  UInt32 dlt) override;
-#endif
     virtual SInt32 apple80211Request(unsigned int request_type, int request_number,
                              IO80211Interface* interface, void* data) override;
     //scan

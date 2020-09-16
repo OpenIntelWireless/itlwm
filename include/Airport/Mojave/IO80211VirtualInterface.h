@@ -20,8 +20,8 @@ public:
                                   void                     *result,
                                   void                     *destination) override;
     virtual bool terminate( IOOptionBits options = 0 ) override;
-    virtual bool attach(IOService *);
-    virtual void detach(IOService *);
+    virtual bool attach(IOService *) override;
+    virtual void detach(IOService *) override;
     virtual const char * stringFromReturn( IOReturn rtn ) override;
     virtual int errnoFromReturn( IOReturn rtn ) override;
     virtual IOReturn powerStateWillChangeTo(
@@ -78,6 +78,8 @@ public:
     static void startOutputQueues();
     
     static void stopOutputQueues();
+    
+    static void postMessage(unsigned int, void* data = NULL, unsigned long dataLen = 0);
     
     static int getInterfaceRole();
     

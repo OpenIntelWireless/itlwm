@@ -18,8 +18,8 @@ public:
                                   void                     *destination) override;
     
     virtual bool terminate( IOOptionBits options = 0 ) override;
-    virtual bool attach(IOService *);
-    virtual void detach(IOService *);
+    virtual bool attach(IOService *) override;
+    virtual void detach(IOService *) override;
     virtual IOReturn newUserClient(task_t,void *,UInt,OSDictionary *,IOUserClient **) override;
     virtual const char * stringFromReturn( IOReturn rtn ) override;
     virtual int errnoFromReturn( IOReturn rtn ) override;

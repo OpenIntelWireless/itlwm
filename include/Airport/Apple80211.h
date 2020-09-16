@@ -12,6 +12,14 @@
 #include "apple_private_spi.h"
 #include "debug.h"
 
+#ifdef HighSierra
+#include "HighSierra/IO80211WorkLoop.h"
+#include "HighSierra/IO80211Controller.h"
+#include "HighSierra/IO80211Interface.h"
+#include "HighSierra/IO80211VirtualInterface.h"
+#include "HighSierra/IO80211P2PInterface.h"
+#endif
+
 #ifdef Mojave
 #include "Mojave/IO80211WorkLoop.h"
 #include "Mojave/IO80211Controller.h"

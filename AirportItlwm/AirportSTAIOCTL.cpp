@@ -823,7 +823,7 @@ setVIRTUAL_IF_CREATE(OSObject *object, struct apple80211_virt_if_create_data* da
     if (data->role - 2 < 2) {
         //TODO check awdl coexist
     }
-    if (data->role == 1) {
+    if (data->role == APPLE80211_VIF_P2P_DEVICE) {
         IO80211P2PInterface *inf = new IO80211P2PInterface;
         if (inf == NULL) {
             return kIOReturnError;
@@ -832,9 +832,9 @@ setVIRTUAL_IF_CREATE(OSObject *object, struct apple80211_virt_if_create_data* da
         inf->init(this, &addr, data->role, "p2p");
         fP2PDISCInterface = inf;
         IOLog("啊啊啊啊 虚拟接口fP2PDISCInterface调用成功\n");
-    } else if(data->role == 2) {
+    } else if(data->role == APPLE80211_VIF_P2P_CLIENT) {
         
-    } else if (data->role == 3) {
+    } else if (data->role == APPLE80211_VIF_P2P_GO) {
         IO80211P2PInterface *inf = new IO80211P2PInterface;
         if (inf == NULL) {
             return kIOReturnError;
@@ -843,7 +843,7 @@ setVIRTUAL_IF_CREATE(OSObject *object, struct apple80211_virt_if_create_data* da
         inf->init(this, &addr, data->role, "p2p");
         fP2PGOInterface = inf;
         IOLog("啊啊啊啊 虚拟接口fP2PGOInterface调用成功\n");
-    } else if (data->role == 4) {
+    } else if (data->role == APPLE80211_VIF_AWDL) {
         if (fAWDLInterface != NULL && strncmp((const char *)data->bsd_name, "awdl", 4) == 0) {
             XYLog("%s awdl interface already exists!\n", __FUNCTION__);
             return kIOReturnSuccess;

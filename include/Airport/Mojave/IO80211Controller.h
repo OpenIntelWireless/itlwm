@@ -57,21 +57,6 @@ enum IO80211FeatureCode
 };
 typedef enum IO80211FeatureCode IO80211FeatureCode;
 
-enum CCStreamLogLevel
-{
-    LEVEL_1,
-};
-
-enum scanSource
-{
-    SOURCE_1,
-};
-
-enum joinStatus
-{
-    STATUS_1,
-};
-
 class IO80211Controller;
 class IO80211Interface;
 class IO82110WorkLoop;
@@ -103,9 +88,9 @@ struct apple80211_btCoex_report;
 struct apple80211_cca_report;
 struct apple80211_lteCoex_report;
 
-//typedef int scanSource;
-//typedef int joinStatus;
-//typedef int CCStreamLogLevel;
+typedef int scanSource;
+typedef int joinStatus;
+typedef int CCStreamLogLevel;
 typedef IOReturn (*IOCTL_FUNC)(IO80211Controller*, IO80211Interface*, IO80211VirtualInterface*, apple80211req*, bool);
 extern IOCTL_FUNC gGetHandlerTable[];
 extern IOCTL_FUNC gSetHandlerTable[];
@@ -145,9 +130,9 @@ class IO80211Controller : public IOEthernetController {
     virtual int outputRaw80211Packet(IO80211Interface*, mbuf_t) ;
     virtual int outputActionFrame(IO80211Interface*, mbuf_t) ;
     virtual int bpfOutputPacket(OSObject*, unsigned int, mbuf_t) ;
-    //virtual SInt32 monitorModeSetEnabled(IO80211Interface*, bool, unsigned int) ;
+    virtual SInt32 monitorModeSetEnabled(IO80211Interface*, bool, unsigned int) ;
     virtual IO80211Interface * getNetworkInterface() ;
-    virtual SInt32 apple80211_ioctl(IO80211Interface*, IO80211VirtualInterface*, ifnet_t*, unsigned long, void*) ;
+    virtual SInt32 apple80211_ioctl(IO80211Interface*, IO80211VirtualInterface*, ifnet_t, unsigned long, void*) ;
     virtual SInt32 apple80211_ioctl(IO80211Interface*, ifnet_t, unsigned long, void*) { return 0; } ;
     virtual SInt32 apple80211Request(unsigned int, int, IO80211Interface*, void*) = 0;
     virtual SInt32 apple80211VirtualRequest(unsigned int, int, IO80211VirtualInterface*, void*) ;
@@ -170,11 +155,10 @@ class IO80211Controller : public IOEthernetController {
     virtual UInt32 selfDiagnosticsReport(int, char const*, unsigned int) ;
     virtual UInt32 getDataQueueDepth(OSObject*) ;
     virtual mbuf_flags_t inputPacket(mbuf_t) ;
-    virtual SInt32 apple80211_ioctl_get(IO80211Interface*, IO80211VirtualInterface*, ifnet_t*, void*) ;
-    virtual SInt32 apple80211_ioctl_set(IO80211Interface*, IO80211VirtualInterface*, ifnet_t*, void*) ;
+    virtual SInt32 apple80211_ioctl_get(IO80211Interface*, IO80211VirtualInterface*, ifnet_t, void*) ;
+    virtual SInt32 apple80211_ioctl_set(IO80211Interface*, IO80211VirtualInterface*, ifnet_t, void*) ;
     virtual IO80211VirtualInterface * createVirtualInterface(ether_addr*, unsigned int) ;
     virtual bool attachVirtualInterface(IO80211VirtualInterface**, ether_addr*, unsigned int, bool) ;
-    // virtual bool detachVirtualInterface(IO80211VirtualInterface*, bool)  { return 0; };
     virtual bool detachVirtualInterface(IO80211VirtualInterface*, bool);
     OSMetaClassDeclareReservedUnused(IO80211Controller, 0);
     OSMetaClassDeclareReservedUnused(IO80211Controller, 1);

@@ -526,6 +526,17 @@ enum apple80211_card_capability
 };
 #define APPLE80211_CAP_MAX    21
 
+enum apple80211_virtual_interface_type
+{
+    APPLE80211_VIF_P2P_DEVICE = 1,
+    APPLE80211_VIF_P2P_CLIENT = 2,
+    APPLE80211_VIF_P2P_GO = 3,
+    APPLE80211_VIF_AWDL = 4,
+    APPLE80211_VIF_SOFT_AP = 5,
+    
+    APPLE80211_VIF_MAX
+};
+
 enum apple80211_assoc_flags {
     APPLE80211_ASSOC_F_CLOSED    = 1,    // flag: scan was directed, needed to remember closed networks
 };

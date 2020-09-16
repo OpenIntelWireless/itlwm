@@ -556,13 +556,11 @@ IOReturn AirportItlwm::setMulticastList(IOEthernetAddress* addr, UInt32 len) {
     return kIOReturnSuccess;
 }
 
-#ifndef Mojave
 SInt32 AirportItlwm::monitorModeSetEnabled(
                                     IO80211Interface *interface, bool enabled, UInt32 dlt)
 {
     return kIOReturnSuccess;
 }
-#endif
 
 bool AirportItlwm::
 useAppleRSNSupplicant(IO80211Interface *interface)
@@ -782,7 +780,7 @@ createVirtualInterface(ether_addr *ether, UInt role)
     }
     IO80211VirtualInterface *inf = new IO80211VirtualInterface;
     if (inf) {
-        if (inf->init(this, ether, role, role == 4 ? "awdl" : "p2p")) {
+        if (inf->init(this, ether, role, role == APPLE80211_VIF_AWDL ? "awdl" : "p2p")) {
             XYLog("%s role=%d succeed\n", __FUNCTION__, role);
         } else {
             inf->release();
