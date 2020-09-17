@@ -16,7 +16,6 @@ apple80211VirtualRequest(UInt request_type, int request_number, IO80211VirtualIn
         return kIOReturnError;
     }
     IOReturn ret = kIOReturnError;
-    bool isGet = (request_type == SIOCGA80211);
     
     switch (request_number) {
         case APPLE80211_IOC_CARD_CAPABILITIES:

@@ -115,20 +115,6 @@ IONetworkInterface *AirportItlwm::createInterface()
     return netif;
 }
 
-bool AirportItlwm::addMediumType(UInt32 type, UInt32 speed,
-                          UInt32 code, char *name)
-{
-    bool ret = false;
-    
-    IONetworkMedium *medium = IONetworkMedium::medium(type, speed, 0, code, name);
-    if (medium) {
-        ret = IONetworkMedium::addMedium(mediumDict, medium);
-        if (ret) mediumTable[code] = medium;
-        medium->release();
-    }
-    return ret;
-}
-
 ieee80211_wpaparams wpa;
 ieee80211_wpapsk psk;
 ieee80211_nwkey nwkey;
@@ -201,6 +187,33 @@ void AirportItlwm::associateSSID(const char *ssid, uint8_t *key, uint16_t keyLen
     }
 }
 
+bool AirportItlwm::
+createMediumTables(const IONetworkMedium **primary)
+{
+    IONetworkMedium    *medium;
+    
+    OSDictionary *mediumDict = OSDictionary::withCapacity(1);
+    if (mediumDict == NULL) {
+        XYLog("Cannot allocate OSDictionary\n");
+        return false;
+    }
+    
+    medium = IONetworkMedium::medium(kIOMediumIEEE80211DS11, 11000000);
+    IONetworkMedium::addMedium(mediumDict, medium);
+    medium->release();
+    if (primary) {
+        *primary = medium;
+    }
+    
+    bool result = publishMediumDictionary(mediumDict);
+    if (!result) {
+        XYLog("Cannot publish medium dictionary!\n");
+    }
+
+    mediumDict->release();
+    return result;
+}
+
 bool AirportItlwm::start(IOService *provider)
 {
     if (!super::start(provider)) {
@@ -243,33 +256,10 @@ bool AirportItlwm::start(IOService *provider)
         return false;
     }
     _fWorkloop->addEventSource(_fCommandGate);
-    mediumDict = OSDictionary::withCapacity(MEDIUM_TYPE_INVALID + 1);
-    if (!mediumDict) {
-        XYLog("start fail, can not create mediumdict\n");
-        releaseAll();
-        return false;
-    }
-    addMediumType(kIOMediumIEEE80211None, 0, MEDIUM_TYPE_NONE);
-    addMediumType(kIOMediumIEEE80211Auto, 0, MEDIUM_TYPE_AUTO);
-    addMediumType(kIOMediumIEEE80211DS1, 1000000, MEDIUM_TYPE_1MBIT);
-    addMediumType(kIOMediumIEEE80211DS2, 2000000, MEDIUM_TYPE_2MBIT);
-    addMediumType(kIOMediumIEEE80211DS5, 5500000, MEDIUM_TYPE_5MBIT);
-    addMediumType(kIOMediumIEEE80211DS11, 11000000, MEDIUM_TYPE_11MBIT);
-    addMediumType(kIOMediumIEEE80211, 54000000, MEDIUM_TYPE_54MBIT, "OFDM54");
-    if (!publishMediumDictionary(mediumDict)) {
-        XYLog("start fail, can not publish mediumdict\n");
-        releaseAll();
-        return false;
-    }
-    
-    if (!setCurrentMedium(mediumTable[MEDIUM_TYPE_AUTO])) {
-        XYLog("Failed to set current medium!\n");
-        releaseAll();
-        return false;
-    }
-    
-    if (!setSelectedMedium(mediumTable[MEDIUM_TYPE_AUTO])) {
-        XYLog("start fail, can not set current medium\n");
+    const IONetworkMedium *primaryMedium;
+    if (!createMediumTables(&primaryMedium) ||
+        !setCurrentMedium(primaryMedium) || !setSelectedMedium(primaryMedium)) {
+        XYLog("setup medium fail\n");
         releaseAll();
         return false;
     }
@@ -321,6 +311,9 @@ void AirportItlwm::watchdogAction(IOTimerEventSource *timer)
     struct _ifnet *ifp = &fHalService->get80211Controller()->ic_ac.ac_if;
     (*ifp->if_watchdog)(ifp);
     watchdogTimer->setTimeoutMS(1000);
+//    if (fNetIf != NULL && fHalService->get80211Controller()->ic_state == IEEE80211_S_RUN) {
+//        fNetIf->postMessage(39);
+//    }
 }
 
 void AirportItlwm::fakeScanDone(OSObject *owner, IOTimerEventSource *sender)

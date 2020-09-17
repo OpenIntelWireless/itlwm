@@ -1411,8 +1411,8 @@
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"DEBUG=1",
 					"$(inherited)",
-					disable_Catalina,
-					BigSur,
+					Catalina,
+					disable_BigSur,
 					disable_Mojave,
 					disable_HighSierra,
 				);

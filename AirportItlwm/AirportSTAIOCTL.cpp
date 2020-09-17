@@ -21,13 +21,6 @@ SInt32 AirportItlwm::apple80211Request(unsigned int request_type,
     IOReturn ret = kIOReturnError;
     bool isGet = (request_type == SIOCGA80211);
     
-//    if (ml_at_interrupt_context()) {
-//            XYLog("%s: IOCTL %s(%d) %s", __FUNCTION__,
-//                  isGet ? "get" : "set",
-//                  request_number,
-//                  IOCTL_NAMES[request_number]);
-//    }
-    
     switch (request_number) {
         case APPLE80211_IOC_SSID:  // 1
             IOCTL(request_type, SSID, apple80211_ssid_data);
@@ -157,10 +150,10 @@ SInt32 AirportItlwm::apple80211Request(unsigned int request_type,
             IOCTL_GET(request_type, NSS, apple80211_nss_data);
             break;
         default:
-//            if (ml_at_interrupt_context()) {
-//                XYLog("%s Unhandled IOCTL %s (%d)\n", __FUNCTION__, IOCTL_NAMES[request_number],
-//                request_number);
-//            }
+            if (!ml_at_interrupt_context()) {
+                XYLog("%s Unhandled IOCTL %s (%d)\n", __FUNCTION__, IOCTL_NAMES[request_number],
+                      request_number);
+            }
             break;
     }
     
@@ -221,6 +214,7 @@ static int ieeeChanFlag2apple(int flags)
     if (flags & IEEE80211_CHAN_OFDM)    ret |= APPLE80211_C_FLAG_20MHZ; // XXX ??
     if (flags & IEEE80211_CHAN_CCK)        ret |= APPLE80211_C_FLAG_10MHZ; // XXX ??
     if (flags & IEEE80211_CHAN_VHT)     ret |= APPLE80211_C_FLAG_5GHZ;
+    if (flags & IEEE80211_CHAN_HT)      ret |= 6;
     return ret;
 }
 
@@ -387,7 +381,8 @@ getMCS_INDEX_SET(OSObject *object, struct apple80211_mcs_index_set_data *ad)
     if (ic->ic_state == IEEE80211_S_RUN) {
         memset(ad, 0, sizeof(*ad));
         ad->version = APPLE80211_VERSION;
-        for (int i = 0; i < 10; i++) {
+        size_t size = min(ARRAY_SIZE(ic->ic_bss->ni_rxmcs), ARRAY_SIZE(ad->mcs_set_map));
+        for (int i = 0; i < size; i++) {
             ad->mcs_set_map[i] = ic->ic_bss->ni_rxmcs[i];
         }
         return kIOReturnSuccess;
@@ -403,7 +398,8 @@ getRATE_SET(OSObject *object, struct apple80211_rate_set_data *ad)
         memset(ad, 0, sizeof(*ad));
         ad->version = APPLE80211_VERSION;
         ad->num_rates = ic->ic_bss->ni_rates.rs_nrates;
-        for (int i=0; i < 15; i++) {
+        size_t size = min(ic->ic_bss->ni_rates.rs_nrates, ARRAY_SIZE(ad->rates));
+        for (int i=0; i < size; i++) {
             struct apple80211_rate apple_rate = ad->rates[i];
             apple_rate.version = APPLE80211_VERSION;
             apple_rate.rate = ic->ic_bss->ni_rates.rs_rates[i];

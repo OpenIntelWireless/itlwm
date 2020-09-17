@@ -14,17 +14,6 @@
 
 #include "AirportItlwmInterface.hpp"
 
-typedef enum {
-  MEDIUM_TYPE_NONE = 0,
-  MEDIUM_TYPE_AUTO,
-  MEDIUM_TYPE_1MBIT,
-  MEDIUM_TYPE_2MBIT,
-  MEDIUM_TYPE_5MBIT,
-  MEDIUM_TYPE_11MBIT,
-  MEDIUM_TYPE_54MBIT,
-  MEDIUM_TYPE_INVALID
-} mediumType_t;
-
 enum
 {
     kPowerStateOff = 0,
@@ -90,7 +79,6 @@ public:
     static IOReturn tsleepHandler(OSObject* owner, void* arg0 = 0, void* arg1 = 0, void* arg2 = 0, void* arg3 = 0);
     
     //IO80211
-    bool addMediumType(UInt32 type, UInt32 speed, UInt32 code, char* name = 0);
     virtual IOReturn getHardwareAddressForInterface(IO80211Interface* netif,
                                             IOEthernetAddress* addr) override;
     virtual SInt32 monitorModeSetEnabled(IO80211Interface* interface, bool enabled,
@@ -172,6 +160,7 @@ public:
     void setPowerStateOn(void);
     void unregistPM();
     
+    bool createMediumTables(const IONetworkMedium **primary);
     virtual IOReturn getPacketFilters(const OSSymbol *group, UInt32 *filters) const override;
     virtual IOReturn selectMedium(const IONetworkMedium *medium) override;
     virtual UInt32 getFeatures() const override;
@@ -195,8 +184,6 @@ public:
     bool magicPacketSupported;
     
     //IO80211
-    OSDictionary* mediumDict;
-    IONetworkMedium* mediumTable[MEDIUM_TYPE_INVALID];
     uint8_t power_state;
     struct ieee80211_node *fNextNodeToSend;
     bool fScanResultWrapping;
