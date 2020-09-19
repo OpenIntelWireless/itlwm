@@ -34,15 +34,6 @@ jobs:
           echo "::set-env name=OLD_PRE_TAG::$CUR_TAG"
         fi
 
-    - name: Generate Prerelease Release Notes
-      run: |
-        echo '### Disclaimer:' >> ReleaseNotes.md
-        echo '***This alpha version is for testing only.***' >> ReleaseNotes.md
-        echo 'It is not ready for daily use and we do not guarantee its usability.' >> ReleaseNotes.md
-        echo 'If you discovered an issue and you do not have debugging skills, please check with the [Gitter Chat Room](https://gitter.im/OpenIntelWireless/itlwm) in advance before opening an Issue.' >> ReleaseNotes.md
-        echo '### The latest five updates are:' >> ReleaseNotes.md
-        git log -"5" --format="- %H %s" | sed '/^$/d' >> ReleaseNotes.md
-
     - name: "Install macOS 10.12 SDK"
       run: |
         curl -L https://github.com/alexey-lysiuk/macos-sdk/releases/download/10.12/MacOSX10.12.tar.bz2 -o /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.12.tar.bz2 && tar -xjf /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.12.tar.bz2 -C /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/
@@ -56,11 +47,21 @@ jobs:
       run: |
         cd $BUILD_OUTPUT
         zip -r itlwm-v${ITLWM_VER}-DEBUG-alpha-${SHORT_SHA}.zip itlwm.kext
-        echo '' >> ReleaseNotes.md
-        echo "$(md5 *.zip)" >> ReleaseNotes.md
-        echo ""
-        echo "境内加速下载链接: https://heliport.bat-bat.workers.dev/https://github.com/OpenIntelWireless/itlwm/releases/download/v${ITLWM_VER}-alpha/itlwm-v${ITLWM_VER}-DEBUG-alpha-${SHORT_SHA}.zip" >> ReleaseNotes.md
         cd -
+
+    - name: Generate Prerelease Release Notes
+      run: |
+        echo '### Disclaimer:' >> ReleaseNotes.md
+        echo '***This alpha version is for testing only.***' >> ReleaseNotes.md
+        echo 'It is not ready for daily use and we do not guarantee its usability.' >> ReleaseNotes.md
+        echo 'If you discovered an issue and you do not have debugging skills, please check with the [Gitter Chat Room](https://gitter.im/OpenIntelWireless/itlwm) in advance before opening an Issue.' >> ReleaseNotes.md
+        echo '### The latest five updates are:' >> ReleaseNotes.md
+        git log -"5" --format="- %H %s" | sed '/^$/d' >> ReleaseNotes.md
+        echo '' >> ReleaseNotes.md
+        echo "MD5: \`$(md5 -q $BUILD_OUTPUT/*.zip)\`" >> ReleaseNotes.md
+        echo '' >> ReleaseNotes.md
+        echo "境内加速下载[链接](https://heliport.bat-bat.workers.dev/https://github.com/OpenIntelWireless/itlwm/releases/download/v${ITLWM_VER}-alpha/itlwm-v${ITLWM_VER}-DEBUG-alpha-${SHORT_SHA}.zip)" >> ReleaseNotes.md
+
 
     - name: Delete Old Prerelease
       uses: dev-drprasad/delete-tag-and-release@v0.1.2
