@@ -988,7 +988,7 @@
 					"$(PROJECT_DIR)/itl80211/linux",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 10.12;
-				MARKETING_VERSION = 1.1.0;
+				MARKETING_VERSION = 1.2.0;
 				MODULE_NAME = com.zxystd.itlwm;
 				MODULE_VERSION = "$(MARKETING_VERSION)";
 				PRODUCT_BUNDLE_IDENTIFIER = com.zxystd.itlwm;
@@ -1019,7 +1019,7 @@
 					"$(PROJECT_DIR)/itl80211/linux",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 10.12;
-				MARKETING_VERSION = 1.1.0;
+				MARKETING_VERSION = 1.2.0;
 				MODULE_NAME = com.zxystd.itlwm;
 				MODULE_VERSION = "$(MARKETING_VERSION)";
 				PRODUCT_BUNDLE_IDENTIFIER = com.zxystd.itlwm;

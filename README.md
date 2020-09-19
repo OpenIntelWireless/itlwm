@@ -4,7 +4,7 @@
 
 ## Documentation
 
-We highly recommended you to explore our documentation before using this Kernel Extension!
+We highly recommended exploring our documentation before using this Kernel Extension
 
 - [Intro](https://OpenIntelWireless.github.io/itlwm)
 - [Compatibility](https://openintelwireless.github.io/itlwm/Compat)
@@ -12,11 +12,11 @@ We highly recommended you to explore our documentation before using this Kernel 
 
 ## Download
 
-[![Download from https://github.com/OpenIntelWireless/itlwm/releases](https://img.shields.io/github/v/release/OpenIntelWireless/itlwm?include_prereleases&label=Download)](https://github.com/OpenIntelWireless/itlwm/releases)
+[![Download from https://github.com/OpenIntelWireless/itlwm/releases](https://img.shields.io/github/v/release/OpenIntelWireless/itlwm?label=Download)](https://github.com/OpenIntelWireless/itlwm/releases)
 
 ## Questions and Issues
 
-Checkout our [FAQ Page](https://openintelwireless.github.io/itlwm/FAQ) for more info.
+Check out our [FAQ Page](https://openintelwireless.github.io/itlwm/FAQ) for more info.
 
 If you have other questions or feedback, feel free to [![Join the chat at https://gitter.im/OpenIntelWireless/itlwm](https://badges.gitter.im/OpenIntelWireless/itlwm.svg)](https://gitter.im/OpenIntelWireless/itlwm?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
@@ -38,7 +38,7 @@ We only accept bug reports in GitHub Issues, before opening an issue, you're rec
 - [@stevezhengshiqi](https://github.com/stevezhengshiqi)
 - [@DogAndPot](https://github.com/DogAndPot)
 
-For providing resources and help for system.
+For providing resources and help for system configuration.
 
 - [@Daliansky](https://github.com/Daliansky)
 

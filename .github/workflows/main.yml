@@ -52,10 +52,14 @@ jobs:
         xcodebuild -scheme fw_gen
         xcodebuild -scheme itlwm -configuration Debug -sdk macosx10.12 -derivedDataPath build CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO | xcpretty && exit ${PIPESTATUS[0]}
 
-    - name: Pack Artifacts
+    - name: Finalize Artifacts
       run: |
         cd $BUILD_OUTPUT
         zip -r itlwm-v${ITLWM_VER}-DEBUG-alpha-${SHORT_SHA}.zip itlwm.kext
+        echo '' >> ReleaseNotes.md
+        echo "$(md5 *.zip)" >> ReleaseNotes.md
+        echo ""
+        echo "境内加速下载链接: https://heliport.bat-bat.workers.dev/https://github.com/OpenIntelWireless/itlwm/releases/download/v${ITLWM_VER}-alpha/itlwm-v${ITLWM_VER}-DEBUG-alpha-${SHORT_SHA}.zip" >> ReleaseNotes.md
         cd -
 
     - name: Delete Old Prerelease

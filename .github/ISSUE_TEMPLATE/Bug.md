@@ -25,6 +25,7 @@ assignees: ''
 
 **Bug Report Archive**
 <!---Open HeliPort while clicking Option, click "create diagnostic report", then drag and drop the zip file into this window--->
+<!---Read this guide if you are using AirportItlwm http://localhost:8080/itlwm/Troubleshooting.html#manually-for-airportitlwm--->
 
-**Upload your Kext**
-<!---To help us identify your issue, please upload the kext you're using, archive itlwm.kext, drag and drop the zip file into this window--->
+**Kext Download Source**
+<!---To help us identify your issue, please tell us where did you download the kext and whether it's custom built--->
