@@ -105,6 +105,7 @@ extern	mbuf_t ieee80211_get_compressed_bar(struct ieee80211com *,
 extern	mbuf_t ieee80211_beacon_alloc(struct ieee80211com *,
 		struct ieee80211_node *);
 extern int ieee80211_save_ie(const u_int8_t *, u_int8_t **);
+extern int ieee80211_save_ie_tlv(const u_int8_t *, u_int8_t **, uint32_t *, uint32_t save_len);
 extern	void ieee80211_eapol_timeout(void *);
 extern	int ieee80211_send_4way_msg1(struct ieee80211com *,
 		struct ieee80211_node *);

@@ -63,6 +63,10 @@ public:
     
     virtual int16_t getBSSNoise() override;
     
+    virtual bool is5GBandSupport() override;
+    
+    virtual int getTxNSS() override;
+    
     //driver controller
     virtual void clearScanningFlags() override;
     

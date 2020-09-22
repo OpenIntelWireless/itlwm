@@ -95,15 +95,12 @@ public:
     
 public:
     IOInterruptEventSource* fInterrupt;
-    IOCommandGate*        fOutputCommandGate;
     IOTimerEventSource *watchdogTimer;
     IOPCIDevice *pciNub;
-    IONetworkMedium *mediumTable[1];
     IONetworkStats *fpNetStats;
     itlwm_interface *fNetIf;
     IOWorkLoop *fWatchdogWorkLoop;
     ItlHalService *fHalService;
-    semaphore_t outputThreadSignal;
     
     //pm
     thread_call_t powerOnThreadCall;
