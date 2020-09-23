@@ -115,13 +115,12 @@ IONetworkInterface *AirportItlwm::createInterface()
     return netif;
 }
 
-void AirportItlwm::associateSSID(uint8_t *ssid, uint32_t ssid_len, const struct ether_addr &bssid, uint32_t authtype_lower, uint32_t authtype_upper, uint8_t *key, uint32_t key_len, int key_index) {
+void AirportItlwm::associateSSID(uint8_t *ssid, uint32_t ssid_len, const struct ether_addr &bssid, uint32_t authtype_lower, uint32_t authtype_upper, uint8_t *key, uint32_t key_len, int key_index) 
+{
     struct ieee80211com *ic = fHalService->get80211Controller();
     
     ieee80211_disable_rsn(ic);
     ieee80211_disable_wep(ic);
-    ic->ic_flags &= ~IEEE80211_F_PSK;
-    bzero(ic->ic_psk, sizeof(ic->ic_psk));		
     
     struct ieee80211_wpaparams	 wpa;
     struct ieee80211_nwkey		 nwkey;

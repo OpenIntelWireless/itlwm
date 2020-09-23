@@ -80,8 +80,12 @@ SInt32 AirportItlwm::apple80211Request(unsigned int request_type,
         case APPLE80211_IOC_ASSOCIATE:  // 20
             IOCTL_SET(request_type, ASSOCIATE, apple80211_assoc_data);
             break;
-        case APPLE80211_IOC_ASSOCIATE_RESULT:
+        case APPLE80211_IOC_ASSOCIATE_RESULT: // 21
             IOCTL_GET(request_type, ASSOCIATE_RESULT, apple80211_assoc_result_data);
+            break;
+        case APPLE80211_IOC_DISASSOCIATE: // 22
+            if (request_type == SIOCSA80211)
+                setDISASSOCIATE(interface);
             break;
         case APPLE80211_IOC_RATE_SET:
             IOCTL_GET(request_type, RATE_SET, apple80211_rate_set_data);
@@ -646,6 +650,18 @@ getASSOCIATE_RESULT(OSObject *object, struct apple80211_assoc_result_data *ad)
         return kIOReturnSuccess;
     }
     return kIOReturnError;
+}
+
+IOReturn AirportItlwm::setDISASSOCIATE(OSObject *object)
+{
+    XYLog("%s\n", __FUNCTION__);
+    struct ieee80211com *ic = fHalService->get80211Controller();
+    
+    ieee80211_del_ess(ic, nullptr, 0, 1);
+    ieee80211_deselect_ess(ic);
+    // ic->ic_rsn_ie_override[1] = 0;
+    ieee80211_new_state(ic, IEEE80211_S_SCAN, -1);
+    return kIOReturnSuccess;
 }
 
 IOReturn AirportItlwm::
