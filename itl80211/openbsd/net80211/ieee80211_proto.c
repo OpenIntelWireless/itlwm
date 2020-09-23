@@ -1272,7 +1272,11 @@ justcleanup:
 				    (ni->ni_flags & IEEE80211_NODE_HT) ?
 					" HT enabled" : "");
 			}
+#ifdef AIRPORT
+			{
+#else
 			if (!(ic->ic_flags & IEEE80211_F_RSNON)) {
+#endif
 				/*
 				 * NB: When RSN is enabled, we defer setting
 				 * the link up until the port is valid.

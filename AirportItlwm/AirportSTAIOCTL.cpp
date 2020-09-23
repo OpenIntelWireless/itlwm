@@ -540,14 +540,25 @@ getRSN_IE(OSObject *object, struct apple80211_rsn_ie_data *data)
         return kIOReturnError;
     }
     data->version = APPLE80211_VERSION;
-    data->len = 2 + ic->ic_bss->ni_rsnie[1];
-    memcpy(data->ie, ic->ic_bss->ni_rsnie, data->len);
+    if (ic->ic_rsn_ie_override[1] > 0) {
+        data->len = 2 + ic->ic_rsn_ie_override[1];
+        memcpy(data->ie, ic->ic_rsn_ie_override, data->len);
+    }
+    else {
+        data->len = 2 + ic->ic_bss->ni_rsnie[1];
+        memcpy(data->ie, ic->ic_bss->ni_rsnie, data->len);
+    }
     return kIOReturnSuccess;
 }
 
 IOReturn AirportItlwm::
 setRSN_IE(OSObject *object, struct apple80211_rsn_ie_data *data)
 {
+    struct ieee80211com *ic = fHalService->get80211Controller();
+    static_assert(sizeof(ic->ic_rsn_ie_override) == APPLE80211_MAX_RSN_IE_LEN, "Max RSN IE length mismatch");
+    memcpy(ic->ic_rsn_ie_override, data->ie, APPLE80211_MAX_RSN_IE_LEN);
+    if (ic->ic_state == IEEE80211_S_RUN && ic->ic_bss != nullptr)
+        ieee80211_save_ie(data->ie, &ic->ic_bss->ni_rsnie);
     return kIOReturnSuccess;
 }
 
@@ -634,6 +645,13 @@ setASSOCIATE(OSObject *object,
     XYLog("%s [%s]\n", __FUNCTION__, ad->ad_ssid);
     this->current_authtype_lower = ad->ad_auth_lower;
     this->current_authtype_upper = ad->ad_auth_upper;
+    
+    apple80211_rsn_ie_data rsn_ie_data;
+    rsn_ie_data.version = APPLE80211_VERSION;
+    rsn_ie_data.len = ad->ad_rsn_ie[1] + 2;
+    memcpy(rsn_ie_data.ie, ad->ad_rsn_ie, rsn_ie_data.len);
+    setRSN_IE(object, &rsn_ie_data);
+    
     associateSSID(ad->ad_ssid, ad->ad_ssid_len, ad->ad_bssid, ad->ad_auth_lower, ad->ad_auth_upper, ad->ad_key.key, ad->ad_key.key_len, ad->ad_key.key_index);
     return kIOReturnSuccess;
 }
@@ -659,7 +677,7 @@ IOReturn AirportItlwm::setDISASSOCIATE(OSObject *object)
     
     ieee80211_del_ess(ic, nullptr, 0, 1);
     ieee80211_deselect_ess(ic);
-    // ic->ic_rsn_ie_override[1] = 0;
+    ic->ic_rsn_ie_override[1] = 0;
     ieee80211_new_state(ic, IEEE80211_S_SCAN, -1);
     return kIOReturnSuccess;
 }
