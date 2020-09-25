@@ -118,16 +118,22 @@ clearScanningFlags()
     com.sc_flags &= ~(IWM_FLAG_SCANNING | IWM_FLAG_BGSCAN);
 }
 
-char *ItlIwm::
+const char *ItlIwm::
 getFirmwareVersion()
 {
     return com.sc_fwver;
 }
 
+const char *ItlIwm::
+getFirmwareName()
+{
+    return com.sc_fwname;
+}
+
 int16_t ItlIwm::
 getBSSNoise()
 {
-    return com.sc_noise;;
+    return com.sc_noise;
 }
 
 bool ItlIwm::

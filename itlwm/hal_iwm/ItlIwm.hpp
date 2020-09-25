@@ -59,13 +59,15 @@ public:
     virtual ItlDriverController *getDriverController() override;
     
     //driver info
-    virtual char *getFirmwareVersion() override;
+    virtual const char *getFirmwareVersion() override;
     
     virtual int16_t getBSSNoise() override;
     
     virtual bool is5GBandSupport() override;
     
     virtual int getTxNSS() override;
+    
+    virtual const char *getFirmwareName() override;
     
     //driver controller
     virtual void clearScanningFlags() override;

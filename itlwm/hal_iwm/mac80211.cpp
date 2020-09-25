@@ -2616,11 +2616,13 @@ _iwm_start_task(OSObject *target, void *arg0, void *arg1, void *arg2, void *arg3
             goto sendit;
         }
         
+#ifndef AIRPORT // maybe we need to set IEEE80211_F_TX_MGMT_ONLY
         if (ic->ic_state != IEEE80211_S_RUN ||
             (ic->ic_xflags & IEEE80211_F_TX_MGMT_ONLY)) {
             ifp->if_snd->lockFlush();
             break;
         }
+#endif
         
         m = ifp->if_snd->lockDequeue();
 //        XYLog("%s if_snd->lockDequeue\n", __FUNCTION__);

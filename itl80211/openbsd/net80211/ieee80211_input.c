@@ -1058,7 +1058,11 @@ ieee80211_enqueue_data(struct ieee80211com *ic, mbuf_t m,
             if (ifp->if_bpf && m1 == NULL)
                 bpf_mtap(ifp->if_bpf, m, BPF_DIRECTION_IN);
 #endif
+#ifdef AIRPORT
+            ml_enqueue(ml, m);
+#else
             ieee80211_eapol_key_input(ic, m, ni);
+#endif
         } else {
             ml_enqueue(ml, m);
         }

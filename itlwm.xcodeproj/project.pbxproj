@@ -1415,6 +1415,7 @@
 					disable_BigSur,
 					disable_Mojave,
 					disable_HighSierra,
+					AIRPORT,
 				);
 				INFOPLIST_FILE = AirportItlwm/Info.plist;
 				LIBRARY_SEARCH_PATHS = (
@@ -1446,6 +1447,7 @@
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"ITLWM_VERSION=\\\"${MARKETING_VERSION}\\\"",
 					Catalina,
+					AIRPORT,
 				);
 				INFOPLIST_FILE = AirportItlwm/Info.plist;
 				LIBRARY_SEARCH_PATHS = (

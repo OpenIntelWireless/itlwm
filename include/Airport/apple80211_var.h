@@ -133,14 +133,17 @@ enum apple80211_authtype_lower
 
 enum apple80211_authtype_upper
 {
-    APPLE80211_AUTHTYPE_NONE        = 0,    //    No upper auth
-    APPLE80211_AUTHTYPE_WPA            = 1,    //    WPA
-    APPLE80211_AUTHTYPE_WPA_PSK        = 2,    //    WPA PSK
-    APPLE80211_AUTHTYPE_WPA2        = 3,    //    WPA2
-    APPLE80211_AUTHTYPE_WPA2_PSK    = 4,    //    WPA2 PSK
-    APPLE80211_AUTHTYPE_LEAP        = 5,    //    LEAP
-    APPLE80211_AUTHTYPE_8021X        = 6,    //    802.1x
-    APPLE80211_AUTHTYPE_WPS            = 7,    //    WiFi Protected Setup
+    APPLE80211_AUTHTYPE_NONE         = 0,         //    No upper auth
+    APPLE80211_AUTHTYPE_WPA          = 1 << 0,    //    WPA
+    APPLE80211_AUTHTYPE_WPA_PSK      = 1 << 1,    //    WPA PSK
+    APPLE80211_AUTHTYPE_WPA2         = 1 << 2,    //    WPA2
+    APPLE80211_AUTHTYPE_WPA2_PSK     = 1 << 3,    //    WPA2 PSK
+    APPLE80211_AUTHTYPE_LEAP         = 1 << 4,    //    LEAP
+    APPLE80211_AUTHTYPE_8021X        = 1 << 5,    //    802.1x
+    APPLE80211_AUTHTYPE_WPS          = 1 << 6,    //    WiFi Protected Setup
+    APPLE80211_AUTHTYPE_SHA256_PSK   = 1 << 7,
+    APPLE80211_AUTHTYPE_SHA256_8021X = 1 << 8,
+    APPLE80211_AUTHTYPE_WPA3_SAE     = 1 << 9
 };
 
 // Unify association status code and deauth reason codes into a single enum describing
@@ -524,7 +527,7 @@ enum apple80211_card_capability
     APPLE80211_CAP_WOW                = 20,    // CAPABILITY: Wake on wireless
     APPLE80211_CAP_TSN                = 21,    // CAPABILITY: WPA with WEP group key
 };
-#define APPLE80211_CAP_MAX    21
+#define APPLE80211_CAP_MAX    63
 
 enum apple80211_virtual_interface_type
 {
@@ -566,6 +569,25 @@ struct apple80211_status_msg_hdr
 #define APPLE80211_M_COUNTRY_CODE_CHANGED    11
 #define APPLE80211_M_STA_ARRIVE                12
 #define APPLE80211_M_STA_LEAVE                13
+#define APPLE80211_M_DECRYPTION_FAILURE     14
+#define APPLE80211_M_SCAN_CACHE_UPDATED     15
+#define APPLE80211_M_INTERNAL_SCAN_DONE     16
+#define APPLE80211_M_LINK_QUALITY           17
+#define APPLE80211_M_IBSS_PEER_ARRIVED      18
+#define APPLE80211_M_IBSS_PEER_LEFT         19
+#define APPLE80211_M_RSN_HANDSHAKE_DONE     20
+#define APPLE80211_M_BT_COEX_CHANGED        21
+#define APPLE80211_M_P2P_PEER_DETECTED      22
+#define APPLE80211_M_P2P_LISTEN_COMPLETE    23
+#define APPLE80211_M_P2P_SCAN_COMPLETE      24
+#define APPLE80211_M_P2P_LISTEN_STARTED     25
+#define APPLE80211_M_P2P_SCAN_STARTED       26
+#define APPLE80211_M_P2P_INTERFACE_CREATED  27
+#define APPLE80211_M_P2P_GROUP_STARTED      28
+#define APPLE80211_M_BGSCAN_NET_DISCOVERED  29
+#define APPLE80211_M_ROAMED                 30
+#define APPLE80211_M_ACT_FRM_TX_COMPLETE    31
+#define APPLE80211_M_DEAUTH_RECEIVED        32
 #define APPLE80211_M_DRIVER_AVAILABLE           0x37
 #define APPLE80211_M_LINK_ADDRESS_CHANGED       0x3B
 #define APPLE80211_M_ROAM_START                 0x46

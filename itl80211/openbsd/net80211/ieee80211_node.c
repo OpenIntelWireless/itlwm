@@ -339,7 +339,7 @@ ieee80211_ess_setwpaparms(struct ieee80211_ess *ess,
     ess->flags |= IEEE80211_F_RSNON;
     
     if (ess->rsnakms &
-        (IEEE80211_AKM_8021X|IEEE80211_WPA_AKM_SHA256_8021X))
+        (IEEE80211_AKM_8021X|IEEE80211_AKM_SHA256_8021X))
         ess->flags |= IEEE80211_JOIN_8021X;
     
     return ENETRESET;
@@ -1128,30 +1128,36 @@ ieee80211_match_bss(struct ieee80211com *ic, struct ieee80211_node *ni,
     }
     
     if (ic->ic_if.if_flags & IFF_DEBUG && ieee80211_debug) {
-        DPRINTF(("%s: %c %s%c", ic->ic_if.if_xname, fail ? '-' : '+',
+        XYLog("%s: %c %s%c %3d%c %+4d %2dM%c %4s%c %7s%c %3s%c %.*s %s\n",
+              ic->ic_if.if_xname,
+              fail ? '-' : '+',
               ether_sprintf(ni->ni_bssid),
-              fail & IEEE80211_NODE_ASSOCFAIL_BSSID ? '!' : ' '));
-        DPRINTF((" %3d%c", ieee80211_chan2ieee(ic, ni->ni_chan),
-              fail & IEEE80211_NODE_ASSOCFAIL_CHAN ? '!' : ' '));
-        DPRINTF((" %+4d", ni->ni_rssi));
-        DPRINTF((" %2dM%c", (rate & IEEE80211_RATE_VAL) / 2,
-              fail & IEEE80211_NODE_ASSOCFAIL_BASIC_RATE ? '!' : ' '));
-        DPRINTF((" %4s%c",
+              fail & IEEE80211_NODE_ASSOCFAIL_BSSID ? '!' : ' ',
+              
+              ieee80211_chan2ieee(ic, ni->ni_chan),
+              fail & IEEE80211_NODE_ASSOCFAIL_CHAN ? '!' : ' ',
+              
+              ni->ni_rssi,
+              
+              (rate & IEEE80211_RATE_VAL) / 2,
+              fail & IEEE80211_NODE_ASSOCFAIL_BASIC_RATE ? '!' : ' ',
+              
               (ni->ni_capinfo & IEEE80211_CAPINFO_ESS) ? "ess" :
               (ni->ni_capinfo & IEEE80211_CAPINFO_IBSS) ? "ibss" :
               "????",
-              fail & IEEE80211_NODE_ASSOCFAIL_IBSS ? '!' : ' '));
-        DPRINTF((" %7s%c ",
+              fail & IEEE80211_NODE_ASSOCFAIL_IBSS ? '!' : ' ',
+              
               (ni->ni_capinfo & IEEE80211_CAPINFO_PRIVACY) ?
               "privacy" : "no",
-              fail & IEEE80211_NODE_ASSOCFAIL_PRIVACY ? '!' : ' '));
-        DPRINTF((" %3s%c ",
+              fail & IEEE80211_NODE_ASSOCFAIL_PRIVACY ? '!' : ' ',
+              
               (ic->ic_flags & IEEE80211_F_RSNON) ?
               "rsn" : "no",
-              fail & IEEE80211_NODE_ASSOCFAIL_WPA_PROTO ? '!' : ' '));
-        ieee80211_print_essid(ni->ni_essid, ni->ni_esslen);
-        DPRINTF(("%s\n",
-              fail & IEEE80211_NODE_ASSOCFAIL_ESSID ? "!" : ""));
+              fail & IEEE80211_NODE_ASSOCFAIL_WPA_PROTO ? '!' : ' ',
+              
+              ni->ni_esslen + 1,
+              ni->ni_essid,
+              fail & IEEE80211_NODE_ASSOCFAIL_ESSID ? "!" : "");
     }
     
     /* We don't care about unrelated networks during background scans. */

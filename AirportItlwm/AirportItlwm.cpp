@@ -115,68 +115,71 @@ IONetworkInterface *AirportItlwm::createInterface()
     return netif;
 }
 
-ieee80211_wpaparams wpa;
-ieee80211_wpapsk psk;
-ieee80211_nwkey nwkey;
-ieee80211_join join;
-struct ieee80211_nwid nwid;
-
-void AirportItlwm::associateSSID(const char *ssid, uint8_t *key, uint16_t keyLen)
-{
+void AirportItlwm::associateSSID(uint8_t *ssid, uint32_t ssid_len, const struct ether_addr &bssid, uint32_t authtype_lower, uint32_t authtype_upper, uint8_t *key, uint32_t key_len, int key_index) {
     struct ieee80211com *ic = fHalService->get80211Controller();
-    if (keyLen == 0) {
-        memcpy(nwid.i_nwid, ssid, 32);
-        nwid.i_len = strlen((char *)nwid.i_nwid);
-        memset(ic->ic_des_essid, 0, IEEE80211_NWID_LEN);
-        ic->ic_des_esslen = nwid.i_len;
-        memcpy(ic->ic_des_essid, nwid.i_nwid, nwid.i_len);
-        if (ic->ic_des_esslen > 0) {
-            /* 'nwid' disables auto-join magic */
-            ic->ic_flags &= ~IEEE80211_F_AUTO_JOIN;
-        } else if (!TAILQ_EMPTY(&ic->ic_ess)) {
-            /* '-nwid' re-enables auto-join */
-            ic->ic_flags |= IEEE80211_F_AUTO_JOIN;
-        }
-        /* disable WPA/WEP */
-        ieee80211_disable_rsn(ic);
-        ieee80211_disable_wep(ic);
-    } else {
-        memset(&psk, 0, sizeof(psk));
-        memcpy(nwid.i_nwid, ssid, 32);
-        nwid.i_len = strlen((char *)nwid.i_nwid);
-        memset(ic->ic_des_essid, 0, IEEE80211_NWID_LEN);
-        ic->ic_des_esslen = nwid.i_len;
-        memcpy(ic->ic_des_essid, nwid.i_nwid, nwid.i_len);
-        if (ic->ic_des_esslen > 0) {
-            /* 'nwid' disables auto-join magic */
-            ic->ic_flags &= ~IEEE80211_F_AUTO_JOIN;
-        } else if (!TAILQ_EMPTY(&ic->ic_ess)) {
-            /* '-nwid' re-enables auto-join */
-            ic->ic_flags |= IEEE80211_F_AUTO_JOIN;
-        }
-        /* disable WPA/WEP */
-        ieee80211_disable_rsn(ic);
-        ieee80211_disable_wep(ic);
-        memcpy(psk.i_psk, key, keyLen);
-        psk.i_enabled = 1;
-        if (psk.i_enabled) {
-            ic->ic_flags |= IEEE80211_F_PSK;
-            memcpy(ic->ic_psk, psk.i_psk, sizeof(ic->ic_psk));
-            if (ic->ic_flags & IEEE80211_F_WEPON)
-                ieee80211_disable_wep(ic);
-        } else {
-            ic->ic_flags &= ~IEEE80211_F_PSK;
-            memset(ic->ic_psk, 0, sizeof(ic->ic_psk));
-        }
-        memset(&wpa, 0, sizeof(wpa));
-        ieee80211_ioctl_getwpaparms(ic, &wpa);
-        wpa.i_enabled = psk.i_enabled;
-        wpa.i_ciphers = 0;
-        wpa.i_groupcipher = 0;
-        wpa.i_protos = IEEE80211_WPA_PROTO_WPA1 | IEEE80211_WPA_PROTO_WPA2;
-        wpa.i_akms = IEEE80211_WPA_AKM_PSK | IEEE80211_WPA_AKM_8021X | IEEE80211_WPA_AKM_SHA256_PSK | IEEE80211_WPA_AKM_SHA256_8021X;
+    
+    ieee80211_disable_rsn(ic);
+    ieee80211_disable_wep(ic);
+    ic->ic_flags &= ~IEEE80211_F_PSK;
+    bzero(ic->ic_psk, sizeof(ic->ic_psk));		
+    
+    struct ieee80211_wpaparams	 wpa;
+    struct ieee80211_nwkey		 nwkey;
+    bzero(&wpa, sizeof(wpa));
+    bzero(&nwkey, sizeof(nwkey));
+    
+    memset(ic->ic_des_essid, 0, IEEE80211_NWID_LEN);
+    memcpy(ic->ic_des_essid, ssid, ssid_len);
+    ic->ic_des_esslen = ssid_len;
+    
+    bool is_zero = true;
+    for (int i = 0; i < IEEE80211_ADDR_LEN; i++)
+    is_zero &= bssid.octet[i] == 0;
+    
+    if (!is_zero) {
+        IEEE80211_ADDR_COPY(ic->ic_des_bssid, bssid.octet);
+        ic->ic_flags |= IEEE80211_F_DESBSSID;
+    }
+    else {
+        memset(ic->ic_des_bssid, 0, IEEE80211_ADDR_LEN);	
+        ic->ic_flags &= ~IEEE80211_F_DESBSSID;
+    }
+    
+    if (authtype_upper & (APPLE80211_AUTHTYPE_WPA | APPLE80211_AUTHTYPE_WPA_PSK)) {
+        wpa.i_protos |= IEEE80211_WPA_PROTO_WPA1;		
+    }
+    if (authtype_upper & (APPLE80211_AUTHTYPE_WPA2 | APPLE80211_AUTHTYPE_WPA2_PSK)) {
+        wpa.i_protos |= IEEE80211_WPA_PROTO_WPA2;		
+    }
+    
+    if (authtype_upper & (APPLE80211_AUTHTYPE_WPA_PSK | APPLE80211_AUTHTYPE_WPA2_PSK)) {
+        wpa.i_akms |= IEEE80211_WPA_AKM_PSK | IEEE80211_WPA_AKM_SHA256_PSK;
+        wpa.i_enabled = 1;
+        memcpy(ic->ic_psk, key, sizeof(ic->ic_psk));
+        ic->ic_flags |= IEEE80211_F_PSK;
         ieee80211_ioctl_setwpaparms(ic, &wpa);
     }
+    if (authtype_upper & (APPLE80211_AUTHTYPE_WPA | APPLE80211_AUTHTYPE_WPA2)) {
+        wpa.i_akms |= IEEE80211_WPA_AKM_8021X | IEEE80211_WPA_AKM_SHA256_8021X;	
+        wpa.i_enabled = 1;
+        ieee80211_ioctl_setwpaparms(ic, &wpa);
+    }
+    
+    if (authtype_lower == APPLE80211_AUTHTYPE_SHARED) {
+        XYLog("shared key authentication is not supported!\n");
+        return;
+    }
+    
+    if (authtype_upper == APPLE80211_AUTHTYPE_NONE && authtype_lower == APPLE80211_AUTHTYPE_OPEN) { // Open or WEP Open System
+        if (key_len > 0) {
+            nwkey.i_wepon = IEEE80211_NWKEY_WEP;
+            nwkey.i_defkid = key_index + 1;
+            nwkey.i_key[key_index].i_keylen = (int)key_len;
+            nwkey.i_key[key_index].i_keydat = key;
+            ieee80211_ioctl_setnwkeys(ic, &nwkey);
+        }
+    }
+    
     ieee80211_del_ess(ic, NULL, 0, 1);
     struct ieee80211_node *selbs = ieee80211_node_choose_bss(ic, 0, NULL);
     if (selbs == NULL) {
@@ -186,6 +189,106 @@ void AirportItlwm::associateSSID(const char *ssid, uint8_t *key, uint16_t keyLen
         fHalService->getDriverController()->clearScanningFlags();
     }
 }
+
+void AirportItlwm::setPTK(const u_int8_t *key, size_t key_len) {
+    struct ieee80211com *ic = fHalService->get80211Controller();
+    struct ieee80211_node	* ni = ic->ic_bss;
+    struct ieee80211_key *k;
+    int keylen;
+    
+    ni->ni_rsn_supp_state = RNSA_SUPP_PTKDONE;
+    
+    if (ni->ni_rsncipher != IEEE80211_CIPHER_USEGROUP) {
+        u_int64_t prsc;
+        
+        /* check that key length matches that of pairwise cipher */
+        keylen = ieee80211_cipher_keylen(ni->ni_rsncipher);
+        if (key_len != keylen) {
+            XYLog("PTK length mismatch. expected %d, got %zu\n", keylen, key_len);
+            return;
+        }
+        prsc = /*(gtk == NULL) ? LE_READ_6(key->rsc) :*/ 0;
+        
+        /* map PTK to 802.11 key */
+        k = &ni->ni_pairwise_key;
+        memset(k, 0, sizeof(*k));
+        k->k_cipher = ni->ni_rsncipher;
+        k->k_rsc[0] = prsc;
+        k->k_len = keylen;
+        memcpy(k->k_key, key, k->k_len);
+        /* install the PTK */
+        if ((*ic->ic_set_key)(ic, ni, k) != 0) {
+            XYLog("setting PTK failed\n");
+            return;
+        }
+        else {
+            XYLog("set PTK successfully\n");
+        }
+        ni->ni_flags &= ~IEEE80211_NODE_RSN_NEW_PTK;
+        ni->ni_flags &= ~IEEE80211_NODE_TXRXPROT;
+        ni->ni_flags |= IEEE80211_NODE_RXPROT;
+    } else if (ni->ni_rsncipher != IEEE80211_CIPHER_USEGROUP)
+        XYLog("%s: unexpected pairwise key update received from %s\n",
+              ic->ic_if.if_xname, ether_sprintf(ni->ni_macaddr));
+}
+
+#define LE_READ_6(p)                                    \
+((u_int64_t)(p)[5] << 40 | (u_int64_t)(p)[4] << 32 |    \
+ (u_int64_t)(p)[3] << 24 | (u_int64_t)(p)[2] << 16 |    \
+ (u_int64_t)(p)[1] <<  8 | (u_int64_t)(p)[0])
+
+void AirportItlwm::setGTK(const u_int8_t *gtk, size_t key_len, u_int8_t kid, u_int8_t *rsc) {
+    struct ieee80211com *ic = fHalService->get80211Controller();
+    struct ieee80211_node	* ni = ic->ic_bss;
+    struct ieee80211_key *k;
+    int keylen;
+    
+    if (gtk != NULL) {
+        /* check that key length matches that of group cipher */
+        keylen = ieee80211_cipher_keylen(ni->ni_rsngroupcipher);
+        if (key_len != keylen) {
+            XYLog("GTK length mismatch. expected %d, got %zu\n", keylen, key_len);
+            return;
+        }
+        /* map GTK to 802.11 key */
+        k = &ic->ic_nw_keys[kid];
+        memset(k, 0, sizeof(*k));
+        k->k_id = kid;    /* 0-3 */
+        k->k_cipher = ni->ni_rsngroupcipher;
+        k->k_flags = IEEE80211_KEY_GROUP;
+        //if (gtk[6] & (1 << 2))
+        //  k->k_flags |= IEEE80211_KEY_TX;
+        k->k_rsc[0] = LE_READ_6(rsc);
+        k->k_len = keylen;
+        memcpy(k->k_key, gtk, k->k_len);
+        /* install the GTK */
+        if ((*ic->ic_set_key)(ic, ni, k) != 0) {
+            XYLog("setting GTK failed\n");
+            return;
+        }
+        else {
+            XYLog("set PTK successfully\n");
+        }
+    }
+    
+    if (true) {
+        ni->ni_flags |= IEEE80211_NODE_TXRXPROT;
+#ifndef IEEE80211_STA_ONLY
+        if (ic->ic_opmode != IEEE80211_M_IBSS ||
+            ++ni->ni_key_count == 2)
+#endif
+        {
+            XYLog("marking port %s valid\n",
+                  ether_sprintf(ni->ni_macaddr));
+            ni->ni_port_valid = 1;
+            ieee80211_set_link_state(ic, LINK_STATE_UP);
+            ni->ni_assoc_fail = 0;
+            if (ic->ic_opmode == IEEE80211_M_STA)
+                ic->ic_rsngroupcipher = ni->ni_rsngroupcipher;
+        }
+    }
+}
+
 
 bool AirportItlwm::
 createMediumTables(const IONetworkMedium **primary)
@@ -329,7 +432,7 @@ const OSString * AirportItlwm::newVendorString() const
 
 const OSString * AirportItlwm::newModelString() const
 {
-    return OSString::withCString("Intel Wireless Card");
+    return OSString::withCString(fHalService->getDriverInfo()->getFirmwareName());
 }
 
 bool AirportItlwm::initPCIPowerManagment(IOPCIDevice *provider)
@@ -502,7 +605,7 @@ UInt32 AirportItlwm::outputPacket(mbuf_t m, void *param)
 //    XYLog("%s\n", __FUNCTION__);
     _ifnet *ifp = &fHalService->get80211Controller()->ic_ac.ac_if;
     
-    if (fHalService->get80211Controller()->ic_state != IEEE80211_S_RUN || ifp == NULL || ifp->if_snd == NULL) {
+    if (fHalService->get80211Controller()->ic_state < IEEE80211_S_AUTH || ifp == NULL || ifp->if_snd == NULL) {
         freePacket(m);
         return kIOReturnOutputDropped;
     }
@@ -558,7 +661,7 @@ SInt32 AirportItlwm::monitorModeSetEnabled(
 bool AirportItlwm::
 useAppleRSNSupplicant(IO80211Interface *interface)
 {
-    return false;
+    return true;
 }
 
 IOReturn AirportItlwm::getPacketFilters(const OSSymbol *group, UInt32 *filters) const {

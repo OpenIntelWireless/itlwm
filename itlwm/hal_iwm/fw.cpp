@@ -583,6 +583,7 @@ out:
         fw->fw_status = IWM_FW_STATUS_DONE;
     wakeupOn(&sc->sc_fw);
     
+    OSSafeReleaseNULL(fwData);
     return err;
 }
 
