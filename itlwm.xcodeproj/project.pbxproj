@@ -6,6 +6,20 @@
 	objectVersion = 48;
 	objects = {
 
+/* Begin PBXAggregateTarget section */
+		5066D63825287F7900EE6F38 /* fw_gen */ = {
+			isa = PBXAggregateTarget;
+			buildConfigurationList = 5066D63B25287F7900EE6F38 /* Build configuration list for PBXAggregateTarget "fw_gen" */;
+			buildPhases = (
+				5066D63C25287F8E00EE6F38 /* Generate Firmware */,
+			);
+			dependencies = (
+			);
+			name = fw_gen;
+			productName = fw;
+		};
+/* End PBXAggregateTarget section */
+
 /* Begin PBXBuildFile section */
 		024A07B023FCBC3C009FBA6C /* itlwm.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 024A07AF23FCBC3C009FBA6C /* itlwm.hpp */; };
 		024A07B223FCBC3C009FBA6C /* itlwm.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 024A07B123FCBC3C009FBA6C /* itlwm.cpp */; };
@@ -341,6 +355,11 @@
 		35CBE787251CB8CA00435CBC /* AirportItlwm.cpp in Sources */ = {isa = PBXBuildFile; fileRef = F89B6BBD25021C9C000F77FF /* AirportItlwm.cpp */; };
 		35CBE788251CB8CA00435CBC /* AirportVirtualIOCTL.cpp in Sources */ = {isa = PBXBuildFile; fileRef = F89B6BDE25022FB5000F77FF /* AirportVirtualIOCTL.cpp */; };
 		35CBE789251CB8CA00435CBC /* AirportAWDL.cpp in Sources */ = {isa = PBXBuildFile; fileRef = F89B6BE025022FC7000F77FF /* AirportAWDL.cpp */; };
+		5088ECBD252884870068A63D /* libkmod.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 5088ECBC252884870068A63D /* libkmod.a */; };
+		5088ECBE252884A30068A63D /* libkmod.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 5088ECBC252884870068A63D /* libkmod.a */; };
+		5088ECBF252884AF0068A63D /* libkmod.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 5088ECBC252884870068A63D /* libkmod.a */; };
+		5088ECC0252884C10068A63D /* libkmod.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 5088ECBC252884870068A63D /* libkmod.a */; };
+		5088ECC1252884D70068A63D /* libkmod.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 5088ECBC252884870068A63D /* libkmod.a */; };
 		F800B8D82511C3CC00D0B92B /* IO80211Interface.h in Headers */ = {isa = PBXBuildFile; fileRef = F800B8D32511C3CC00D0B92B /* IO80211Interface.h */; };
 		F800B8D92511C3CC00D0B92B /* IO80211VirtualInterface.h in Headers */ = {isa = PBXBuildFile; fileRef = F800B8D42511C3CC00D0B92B /* IO80211VirtualInterface.h */; };
 		F800B8DA2511C3CC00D0B92B /* IO80211WorkLoop.h in Headers */ = {isa = PBXBuildFile; fileRef = F800B8D52511C3CC00D0B92B /* IO80211WorkLoop.h */; };
@@ -506,39 +525,39 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
-		35CBE657251CB89700435CBC /* PBXContainerItemProxy */ = {
+		5066D63D252880A700EE6F38 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 024A07A323FCBC3C009FBA6C /* Project object */;
 			proxyType = 1;
-			remoteGlobalIDString = F8EE4D1B24178BF0002FA666;
+			remoteGlobalIDString = 5066D63825287F7900EE6F38;
 			remoteInfo = fw_gen;
 		};
-		35CBE6C1251CB8BF00435CBC /* PBXContainerItemProxy */ = {
+		5066D63F252880AD00EE6F38 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 024A07A323FCBC3C009FBA6C /* Project object */;
 			proxyType = 1;
-			remoteGlobalIDString = F8EE4D1B24178BF0002FA666;
+			remoteGlobalIDString = 5066D63825287F7900EE6F38;
 			remoteInfo = fw_gen;
 		};
-		35CBE72C251CB8CA00435CBC /* PBXContainerItemProxy */ = {
+		5066D6412528814000EE6F38 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 024A07A323FCBC3C009FBA6C /* Project object */;
 			proxyType = 1;
-			remoteGlobalIDString = F8EE4D1B24178BF0002FA666;
+			remoteGlobalIDString = 5066D63825287F7900EE6F38;
 			remoteInfo = fw_gen;
 		};
-		F8585CC62501E05100485C5A /* PBXContainerItemProxy */ = {
+		5066D6432528814400EE6F38 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 024A07A323FCBC3C009FBA6C /* Project object */;
 			proxyType = 1;
-			remoteGlobalIDString = F8EE4D1B24178BF0002FA666;
+			remoteGlobalIDString = 5066D63825287F7900EE6F38;
 			remoteInfo = fw_gen;
 		};
-		F89C0359250DE91300B41C85 /* PBXContainerItemProxy */ = {
+		5066D6452528814900EE6F38 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 024A07A323FCBC3C009FBA6C /* Project object */;
 			proxyType = 1;
-			remoteGlobalIDString = F8EE4D1B24178BF0002FA666;
+			remoteGlobalIDString = 5066D63825287F7900EE6F38;
 			remoteInfo = fw_gen;
 		};
 /* End PBXContainerItemProxy section */
@@ -614,6 +633,10 @@
 		35CBE724251CB8BF00435CBC /* AirportItlwm.kext */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AirportItlwm.kext; sourceTree = BUILT_PRODUCTS_DIR; };
 		35CBE78F251CB8CA00435CBC /* AirportItlwm.kext */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AirportItlwm.kext; sourceTree = BUILT_PRODUCTS_DIR; };
 		5076FA7F24CC71E40011B2BB /* FwBinary.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = FwBinary.cpp; sourceTree = "<group>"; };
+		5088ECB8252883BF0068A63D /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
+		5088ECB9252883C60068A63D /* LICENSE */ = {isa = PBXFileReference; lastKnownFileType = text; path = LICENSE; sourceTree = "<group>"; };
+		5088ECBA252884060068A63D /* iwlwifi-firmware-license */ = {isa = PBXFileReference; lastKnownFileType = text; path = "iwlwifi-firmware-license"; sourceTree = "<group>"; };
+		5088ECBC252884870068A63D /* libkmod.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libkmod.a; path = MacKernelSDK/Library/x86_64/libkmod.a; sourceTree = "<group>"; };
 		F800B8D32511C3CC00D0B92B /* IO80211Interface.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = IO80211Interface.h; sourceTree = "<group>"; };
 		F800B8D42511C3CC00D0B92B /* IO80211VirtualInterface.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = IO80211VirtualInterface.h; sourceTree = "<group>"; };
 		F800B8D52511C3CC00D0B92B /* IO80211WorkLoop.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = IO80211WorkLoop.h; sourceTree = "<group>"; };
@@ -755,6 +778,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				5088ECBD252884870068A63D /* libkmod.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -762,6 +786,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				5088ECC1252884D70068A63D /* libkmod.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -769,6 +794,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				5088ECBF252884AF0068A63D /* libkmod.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -776,6 +802,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				5088ECBE252884A30068A63D /* libkmod.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -783,6 +810,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				5088ECC0252884C10068A63D /* libkmod.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -792,11 +820,15 @@
 		024A07A223FCBC3C009FBA6C = {
 			isa = PBXGroup;
 			children = (
+				5088ECB8252883BF0068A63D /* README.md */,
+				5088ECB9252883C60068A63D /* LICENSE */,
+				5088ECBA252884060068A63D /* iwlwifi-firmware-license */,
 				F8B8F1622493C28B0059FAA8 /* include */,
 				024A07AE23FCBC3C009FBA6C /* itlwm */,
 				F8D6CD4F2442E0D100D2A454 /* itl80211 */,
 				F89B6BBA25021C9C000F77FF /* AirportItlwm */,
 				024A07AD23FCBC3C009FBA6C /* Products */,
+				5088ECBB252884870068A63D /* Frameworks */,
 			);
 			sourceTree = "<group>";
 		};
@@ -913,6 +945,14 @@
 				F8A68DD92482241E007EB376 /* iwlwifi-QuZ-a0-hr-b0-48.ucode */,
 			);
 			path = firmware;
+			sourceTree = "<group>";
+		};
+		5088ECBB252884870068A63D /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				5088ECBC252884870068A63D /* libkmod.a */,
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 		F800B8D22511C39900D0B92B /* HighSierra */ = {
@@ -1356,23 +1396,6 @@
 		};
 /* End PBXHeadersBuildPhase section */
 
-/* Begin PBXLegacyTarget section */
-		F8EE4D1B24178BF0002FA666 /* fw_gen */ = {
-			isa = PBXLegacyTarget;
-			buildArgumentsString = "-P ${PROJECT_DIR}/itlwm/firmware/";
-			buildConfigurationList = F8EE4D1C24178BF0002FA666 /* Build configuration list for PBXLegacyTarget "fw_gen" */;
-			buildPhases = (
-			);
-			buildToolPath = "$(PROJECT_DIR)/scripts/fw_gen.sh";
-			buildWorkingDirectory = "";
-			dependencies = (
-			);
-			name = fw_gen;
-			passBuildSettingsInEnvironment = 1;
-			productName = fwgen;
-		};
-/* End PBXLegacyTarget section */
-
 /* Begin PBXNativeTarget section */
 		024A07AB23FCBC3C009FBA6C /* itlwm */ = {
 			isa = PBXNativeTarget;
@@ -1386,7 +1409,7 @@
 			buildRules = (
 			);
 			dependencies = (
-				F8585CC72501E05100485C5A /* PBXTargetDependency */,
+				5066D63E252880A700EE6F38 /* PBXTargetDependency */,
 			);
 			name = itlwm;
 			productName = itlwm;
@@ -1405,7 +1428,7 @@
 			buildRules = (
 			);
 			dependencies = (
-				35CBE656251CB89700435CBC /* PBXTargetDependency */,
+				5066D6462528814900EE6F38 /* PBXTargetDependency */,
 			);
 			name = "AirportItlwm-Big Sur";
 			productName = AirportItlwm;
@@ -1424,7 +1447,7 @@
 			buildRules = (
 			);
 			dependencies = (
-				35CBE6C0251CB8BF00435CBC /* PBXTargetDependency */,
+				5066D6422528814000EE6F38 /* PBXTargetDependency */,
 			);
 			name = "AirportItlwm-Mojave";
 			productName = AirportItlwm;
@@ -1443,7 +1466,7 @@
 			buildRules = (
 			);
 			dependencies = (
-				35CBE72B251CB8CA00435CBC /* PBXTargetDependency */,
+				5066D640252880AD00EE6F38 /* PBXTargetDependency */,
 			);
 			name = "AirportItlwm-High Sierra";
 			productName = AirportItlwm;
@@ -1462,7 +1485,7 @@
 			buildRules = (
 			);
 			dependencies = (
-				F89C035A250DE91300B41C85 /* PBXTargetDependency */,
+				5066D6442528814400EE6F38 /* PBXTargetDependency */,
 			);
 			name = "AirportItlwm-Catalina";
 			productName = AirportItlwm;
@@ -1480,24 +1503,24 @@
 				TargetAttributes = {
 					024A07AB23FCBC3C009FBA6C = {
 						CreatedOnToolsVersion = 11.1;
-						ProvisioningStyle = Automatic;
+						ProvisioningStyle = Manual;
 					};
 					35CBE655251CB89700435CBC = {
-						ProvisioningStyle = Automatic;
+						ProvisioningStyle = Manual;
 					};
 					35CBE6BF251CB8BF00435CBC = {
-						ProvisioningStyle = Automatic;
+						ProvisioningStyle = Manual;
 					};
 					35CBE72A251CB8CA00435CBC = {
-						ProvisioningStyle = Automatic;
+						ProvisioningStyle = Manual;
+					};
+					5066D63825287F7900EE6F38 = {
+						CreatedOnToolsVersion = 12.0;
+						ProvisioningStyle = Manual;
 					};
 					F89B6BB825021C9C000F77FF = {
 						CreatedOnToolsVersion = 11.6;
-						ProvisioningStyle = Automatic;
-					};
-					F8EE4D1B24178BF0002FA666 = {
-						CreatedOnToolsVersion = 11.3.1;
-						ProvisioningStyle = Automatic;
+						ProvisioningStyle = Manual;
 					};
 				};
 			};
@@ -1514,12 +1537,12 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				F8EE4D1B24178BF0002FA666 /* fw_gen */,
 				024A07AB23FCBC3C009FBA6C /* itlwm */,
 				35CBE72A251CB8CA00435CBC /* AirportItlwm-High Sierra */,
 				35CBE6BF251CB8BF00435CBC /* AirportItlwm-Mojave */,
 				F89B6BB825021C9C000F77FF /* AirportItlwm-Catalina */,
 				35CBE655251CB89700435CBC /* AirportItlwm-Big Sur */,
+				5066D63825287F7900EE6F38 /* fw_gen */,
 			);
 		};
 /* End PBXProject section */
@@ -1561,6 +1584,28 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		5066D63C25287F8E00EE6F38 /* Generate Firmware */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "Generate Firmware";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(PROJECT_DIR)/include/FwBinary.cpp",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "${PROJECT_DIR}/scripts/fw_gen.sh -P ${PROJECT_DIR}/itlwm/firmware/\n";
+		};
+/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		024A07A823FCBC3C009FBA6C /* Sources */ = {
@@ -1940,30 +1985,30 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
-		35CBE656251CB89700435CBC /* PBXTargetDependency */ = {
+		5066D63E252880A700EE6F38 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = F8EE4D1B24178BF0002FA666 /* fw_gen */;
-			targetProxy = 35CBE657251CB89700435CBC /* PBXContainerItemProxy */;
+			target = 5066D63825287F7900EE6F38 /* fw_gen */;
+			targetProxy = 5066D63D252880A700EE6F38 /* PBXContainerItemProxy */;
 		};
-		35CBE6C0251CB8BF00435CBC /* PBXTargetDependency */ = {
+		5066D640252880AD00EE6F38 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = F8EE4D1B24178BF0002FA666 /* fw_gen */;
-			targetProxy = 35CBE6C1251CB8BF00435CBC /* PBXContainerItemProxy */;
+			target = 5066D63825287F7900EE6F38 /* fw_gen */;
+			targetProxy = 5066D63F252880AD00EE6F38 /* PBXContainerItemProxy */;
 		};
-		35CBE72B251CB8CA00435CBC /* PBXTargetDependency */ = {
+		5066D6422528814000EE6F38 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = F8EE4D1B24178BF0002FA666 /* fw_gen */;
-			targetProxy = 35CBE72C251CB8CA00435CBC /* PBXContainerItemProxy */;
+			target = 5066D63825287F7900EE6F38 /* fw_gen */;
+			targetProxy = 5066D6412528814000EE6F38 /* PBXContainerItemProxy */;
 		};
-		F8585CC72501E05100485C5A /* PBXTargetDependency */ = {
+		5066D6442528814400EE6F38 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = F8EE4D1B24178BF0002FA666 /* fw_gen */;
-			targetProxy = F8585CC62501E05100485C5A /* PBXContainerItemProxy */;
+			target = 5066D63825287F7900EE6F38 /* fw_gen */;
+			targetProxy = 5066D6432528814400EE6F38 /* PBXContainerItemProxy */;
 		};
-		F89C035A250DE91300B41C85 /* PBXTargetDependency */ = {
+		5066D6462528814900EE6F38 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = F8EE4D1B24178BF0002FA666 /* fw_gen */;
-			targetProxy = F89C0359250DE91300B41C85 /* PBXContainerItemProxy */;
+			target = 5066D63825287F7900EE6F38 /* fw_gen */;
+			targetProxy = 5066D6452528814900EE6F38 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -1972,6 +2017,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = x86_64;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
@@ -1983,9 +2029,7 @@
 				CLANG_WARN_BOOL_CONVERSION = YES;
 				CLANG_WARN_COMMA = YES;
 				CLANG_WARN_CONSTANT_CONVERSION = YES;
-				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
 				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
-				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
 				CLANG_WARN_EMPTY_BODY = YES;
 				CLANG_WARN_ENUM_CONVERSION = YES;
 				CLANG_WARN_INFINITE_RECURSION = YES;
@@ -2000,18 +2044,22 @@
 				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_IDENTITY = "";
+				CODE_SIGN_STYLE = Manual;
 				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = "$(MODULE_VERSION)";
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
-				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_C_LANGUAGE_STANDARD = c11;
 				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_INPUT_FILETYPE = sourcecode.cpp.cpp;
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_OPTIMIZATION_LEVEL = 0;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"DEBUG=1",
 					"$(inherited)",
-					"ITLWM_VERSION=\\\"${MARKETING_VERSION}\\\"",
+					"ITLWM_VERSION=\\\"${MODULE_VERSION}\\\"",
 				);
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
@@ -2019,10 +2067,16 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
+				KERNEL_EXTENSION_HEADER_SEARCH_PATHS = "$(PROJECT_DIR)/MacKernelSDK/Headers";
+				KERNEL_FRAMEWORK_HEADERS = "$(PROJECT_DIR)/MacKernelSDK/Headers";
 				MACOSX_DEPLOYMENT_TARGET = 10.12;
+				MODULE_VERSION = 1.2.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
-				ONLY_ACTIVE_ARCH = YES;
+				OTHER_CPLUSPLUSFLAGS = (
+					"-Wno-deprecated-register",
+					"$(OTHER_CFLAGS)",
+				);
 				SDKROOT = macosx;
 			};
 			name = Debug;
@@ -2031,6 +2085,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = x86_64;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
@@ -2042,9 +2097,7 @@
 				CLANG_WARN_BOOL_CONVERSION = YES;
 				CLANG_WARN_COMMA = YES;
 				CLANG_WARN_CONSTANT_CONVERSION = YES;
-				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
 				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
-				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
 				CLANG_WARN_EMPTY_BODY = YES;
 				CLANG_WARN_ENUM_CONVERSION = YES;
 				CLANG_WARN_INFINITE_RECURSION = YES;
@@ -2059,22 +2112,33 @@
 				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_IDENTITY = "";
+				CODE_SIGN_STYLE = Manual;
 				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = "$(MODULE_VERSION)";
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
-				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_C_LANGUAGE_STANDARD = c11;
+				GCC_INPUT_FILETYPE = sourcecode.cpp.cpp;
 				GCC_NO_COMMON_BLOCKS = YES;
-				GCC_PREPROCESSOR_DEFINITIONS = "ITLWM_VERSION=\\\"${MARKETING_VERSION}\\\"";
+				GCC_PREPROCESSOR_DEFINITIONS = "ITLWM_VERSION=\\\"${MODULE_VERSION}\\\"";
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
 				GCC_WARN_UNDECLARED_SELECTOR = YES;
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
+				KERNEL_EXTENSION_HEADER_SEARCH_PATHS = "$(PROJECT_DIR)/MacKernelSDK/Headers";
+				KERNEL_FRAMEWORK_HEADERS = "$(PROJECT_DIR)/MacKernelSDK/Headers";
 				MACOSX_DEPLOYMENT_TARGET = 10.12;
+				MODULE_VERSION = 1.2.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
+				OTHER_CPLUSPLUSFLAGS = (
+					"-Wno-deprecated-register",
+					"$(OTHER_CFLAGS)",
+				);
 				SDKROOT = macosx;
 			};
 			name = Release;
@@ -2082,29 +2146,18 @@
 		024A07B723FCBC3C009FBA6C /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
-				CODE_SIGN_STYLE = Automatic;
-				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = "$(MARKETING_VERSION)";
-				DEBUG_INFORMATION_FORMAT = dwarf;
-				DEVELOPMENT_TEAM = "";
 				FRAMEWORK_SEARCH_PATHS = "";
-				GCC_C_LANGUAGE_STANDARD = c11;
-				GCC_INPUT_FILETYPE = sourcecode.cpp.cpp;
 				INFOPLIST_FILE = itlwm/Info.plist;
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(PROJECT_DIR)/itl80211",
 					"$(PROJECT_DIR)/itl80211/openbsd",
 					"$(PROJECT_DIR)/itl80211/linux",
+					"$(PROJECT_DIR)/MacKernelSDK/Library/x86_64",
 				);
-				MACOSX_DEPLOYMENT_TARGET = 10.12;
-				MARKETING_VERSION = 1.2.0;
 				MODULE_NAME = com.zxystd.itlwm;
-				MODULE_VERSION = "$(MARKETING_VERSION)";
 				PRODUCT_BUNDLE_IDENTIFIER = com.zxystd.itlwm;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = macosx;
 				SYSTEM_HEADER_SEARCH_PATHS = "itl80211/openbsd itl80211 include";
 				WRAPPER_EXTENSION = kext;
 			};
@@ -2113,29 +2166,18 @@
 		024A07B823FCBC3C009FBA6C /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
-				CODE_SIGN_STYLE = Automatic;
-				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = "$(MARKETING_VERSION)";
-				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
-				DEVELOPMENT_TEAM = "";
 				FRAMEWORK_SEARCH_PATHS = "";
-				GCC_C_LANGUAGE_STANDARD = c11;
-				GCC_INPUT_FILETYPE = sourcecode.cpp.cpp;
 				INFOPLIST_FILE = itlwm/Info.plist;
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(PROJECT_DIR)/itl80211",
 					"$(PROJECT_DIR)/itl80211/openbsd",
 					"$(PROJECT_DIR)/itl80211/linux",
+					"$(PROJECT_DIR)/MacKernelSDK/Library/x86_64",
 				);
-				MACOSX_DEPLOYMENT_TARGET = 10.12;
-				MARKETING_VERSION = 1.2.0;
 				MODULE_NAME = com.zxystd.itlwm;
-				MODULE_VERSION = "$(MARKETING_VERSION)";
 				PRODUCT_BUNDLE_IDENTIFIER = com.zxystd.itlwm;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = macosx;
 				SYSTEM_HEADER_SEARCH_PATHS = "itl80211/openbsd itl80211 include";
 				WRAPPER_EXTENSION = kext;
 			};
@@ -2144,12 +2186,8 @@
 		35CBE6B8251CB89700435CBC /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CODE_SIGN_IDENTITY = "";
-				CODE_SIGN_STYLE = Automatic;
-				COMBINE_HIDPI_IMAGES = YES;
-				CONFIGURATION_BUILD_DIR = "build/$(CONFIGURATION)/Big Sur";
-				CURRENT_PROJECT_VERSION = "$(MARKETING_VERSION)";
-				GCC_INPUT_FILETYPE = sourcecode.cpp.cpp;
+				CONFIGURATION_BUILD_DIR = "build/Products/$(CONFIGURATION)/Big Sur";
+				CURRENT_PROJECT_VERSION = "$(MODULE_VERSION)";
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"DEBUG=1",
 					"$(inherited)",
@@ -2165,14 +2203,12 @@
 					"$(inherited)",
 					"$(PROJECT_DIR)/itl80211/openbsd",
 					"$(PROJECT_DIR)/itl80211/linux",
+					"$(PROJECT_DIR)/MacKernelSDK/Library/x86_64",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 10.15;
-				MARKETING_VERSION = 1.1.0;
 				MODULE_NAME = com.zxystd.AirportItlwm;
-				MODULE_VERSION = 1.0.0d1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.zxystd.AirportItlwm;
 				PRODUCT_NAME = AirportItlwm;
-				SDKROOT = macosx;
 				SYSTEM_HEADER_SEARCH_PATHS = "itl80211/openbsd itl80211 include";
 				WRAPPER_EXTENSION = kext;
 			};
@@ -2181,14 +2217,10 @@
 		35CBE6B9251CB89700435CBC /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CODE_SIGN_IDENTITY = "";
-				CODE_SIGN_STYLE = Automatic;
-				COMBINE_HIDPI_IMAGES = YES;
-				CONFIGURATION_BUILD_DIR = "build/$(CONFIGURATION)/Big Sur";
-				CURRENT_PROJECT_VERSION = "$(MARKETING_VERSION)";
-				GCC_INPUT_FILETYPE = sourcecode.cpp.cpp;
+				CONFIGURATION_BUILD_DIR = "build/Products/$(CONFIGURATION)/Big Sur";
+				CURRENT_PROJECT_VERSION = "$(MODULE_VERSION)";
 				GCC_PREPROCESSOR_DEFINITIONS = (
-					"ITLWM_VERSION=\\\"${MARKETING_VERSION}\\\"",
+					"ITLWM_VERSION=\\\"${MODULE_VERSION}\\\"",
 					BigSur,
 					AIRPORT,
 				);
@@ -2198,14 +2230,12 @@
 					"$(inherited)",
 					"$(PROJECT_DIR)/itl80211/openbsd",
 					"$(PROJECT_DIR)/itl80211/linux",
+					"$(PROJECT_DIR)/MacKernelSDK/Library/x86_64",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 10.15;
-				MARKETING_VERSION = 1.1.0;
 				MODULE_NAME = com.zxystd.AirportItlwm;
-				MODULE_VERSION = 1.0.0d1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.zxystd.AirportItlwm;
 				PRODUCT_NAME = AirportItlwm;
-				SDKROOT = macosx;
 				SYSTEM_HEADER_SEARCH_PATHS = "itl80211/openbsd itl80211 include";
 				WRAPPER_EXTENSION = kext;
 			};
@@ -2214,12 +2244,7 @@
 		35CBE722251CB8BF00435CBC /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CODE_SIGN_IDENTITY = "";
-				CODE_SIGN_STYLE = Automatic;
-				COMBINE_HIDPI_IMAGES = YES;
-				CONFIGURATION_BUILD_DIR = "build/$(CONFIGURATION)/Mojave";
-				CURRENT_PROJECT_VERSION = "$(MARKETING_VERSION)";
-				GCC_INPUT_FILETYPE = sourcecode.cpp.cpp;
+				CONFIGURATION_BUILD_DIR = "build/Products/$(CONFIGURATION)/Mojave";
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"DEBUG=1",
 					"$(inherited)",
@@ -2235,14 +2260,12 @@
 					"$(inherited)",
 					"$(PROJECT_DIR)/itl80211/openbsd",
 					"$(PROJECT_DIR)/itl80211/linux",
+					"$(PROJECT_DIR)/MacKernelSDK/Library/x86_64",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 10.14;
-				MARKETING_VERSION = 1.1.0;
 				MODULE_NAME = com.zxystd.AirportItlwm;
-				MODULE_VERSION = 1.0.0d1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.zxystd.AirportItlwm;
 				PRODUCT_NAME = AirportItlwm;
-				SDKROOT = macosx;
 				SYSTEM_HEADER_SEARCH_PATHS = "itl80211/openbsd itl80211 include";
 				WRAPPER_EXTENSION = kext;
 			};
@@ -2251,14 +2274,9 @@
 		35CBE723251CB8BF00435CBC /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CODE_SIGN_IDENTITY = "";
-				CODE_SIGN_STYLE = Automatic;
-				COMBINE_HIDPI_IMAGES = YES;
-				CONFIGURATION_BUILD_DIR = "build/$(CONFIGURATION)/Mojave";
-				CURRENT_PROJECT_VERSION = "$(MARKETING_VERSION)";
-				GCC_INPUT_FILETYPE = sourcecode.cpp.cpp;
+				CONFIGURATION_BUILD_DIR = "build/Products/$(CONFIGURATION)/Mojave";
 				GCC_PREPROCESSOR_DEFINITIONS = (
-					"ITLWM_VERSION=\\\"${MARKETING_VERSION}\\\"",
+					"ITLWM_VERSION=\\\"${MODULE_VERSION}\\\"",
 					Mojave,
 					AIRPORT,
 				);
@@ -2268,14 +2286,12 @@
 					"$(inherited)",
 					"$(PROJECT_DIR)/itl80211/openbsd",
 					"$(PROJECT_DIR)/itl80211/linux",
+					"$(PROJECT_DIR)/MacKernelSDK/Library/x86_64",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 10.14;
-				MARKETING_VERSION = 1.1.0;
 				MODULE_NAME = com.zxystd.AirportItlwm;
-				MODULE_VERSION = 1.0.0d1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.zxystd.AirportItlwm;
 				PRODUCT_NAME = AirportItlwm;
-				SDKROOT = macosx;
 				SYSTEM_HEADER_SEARCH_PATHS = "itl80211/openbsd itl80211 include";
 				WRAPPER_EXTENSION = kext;
 			};
@@ -2284,12 +2300,7 @@
 		35CBE78D251CB8CA00435CBC /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CODE_SIGN_IDENTITY = "";
-				CODE_SIGN_STYLE = Automatic;
-				COMBINE_HIDPI_IMAGES = YES;
-				CONFIGURATION_BUILD_DIR = "build/$(CONFIGURATION)/High Sierra";
-				CURRENT_PROJECT_VERSION = "$(MARKETING_VERSION)";
-				GCC_INPUT_FILETYPE = sourcecode.cpp.cpp;
+				CONFIGURATION_BUILD_DIR = "build/Products/$(CONFIGURATION)/High Sierra";
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"DEBUG=1",
 					"$(inherited)",
@@ -2305,14 +2316,12 @@
 					"$(inherited)",
 					"$(PROJECT_DIR)/itl80211/openbsd",
 					"$(PROJECT_DIR)/itl80211/linux",
+					"$(PROJECT_DIR)/MacKernelSDK/Library/x86_64",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 10.13;
-				MARKETING_VERSION = 1.1.0;
 				MODULE_NAME = com.zxystd.AirportItlwm;
-				MODULE_VERSION = 1.0.0d1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.zxystd.AirportItlwm;
 				PRODUCT_NAME = AirportItlwm;
-				SDKROOT = macosx;
 				SYSTEM_HEADER_SEARCH_PATHS = "itl80211/openbsd itl80211 include";
 				WRAPPER_EXTENSION = kext;
 			};
@@ -2321,14 +2330,9 @@
 		35CBE78E251CB8CA00435CBC /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CODE_SIGN_IDENTITY = "";
-				CODE_SIGN_STYLE = Automatic;
-				COMBINE_HIDPI_IMAGES = YES;
-				CONFIGURATION_BUILD_DIR = "build/$(CONFIGURATION)/High Sierra";
-				CURRENT_PROJECT_VERSION = "$(MARKETING_VERSION)";
-				GCC_INPUT_FILETYPE = sourcecode.cpp.cpp;
+				CONFIGURATION_BUILD_DIR = "build/Products/$(CONFIGURATION)/High Sierra";
 				GCC_PREPROCESSOR_DEFINITIONS = (
-					"ITLWM_VERSION=\\\"${MARKETING_VERSION}\\\"",
+					"ITLWM_VERSION=\\\"${MODULE_VERSION}\\\"",
 					HighSierra,
 					AIRPORT,
 				);
@@ -2338,28 +2342,34 @@
 					"$(inherited)",
 					"$(PROJECT_DIR)/itl80211/openbsd",
 					"$(PROJECT_DIR)/itl80211/linux",
+					"$(PROJECT_DIR)/MacKernelSDK/Library/x86_64",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 10.13;
-				MARKETING_VERSION = 1.1.0;
 				MODULE_NAME = com.zxystd.AirportItlwm;
-				MODULE_VERSION = 1.0.0d1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.zxystd.AirportItlwm;
 				PRODUCT_NAME = AirportItlwm;
-				SDKROOT = macosx;
 				SYSTEM_HEADER_SEARCH_PATHS = "itl80211/openbsd itl80211 include";
 				WRAPPER_EXTENSION = kext;
+			};
+			name = Release;
+		};
+		5066D63925287F7900EE6F38 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+			};
+			name = Debug;
+		};
+		5066D63A25287F7900EE6F38 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
 			};
 			name = Release;
 		};
 		F89B6BC125021C9C000F77FF /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CODE_SIGN_IDENTITY = "";
-				CODE_SIGN_STYLE = Automatic;
-				COMBINE_HIDPI_IMAGES = YES;
-				CONFIGURATION_BUILD_DIR = "build/$(CONFIGURATION)/Catalina";
-				CURRENT_PROJECT_VERSION = "$(MARKETING_VERSION)";
-				GCC_INPUT_FILETYPE = sourcecode.cpp.cpp;
+				CONFIGURATION_BUILD_DIR = "build/Products/$(CONFIGURATION)/Catalina";
+				CURRENT_PROJECT_VERSION = "$(MODULE_VERSION)";
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"DEBUG=1",
 					"$(inherited)",
@@ -2375,14 +2385,12 @@
 					"$(inherited)",
 					"$(PROJECT_DIR)/itl80211/openbsd",
 					"$(PROJECT_DIR)/itl80211/linux",
+					"$(PROJECT_DIR)/MacKernelSDK/Library/x86_64",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 10.15;
-				MARKETING_VERSION = 1.1.0;
 				MODULE_NAME = com.zxystd.AirportItlwm;
-				MODULE_VERSION = 1.0.0d1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.zxystd.AirportItlwm;
 				PRODUCT_NAME = AirportItlwm;
-				SDKROOT = macosx;
 				SYSTEM_HEADER_SEARCH_PATHS = "itl80211/openbsd itl80211 include";
 				WRAPPER_EXTENSION = kext;
 			};
@@ -2391,14 +2399,10 @@
 		F89B6BC225021C9C000F77FF /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CODE_SIGN_IDENTITY = "";
-				CODE_SIGN_STYLE = Automatic;
-				COMBINE_HIDPI_IMAGES = YES;
-				CONFIGURATION_BUILD_DIR = "build/$(CONFIGURATION)/Catalina";
-				CURRENT_PROJECT_VERSION = "$(MARKETING_VERSION)";
-				GCC_INPUT_FILETYPE = sourcecode.cpp.cpp;
+				CONFIGURATION_BUILD_DIR = "build/Products/$(CONFIGURATION)/Catalina";
+				CURRENT_PROJECT_VERSION = "$(MODULE_VERSION)";
 				GCC_PREPROCESSOR_DEFINITIONS = (
-					"ITLWM_VERSION=\\\"${MARKETING_VERSION}\\\"",
+					"ITLWM_VERSION=\\\"${MODULE_VERSION}\\\"",
 					Catalina,
 					AIRPORT,
 				);
@@ -2408,41 +2412,14 @@
 					"$(inherited)",
 					"$(PROJECT_DIR)/itl80211/openbsd",
 					"$(PROJECT_DIR)/itl80211/linux",
+					"$(PROJECT_DIR)/MacKernelSDK/Library/x86_64",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 10.15;
-				MARKETING_VERSION = 1.1.0;
 				MODULE_NAME = com.zxystd.AirportItlwm;
-				MODULE_VERSION = 1.0.0d1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.zxystd.AirportItlwm;
 				PRODUCT_NAME = AirportItlwm;
-				SDKROOT = macosx;
 				SYSTEM_HEADER_SEARCH_PATHS = "itl80211/openbsd itl80211 include";
 				WRAPPER_EXTENSION = kext;
-			};
-			name = Release;
-		};
-		F8EE4D1D24178BF0002FA666 /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CODE_SIGN_STYLE = Automatic;
-				DEBUGGING_SYMBOLS = YES;
-				DEBUG_INFORMATION_FORMAT = dwarf;
-				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
-				GCC_OPTIMIZATION_LEVEL = 0;
-				OTHER_CFLAGS = "";
-				OTHER_LDFLAGS = "";
-				PRODUCT_NAME = "$(TARGET_NAME)";
-			};
-			name = Debug;
-		};
-		F8EE4D1E24178BF0002FA666 /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CODE_SIGN_STYLE = Automatic;
-				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
-				OTHER_CFLAGS = "";
-				OTHER_LDFLAGS = "";
-				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Release;
 		};
@@ -2494,20 +2471,20 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
+		5066D63B25287F7900EE6F38 /* Build configuration list for PBXAggregateTarget "fw_gen" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				5066D63925287F7900EE6F38 /* Debug */,
+				5066D63A25287F7900EE6F38 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		F89B6BC025021C9C000F77FF /* Build configuration list for PBXNativeTarget "AirportItlwm-Catalina" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				F89B6BC125021C9C000F77FF /* Debug */,
 				F89B6BC225021C9C000F77FF /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
-		F8EE4D1C24178BF0002FA666 /* Build configuration list for PBXLegacyTarget "fw_gen" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				F8EE4D1D24178BF0002FA666 /* Debug */,
-				F8EE4D1E24178BF0002FA666 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
