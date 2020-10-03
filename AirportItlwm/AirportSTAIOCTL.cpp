@@ -10,6 +10,8 @@
 
 extern IOCommandGate *_fCommandGate;
 
+const char* hexdump(uint8_t *buf, size_t len);
+
 SInt32 AirportItlwm::apple80211Request(unsigned int request_type,
                                        int request_number,
                                        IO80211Interface *interface,
@@ -19,7 +21,6 @@ SInt32 AirportItlwm::apple80211Request(unsigned int request_type,
         return kIOReturnError;
     }
     IOReturn ret = kIOReturnError;
-    bool isGet = (request_type == SIOCGA80211);
     
     switch (request_number) {
         case APPLE80211_IOC_SSID:  // 1
@@ -79,8 +80,12 @@ SInt32 AirportItlwm::apple80211Request(unsigned int request_type,
         case APPLE80211_IOC_ASSOCIATE:  // 20
             IOCTL_SET(request_type, ASSOCIATE, apple80211_assoc_data);
             break;
-        case APPLE80211_IOC_ASSOCIATE_RESULT:
+        case APPLE80211_IOC_ASSOCIATE_RESULT: // 21
             IOCTL_GET(request_type, ASSOCIATE_RESULT, apple80211_assoc_result_data);
+            break;
+        case APPLE80211_IOC_DISASSOCIATE: // 22
+            if (request_type == SIOCSA80211)
+                setDISASSOCIATE(interface);
             break;
         case APPLE80211_IOC_RATE_SET:
             IOCTL_GET(request_type, RATE_SET, apple80211_rate_set_data);
@@ -110,8 +115,11 @@ SInt32 AirportItlwm::apple80211Request(unsigned int request_type,
         case APPLE80211_IOC_HARDWARE_VERSION:  // 44
             IOCTL_GET(request_type, HARDWARE_VERSION, apple80211_version_data);
             break;
-        case APPLE80211_IOC_RSN_IE:
+        case APPLE80211_IOC_RSN_IE: // 46
             IOCTL(request_type, RSN_IE, apple80211_rsn_ie_data);
+            break;
+        case APPLE80211_IOC_AP_IE_LIST: // 48
+            IOCTL_GET(request_type, AP_IE_LIST, apple80211_ap_ie_data);
             break;
         case APPLE80211_IOC_ASSOCIATION_STATUS:  // 50
             IOCTL_GET(request_type, ASSOCIATION_STATUS, apple80211_assoc_status_data);
@@ -199,9 +207,55 @@ setAUTH_TYPE(OSObject *object, struct apple80211_authtype_data *ad)
 }
 
 IOReturn AirportItlwm::
-setCIPHER_KEY(OSObject *object, struct apple80211_key *ck)
+setCIPHER_KEY(OSObject *object, struct apple80211_key *key)
 {
     XYLog("%s", __FUNCTION__);
+    const char* keydump = hexdump(key->key, key->key_len);
+    const char* rscdump = hexdump(key->key_rsc, key->key_rsc_len);
+    const char* eadump = hexdump(key->key_ea.octet, APPLE80211_ADDR_LEN);
+    if (keydump && rscdump && eadump)
+        XYLog("Set key request: len=%d cipher_type=%d flags=%d index=%d key=%s rsc_len=%d rsc=%s ea=%s\n",
+              key->key_len, key->key_cipher_type, key->key_flags, key->key_index, keydump, key->key_rsc_len, rscdump, eadump);
+    else
+        XYLog("Set key request, but failed to allocate memory for hexdump\n");
+    
+    if (keydump)
+        IOFree((void*)keydump, 3 * key->key_len + 1);
+    if (rscdump)
+        IOFree((void*)rscdump, 3 * key->key_rsc_len + 1);
+    if (eadump)
+        IOFree((void*)eadump, 3 * APPLE80211_ADDR_LEN + 1);
+    
+    switch (key->key_cipher_type) {
+        case APPLE80211_CIPHER_NONE:
+            XYLog("Setting NONE key is not supported\n");
+            break;
+        case APPLE80211_CIPHER_WEP_40:
+        case APPLE80211_CIPHER_WEP_104:
+            XYLog("Setting WEP key %d is not supported\n", key->key_index);
+            break;
+        case APPLE80211_CIPHER_TKIP:
+        case APPLE80211_CIPHER_AES_OCB:
+        case APPLE80211_CIPHER_AES_CCM:
+            switch (key->key_flags) {
+                case 4: // PTK
+                    setPTK(key->key, key->key_len);
+                    getNetworkInterface()->postMessage(APPLE80211_M_RSN_HANDSHAKE_DONE);
+                    break;
+                case 0: // GTK
+                    setGTK(key->key, key->key_len, key->key_index, key->key_rsc);
+                    getNetworkInterface()->postMessage(APPLE80211_M_RSN_HANDSHAKE_DONE);
+                    break;
+            }
+            break;
+        case APPLE80211_CIPHER_PMK:
+            XYLog("Setting WPA PMK is not supported\n");
+            break;
+        case APPLE80211_CIPHER_PMKSA:
+            XYLog("Setting WPA PMKSA is not supported\n");
+            break;
+    }
+    //fInterface->postMessage(APPLE80211_M_CIPHER_KEY_CHANGED);
     return kIOReturnSuccess;
 }
 
@@ -486,14 +540,38 @@ getRSN_IE(OSObject *object, struct apple80211_rsn_ie_data *data)
         return kIOReturnError;
     }
     data->version = APPLE80211_VERSION;
-    data->len = 2 + ic->ic_bss->ni_rsnie[1];
-    memcpy(data->ie, ic->ic_bss->ni_rsnie, data->len);
+    if (ic->ic_rsn_ie_override[1] > 0) {
+        data->len = 2 + ic->ic_rsn_ie_override[1];
+        memcpy(data->ie, ic->ic_rsn_ie_override, data->len);
+    }
+    else {
+        data->len = 2 + ic->ic_bss->ni_rsnie[1];
+        memcpy(data->ie, ic->ic_bss->ni_rsnie, data->len);
+    }
     return kIOReturnSuccess;
 }
 
 IOReturn AirportItlwm::
 setRSN_IE(OSObject *object, struct apple80211_rsn_ie_data *data)
 {
+    struct ieee80211com *ic = fHalService->get80211Controller();
+    static_assert(sizeof(ic->ic_rsn_ie_override) == APPLE80211_MAX_RSN_IE_LEN, "Max RSN IE length mismatch");
+    memcpy(ic->ic_rsn_ie_override, data->ie, APPLE80211_MAX_RSN_IE_LEN);
+    if (ic->ic_state == IEEE80211_S_RUN && ic->ic_bss != nullptr)
+        ieee80211_save_ie(data->ie, &ic->ic_bss->ni_rsnie);
+    return kIOReturnSuccess;
+}
+
+IOReturn AirportItlwm::
+getAP_IE_LIST(OSObject *object, struct apple80211_ap_ie_data *data)
+{
+    struct ieee80211com *ic = fHalService->get80211Controller();
+    if (ic->ic_bss == NULL || ic->ic_bss->ni_rsnie_tlv == NULL || ic->ic_bss->ni_rsnie_tlv_len > data->len) {
+        return kIOReturnError;
+    }
+    data->version = APPLE80211_VERSION;
+    data->len = ic->ic_bss->ni_rsnie_tlv_len;
+    memcpy(data->ie_data, ic->ic_bss->ni_rsnie_tlv, data->len);
     return kIOReturnSuccess;
 }
 
@@ -567,7 +645,14 @@ setASSOCIATE(OSObject *object,
     XYLog("%s [%s]\n", __FUNCTION__, ad->ad_ssid);
     this->current_authtype_lower = ad->ad_auth_lower;
     this->current_authtype_upper = ad->ad_auth_upper;
-    associateSSID((const char *)ad->ad_ssid, ad->ad_key.key, ad->ad_key.key_len);
+    
+    apple80211_rsn_ie_data rsn_ie_data;
+    rsn_ie_data.version = APPLE80211_VERSION;
+    rsn_ie_data.len = ad->ad_rsn_ie[1] + 2;
+    memcpy(rsn_ie_data.ie, ad->ad_rsn_ie, rsn_ie_data.len);
+    setRSN_IE(object, &rsn_ie_data);
+    
+    associateSSID(ad->ad_ssid, ad->ad_ssid_len, ad->ad_bssid, ad->ad_auth_lower, ad->ad_auth_upper, ad->ad_key.key, ad->ad_key.key_len, ad->ad_key.key_index);
     return kIOReturnSuccess;
 }
 
@@ -583,6 +668,18 @@ getASSOCIATE_RESULT(OSObject *object, struct apple80211_assoc_result_data *ad)
         return kIOReturnSuccess;
     }
     return kIOReturnError;
+}
+
+IOReturn AirportItlwm::setDISASSOCIATE(OSObject *object)
+{
+    XYLog("%s\n", __FUNCTION__);
+    struct ieee80211com *ic = fHalService->get80211Controller();
+    
+    ieee80211_del_ess(ic, nullptr, 0, 1);
+    ieee80211_deselect_ess(ic);
+    ic->ic_rsn_ie_override[1] = 0;
+    ieee80211_new_state(ic, IEEE80211_S_SCAN, -1);
+    return kIOReturnSuccess;
 }
 
 IOReturn AirportItlwm::

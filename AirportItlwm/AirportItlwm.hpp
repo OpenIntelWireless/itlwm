@@ -73,7 +73,9 @@ public:
                                OSData *                data         = 0) override;
     
     void releaseAll();
-    void associateSSID(const char *ssid, uint8_t *key, uint16_t keyLen);
+    void associateSSID(uint8_t *ssid, uint32_t ssid_len, const struct ether_addr &bssid, uint32_t authtype_lower, uint32_t authtype_upper, uint8_t *key, uint32_t key_len, int key_index);
+    void setPTK(const u_int8_t *key, size_t key_len);
+    void setGTK(const u_int8_t *key, size_t key_len, u_int8_t kid, u_int8_t *rsc);
     void watchdogAction(IOTimerEventSource *timer);
     bool initPCIPowerManagment(IOPCIDevice *provider);
     static IOReturn tsleepHandler(OSObject* owner, void* arg0 = 0, void* arg1 = 0, void* arg2 = 0, void* arg3 = 0);
@@ -118,6 +120,7 @@ public:
     FUNC_IOCTL(POWER, apple80211_power_data)
     FUNC_IOCTL_SET(ASSOCIATE, apple80211_assoc_data)
     FUNC_IOCTL_GET(ASSOCIATE_RESULT, apple80211_assoc_result_data)
+    IOReturn setDISASSOCIATE(OSObject *);
     FUNC_IOCTL_GET(RATE_SET, apple80211_rate_set_data)
     FUNC_IOCTL_GET(MCS_INDEX_SET, apple80211_mcs_index_set_data)
     FUNC_IOCTL_GET(SUPPORTED_CHANNELS, apple80211_sup_channel_data)
@@ -128,6 +131,7 @@ public:
     FUNC_IOCTL_GET(DRIVER_VERSION, apple80211_version_data)
     FUNC_IOCTL_GET(HARDWARE_VERSION, apple80211_version_data)
     FUNC_IOCTL(RSN_IE, apple80211_rsn_ie_data)
+    FUNC_IOCTL_GET(AP_IE_LIST, apple80211_ap_ie_data)
     FUNC_IOCTL_GET(ASSOCIATION_STATUS, apple80211_assoc_status_data)
     FUNC_IOCTL_GET(COUNTRY_CODE, apple80211_country_code_data)
     FUNC_IOCTL_GET(RADIO_INFO, apple80211_radio_info_data)

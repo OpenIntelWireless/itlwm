@@ -1445,13 +1445,29 @@ ieee80211_get_assoc_req(struct ieee80211com *ic, struct ieee80211_node *ni,
 	if (rs->rs_nrates > IEEE80211_RATE_SIZE)
 		frm = ieee80211_add_xrates(frm, rs);
 	if ((ic->ic_flags & IEEE80211_F_RSNON) &&
-	    (ni->ni_rsnprotos & IEEE80211_PROTO_RSN))
+		(ni->ni_rsnprotos & IEEE80211_PROTO_RSN)) {
+#ifdef AIRPORT
+		if (ic->ic_rsn_ie_override[1] > 0) {
+			memcpy(frm, ic->ic_rsn_ie_override, 2 + ic->ic_rsn_ie_override[1]);
+			frm += 2 + ic->ic_rsn_ie_override[1];
+		}
+		else
+#endif
 		frm = ieee80211_add_rsn(frm, ic, ni);
+	}
 	if (ni->ni_flags & IEEE80211_NODE_QOS)
 		frm = ieee80211_add_qos_capability(frm, ic);
 	if ((ic->ic_flags & IEEE80211_F_RSNON) &&
-	    (ni->ni_rsnprotos & IEEE80211_PROTO_WPA))
+		(ni->ni_rsnprotos & IEEE80211_PROTO_WPA)) {
+#ifdef AIRPORT
+		if (ic->ic_rsn_ie_override[1] > 0) {
+			memcpy(frm, ic->ic_rsn_ie_override, 2 + ic->ic_rsn_ie_override[1]);
+			frm += 2 + ic->ic_rsn_ie_override[1];
+		}
+		else
+#endif
 		frm = ieee80211_add_wpa(frm, ic, ni);
+	}
 	if (ic->ic_flags & IEEE80211_F_HTON) {
 		frm = ieee80211_add_htcaps(frm, ic);
 		frm = ieee80211_add_wme_info(frm, ic);
