@@ -15,9 +15,9 @@
 	<key>CFBundlePackageType</key>
 	<string>$(PRODUCT_BUNDLE_PACKAGE_TYPE)</string>
 	<key>CFBundleShortVersionString</key>
-	<string>1.0</string>
+	<string>$(MODULE_VERSION)</string>
 	<key>CFBundleVersion</key>
-	<string>1</string>
+	<string>$(MODULE_VERSION)</string>
 	<key>IOKitPersonalities</key>
 	<dict>
 		<key>itlwm</key>
@@ -86,5 +86,7 @@
 		<key>com.apple.kpi.mach</key>
 		<string>16.7</string>
 	</dict>
+	<key>OSBundleRequired</key>
+	<string>Network-Root</string>
 </dict>
 </plist>

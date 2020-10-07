@@ -24,29 +24,34 @@ jobs:
         git fetch --prune --unshallow --tags
         GIT_SHA="$(git rev-parse --short HEAD)"
         CUR_TAG="$(git tag -l | grep 'alpha\|beta' | tail -1)"
-        sed -i '' -e "s/CURRENT_PROJECT_VERSION =.*/CURRENT_PROJECT_VERSION = ${GIT_SHA};/g" itlwm.xcodeproj/project.pbxproj
-        eval $(grep -m 1 "MARKETING_VERSION =" itlwm.xcodeproj/project.pbxproj | tr -d ';' | tr -d '\t' | tr -d " ")
+        eval $(grep -m 1 "MODULE_VERSION =" itlwm.xcodeproj/project.pbxproj | tr -d ';' | tr -d '\t' | tr -d " ")
         echo "::set-env name=SHORT_SHA::$GIT_SHA"
-        echo "::set-env name=ITLWM_VER::$MARKETING_VERSION"
+        echo "::set-env name=ITLWM_VER::$MODULE_VERSION"
         if [[ -z $CUR_TAG ]]; then
           echo "::set-env name=OLD_PRE_TAG::NULL"
         else
           echo "::set-env name=OLD_PRE_TAG::$CUR_TAG"
         fi
 
-    - name: "Install macOS 10.12 SDK"
+    - name: Install MacKernelSDK
       run: |
-        curl -L https://github.com/alexey-lysiuk/macos-sdk/releases/download/10.12/MacOSX10.12.tar.bz2 -o /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.12.tar.bz2 && tar -xjf /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.12.tar.bz2 -C /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/
+        git clone --depth=1 https://github.com/acidanthera/MacKernelSDK.git
 
     - name: Build itlwm
       run: |
-        xcodebuild -scheme fw_gen
-        xcodebuild -scheme itlwm -configuration Debug -sdk macosx10.12 -derivedDataPath build CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO | xcpretty && exit ${PIPESTATUS[0]}
+        xcodebuild -scheme itlwm -configuration Debug -derivedDataPath build | xcpretty && exit ${PIPESTATUS[0]}
+
+    - name: Build AirportItlwm
+      run: |
+        xcodebuild -scheme "AirportItlwm (all)" -configuration Debug -derivedDataPath build | xcpretty && exit ${PIPESTATUS[0]}
 
     - name: Finalize Artifacts
       run: |
         cd $BUILD_OUTPUT
-        zip -r itlwm-v${ITLWM_VER}-DEBUG-alpha-${SHORT_SHA}.zip itlwm.kext
+          zip -r itlwm-v${ITLWM_VER}-DEBUG-alpha-${SHORT_SHA}.zip itlwm.kext
+          while read -r tgt ; do
+            zip -r AirportItlwm-${tgt// /_}-v${ITLWM_VER}-DEBUG-alpha-${SHORT_SHA}.zip "$tgt"
+          done < <(find . -mindepth 1 -maxdepth 1 -type d -not -path "*.kext" | cut -c 3-)
         cd -
 
     - name: Generate Prerelease Release Notes
@@ -57,11 +62,6 @@ jobs:
         echo 'If you discovered an issue and you do not have debugging skills, please check with the [Gitter Chat Room](https://gitter.im/OpenIntelWireless/itlwm) in advance before opening an Issue.' >> ReleaseNotes.md
         echo '### The latest five updates are:' >> ReleaseNotes.md
         git log -"5" --format="- %H %s" | sed '/^$/d' >> ReleaseNotes.md
-        echo '' >> ReleaseNotes.md
-        echo "MD5: \`$(md5 -q $BUILD_OUTPUT/*.zip)\`" >> ReleaseNotes.md
-        echo '' >> ReleaseNotes.md
-        echo "境内加速下载[链接](https://heliport.bat-bat.workers.dev/https://github.com/OpenIntelWireless/itlwm/releases/download/v${ITLWM_VER}-alpha/itlwm-v${ITLWM_VER}-DEBUG-alpha-${SHORT_SHA}.zip)" >> ReleaseNotes.md
-
 
     - name: Delete Old Prerelease
       uses: dev-drprasad/delete-tag-and-release@v0.1.2
