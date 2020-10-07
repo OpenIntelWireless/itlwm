@@ -635,8 +635,7 @@ UInt32 AirportItlwm::outputPacket(mbuf_t m, void *param)
 
 UInt32 AirportItlwm::getFeatures() const
 {
-    UInt32 features = (kIONetworkFeatureMultiPages);
-    return features;
+    return fHalService->getDriverInfo()->supportedFeatures();
 }
 
 IOReturn AirportItlwm::setPromiscuousMode(IOEnetPromiscuousMode mode) {
@@ -833,6 +832,36 @@ outputRaw80211Packet(IO80211Interface *interface, mbuf_t m)
     XYLog("%s len=%d\n", __FUNCTION__, mbuf_len(m));
     freePacket(m);
     return kIOReturnOutputDropped;
+}
+
+UInt32 AirportItlwm::
+hardwareOutputQueueDepth(IO80211Interface *interface)
+{
+    return 0;
+}
+
+SInt32 AirportItlwm::
+performCountryCodeOperation(IO80211Interface *interface, IO80211CountryCodeOp op)
+{
+    return 0;
+}
+
+SInt32 AirportItlwm::
+stopDMA()
+{
+    if (fNetIf) {
+        disable(fNetIf);
+    }
+    return 0;
+}
+
+SInt32 AirportItlwm::
+enableFeature(IO80211FeatureCode code, void *data)
+{
+    if (code == kIO80211Feature80211n) {
+        return 0;
+    }
+    return 102;
 }
 
 int AirportItlwm::

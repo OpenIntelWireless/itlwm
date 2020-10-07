@@ -11,41 +11,13 @@
 
 #include "apple_private_spi.h"
 #include "debug.h"
-
-#ifdef HighSierra
-#include "HighSierra/IO80211WorkLoop.h"
-#include "HighSierra/IO80211Controller.h"
-#include "HighSierra/IO80211Interface.h"
-#include "HighSierra/IO80211VirtualInterface.h"
-#include "HighSierra/IO80211P2PInterface.h"
-#endif
-
-#ifdef Mojave
-#include "Mojave/IO80211WorkLoop.h"
-#include "Mojave/IO80211Controller.h"
-#include "Mojave/IO80211Interface.h"
-#include "Mojave/IO80211VirtualInterface.h"
-#include "Mojave/IO80211P2PInterface.h"
-#endif
-
-#ifdef Catalina
-#include "Catalina/IO80211WorkLoop.h"
-#include "Catalina/IO80211Controller.h"
-#include "Catalina/IO80211Interface.h"
-#include "Catalina/IO80211VirtualInterface.h"
-#include "Catalina/IO80211P2PInterface.h"
-#include "Catalina/IO80211SkywalkInterface.h"
-#include "Catalina/IOSkywalkEthernetInterface.h"
-#endif
-
-#ifdef BigSur
-#include "BigSur/IO80211WorkLoop.h"
-#include "BigSur/IO80211Controller.h"
-#include "BigSur/IO80211Interface.h"
-#include "BigSur/IO80211VirtualInterface.h"
-#include "BigSur/IO80211P2PInterface.h"
-#include "BigSur/IO80211SkywalkInterface.h"
-#include "BigSur/IOSkywalkEthernetInterface.h"
+#include "IO80211WorkLoop.h"
+#include "IO80211Controller.h"
+#include "IO80211Interface.h"
+#include "IO80211VirtualInterface.h"
+#include "IO80211P2PInterface.h"
+#if __IO80211_TARGET >= __MAC_10_15
+#include "IO80211SkywalkInterface.h"
 #endif
 
 #endif /* Apple80211_h */

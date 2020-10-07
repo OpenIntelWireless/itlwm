@@ -10,31 +10,35 @@ class IO80211VirtualInterface : public IOService {
     OSDeclareDefaultStructors(IO80211VirtualInterface)
     
 public:
-    virtual void free(void) override;
-    virtual bool willTerminate( IOService * provider, IOOptionBits options ) override;
+    virtual void free(void) APPLE_KEXT_OVERRIDE;
+#if __IO80211_TARGET >= __MAC_11_0
+    virtual bool willTerminate( IOService * provider, IOOptionBits options ) APPLE_KEXT_OVERRIDE;
+#endif
     virtual IOReturn configureReport(IOReportChannelList   *channels,
                                      IOReportConfigureAction action,
                                      void                  *result,
-                                     void                  *destination) override;
+                                     void                  *destination) APPLE_KEXT_OVERRIDE;
     virtual IOReturn updateReport(IOReportChannelList      *channels,
                                   IOReportUpdateAction      action,
                                   void                     *result,
-                                  void                     *destination) override;
-    virtual bool terminate( IOOptionBits options = 0 ) override;
-    virtual bool attach(IOService *) override;
-    virtual void detach(IOService *) override;
-    virtual IOReturn newUserClient(task_t,void *,UInt,OSDictionary *,IOUserClient **) override;
-    virtual const char * stringFromReturn( IOReturn rtn ) override;
-    virtual int errnoFromReturn( IOReturn rtn ) override;
+                                  void                     *destination) APPLE_KEXT_OVERRIDE;
+    virtual bool terminate( IOOptionBits options = 0 ) APPLE_KEXT_OVERRIDE;
+    virtual bool attach(IOService *) APPLE_KEXT_OVERRIDE;
+    virtual void detach(IOService *) APPLE_KEXT_OVERRIDE;
+#if __IO80211_TARGET >= __MAC_10_15
+    virtual IOReturn newUserClient(task_t,void *,UInt,OSDictionary *,IOUserClient **) APPLE_KEXT_OVERRIDE;
+#endif
+    virtual const char * stringFromReturn( IOReturn rtn ) APPLE_KEXT_OVERRIDE;
+    virtual int errnoFromReturn( IOReturn rtn ) APPLE_KEXT_OVERRIDE;
     virtual IOReturn powerStateWillChangeTo(
                                             IOPMPowerFlags  capabilities,
                                             unsigned long   stateNumber,
-                                            IOService *     whatDevice ) override;
+                                            IOService *     whatDevice ) APPLE_KEXT_OVERRIDE;
 
     virtual IOReturn powerStateDidChangeTo(
                                            IOPMPowerFlags  capabilities,
                                            unsigned long   stateNumber,
-                                           IOService *     whatDevice ) override;
+                                           IOService *     whatDevice ) APPLE_KEXT_OVERRIDE;
     virtual bool init(IO80211Controller *,ether_addr *,uint,char const*);
     virtual bool createPeerManager(ether_addr *,IO80211PeerManager **);
     virtual UInt getMediumType();
@@ -49,7 +53,9 @@ public:
     virtual bool handleDebugCmd(apple80211_debug_command *);
     virtual IOReturn postPeerPresence(ether_addr *,int,int,int,char *);
     virtual IOReturn postPeerAbsence(ether_addr *);
+#if __IO80211_TARGET >= __MAC_10_15
     virtual IOReturn postPeerPresenceIPv6(ether_addr *,int,int,int,char *,unsigned char *);
+#endif
     virtual void signalOutputThread();
     virtual bool isOutputFlowControlled();
     virtual void setOutputFlowControlled();
@@ -88,7 +94,7 @@ public:
     
     const char *getBSDName();
 public:
-    char buf[0x1024];
+    char buf[0x300];
 };
 
 

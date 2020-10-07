@@ -235,6 +235,12 @@ getFirmwareName()
     return com.sc_fwname;
 }
 
+UInt32 ItlIwx::
+supportedFeatures()
+{
+    return 0;
+}
+
 int16_t ItlIwx::
 getBSSNoise()
 {

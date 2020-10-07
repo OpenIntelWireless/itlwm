@@ -98,6 +98,10 @@ public:
     virtual SInt32 disableVirtualInterface(IO80211VirtualInterface *interface) override;
     virtual IO80211VirtualInterface* createVirtualInterface(ether_addr *eth,uint role) override;
     virtual SInt32 apple80211VirtualRequest(uint request_type, int request_number,IO80211VirtualInterface *interface,void *data) override;
+    virtual SInt32 stopDMA() override;
+    virtual UInt32 hardwareOutputQueueDepth(IO80211Interface* interface) override;
+    virtual SInt32 performCountryCodeOperation(IO80211Interface* interface, IO80211CountryCodeOp op) override;
+    virtual SInt32 enableFeature(IO80211FeatureCode code, void* data) override;
     
     //AirportSTAIOCTL
     FUNC_IOCTL(SSID, apple80211_ssid_data)

@@ -69,6 +69,8 @@ public:
     
     virtual const char *getFirmwareName() override;
     
+    virtual UInt32 supportedFeatures() override;
+    
     //driver controller
     virtual void clearScanningFlags() override;
     

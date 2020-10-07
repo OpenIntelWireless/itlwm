@@ -574,8 +574,7 @@ UInt32 itlwm::outputPacket(mbuf_t m, void *param)
 
 UInt32 itlwm::getFeatures() const
 {
-    UInt32 features = (kIONetworkFeatureMultiPages);
-    return features;
+    return fHalService->getDriverInfo()->supportedFeatures();
 }
 
 IOReturn itlwm::setPromiscuousMode(IOEnetPromiscuousMode mode) {
