@@ -2186,7 +2186,7 @@
 		35CBE6B8251CB89700435CBC /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CONFIGURATION_BUILD_DIR = "build/Products/$(CONFIGURATION)/Big Sur";
+				CONFIGURATION_BUILD_DIR = "$(SYMROOT)/$(CONFIGURATION)/Big Sur";
 				CURRENT_PROJECT_VERSION = "$(MODULE_VERSION)";
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"DEBUG=1",
@@ -2217,7 +2217,7 @@
 		35CBE6B9251CB89700435CBC /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CONFIGURATION_BUILD_DIR = "build/Products/$(CONFIGURATION)/Big Sur";
+				CONFIGURATION_BUILD_DIR = "$(SYMROOT)/$(CONFIGURATION)/Big Sur";
 				CURRENT_PROJECT_VERSION = "$(MODULE_VERSION)";
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"ITLWM_VERSION=\\\"${MODULE_VERSION}\\\"",
@@ -2244,7 +2244,7 @@
 		35CBE722251CB8BF00435CBC /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CONFIGURATION_BUILD_DIR = "build/Products/$(CONFIGURATION)/Mojave";
+				CONFIGURATION_BUILD_DIR = "$(SYMROOT)/$(CONFIGURATION)/Mojave";
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"DEBUG=1",
 					"$(inherited)",
@@ -2274,7 +2274,7 @@
 		35CBE723251CB8BF00435CBC /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CONFIGURATION_BUILD_DIR = "build/Products/$(CONFIGURATION)/Mojave";
+				CONFIGURATION_BUILD_DIR = "$(SYMROOT)/$(CONFIGURATION)/Mojave";
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"ITLWM_VERSION=\\\"${MODULE_VERSION}\\\"",
 					Mojave,
@@ -2300,7 +2300,7 @@
 		35CBE78D251CB8CA00435CBC /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CONFIGURATION_BUILD_DIR = "build/Products/$(CONFIGURATION)/High Sierra";
+				CONFIGURATION_BUILD_DIR = "$(SYMROOT)/$(CONFIGURATION)/High Sierra";
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"DEBUG=1",
 					"$(inherited)",
@@ -2330,7 +2330,7 @@
 		35CBE78E251CB8CA00435CBC /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CONFIGURATION_BUILD_DIR = "build/Products/$(CONFIGURATION)/High Sierra";
+				CONFIGURATION_BUILD_DIR = "$(SYMROOT)/$(CONFIGURATION)/High Sierra";
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"ITLWM_VERSION=\\\"${MODULE_VERSION}\\\"",
 					HighSierra,
@@ -2368,7 +2368,7 @@
 		F89B6BC125021C9C000F77FF /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CONFIGURATION_BUILD_DIR = "build/Products/$(CONFIGURATION)/Catalina";
+				CONFIGURATION_BUILD_DIR = "$(SYMROOT)/$(CONFIGURATION)/Catalina";
 				CURRENT_PROJECT_VERSION = "$(MODULE_VERSION)";
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"DEBUG=1",
@@ -2399,7 +2399,7 @@
 		F89B6BC225021C9C000F77FF /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CONFIGURATION_BUILD_DIR = "build/Products/$(CONFIGURATION)/Catalina";
+				CONFIGURATION_BUILD_DIR = "$(SYMROOT)/$(CONFIGURATION)/Catalina";
 				CURRENT_PROJECT_VERSION = "$(MODULE_VERSION)";
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"ITLWM_VERSION=\\\"${MODULE_VERSION}\\\"",
