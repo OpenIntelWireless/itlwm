@@ -221,7 +221,7 @@ void AirportItlwm::setPTK(const u_int8_t *key, size_t key_len) {
             return;
         }
         else {
-            XYLog("set PTK successfully\n");
+            XYLog("setting PTK successfully\n");
         }
         ni->ni_flags &= ~IEEE80211_NODE_RSN_NEW_PTK;
         ni->ni_flags &= ~IEEE80211_NODE_TXRXPROT;
@@ -266,7 +266,7 @@ void AirportItlwm::setGTK(const u_int8_t *gtk, size_t key_len, u_int8_t kid, u_i
             return;
         }
         else {
-            XYLog("set PTK successfully\n");
+            XYLog("setting GTK successfully\n");
         }
     }
     

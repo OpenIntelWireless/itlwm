@@ -175,6 +175,8 @@ ieee80211_set_key(struct ieee80211com *ic, struct ieee80211_node *ni,
 
     if (error == 0)
         k->k_flags |= IEEE80211_KEY_SWCRYPTO;
+    
+    XYLog("%s cipher=%d, error=%d\n", __FUNCTION__, k->k_cipher, error);
 
     return error;
 }

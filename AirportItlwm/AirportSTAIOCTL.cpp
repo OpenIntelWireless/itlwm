@@ -728,6 +728,10 @@ IOReturn AirportItlwm::
 setSCANCACHE_CLEAR(OSObject *object, struct apple80211req *req)
 {
     ieee80211com *ic = fHalService->get80211Controller();
+    //if doing background or active scan, don't free nodes.
+    if ((ic->ic_flags & IEEE80211_F_BGSCAN) || (ic->ic_flags & IEEE80211_F_ASCAN)) {
+        return kIOReturnSuccess;
+    }
     ieee80211_free_allnodes(ic, 0);
     return kIOReturnSuccess;
 }
