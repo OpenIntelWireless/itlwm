@@ -302,9 +302,14 @@ struct apple80211_key
     u_int16_t            key_flags;
     u_int16_t            key_index;
     u_int8_t            key[ APPLE80211_KEY_BUFF_LEN ];
+    u_int8_t pad[30];
     u_int32_t            key_rsc_len;
     u_int8_t            key_rsc[ APPLE80211_RSC_LEN ];    // receive sequence counter
     struct ether_addr    key_ea;                            // key applies to this bssid
+    uint wowl_kck_len;
+    uint8_t wowl_kck_key[16];
+    uint wowl_kek_len;
+    u_int8_t wowl_kek_key[24];
 };
 
 // Changing this affects any structure that contains a channel

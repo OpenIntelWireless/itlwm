@@ -32,8 +32,7 @@ IOCommandGate *_fCommandGate;
 
 bool itlwm::init(OSDictionary *properties)
 {
-    super::init(properties);
-    return true;
+    return super::init(properties);
 }
 
 #define  PCI_MSI_FLAGS        2    /* Message Control */

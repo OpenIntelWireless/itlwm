@@ -1,5 +1,3 @@
-/* add your code here */
-
 /*
 * Copyright (C) 2020  钟先耀
 *

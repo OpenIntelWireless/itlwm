@@ -557,7 +557,7 @@ struct apple80211_assoc_data
     u_int8_t                ad_ssid[ APPLE80211_MAX_SSID_LEN ];
     struct ether_addr        ad_bssid;        // prefer over ssid if not zeroed
     struct apple80211_key    ad_key;
-    u_int8_t                unknown[82];
+    uint16_t pad;
     u_int8_t                ad_rsn_ie[ APPLE80211_MAX_RSN_IE_LEN ];
     u_int32_t                ad_flags;        // apple80211_assoc_flags
 };
