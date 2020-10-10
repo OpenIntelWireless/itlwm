@@ -397,7 +397,7 @@ struct apple80211_bssid_data
 struct apple80211_capability_data
 {
     u_int32_t    version;
-    u_int8_t    capabilities[APPLE80211_MAP_SIZE( APPLE80211_CAP_MAX + 1 )];
+    u_int8_t    capabilities[11];
 };
 
 struct apple80211_state_data

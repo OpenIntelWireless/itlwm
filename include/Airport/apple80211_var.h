@@ -200,6 +200,7 @@ enum apple80211_locale
     APPLE80211_LOCALE_KOREA        = 4,
     APPLE80211_LOCALE_APAC        = 5,
     APPLE80211_LOCALE_ROW        = 6,
+    APPLE80211_LOCALE_INDONESIA  = 7
 };
 
 enum apple80211_scan_type

@@ -34,6 +34,8 @@ enum
     kPowerStateCount
 };
 
+#define kWatchDogTimerPeriod 1000
+
 class AirportItlwm : public IO80211Controller {
     OSDeclareDefaultStructors(AirportItlwm)
 #define IOCTL(REQ_TYPE, REQ, DATA_TYPE) \

@@ -2125,13 +2125,22 @@ ieee80211_release_node(struct ieee80211com *ic, struct ieee80211_node *ni)
 void
 ieee80211_free_allnodes(struct ieee80211com *ic, int clear_ic_bss)
 {
-    struct ieee80211_node *ni;
+    struct ieee80211_node *ni, *next_ni;
     int s;
     
     DPRINTF(("freeing all nodes\n"));
     s = splnet();
-    while ((ni = RB_MIN(ieee80211_tree, &ic->ic_tree)) != NULL)
+    for (ni = RB_MIN(ieee80211_tree, &ic->ic_tree);
+         ni != NULL; ni = next_ni) {
+        next_ni = RB_NEXT(ieee80211_tree, &ic->ic_tree, ni);
+        if (!clear_ic_bss && ic->ic_bss != NULL) {
+            if (memcmp(ic->ic_bss->ni_bssid, ni->ni_bssid, IEEE80211_ADDR_LEN) == 0
+                && strncmp((const char *)ic->ic_bss->ni_essid, (const char *)ni->ni_essid, IEEE80211_NWID_LEN) == 0) {
+                continue;
+            }
+        }
         ieee80211_free_node(ic, ni);
+    }
     splx(s);
     
     if (clear_ic_bss && ic->ic_bss != NULL)

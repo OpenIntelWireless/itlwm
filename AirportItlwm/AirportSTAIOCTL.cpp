@@ -399,27 +399,28 @@ getCARD_CAPABILITIES(OSObject *object,
                                      struct apple80211_capability_data *cd)
 {
     cd->version = APPLE80211_VERSION;
-    cd->capabilities[0] = 0xeb;
-    cd->capabilities[1] = 0x7e;
-    cd->capabilities[2] |= 0xc0;
-    cd->capabilities[2] = 3;
-    cd->capabilities[2] |= 0x13;
-    cd->capabilities[2] |= 0x20;
-    cd->capabilities[2] |= 0x28;
-    cd->capabilities[2] |= 4;
+    cd->capabilities[0] = 0xEB;
+    cd->capabilities[1] = 0x7E;
+    cd->capabilities[2] = 0xFF;
     cd->capabilities[5] |= 8;
     cd->capabilities[3] |= 2;
     cd->capabilities[4] |= 1;
     cd->capabilities[6] |= 8;
-
-    cd->capabilities[3] |= 0x23;
-    cd->capabilities[2] |= 0x80;
+    cd->capabilities[8] |= 8;//dfs white list
+    cd->capabilities[3] |= 0x21;
+    cd->capabilities[4] |= 0x80;
     cd->capabilities[5] |= 4;
     cd->capabilities[2] |= 0xC0;
     cd->capabilities[6] |= 0x84;
     cd->capabilities[3] |= 8;
+    cd->capabilities[4] |= 0xAC;
     cd->capabilities[6] |= 1;
-    cd->capabilities[5] |= 0x80;
+    cd->capabilities[7] |= 4;
+    cd->capabilities[5] |= 0x80;//isCntryDefaultSupported
+    cd->capabilities[7] |= 0x80;
+    cd->capabilities[8] |= 0x40;
+    cd->capabilities[9] |= 8;
+    cd->capabilities[9] |= 0x28;
     return kIOReturnSuccess;
 }
 
@@ -647,7 +648,7 @@ IOReturn AirportItlwm::
 setASSOCIATE(OSObject *object,
                              struct apple80211_assoc_data *ad)
 {
-    XYLog("%s [%s]\n", __FUNCTION__, ad->ad_ssid);
+    XYLog("%s [%s] ad_auth_lower=%d ad_auth_upper=%d\n", __FUNCTION__, ad->ad_ssid, ad->ad_auth_lower, ad->ad_auth_upper);
     this->current_authtype_lower = ad->ad_auth_lower;
     this->current_authtype_upper = ad->ad_auth_upper;
     
@@ -842,6 +843,13 @@ setSCAN_REQ(OSObject *object,
 {
     if (fScanResultWrapping) {
         return 22;
+    }
+    if (sd->scan_type == APPLE80211_SCAN_TYPE_FAST) {
+        if (scanSource) {
+            scanSource->setTimeoutMS(100);
+            scanSource->enable();
+        }
+        return kIOReturnSuccess;
     }
     ieee80211_begin_cache_bgscan(&fHalService->get80211Controller()->ic_ac.ac_if);
     if (scanSource) {
