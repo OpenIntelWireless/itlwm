@@ -98,10 +98,17 @@ ieee80211_tkip_set_key(struct ieee80211com *ic, struct ieee80211_key *k)
 	} else
 #endif
 	{
+#ifdef AIRPORT
+        ctx->txmic = &k->k_key[16];
+        ctx->rxmic = &k->k_key[24];
+#else
 		ctx->rxmic = &k->k_key[16];
 		ctx->txmic = &k->k_key[24];
+#endif
 	}
 	k->k_priv = ctx;
+    XYLog("%s kid=%d klen=%d key=%02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X %02X \n", __FUNCTION__, k->k_id, k->k_len, k->k_key[0], k->k_key[1], k->k_key[2], k->k_key[3], k->k_key[4], k->k_key[5], k->k_key[6], k->k_key[7], k->k_key[8], k->k_key[9], k->k_key[10], k->k_key[11], k->k_key[12], k->k_key[13], k->k_key[14], k->k_key[15], k->k_key[16], k->k_key[17], k->k_key[18], k->k_key[19], k->k_key[20], k->k_key[21], k->k_key[22], k->k_key[23], k->k_key[24], k->k_key[25], k->k_key[26], k->k_key[27], k->k_key[28], k->k_key[29], k->k_key[30], k->k_key[31]);
+    XYLog("%s rxmic=%02X %02X %02X %02X %02X %02X %02X %02X txmic=%02X %02X %02X %02X %02X %02X %02X %02X ", __FUNCTION__, ctx->rxmic[0], ctx->rxmic[1], ctx->rxmic[2], ctx->rxmic[3], ctx->rxmic[4], ctx->rxmic[5], ctx->rxmic[6], ctx->rxmic[7], ctx->txmic[0], ctx->txmic[1], ctx->txmic[2], ctx->txmic[3], ctx->txmic[4], ctx->txmic[5], ctx->txmic[6], ctx->txmic[7]);
 	return 0;
 }
 

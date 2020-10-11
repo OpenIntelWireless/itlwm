@@ -614,6 +614,8 @@ ieee80211_recv_4way_msg3(struct ieee80211com *ic,
             k->k_flags = IEEE80211_KEY_GROUP;
             if (gtk[6] & (1 << 2))
                 k->k_flags |= IEEE80211_KEY_TX;
+            XYLog("%s k_len=%d rsc=%02X %02X %02X %02X %02X %02X", __FUNCTION__, keylen
+                  , key->rsc[0], key->rsc[1], key->rsc[2], key->rsc[3], key->rsc[4], key->rsc[5]);
             k->k_rsc[0] = LE_READ_6(key->rsc);
             k->k_len = keylen;
             memcpy(k->k_key, &gtk[8], k->k_len);

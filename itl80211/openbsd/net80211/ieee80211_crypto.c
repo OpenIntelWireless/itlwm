@@ -176,7 +176,7 @@ ieee80211_set_key(struct ieee80211com *ic, struct ieee80211_node *ni,
     if (error == 0)
         k->k_flags |= IEEE80211_KEY_SWCRYPTO;
     
-    XYLog("%s cipher=%d, error=%d\n", __FUNCTION__, k->k_cipher, error);
+    XYLog("%s kid=%d cipher=%d, error=%d\n", __FUNCTION__, k->k_id, k->k_cipher, error);
 
     return error;
 }
@@ -276,6 +276,8 @@ ieee80211_encrypt(struct ieee80211com *ic, mbuf_t m0,
 {
 	if ((k->k_flags & IEEE80211_KEY_SWCRYPTO) == 0)
 		panic("%s: key unset for sw crypto: %d", __FUNCTION__, k->k_id);
+    
+    XYLog("%s kid=%d cipher=%d\n", __FUNCTION__, k->k_id, k->k_cipher);
 
 	switch (k->k_cipher) {
 	case IEEE80211_CIPHER_WEP40:
@@ -310,6 +312,8 @@ ieee80211_decrypt(struct ieee80211com *ic, mbuf_t m0,
         mbuf_free(m0);
         return NULL;
     }
+    
+    XYLog("%s kid=%d cipher=%d\n", __FUNCTION__, k->k_id, k->k_cipher);
 
     switch (k->k_cipher) {
     case IEEE80211_CIPHER_WEP40:
