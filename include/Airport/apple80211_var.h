@@ -23,9 +23,15 @@
 #ifndef _APPLE80211_VAR_H_
 #define _APPLE80211_VAR_H_
 
+#include <Availability.h>
 #include <sys/types.h>
 #include <net/ethernet.h>
 #include <sys/param.h>
+
+// This is necessary, because even the latest Xcode does not support properly targeting 11.0.
+#ifndef __IO80211_TARGET
+#error "Please define __IO80211_TARGET to the requested version"
+#endif
 
 // Sizes and limits
 #define APPLE80211_ADDR_LEN            6
@@ -174,6 +180,14 @@ enum apple80211_associate_result
     APPLE80211_RESULT_INVALID_PMK                = 21, // APPLE80211_REASON_PREV_AUTH_EXPIRED received
     APPLE80211_RESULT_SUPPLICANT_TIMEOUT        = 22, // RSNSupplicant did not finish handshake
     APPLE80211_RESULT_UNKNOWN                    = 0xffff // Unrecognized error condition
+};
+
+enum apple80211_link_down_reason
+{
+   APPLE80211_LINK_DOWN_REASON_INTERNAL_ERROR   = 0,
+   APPLE80211_LINK_DOWN_REASON_BEACONLOST       = 1,
+   APPLE80211_LINK_DOWN_REASON_DEAUTH           = 2,
+   APPLE80211_LINK_DOWN_REASON_INTERNAL_ERROR_2 = 3
 };
 
 enum apple80211_unit

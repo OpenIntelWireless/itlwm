@@ -1,9 +1,15 @@
+#ifndef _APPLE80211_WPS_H_
+#define _APPLE80211_WPS_H_
+
+#include <Availability.h>
 #include <sys/types.h>
 #include <net/ethernet.h>
 //#include "eap_defs.h"
 
-#ifndef WPS_EAP_H
-#define WPS_EAP_H
+// This is necessary, because even the latest Xcode does not support properly targeting 11.0.
+#ifndef __IO80211_TARGET
+#error "Please define __IO80211_TARGET to the requested version"
+#endif
 
 #define WPS_HANDSHAKE_TIMEOUT    120 /* seconds */
 #define WPS_RETRANSMIT_TIMEOUT    5
@@ -519,5 +525,5 @@ typedef enum WPSSupplicantState WPSSupplicantState;
 #define WPSE_NACKED                -15        // NACKED by registrar
 #define WPSE_FAIL                -16        // unexpected EAP-FAIL received
 
-#endif /* WPS_EAP_H */
+#endif /* _APPLE80211_WPS_H_ */
 

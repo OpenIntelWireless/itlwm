@@ -22,11 +22,17 @@
 #ifndef _APPLE80211_IOCTL_H_
 #define _APPLE80211_IOCTL_H_
 
+#include <Availability.h>
 #include <sys/socket.h>
 #include <net/if.h>
 #include <net/ethernet.h>
 #include <sys/param.h>
 #include <sys/ioctl.h>
+
+// This is necessary, because even the latest Xcode does not support properly targeting 11.0.
+#ifndef __IO80211_TARGET
+#error "Please define __IO80211_TARGET to the requested version"
+#endif
 
 #include "apple80211_var.h"
 
@@ -539,6 +545,34 @@ struct apple80211_scan_data
     u_int32_t                    rest_time;                            // time between scanning each channel (ms)
     u_int32_t                    num_channels;                        // 0 if not passing in channels
     struct apple80211_channel    channels[APPLE80211_MAX_CHANNELS];    // channel list
+};
+
+struct apple80211_scan_multiple_data
+{
+  uint32_t                  version;
+  uint32_t                  ap_mode; // apple80211_apmode
+  uint32_t                  ssid_count;
+  apple80211_ssid_data      ssids[16];
+  uint32_t                  bssid_count;
+  ether_addr                bssids[16];
+  uint32_t                  scan_type;
+  uint32_t                  phy_mode;
+  uint32_t                  dwell_time;
+  uint32_t                  rest_time;
+  uint32_t                  num_channels;
+  struct apple80211_channel channels[128];
+  uint16_t                  unk_2;
+};
+
+struct apple80211_link_changed_event_data
+{
+   bool       isLinkDown; // 0
+   uint32_t   rssi;       // 4
+   uint16_t   snr;        // 8
+   uint16_t   nf;         // 10
+   char       cca;        // 12
+   bool       voluntary;  // 16
+   uint32_t   reason;     // 20
 };
 
 struct apple80211_apmode_data
