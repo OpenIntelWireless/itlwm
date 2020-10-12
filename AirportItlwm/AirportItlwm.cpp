@@ -499,17 +499,15 @@ void AirportItlwm::stop(IOService *provider)
     releaseAll();
 }
 
-UInt64 currentSpeed;
 UInt32 currentStatus;
 
 bool AirportItlwm::
 setLinkStatus(UInt32 status, const IONetworkMedium * activeMedium, UInt64 speed, OSData * data)
 {
-    if (status == currentStatus && activeMedium == getCurrentMedium() && speed == currentSpeed) {
+    if (status == currentStatus) {
         return true;
     }
     bool ret = super::setLinkStatus(status, activeMedium, speed, data);
-    currentSpeed = speed;
     currentStatus = status;
     if (fNetIf) {
         if (status & kIONetworkLinkActive) {
