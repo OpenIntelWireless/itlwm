@@ -43,13 +43,13 @@ public:
     virtual bool createPeerManager(ether_addr *,IO80211PeerManager **);
     virtual UInt getMediumType();
     virtual void setLinkState(IO80211LinkState,uint);
-    virtual bool dequeueOutputPacketsWithServiceClass(uint,IOMbufServiceClass,mbuf_t*,mbuf_t*,uint *,ulong long *);
+    virtual bool dequeueOutputPacketsWithServiceClass(uint,IOMbufServiceClass,mbuf_t*,mbuf_t*,UInt *,unsigned long long *);
     virtual UInt32 outputPacket (mbuf_t m, void* param);
     virtual void setEnabledBySystem(bool);
-    virtual void handleIoctl(ulong,void *);
+    virtual void handleIoctl(unsigned long,void *);
     virtual UInt32 inputPacket(mbuf_t,packet_info_tag *);
-    virtual IOReturn controllerWillChangePowerState(IO80211Controller *,ulong,uint,IOService *);
-    virtual IOReturn controllerDidChangePowerState(IO80211Controller *,ulong,uint,IOService *);
+    virtual IOReturn controllerWillChangePowerState(IO80211Controller *,unsigned long,UInt,IOService *);
+    virtual IOReturn controllerDidChangePowerState(IO80211Controller *,unsigned long,UInt,IOService *);
     virtual bool handleDebugCmd(apple80211_debug_command *);
     virtual IOReturn postPeerPresence(ether_addr *,int,int,int,char *);
     virtual IOReturn postPeerAbsence(ether_addr *);

@@ -100,6 +100,9 @@ class IO80211FlowQueue;
 class IO80211FlowQueueLegacy;
 class FlowIdMetadata;
 class IOReporter;
+#if __IO80211_TARGET >= __MAC_11_0
+class IO80211InfraInterface;
+#endif
 extern void IO80211VirtualInterfaceNamerRetain();
 
 
@@ -127,10 +130,6 @@ struct apple80211_lteCoex_report;
 typedef IOReturn (*IOCTL_FUNC)(IO80211Controller*, IO80211Interface*, IO80211VirtualInterface*, apple80211req*, bool);
 extern IOCTL_FUNC gGetHandlerTable[];
 extern IOCTL_FUNC gSetHandlerTable[];
-#define __int64 int
-#define ulong unsigned long
-#define _QWORD UInt64
-#define uint UInt
 
 class IO80211Controller : public IOEthernetController {
     OSDeclareAbstractStructors(IO80211Controller)
@@ -142,8 +141,8 @@ public:
     virtual bool terminate(unsigned int) APPLE_KEXT_OVERRIDE;
 #endif
     virtual bool init(OSDictionary *) APPLE_KEXT_OVERRIDE;
-    virtual IOReturn configureReport(IOReportChannelList *,uint,void *,void *) APPLE_KEXT_OVERRIDE;
-    virtual IOReturn updateReport(IOReportChannelList *,uint,void *,void *) APPLE_KEXT_OVERRIDE;
+    virtual IOReturn configureReport(IOReportChannelList *,UInt,void *,void *) APPLE_KEXT_OVERRIDE;
+    virtual IOReturn updateReport(IOReportChannelList *,UInt,void *,void *) APPLE_KEXT_OVERRIDE;
     virtual bool start(IOService *) APPLE_KEXT_OVERRIDE;
     virtual void stop(IOService *) APPLE_KEXT_OVERRIDE;
     virtual IOService* getProvider(void) const APPLE_KEXT_OVERRIDE;
@@ -160,30 +159,32 @@ public:
 #endif
     virtual IONetworkInterface* createInterface(void) APPLE_KEXT_OVERRIDE;
     virtual bool configureInterface(IONetworkInterface *) APPLE_KEXT_OVERRIDE;
-//    virtual IOReturn outputStart(IONetworkInterface *,uint) APPLE_KEXT_OVERRIDE;
+#ifdef __PRIVATE_SPI__
+    virtual IOReturn outputStart(IONetworkInterface *,UInt) APPLE_KEXT_OVERRIDE;
+#endif
     virtual IOReturn getHardwareAddress(IOEthernetAddress *) APPLE_KEXT_OVERRIDE;
-    virtual void requestPacketTx(void*, uint);
+    virtual void requestPacketTx(void*, UInt);
     virtual IOReturn getHardwareAddressForInterface(IO80211Interface *,IOEthernetAddress *);
-    virtual void inputMonitorPacket(mbuf_t,uint,void *,ulong);
+    virtual void inputMonitorPacket(mbuf_t,UInt,void *,unsigned long);
     virtual int outputRaw80211Packet(IO80211Interface *,mbuf_t);
     virtual int outputActionFrame(IO80211Interface *,mbuf_t);
-    virtual int bpfOutputPacket(OSObject *,uint,mbuf_t m);
-    virtual SInt32 monitorModeSetEnabled(IO80211Interface*, bool, uint);
+    virtual int bpfOutputPacket(OSObject *,UInt,mbuf_t m);
+    virtual SInt32 monitorModeSetEnabled(IO80211Interface*, bool, UInt);
     virtual IO80211Interface* getNetworkInterface(void);
 #if __IO80211_TARGET >= __MAC_10_15
     virtual IO80211SkywalkInterface* getPrimarySkywalkInterface(void);
 #endif
-    virtual SInt32 apple80211_ioctl(IO80211Interface *, IO80211VirtualInterface*, ifnet_t,ulong,void *);
+    virtual SInt32 apple80211_ioctl(IO80211Interface *, IO80211VirtualInterface*, ifnet_t,unsigned long,void *);
 #if __IO80211_TARGET >= __MAC_10_15
-    virtual SInt32 apple80211_ioctl(IO80211SkywalkInterface *,ulong,void *);
+    virtual SInt32 apple80211_ioctl(IO80211SkywalkInterface *,unsigned long,void *);
 #endif
-    virtual SInt32 apple80211_ioctl(IO80211Interface *interface, ifnet_t net,ulong id,void *data) {
+    virtual SInt32 apple80211_ioctl(IO80211Interface *interface, ifnet_t net,unsigned long id,void *data) {
         return apple80211_ioctl(interface, NULL, net, id, data);
     }
     virtual SInt32 apple80211Request(unsigned int, int, IO80211Interface*, void*) = 0;
-    virtual SInt32 apple80211VirtualRequest(uint,int,IO80211VirtualInterface *,void *);
+    virtual SInt32 apple80211VirtualRequest(UInt,int,IO80211VirtualInterface *,void *);
 #if __IO80211_TARGET >= __MAC_10_15
-    virtual SInt32 apple80211SkywalkRequest(uint,int,IO80211SkywalkInterface *,void *);
+    virtual SInt32 apple80211SkywalkRequest(UInt,int,IO80211SkywalkInterface *,void *);
 #endif
     virtual SInt32 stopDMA() = 0;
     virtual UInt32 hardwareOutputQueueDepth(IO80211Interface*) = 0;
@@ -212,7 +213,7 @@ public:
     virtual IOReturn disablePacketTimestamping(void) {
         return kIOReturnUnsupported;
     }
-    virtual UInt32 selfDiagnosticsReport(int,char const*,uint);
+    virtual UInt32 selfDiagnosticsReport(int,char const*,UInt);
     virtual UInt32 getDataQueueDepth(OSObject *);
 #if __IO80211_TARGET >= __MAC_11_0
     virtual bool isAssociatedToMovingNetwork(void) { return false; }
@@ -234,89 +235,113 @@ public:
 #if __IO80211_TARGET >= __MAC_11_0
     virtual bool detachInterface(IOSkywalkInterface *, bool);
 #endif
-    virtual IO80211VirtualInterface* createVirtualInterface(ether_addr *,uint);
-    virtual bool attachVirtualInterface(IO80211VirtualInterface **,ether_addr *,uint,bool);
+    virtual IO80211VirtualInterface* createVirtualInterface(ether_addr *,UInt);
+    virtual bool attachVirtualInterface(IO80211VirtualInterface **,ether_addr *,UInt,bool);
     virtual bool detachVirtualInterface(IO80211VirtualInterface *,bool);
 #if __IO80211_TARGET >= __MAC_10_15
     virtual IOReturn enable(IO80211SkywalkInterface *);
     virtual IOReturn disable(IO80211SkywalkInterface *);
 #endif
     
-//public:
-//    IO80211SkywalkInterface* getInfraInterface(void);
-//    IO80211ScanManager* getPrimaryInterfaceScanManager(void);
-//    IO80211ControllerMonitor* getInterfaceMonitor(void);
-//    IOReturn addReporterLegend(IOService *,IOReporter *,char const*,char const*);
-//    IOReturn removeReporterFromLegend(IOService *,IOReporter *,char const*,char const*);
-//    IOReturn unlockIOReporterLegend(void);
-//    void lockIOReporterLegend(void);//怀疑对象，之前是返回int
-//    IOReturn logIOReportLogStreamSubscription(ulong long);
-//    IOReturn addIOReportLogStreamForProvider(IOService *,ulong long *);
-//    IOReturn addSubscriptionForThisReporterFetchedOnTimer(IOReporter *,char const*,char const*,IOService *) ;
-//    IOReturn addSubscriptionForProviderFetchedOnTimer(IOService *);
-//    void handleIOReporterTimer(IOTimerEventSource *);
-//    void setIOReportersStreamFlags(ulong long);
-//    void updateIOReportersStreamFrequency(void); //怀疑对象，之前是返回int
-//    void setIOReportersStreamLevel(CCStreamLogLevel);
-//    void powerChangeGated(OSObject *,void *,void *,void *,void *);
-//    int copyOut(void const*,ulong long,ulong);
-//    SInt32 getASSOCIATE_RESULT(IO80211Interface *,IO80211VirtualInterface *,IO80211SkywalkInterface *,apple80211_assoc_result_data *);
-//    IOReturn copyIn(unsigned long long,void *,unsigned long);
-//    void logIOCTL(apple80211req *);
-//    bool isIOCTLLoggingRestricted(apple80211req *);
-//    IOReturn setChanNoiseFloorLTE(apple80211_stat_report *,int);
-//    IOReturn setChanNoiseFloor(apple80211_stat_report *,int);
-//    IOReturn setChanCCA(apple80211_stat_report *,int);
-//    IOReturn setChanExtendedCCA(apple80211_stat_report *,apple80211_cca_report *);
-//    bool setLTECoexstat(apple80211_stat_report *,apple80211_lteCoex_report *);
-//    bool setBTCoexstat(apple80211_stat_report *,apple80211_btCoex_report *);
-//    bool setAMPDUstat(apple80211_stat_report *,apple80211_ampdu_stat_report *,apple80211_channel *);
-//    UInt32 getCountryCode(apple80211_country_code_data *);
-//    IOReturn setCountryCode(apple80211_country_code_data *);
-//    bool getInfraExtendedStats(apple80211_extended_stats *);
-//    bool getChipCounterStats(apple80211_chip_stats *);
-//    bool setExtendedChipCounterStats(apple80211_stat_report *,void *);
-//    bool setChipCounterStats(apple80211_stat_report *,apple80211_chip_stats *,apple80211_channel *);
-//    virtual bool setLeakyAPStats(apple80211_leaky_ap_event *);
-//    bool setFrameStats(apple80211_stat_report *,apple80211_frame_counters *,apple80211_channel *);
-//    bool setPowerStats(apple80211_stat_report *,apple80211_power_debug_sub_info *);
-//    bool getBeaconPeriod(apple80211_beacon_period_data *);
+public:
+#if __IO80211_TARGET >= __MAC_11_0
+    void setDisplayState(bool);
+    void resetIO80211ReporterHistory(void);
+    bool markInterfaceUnitUnused(char const*,UInt);
+    bool markInterfaceUnitUsed(char const*,UInt);
+    bool assignUnitNumber(char const*);
+#endif
+#if __IO80211_TARGET >= __MAC_10_15
+    IO80211SkywalkInterface* getInfraInterface(void);
+    IO80211ScanManager* getPrimaryInterfaceScanManager(void);
+    IO80211ControllerMonitor* getInterfaceMonitor(void);
+#endif
+    IOReturn addReporterLegend(IOService *,IOReporter *,char const*,char const*);
+    IOReturn removeReporterFromLegend(IOService *,IOReporter *,char const*,char const*);
+    IOReturn unlockIOReporterLegend(void);
+    void lockIOReporterLegend(void);// Suspected return type - int
+    IOReturn logIOReportLogStreamSubscription(unsigned long long);
+    IOReturn addIOReportLogStreamForProvider(IOService *,unsigned long long *);
+    IOReturn addSubscriptionForThisReporterFetchedOnTimer(IOReporter *,char const*,char const*,IOService *) ;
+    IOReturn addSubscriptionForProviderFetchedOnTimer(IOService *);
+    void handleIOReporterTimer(IOTimerEventSource *);
+    void setIOReportersStreamFlags(unsigned long long);
+    void updateIOReportersStreamFrequency(void); // Suspected return type - int
+    void setIOReportersStreamLevel(CCStreamLogLevel);
+    void powerChangeGated(OSObject *,void *,void *,void *,void *);
+    int copyOut(void const*,unsigned long long,unsigned long);
+#if __IO80211_TARGET >= __MAC_11_0
+    SInt32 getASSOCIATE_EXTENDED_RESULT(IO80211Interface *,IO80211VirtualInterface *,IO80211InfraInterface *,apple80211_assoc_result_data *);
+#endif
+    SInt32 getASSOCIATE_RESULT(IO80211Interface *,IO80211VirtualInterface *,IO80211SkywalkInterface *,apple80211_assoc_result_data *);
+    IOReturn copyIn(unsigned long long,void *,unsigned long);
+    void logIOCTL(apple80211req *);
+    bool isIOCTLLoggingRestricted(apple80211req *);
+    IOReturn setChanNoiseFloorLTE(apple80211_stat_report *,int);
+    IOReturn setChanNoiseFloor(apple80211_stat_report *,int);
+    IOReturn setChanCCA(apple80211_stat_report *,int);
+    IOReturn setChanExtendedCCA(apple80211_stat_report *,apple80211_cca_report *);
+    bool setLTECoexstat(apple80211_stat_report *,apple80211_lteCoex_report *);
+    bool setBTCoexstat(apple80211_stat_report *,apple80211_btCoex_report *);
+    bool setAMPDUstat(apple80211_stat_report *,apple80211_ampdu_stat_report *,apple80211_channel *);
+    UInt32 getCountryCode(apple80211_country_code_data *);
+    IOReturn setCountryCode(apple80211_country_code_data *);
+    bool getInfraExtendedStats(apple80211_extended_stats *);
+    bool getChipCounterStats(apple80211_chip_stats *);
+#if __IO80211_TARGET >= __MAC_10_15
+    bool setExtendedChipCounterStats(apple80211_stat_report *,void *);
+#endif
+    bool setChipCounterStats(apple80211_stat_report *,apple80211_chip_stats *,apple80211_channel *);
+    bool setLeakyAPStats(apple80211_leaky_ap_event *);
+    bool setFrameStats(apple80211_stat_report *,apple80211_frame_counters *,apple80211_channel *);
+    bool setPowerStats(apple80211_stat_report *,apple80211_power_debug_sub_info *);
+    bool getBeaconPeriod(apple80211_beacon_period_data *);
     SInt32 apple80211VirtualRequestIoctl(unsigned int,int,IO80211VirtualInterface *,void *);
-//    bool getBSSIDData(OSObject *,apple80211_bssid_data *);
-//    bool getSSIDData(apple80211_ssid_data *);
-//    bool inputInfraPacket(mbuf_t);
-//    void notifyHostapState(apple80211_hostap_state *);
-//    bool isAwdlAssistedDiscoveryEnabled(void);
-//    void joinDone(scanSource,joinStatus);
-//    void joinStarted(scanSource,joinStatus);
-//    void handleChannelSwitchAnnouncement(apple80211_channel_switch_announcement *);
-//    void scanDone(scanSource,int);
-//    void scanStarted(scanSource,apple80211_scan_data *);
-//    void printChannels(void);
-//    void updateInterfaceCoexRiskPct(unsigned long long);
-//    SInt32 getInfraChannel(apple80211_channel_data *);
-//    void calculateInterfacesAvaiability(void); // Suspected return type - int
-//    void setChannelSequenceList(apple80211_awdl_sync_channel_sequence *); // Suspected return type - int
-//    void setPrimaryInterfaceDatapathState(bool);
-//    UInt32 getPrimaryInterfaceLinkState(void);
-//    void setCurrentChannel(apple80211_channel *); // Suspected return type - int
-//    void setHtCapability(ieee80211_ht_capability_ie *);
-//    UInt32 getHtCapability(void);
-//    UInt32 getHtCapabilityLength(void);
-//    bool io80211isDebuggable(bool* enable);
-//    void logDebug(unsigned long long,char const*,...); // Suspected return type - int
-//    void vlogDebug(unsigned long long,char const*,va_list); // Suspected return type - char
-//    void logDebug(char const*,...); // Suspected return type - int
-//    bool calculateInterfacesCoex(void);
-//    void setInfraChannel(apple80211_channel *);
-//    void configureAntennae(void);
+    bool getBSSIDData(OSObject *,apple80211_bssid_data *);
+    bool getSSIDData(apple80211_ssid_data *);
+    bool inputInfraPacket(mbuf_t);
+#if __IO80211_TARGET >= __MAC_10_15
+    void notifyHostapState(apple80211_hostap_state *);
+#endif
+    bool isAwdlAssistedDiscoveryEnabled(void);
+    void joinDone(scanSource,joinStatus);
+    void joinStarted(scanSource,joinStatus);
+    void handleChannelSwitchAnnouncement(apple80211_channel_switch_announcement *);
+    void scanDone(scanSource,int);
+    void scanStarted(scanSource,apple80211_scan_data *);
+    void printChannels(void);
+#if __IO80211_TARGET >= __MAC_10_15
+    void updateInterfaceCoexRiskPct(unsigned long long);
+#endif
+    SInt32 getInfraChannel(apple80211_channel_data *);
+    void calculateInterfacesAvaiability(void); // Suspected return type - int
+    void setChannelSequenceList(apple80211_awdl_sync_channel_sequence *); // Suspected return type - int
+#if __IO80211_TARGET >= __MAC_10_15
+    void setPrimaryInterfaceDatapathState(bool);
+    UInt32 getPrimaryInterfaceLinkState(void);
+#endif
+    void setCurrentChannel(apple80211_channel *); // Suspected return type - int
+    void setHtCapability(ieee80211_ht_capability_ie *);
+    UInt32 getHtCapability(void);
+    UInt32 getHtCapabilityLength(void);
+    bool io80211isDebuggable(bool* enable);
+    void logDebug(unsigned long long,char const*,...); // Suspected return type - int
+    void vlogDebug(unsigned long long,char const*,va_list); // Suspected return type - char
+    void logDebug(char const*,...); // Suspected return type - int
+    bool calculateInterfacesCoex(void);
+    void setInfraChannel(apple80211_channel *);
+#if __IO80211_TARGET >= __MAC_10_15
+    void configureAntennae(void);
+#endif
     SInt32 apple80211RequestIoctl(unsigned int,int,IO80211Interface *,void *);
     UInt32 radioCountForInterface(IO80211Interface *);
-//    void releaseIOReporters(void);
-//    bool findAndAttachToFaultReporter(void);
-//    UInt32 setupControlPathLogging(void);
-//    IOReturn createIOReporters(IOService *);
-//    IOReturn powerChangeHandler(void *,void *,unsigned int,IOService *,void *,unsigned long);
+    void releaseIOReporters(void);
+#if __IO80211_TARGET >= __MAC_10_15
+    bool findAndAttachToFaultReporter(void);
+#endif
+    UInt32 setupControlPathLogging(void);
+    IOReturn createIOReporters(IOService *);
+    IOReturn powerChangeHandler(void *,void *,unsigned int,IOService *,void *,unsigned long);
     
     OSMetaClassDeclareReservedUnused( IO80211Controller,  0);
     OSMetaClassDeclareReservedUnused( IO80211Controller,  1);

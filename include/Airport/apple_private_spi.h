@@ -29,6 +29,8 @@
 #ifndef apple_private_spi_h
 #define apple_private_spi_h
 
+#ifndef __PRIVATE_SPI__
+
 /*! @enum IOMbufServiceClass
     @discussion Service class of a mbuf packet.
     @constant kIOMbufServiceClassBKSYS Background System-Initiated.
@@ -54,6 +56,8 @@ enum IOMbufServiceClass {
     kIOMbufServiceClassVO       = 800,
     kIOMbufServiceClassCTL      = 900
 };
+
+#endif
 
 struct packet_info_tag {
     

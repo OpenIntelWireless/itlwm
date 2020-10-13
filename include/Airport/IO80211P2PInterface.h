@@ -41,13 +41,13 @@ public:
     virtual bool createPeerManager(ether_addr *,IO80211PeerManager **) APPLE_KEXT_OVERRIDE;
     virtual UInt getMediumType() APPLE_KEXT_OVERRIDE;
     virtual void setLinkState(IO80211LinkState,uint) APPLE_KEXT_OVERRIDE;
-    virtual bool dequeueOutputPacketsWithServiceClass(uint,IOMbufServiceClass,mbuf_t*,mbuf_t*,uint *,ulong long *) APPLE_KEXT_OVERRIDE;
+    virtual bool dequeueOutputPacketsWithServiceClass(uint,IOMbufServiceClass,mbuf_t*,mbuf_t*,UInt *,unsigned long long *) APPLE_KEXT_OVERRIDE;
     virtual UInt32 outputPacket (mbuf_t m, void* param) APPLE_KEXT_OVERRIDE;
     virtual void setEnabledBySystem(bool) APPLE_KEXT_OVERRIDE;
-    virtual void handleIoctl(ulong,void *) APPLE_KEXT_OVERRIDE;
+    virtual void handleIoctl(unsigned long,void *) APPLE_KEXT_OVERRIDE;
     virtual UInt32 inputPacket(mbuf_t,packet_info_tag *) APPLE_KEXT_OVERRIDE;
-    virtual IOReturn controllerWillChangePowerState(IO80211Controller *,ulong,uint,IOService *) APPLE_KEXT_OVERRIDE;
-    virtual IOReturn controllerDidChangePowerState(IO80211Controller *,ulong,uint,IOService *) APPLE_KEXT_OVERRIDE;
+    virtual IOReturn controllerWillChangePowerState(IO80211Controller *,unsigned long,UInt,IOService *) APPLE_KEXT_OVERRIDE;
+    virtual IOReturn controllerDidChangePowerState(IO80211Controller *,unsigned long,UInt,IOService *) APPLE_KEXT_OVERRIDE;
     virtual bool handleDebugCmd(apple80211_debug_command *) APPLE_KEXT_OVERRIDE;
     virtual IOReturn postPeerPresence(ether_addr *,int,int,int,char *) APPLE_KEXT_OVERRIDE;
     virtual IOReturn postPeerAbsence(ether_addr *) APPLE_KEXT_OVERRIDE;

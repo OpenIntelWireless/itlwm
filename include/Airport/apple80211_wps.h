@@ -1,38 +1,45 @@
+//
+//  wps_eap.h
+//  IO80211Family
+//
+//  Created by Pete on 6/20/06.
+//  Copyright 2006 Apple Computer, Inc. All rights reserved.
+//
+
 #ifndef _APPLE80211_WPS_H_
 #define _APPLE80211_WPS_H_
 
 #include <Availability.h>
 #include <sys/types.h>
 #include <net/ethernet.h>
-//#include "eap_defs.h"
 
 // This is necessary, because even the latest Xcode does not support properly targeting 11.0.
 #ifndef __IO80211_TARGET
 #error "Please define __IO80211_TARGET to the requested version"
 #endif
 
-#define WPS_HANDSHAKE_TIMEOUT    120 /* seconds */
-#define WPS_RETRANSMIT_TIMEOUT    5
+#define WPS_HANDSHAKE_TIMEOUT      120 /* seconds */
+#define WPS_RETRANSMIT_TIMEOUT     5
 #define WPS_MAX_RETRIES            3
 
 #define WPS_IDENTITY_STR                "WFA-SimpleConfig-Enrollee-1-0"
 #define WPS_IDENTITY_STR_LEN            29
-#define WPS_PERSONALIZATION_STRING        "Wi-Fi Easy and Secure Key Derivation"
-#define WPS_PERSONALIZATION_STRING_LEN    ( sizeof( WPS_PERSONALIZATION_STRING ) - 1 )
+#define WPS_PERSONALIZATION_STRING      "Wi-Fi Easy and Secure Key Derivation"
+#define WPS_PERSONALIZATION_STRING_LEN  ( sizeof( WPS_PERSONALIZATION_STRING ) - 1 )
 #define WPS_KDF_KEY_BITS                640
 
-#define WPS_DISPLAY_PIN_LEN        8
+#define WPS_DISPLAY_PIN_LEN    8
 
 #define EAP_TYPE_ID            1
 #define WPS_EAP_METHOD_TYPE    254
 
-#define WPS_VENDOR_ID_BYTES 0x00, 0x37, 0x2A
+#define WPS_VENDOR_ID_BYTES    0x00, 0x37, 0x2A
 #define WPS_VENDOR_TYPE        0x00000001
 
-#define WPS_OP_START        0x01
-#define WPS_OP_ACK            0x02
+#define WPS_OP_START           0x01
+#define WPS_OP_ACK             0x02
 #define WPS_OP_NACK            0x03
-#define WPS_OP_MSG            0x04
+#define WPS_OP_MSG             0x04
 #define WPS_OP_DONE            0x05
 
 #define WPS_FLAG_MF            0x01    /* more fragments */
@@ -54,7 +61,8 @@ struct wps_eap_hdr
     u_int8_t    flags;
     u_int16_t    msg_length;
     //    u_int8_t    msg[1];        /* data follows */
-}PACKED;
+} PACKED;
+
 #define WPS_EAP_HDR_LEN( _whdr ) ( ( _whdr->flags & WPS_FLAG_LF ) ? sizeof( struct wps_eap_hdr ) : sizeof( struct wps_eap_hdr ) - sizeof( u_int16_t ) )
 
 // Messages elements
@@ -71,7 +79,7 @@ struct wps_msg_elem_hdr
 {
     u_int16_t    elem_id;
     u_int16_t    elem_len;
-}PACKED;
+} PACKED;
 
 #define WPS_ELEM_SET_HEADER( elem, id, len ) (elem)->hdr.elem_id = htons( id ); (elem)->hdr.elem_len = htons( len )
 
@@ -80,14 +88,15 @@ struct wps_dev_type
     u_int16_t    category;
     u_int8_t    oui[4];
     u_int16_t    sub_category;
-}PACKED;
+} PACKED;
 
 #define WIFI_DEV_TYPE_OUI_BYTES    0x00, 0x50, 0xf2, 0x04
 
-#define DEFINE_WPS_ELEMENT( name, param )    typedef struct {                    \
-struct wps_msg_elem_hdr hdr;    \
-param;                            \
-}PACKED name
+#define DEFINE_WPS_ELEMENT( name, param ) \
+typedef struct {                          \
+  struct wps_msg_elem_hdr hdr;            \
+  param;                                  \
+} PACKED name
 
 
 #define WPS_VERSION 0x10
@@ -218,7 +227,7 @@ struct wps_identity_msg
     u_int16_t    length;
     u_int8_t    type;
     //    u_int8_t    type_data[1];    /* data follows */
-}__attribute__((packed));
+} PACKED;
 
 #define WPS_EAP_TYPE_IDENTITY    1
 
@@ -507,23 +516,22 @@ typedef enum WPSSupplicantState WPSSupplicantState;
 
 // Apple specific error codes
 
-#define WPSE_NOERR                 0        // no error
-#define WPSE_ERR                -1        // general error code
-#define    WPSE_PROTO_ERR            -2        // Problem with EAPOL handshake
+#define WPSE_NOERR                     0        // no error
+#define WPSE_ERR                      -1        // general error code
+#define    WPSE_PROTO_ERR             -2        // Problem with EAPOL handshake
 #define    WPSE_IE_NOT_PRESENT        -3        // No WPS IE present in IE list for ssid
-#define    WPSE_IE_MALFORMED        -4        // WPS IS missing required (for Apple) fields
-#define    WPSE_SCAN_ERR            -5        // Scan failed
-#define    WPSE_NO_PIN_AT_REG        -6        // No PIN configured at registrar
-#define WPSE_NO_PIN_AT_CLIENT    -7        // No PIN configured at client
+#define    WPSE_IE_MALFORMED          -4        // WPS IS missing required (for Apple) fields
+#define    WPSE_SCAN_ERR              -5        // Scan failed
+#define    WPSE_NO_PIN_AT_REG         -6        // No PIN configured at registrar
+#define WPSE_NO_PIN_AT_CLIENT         -7        // No PIN configured at client
 #define    WPSE_SSID_NOT_FOUND        -8        // Scan did not find SSID
-#define    WPSE_UNSUPPORTED_PW_ID    -9        // Registrar reports that it is using an unsupported PW ID
-#define    WPSE_ASSOC_FAILED        -10        // Association attempt failed
-#define WPSE_API_REQ            -11        // An apple80211 ioctl request failed
-#define WPSE_NOMEM                -12        // memory error
-#define WPSE_WPA_RSN_NOT_SUP    -13        // WPA/RSN not supported
-#define WPSE_TIMEOUT            -14        // EAPOL timed out
-#define WPSE_NACKED                -15        // NACKED by registrar
-#define WPSE_FAIL                -16        // unexpected EAP-FAIL received
+#define    WPSE_UNSUPPORTED_PW_ID     -9        // Registrar reports that it is using an unsupported PW ID
+#define    WPSE_ASSOC_FAILED          -10       // Association attempt failed
+#define WPSE_API_REQ                  -11       // An apple80211 ioctl request failed
+#define WPSE_NOMEM                    -12       // memory error
+#define WPSE_WPA_RSN_NOT_SUP          -13       // WPA/RSN not supported
+#define WPSE_TIMEOUT                  -14       // EAPOL timed out
+#define WPSE_NACKED                   -15       // NACKED by registrar
+#define WPSE_FAIL                     -16       // unexpected EAP-FAIL received
 
 #endif /* _APPLE80211_WPS_H_ */
-
