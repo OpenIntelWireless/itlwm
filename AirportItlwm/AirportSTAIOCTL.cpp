@@ -648,17 +648,23 @@ IOReturn AirportItlwm::
 setASSOCIATE(OSObject *object,
                              struct apple80211_assoc_data *ad)
 {
-    XYLog("%s [%s] ad_auth_lower=%d ad_auth_upper=%d\n", __FUNCTION__, ad->ad_ssid, ad->ad_auth_lower, ad->ad_auth_upper);
-    this->current_authtype_lower = ad->ad_auth_lower;
-    this->current_authtype_upper = ad->ad_auth_upper;
+    XYLog("%s [%s] mode=%d ad_auth_lower=%d ad_auth_upper=%d\n", __FUNCTION__, ad->ad_ssid, ad->ad_mode, ad->ad_auth_lower, ad->ad_auth_upper);
     
-    apple80211_rsn_ie_data rsn_ie_data;
-    rsn_ie_data.version = APPLE80211_VERSION;
-    rsn_ie_data.len = ad->ad_rsn_ie[1] + 2;
-    memcpy(rsn_ie_data.ie, ad->ad_rsn_ie, rsn_ie_data.len);
-    setRSN_IE(object, &rsn_ie_data);
-    
-    associateSSID(ad->ad_ssid, ad->ad_ssid_len, ad->ad_bssid, ad->ad_auth_lower, ad->ad_auth_upper, ad->ad_key.key, ad->ad_key.key_len, ad->ad_key.key_index);
+    struct apple80211_rsn_ie_data rsn_ie_data;
+    struct apple80211_authtype_data auth_type_data;
+
+    if (ad->ad_mode != 1) {
+        auth_type_data.version = APPLE80211_VERSION;
+        auth_type_data.authtype_upper = ad->ad_auth_upper;
+        auth_type_data.authtype_lower = ad->ad_auth_lower;
+        setAUTH_TYPE(object, &auth_type_data);
+        rsn_ie_data.version = APPLE80211_VERSION;
+        rsn_ie_data.len = ad->ad_rsn_ie[1] + 2;
+        memcpy(rsn_ie_data.ie, ad->ad_rsn_ie, rsn_ie_data.len);
+        setRSN_IE(object, &rsn_ie_data);
+
+        associateSSID(ad->ad_ssid, ad->ad_ssid_len, ad->ad_bssid, ad->ad_auth_lower, ad->ad_auth_upper, ad->ad_key.key, ad->ad_key.key_len, ad->ad_key.key_index);
+    }
     return kIOReturnSuccess;
 }
 

@@ -599,6 +599,8 @@ struct apple80211_assoc_data
     u_int32_t                ad_flags;         // apple80211_assoc_flags
 };
 
+static_assert(offsetof(apple80211_assoc_data, ad_key) == 0x38, "aaaa");
+
 static_assert(offsetof(apple80211_assoc_data, ad_rsn_ie) == 206, "offsetof(apple80211_assoc_data, ad_rsn_ie)");
 
 struct apple80211_deauth_data

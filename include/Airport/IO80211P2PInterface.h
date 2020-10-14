@@ -39,7 +39,7 @@ public:
                                            IOService *     whatDevice ) APPLE_KEXT_OVERRIDE;
     virtual bool init(IO80211Controller *,ether_addr *,uint,char const*) APPLE_KEXT_OVERRIDE;
     virtual bool createPeerManager(ether_addr *,IO80211PeerManager **) APPLE_KEXT_OVERRIDE;
-    virtual UInt getMediumType() APPLE_KEXT_OVERRIDE;
+    virtual IOMediumType getMediumType() APPLE_KEXT_OVERRIDE;
     virtual void setLinkState(IO80211LinkState,uint) APPLE_KEXT_OVERRIDE;
     virtual bool dequeueOutputPacketsWithServiceClass(uint,IOMbufServiceClass,mbuf_t*,mbuf_t*,UInt *,unsigned long long *) APPLE_KEXT_OVERRIDE;
     virtual UInt32 outputPacket (mbuf_t m, void* param) APPLE_KEXT_OVERRIDE;
@@ -80,6 +80,39 @@ public:
     OSMetaClassDeclareReservedUnused( IO80211P2PInterface, 13);
     OSMetaClassDeclareReservedUnused( IO80211P2PInterface, 14);
     OSMetaClassDeclareReservedUnused( IO80211P2PInterface, 15);
+public:
+#if __IO80211_TARGET < __MAC_11_0
+    void setJoiningState(UInt,joinStatus,bool);
+    void setInfraChannel(apple80211_channel *);
+#endif
+    void p2pSetUnitNumber(char const*);
+    bool p2pCreatePeerManager(ether_addr *,IO80211PeerManager **);
+    bool p2pConfigureIfnet(void);
+    bool p2pAttachToBpf(void);
+#if __IO80211_TARGET < __MAC_11_0
+#if __IO80211_TARGET >= __MAC_10_15
+    void notifyHostapState(apple80211_hostap_state *);
+#endif
+    bool isAwdlAssistedDiscoveryEnabled(void);
+    void handleChannelSwitchAnnouncement(apple80211_channel_switch_announcement *);
+    void awdlSetUnitNumber(char const*);
+    void awdlInit(void);
+    void awdlFree(void);
+    bool awdlCreatePeerManager(ether_addr *,IO80211PeerManager **);
+    bool awdlConfigureIfnet(void);
+    bool awdlAttachToBpf(void);
+#endif
+#if __IO80211_TARGET >= __MAC_11_0
+    bool isP2P(void);
+    bool isAPSTA(void);
+#endif
+    errno_t apsta_if_output_pre_enqueue(ifnet_t, mbuf_t);
+    void apStaSetUnitNumber(char const*);
+    bool apStaInitIfnetEparams(ifnet_init_eparams *);
+    bool apStaCreatePeerManager(ether_addr *,IO80211PeerManager **);
+    bool apStaConfigureIfnet(void);
+    bool apStaAttachToBpf(void);
+
 public:
     char buf[0x300];
 };

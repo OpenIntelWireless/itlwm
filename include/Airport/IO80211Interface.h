@@ -1,8 +1,3 @@
-//
-//  IO80211SkywalkInterface.h
-//  IO80211Family
-//
-
 #ifndef _IO80211INTERFACE_H
 #define _IO80211INTERFACE_H
 
@@ -34,6 +29,7 @@ enum IO80211LinkState
 	kIO80211NetworkLinkUp,					// Interface capable of transmitting packets
 };
 typedef enum IO80211LinkState IO80211LinkState;
+typedef UInt kIO80211InterfaceType;
 
 /*!	@defined kIO80211InterfaceClass
 	@abstract The name of the IO80211Interface class.
@@ -122,18 +118,156 @@ public:
     OSMetaClassDeclareReservedUnused( IO80211Interface, 14);
     OSMetaClassDeclareReservedUnused( IO80211Interface, 15);
 public:
-    IO80211FlowQueue * findOrCreateFlowQueue(IO80211FlowQueueHash);
+    IOReturn IO80211InterfacePostMessage(UInt,void *,unsigned long);
+    struct apple80211_ap_cmp_data *apCompare(apple80211_ap_cmp_data *,apple80211_ap_cmp_data *);
+    void associateForNetBoot(IOService *);
+    IOReturn associateForNetBootGated(OSObject *,void *,void *,void *,void *);
+    bool authTimeout(void);
+    UInt32 awsRespond(mbuf_t,AWSRequest *,unsigned long,unsigned short);
+    IOReturn bpfAttach(UInt,UInt);
+    IOReturn bpfAttach(UInt,UInt,OSObject *,UInt (OSObject::*)(mbuf_t,void *),int (OSObject::*)(UInt,UInt),IOWorkLoop *);
+    IOReturn bpfOutput(UInt,mbuf_t);
+    UInt32 bpfOutputPacket(mbuf_t,void *);
+    void bpfTap(UInt,UInt);
+    UInt32 bpfTapInput(mbuf_t,UInt,void *,unsigned long);
+    UInt32 cachePMKSA(unsigned char *,unsigned long,ether_addr *);
+    UInt32 cachePMKSA(unsigned char *,unsigned long,ether_addr *,unsigned char *);
+    void clearAssocHistory(void);
+    void configureAntennae(void);
+    void configureBpfOutputQueues(bool);
+    IOReturn createAssocHistory(void);
+    UInt64 createIOReporters(IOService *);
+    UInt64 debugFlags(void);
+    mbuf_t dequeueTxPackets(TxPacketRequest *);
+    mbuf_t dequeueTxPackets(UInt,UInt);
     void dropTxPacket(mbuf_t);
-    void logDebug(unsigned long long, char const*, ...);
-    void vlogDebug(unsigned long long, char const*, va_list);
-    const char * getBSDName();
-    bool setLeakyAPStatsMode(unsigned int);
-    void stopOutputQueues();
-    void startOutputQueues();
-    bool updateLinkSpeed();
-    bool reportDataTransferRatesStatic(void*);
+    bool efiNVRAMPublished(void *,void *,IOService *,IONotifier *);
+    bool enabledBySystem(void);
+    IO80211FlowQueue *findExistingFlowQueue(IO80211FlowQueueHash);
+    IO80211FlowQueue *findOrCreateFlowQueue(IO80211FlowQueueHash);
+    void finishAttachToDataLinkLayer(void);
+    IOReturn finishAttachToDataLinkLayerGated(OSObject *,void *,void *,void *,void *);
+    void flushPacketQueues(void);
+    void freeBpf(void);
+    void freePMKSACache(void);
+    const char *getBSDName();
+    IO80211Controller *getController(void);
+    IO80211WorkLoop *getControllerWorkLoop(void);
+    bool getExtendedStats(apple80211_extended_stats *);
+    bool getLeakyApStats(apple80211_leaky_ap_stats const**);
+    IOOutputQueue *getOutputQueue(void);
+    IOOutputQueue *getOutputQueueForDLT(UInt);
+    void getPMKSAList(apple80211_pmk_cache_data *);
+    void getWmeTxCounters(unsigned long long *);
+    void handleLeakyApStatsModeTimer(IOTimerEventSource *);
+    void handleLeakyApStatsResetTimer(IOTimerEventSource *);
+    bool initSupplicant(unsigned char *,int);
+    UInt32 inputAWSPacket(mbuf_t);
+    IO80211LinkState linkState(void);
     void logDebug(char const*, ...);
+    void logDebug(unsigned long long, char const*, ...);
+    void logDebugHex(void const*,unsigned long,char const*,...);
+    void logTxCompletionPacket(mbuf_t,int);
+    void logTxPacket(mbuf_t);
+    UInt32 monitorModeInputPacket(mbuf_t,UInt,void *,unsigned long);
+    IOReturn netBootThread(IOService *);
+    IOReturn netBootThreadGated(OSObject *,void *,void *,void *,void *);
+    bool netBooting(void);
+    UInt32 outputEAPOLFrame(mbuf_t);
+    void outputPreEnqueueHandler(void *,void *,mbuf_t);
+    IOReturn outputStart(UInt);
+    UInt64 packetSpace(unsigned char);
+    UInt64 pendingPackets(unsigned char);
+    IOReturn performCountryCodeOpGated(OSObject *,void *,void *,void *,void *);
+    IOReturn performGatedCommand(void *,void *,void *,void *,void *);
+    bool pidLocked(void);
+    UInt64 pmksaLookup(ether_addr *,unsigned char *);
     void postMessage(unsigned int, void* data = NULL, unsigned long dataLen = 0);
+    IOReturn powerChangeHandler(void *,void *,UInt,IOService *,void *,unsigned long);
+    bool poweredOnByUser(void);
+    mbuf_t preQueuePacket(mbuf_t);
+    void printDataPath(userPrintCtx *);
+    void printPeers(UInt,UInt);
+    void purgePMKSACache(void);
+    UInt64 queueSize(unsigned char);
+    IOReturn queueWMEPacket(mbuf_t,void *);
+    void removePacketQueue(IO80211FlowQueueHash const*);
+    IOReturn reportDataPathEvents(UInt,void *,unsigned long);
+    IOReturn reportDataPathEventsGated(void *,void *,void *,void *,void *);
+    IOReturn reportDataTransferRates(void);
+    IOReturn reportDataTransferRatesGated(void);
+    IOReturn reportDataTransferRatesStatic(void *);
+    IOReturn reportTransmitCompletionStatus(mbuf_t,int,UInt,UInt,UInt);
+    void reportTransmitStatus(mbuf_t,int,packet_info_tx *);
+    void reportTxStatistics(apple80211_txstats *);
+    void resetLeakyApStats(void);
+    void resetSupplicant(void);
+#if __IO80211_TARGET >= __MAC_10_15
+    void resetUserClientReference(void);
+#endif
+#if __IO80211_TARGET >= __MAC_11_0
+    IOReturn resetUserClientReferenceGated(OSObject *,void *,void *,void *,void *);
+#endif
+    void setAuthTimeout(unsigned long);
+    bool setBTCoexWLANLostAntennaTime(unsigned long long,unsigned long long,bool,apple80211_btCoex_report *);
+    void setCountermeasuresTimer(IOTimerEventSource *);
+    void setDataPathState(bool);
+    IOReturn setDataPointerAndLengthForMessageType(apple80211_postMessage_tlv_types,void **,unsigned long *);
+    void setDebugFlags(unsigned long long,UInt);
+    bool setFrameStats(apple80211_stat_report *,apple80211_frame_counters *);
+    bool setInterfaceCCA(apple80211_channel,int);
+    bool setInterfaceChipCounters(apple80211_stat_report *,apple80211_chip_counters_tx *,apple80211_chip_error_counters_tx *,apple80211_chip_counters_rx *);
+    bool setInterfaceExtendedCCA(apple80211_channel,apple80211_cca_report *);
+    bool setInterfaceMIBdot11(apple80211_stat_report *,apple80211_ManagementInformationBasedot11_counters *);
+    IOReturn setLQM(unsigned long long);
+    IOReturn setLQMGated(long long);
+    IOReturn setLQMStatic(void *,void *);
+    bool setLeakyAPStats(apple80211_leaky_ap_event *);
+    bool setLeakyAPStatsMode(UInt);
+    bool setLeakyApSsidMetrics(apple80211_leaky_ap_ssid_metrics *);
+    void setNetBooting(bool);
+    bool setPMK(unsigned char *,unsigned char *);
+#if __IO80211_TARGET >= __MAC_10_15
+    bool setPSKPMK(unsigned char *);
+#endif
+    void setPeerManagerLogFlag(UInt,UInt,UInt);
+    bool setPidLock(bool);
+    void setScanningState(UInt,bool,apple80211_scan_data *,int);
+    void setWoWEnabled(bool);
+    bool shortGISupported20MHz(void);
+    bool shortGISupported40MHz(void);
+    bool shouldLog(unsigned long long);
+    bool shouldRoam(apple80211_scan_result *);
+#if __IO80211_TARGET >= __MAC_10_15
+    IOReturn startAsyncEventUserClientForTask(task *,kIO80211InterfaceType);
+#endif
+    void startOutputQueues();
+    void stopBpf(void);
+    void stopCountermeasures(OSObject *,IOTimerEventSource *);
+    void stopOutputQueues();
+    bool supplicantExchangeComplete(void);
+    bool supplicantInitialized(void);
+    void terminateSupplicant(void);
+    void togglePeerManagerLogFlag(UInt,UInt);
+    void updateBSSIDProperty(void);
+    void updateChannelProperty(void);
+    void updateChannelPropertyGated(void);
+    void updateChannelPropertyStatic(void *);
+    void updateCountryCodeProperty(bool);
+    bool updateInterfaceCoexRiskPct(unsigned long long);
+    void updateLinkParameters(apple80211_interface_availability *);
+    void updateLinkParametersGated(apple80211_interface_availability *);
+    void updateLinkParametersStatic(void *,void *);
+    bool updateLinkSpeed();
+    IOReturn updateLinkStatus(void);
+    IOReturn updateLinkStatusGated(void);
+    IOReturn updateLinkStatusStatic(void *);
+    void updateSSIDProperty(void);
+    void updateStaticProperties(void);
+    void vlogDebug(unsigned long long, char const*, va_list);
+    void vlogDebugBPF(unsigned long long,char const*,va_list);
+    void willRoam(ether_addr *,UInt);
+
 protected:
     u_int8_t dat[0x500];
 };

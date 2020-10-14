@@ -160,6 +160,18 @@ void AirportItlwm::associateSSID(uint8_t *ssid, uint32_t ssid_len, const struct 
         XYLog("%s %d\n", __FUNCTION__, __LINE__);
         wpa.i_protos = IEEE80211_WPA_PROTO_WPA1 | IEEE80211_WPA_PROTO_WPA2;
     }
+
+    // AUTHTYPE_WPA3_SAE AUTHTYPE_WPA3_FT_SAE
+    // we don't really support WPA3, but we have announced we support WPA3 in card capability function. so we fake it as WPA2 to support some WPA2/WPA3 mix wifi connection.
+    if (authtype_upper == 0x1000 || authtype_upper == 0x2000) {
+        wpa.i_protos |= IEEE80211_WPA_PROTO_WPA2;
+        authtype_upper |= APPLE80211_AUTHTYPE_WPA2_PSK;// hack
+    }
+    // AUTHTYPE_WPA3_ENTERPRISE AUTHTYPE_WPA3_FT_ENTERPRISE
+    if (authtype_upper == 0x4000 || authtype_upper == 0x8000) {
+        wpa.i_protos |= IEEE80211_WPA_PROTO_WPA2;
+        authtype_upper |= APPLE80211_AUTHTYPE_WPA2;// hack
+    }
     
     if (authtype_upper & (APPLE80211_AUTHTYPE_WPA_PSK | APPLE80211_AUTHTYPE_WPA2_PSK)) {
         XYLog("%s %d\n", __FUNCTION__, __LINE__);
