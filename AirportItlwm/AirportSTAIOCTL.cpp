@@ -142,6 +142,9 @@ SInt32 AirportItlwm::apple80211Request(unsigned int request_type,
         case APPLE80211_IOC_ROAM_THRESH:
             IOCTL_GET(request_type, ROAM_THRESH, apple80211_roam_threshold_data);
             break;
+        case APPLE80211_IOC_LINK_CHANGED_EVENT_DATA:
+            IOCTL_GET(request_type, LINK_CHANGED_EVENT_DATA, apple80211_link_changed_event_data);
+            break;
         case APPLE80211_IOC_POWERSAVE:
             IOCTL_GET(request_type, POWERSAVE, apple80211_powersave_data);
             break;
@@ -654,6 +657,7 @@ setASSOCIATE(OSObject *object,
     struct apple80211_authtype_data auth_type_data;
 
     if (ad->ad_mode != 1) {
+        disassocIsVoluntary = false;
         auth_type_data.version = APPLE80211_VERSION;
         auth_type_data.authtype_upper = ad->ad_auth_upper;
         auth_type_data.authtype_lower = ad->ad_auth_lower;
@@ -686,10 +690,13 @@ IOReturn AirportItlwm::setDISASSOCIATE(OSObject *object)
 {
     XYLog("%s\n", __FUNCTION__);
     struct ieee80211com *ic = fHalService->get80211Controller();
+    disassocIsVoluntary = true;
     
     ieee80211_del_ess(ic, nullptr, 0, 1);
     ieee80211_deselect_ess(ic);
     ic->ic_rsn_ie_override[1] = 0;
+    ic->ic_assoc_status = APPLE80211_STATUS_UNAVAILABLE;
+    ic->ic_deauth_reason = APPLE80211_REASON_ASSOC_LEAVING;
     ieee80211_new_state(ic, IEEE80211_S_SCAN, -1);
     return kIOReturnSuccess;
 }
@@ -723,16 +730,20 @@ IOReturn AirportItlwm::
 getDEAUTH(OSObject *object,
                           struct apple80211_deauth_data *da) {
     da->version = APPLE80211_VERSION;
-    da->deauth_reason = APPLE80211_REASON_UNSPECIFIED;
+    ieee80211com *ic = fHalService->get80211Controller();
+    da->deauth_reason = ic->ic_deauth_reason;
+    XYLog("%s, %d\n", __FUNCTION__, da->deauth_reason);
     return kIOReturnSuccess;
 }
 
 IOReturn AirportItlwm::
 getASSOCIATION_STATUS(OSObject *object, struct apple80211_assoc_status_data *hv) {
 //    XYLog("%s\n", __FUNCTION__);
+    ieee80211com *ic = fHalService->get80211Controller();
     memset(hv, 0, sizeof(*hv));
     hv->version = APPLE80211_VERSION;
-    hv->status = APPLE80211_STATUS_SUCCESS;
+    hv->status = ic->ic_assoc_status;
+    XYLog("%s, %d\n", __FUNCTION__, hv->status);
     return kIOReturnSuccess;
 }
 
@@ -753,6 +764,12 @@ setDEAUTH(OSObject *object,
                           struct apple80211_deauth_data *da) {
     XYLog("%s\n", __FUNCTION__);
     return kIOReturnSuccess;
+}
+
+void notify(IONetworkInterface *iface, unsigned int messageCode) {
+    IO80211Interface *interface = OSDynamicCast(IO80211Interface, iface);
+    if (interface != nullptr)
+        interface->postMessage(messageCode);
 }
 
 IOReturn AirportItlwm::
@@ -987,5 +1004,25 @@ setVIRTUAL_IF_DELETE(OSObject *object, struct apple80211_virt_if_delete_data *da
     }
     detachVirtualInterface(vif, false);
     vif->release();
+    return kIOReturnSuccess;
+}
+
+IOReturn AirportItlwm::
+getLINK_CHANGED_EVENT_DATA(OSObject *object, struct apple80211_link_changed_event_data *ed) {
+    if (ed == nullptr)
+        return 16;
+    
+    ieee80211com *ic = fHalService->get80211Controller();
+    
+    bzero(ed, sizeof(apple80211_link_changed_event_data));
+    ed->isLinkDown = !(currentStatus & kIONetworkLinkActive);
+    if (ed->isLinkDown) {
+        ed->voluntary = disassocIsVoluntary;
+        ed->reason = APPLE80211_LINK_DOWN_REASON_DEAUTH;
+    }
+    else {
+        ed->rssi = -(0 - IWM_MIN_DBM - ic->ic_bss->ni_rssi);
+    }
+    XYLog("Link %s, reason: %d, voluntary: %d\n", ed->isLinkDown ? "down" : "up", ed->reason, ed->voluntary);
     return kIOReturnSuccess;
 }

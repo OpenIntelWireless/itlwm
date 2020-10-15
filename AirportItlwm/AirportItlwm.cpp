@@ -511,8 +511,6 @@ void AirportItlwm::stop(IOService *provider)
     releaseAll();
 }
 
-UInt32 currentStatus;
-
 bool AirportItlwm::
 setLinkStatus(UInt32 status, const IONetworkMedium * activeMedium, UInt64 speed, OSData * data)
 {
@@ -523,10 +521,10 @@ setLinkStatus(UInt32 status, const IONetworkMedium * activeMedium, UInt64 speed,
     currentStatus = status;
     if (fNetIf) {
         if (status & kIONetworkLinkActive) {
-            fNetIf->setLinkState(kIO80211NetworkLinkUp, 4);
+            fNetIf->setLinkState(kIO80211NetworkLinkUp, 0);
             fNetIf->postMessage(APPLE80211_M_LINK_CHANGED);
         } else if (!(status & kIONetworkLinkNoNetworkChange)) {
-            fNetIf->setLinkState(kIO80211NetworkLinkDown, 8);
+            fNetIf->setLinkState(kIO80211NetworkLinkDown, fHalService->get80211Controller()->ic_deauth_reason);
             fNetIf->postMessage(APPLE80211_M_LINK_CHANGED);
         }
     }

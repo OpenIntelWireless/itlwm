@@ -151,6 +151,7 @@ public:
     FUNC_IOCTL_GET(HARDWARE_VERSION, apple80211_version_data)
     FUNC_IOCTL(RSN_IE, apple80211_rsn_ie_data)
     FUNC_IOCTL_GET(AP_IE_LIST, apple80211_ap_ie_data)
+    FUNC_IOCTL_GET(LINK_CHANGED_EVENT_DATA, apple80211_link_changed_event_data)
     FUNC_IOCTL_GET(ASSOCIATION_STATUS, apple80211_assoc_status_data)
     FUNC_IOCTL_GET(COUNTRY_CODE, apple80211_country_code_data)
     FUNC_IOCTL_GET(RADIO_INFO, apple80211_radio_info_data)
@@ -214,6 +215,9 @@ public:
     
     u_int32_t current_authtype_lower;
     u_int32_t current_authtype_upper;
+    UInt64 currentSpeed;
+    UInt32 currentStatus;
+    bool disassocIsVoluntary;
     
     IO80211P2PInterface *fP2PDISCInterface;
     IO80211P2PInterface *fP2PGOInterface;
