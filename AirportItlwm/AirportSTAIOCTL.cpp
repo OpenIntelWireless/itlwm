@@ -402,29 +402,44 @@ IOReturn AirportItlwm::
 getCARD_CAPABILITIES(OSObject *object,
                                      struct apple80211_capability_data *cd)
 {
+    uint32_t caps = fHalService->get80211Controller()->ic_caps;
+    if (caps & IEEE80211_C_WEP)
+        cd->capabilities[0] |= 1 << APPLE80211_CAP_WEP;
+    if (caps & IEEE80211_C_RSN)
+        cd->capabilities[0] |= 1 << APPLE80211_CAP_TKIP | 1 << APPLE80211_CAP_AES_CCM;
+    // Disable not implemented capabilities
+    // if (caps & IEEE80211_C_PMGT)
+    //     cd->capabilities[0] |= 1 << APPLE80211_CAP_PMGT;
+    // if (caps & IEEE80211_C_IBSS)
+    //     cd->capabilities[0] |= 1 << APPLE80211_CAP_IBSS;
+    // if (caps & IEEE80211_C_HOSTAP)
+    //     cd->capabilities[0] |= 1 << APPLE80211_CAP_HOSTAP;
+    // AES not enabled, like on Apple cards
+    
+    if (caps & IEEE80211_C_SHSLOT)
+        cd->capabilities[1] |= 1 << (APPLE80211_CAP_SHSLOT - 8);
+    if (caps & IEEE80211_C_SHPREAMBLE)
+        cd->capabilities[1] |= 1 << (APPLE80211_CAP_SHPREAMBLE - 8);
+    if (caps & IEEE80211_C_RSN)
+        cd->capabilities[1] |= 1 << (APPLE80211_CAP_WPA1 - 8) | 1 << (APPLE80211_CAP_WPA2 - 8) | 1 << (APPLE80211_CAP_TKIPMIC - 8);
+    // Disable not implemented capabilities
+    // if (caps & IEEE80211_C_TXPMGT)
+    //     cd->capabilities[1] |= 1 << (APPLE80211_CAP_TXPMGT - 8);
+    // if (caps & IEEE80211_C_MONITOR)
+    //     cd->capabilities[1] |= 1 << (APPLE80211_CAP_MONITOR - 8);
+    // WPA not enabled, like on Apple cards
+
     cd->version = APPLE80211_VERSION;
-    cd->capabilities[0] = 0xEB;
-    cd->capabilities[1] = 0x7E;
-    cd->capabilities[2] = 0xFF;
-    cd->capabilities[5] |= 8;
-    cd->capabilities[3] |= 2;
-    cd->capabilities[4] |= 1;
-    cd->capabilities[6] |= 8;
-    cd->capabilities[8] |= 8;//dfs white list
-    cd->capabilities[3] |= 0x21;
-    cd->capabilities[4] |= 0x80;
-    cd->capabilities[5] |= 4;
-    cd->capabilities[2] |= 0xC0;
-    cd->capabilities[6] |= 0x84;
-    cd->capabilities[3] |= 8;
-    cd->capabilities[4] |= 0xAC;
-    cd->capabilities[6] |= 1;
-    cd->capabilities[7] |= 4;
-    cd->capabilities[5] |= 0x80;//isCntryDefaultSupported
-    cd->capabilities[7] |= 0x80;
-    cd->capabilities[8] |= 0x40;
-    cd->capabilities[9] |= 8;
-    cd->capabilities[9] |= 0x28;
+    cd->capabilities[2] = 0xFF; // BURST, WME, SHORT_GI_40MHZ, SHORT_GI_20MHZ, WOW, TSN, ?, ?
+    cd->capabilities[3] = 0x2B;
+    cd->capabilities[4] = 0xAD;
+    cd->capabilities[5] = 0x80;//isCntryDefaultSupported
+    cd->capabilities[5] |= 0x0C;
+    cd->capabilities[6] = 0x8D;
+    cd->capabilities[7] = 0x84; // This byte contains Apple Watch unlock
+    //cd->capabilities[8] = 0x40;
+    //cd->capabilities[8] |= 8;//dfs white list
+    //cd->capabilities[9] = 0x28;
     return kIOReturnSuccess;
 }
 
