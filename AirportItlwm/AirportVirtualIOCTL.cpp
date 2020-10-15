@@ -77,7 +77,11 @@ apple80211VirtualRequest(UInt request_type, int request_number, IO80211VirtualIn
             IOCTL(request_type, AWDL_ELECTION_METRIC, apple80211_awdl_election_metric);
             break;
         default:
-            XYLog("%s Unhandled IOCTL %s (%d)\n", __FUNCTION__, IOCTL_NAMES[request_number], request_number);
+        unhandled:
+            if (!ml_at_interrupt_context()) {
+                XYLog("%s Unhandled IOCTL %s (%d) %s\n", __FUNCTION__, IOCTL_NAMES[request_number],
+                      request_number, request_type == SIOCGA80211 ? "get" : (request_type == SIOCSA80211 ? "set" : "other"));
+            }
             break;
     }
     
