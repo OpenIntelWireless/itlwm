@@ -237,13 +237,40 @@ iwm_init_channel_map(struct iwm_softc *sc, const uint16_t * const nvm_ch_flags,
             channel->ic_flags =
             IEEE80211_CHAN_A;
         }
-        channel->ic_freq = ieee80211_ieee2mhz(hw_value, flags);
         
         if (!(ch_flags & IWM_NVM_CHANNEL_ACTIVE))
             channel->ic_flags |= IEEE80211_CHAN_PASSIVE;
         
         if (data->sku_cap_11n_enable)
-            channel->ic_flags |= IEEE80211_CHAN_HT;
+            channel->ic_flags |= IEEE80211_CHAN_HT20;
+
+        if (!is_5ghz && (ch_flags & IWM_NVM_CHANNEL_40MHZ)) {
+            if (hw_value <= IWM_LAST_2GHZ_HT_PLUS) {
+                channel->ic_flags |= IEEE80211_CHAN_HT40U;
+            }
+            if (hw_value >= IWM_FIRST_2GHZ_HT_MINUS) {
+                channel->ic_flags |= IEEE80211_CHAN_HT40D;
+            }
+        } else if (ch_flags & IWM_NVM_CHANNEL_40MHZ) {
+            if ((ch_idx - IWM_NUM_2GHZ_CHANNELS) % 2 == 0) {
+                channel->ic_flags |= IEEE80211_CHAN_HT40U;
+            } else {
+                channel->ic_flags |= IEEE80211_CHAN_HT40D;
+            }
+        }
+
+        if (ch_flags & IWM_NVM_CHANNEL_80MHZ) {
+            channel->ic_flags |= IEEE80211_CHAN_VHT80;
+        }
+        if (ch_flags & IWM_NVM_CHANNEL_160MHZ) {
+            channel->ic_flags |= IEEE80211_CHAN_VHT160;
+        }
+
+        if (ch_flags & IWM_NVM_CHANNEL_DFS) {
+            channel->ic_flags |= IEEE80211_CHAN_DFS;
+        }
+
+        channel->ic_freq = ieee80211_ieee2mhz(hw_value, flags);
     }
 }
 
@@ -874,7 +901,7 @@ iwm_tx_fill_cmd(struct iwm_softc *sc, struct iwm_node *in,
     if ((ni->ni_flags & IEEE80211_NODE_HT) &&
         rinfo->ht_plcp != IWM_RATE_HT_SISO_MCS_INV_PLCP) {
         rate_flags |= IWM_RATE_MCS_HT_MSK;
-        if (ieee80211_node_supports_ht_sgi20(ni))
+        if (ieee80211_node_supports_ht_sgi20(ni) || ieee80211_node_supports_ht_sgi40(ni))
             rate_flags |= IWM_RATE_MCS_SGI_MSK;
         tx->rate_n_flags = htole32(rate_flags | rinfo->ht_plcp);
     } else
@@ -1878,6 +1905,12 @@ iwm_setrates(struct iwm_node *in, int async)
     if ((ni->ni_flags & IEEE80211_NODE_HT) &&
         ieee80211_node_supports_ht_sgi20(ni)) {
         ni->ni_flags |= IEEE80211_NODE_HT_SGI20;
+        sgi_ok = 1;
+    }
+
+    if ((ni->ni_flags & IEEE80211_NODE_HT) &&
+        ieee80211_node_supports_ht_sgi40(ni)) {
+        ni->ni_flags |= IEEE80211_NODE_HT_SGI40;
         sgi_ok = 1;
     }
     
@@ -3811,6 +3844,7 @@ iwm_attach(struct iwm_softc *sc, struct pci_attach_args *pa)
     ic->ic_htcaps = IEEE80211_HTCAP_SGI20;
     ic->ic_htcaps |=
     (IEEE80211_HTCAP_SMPS_DIS << IEEE80211_HTCAP_SMPS_SHIFT);
+    ic->ic_htcaps |= (IEEE80211_HTCAP_CBW20_40 | IEEE80211_HTCAP_SGI40);
     ic->ic_htxcaps = 0;
     ic->ic_txbfcaps = 0;
     ic->ic_aselcaps = 0;

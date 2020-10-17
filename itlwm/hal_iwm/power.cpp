@@ -307,6 +307,7 @@ iwm_add_sta_cmd(struct iwm_softc *sc, struct iwm_node *in, int update)
         add_sta_cmd.modify_mask |= (IWM_STA_MODIFY_TID_DISABLE_TX);
     
     if (in->in_ni.ni_flags & IEEE80211_NODE_HT) {
+        XYLog("%s line=%d\n", __FUNCTION__, __LINE__);
         add_sta_cmd.station_flags_msk
         |= htole32(IWM_STA_FLG_MAX_AGG_SIZE_MSK |
                    IWM_STA_FLG_AGG_MPDU_DENS_MSK);
@@ -323,6 +324,10 @@ iwm_add_sta_cmd(struct iwm_softc *sc, struct iwm_node *in, int update)
         
         add_sta_cmd.station_flags
         |= htole32(IWM_STA_FLG_MAX_AGG_SIZE_64K);
+        add_sta_cmd.station_flags
+        |= htole32(IWM_STA_FLG_FAT_EN_20MHZ);
+        add_sta_cmd.station_flags
+        |= htole32(IWM_STA_FLG_FAT_EN_40MHZ);
         switch (ic->ic_ampdu_params & IEEE80211_AMPDU_PARAM_SS) {
             case IEEE80211_AMPDU_PARAM_SS_2:
                 add_sta_cmd.station_flags

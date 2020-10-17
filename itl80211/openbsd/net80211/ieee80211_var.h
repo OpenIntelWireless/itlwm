@@ -288,7 +288,7 @@ enum ieee80211_protmode {
  */
 struct ieee80211_channel {
 	u_int16_t	ic_freq;	/* setting in MHz */
-	u_int16_t	ic_flags;	/* see below */
+	u_int32_t	ic_flags;	/* see below */
 };
 
 /*
@@ -301,11 +301,34 @@ struct ieee80211_channel {
 #define IEEE80211_CHAN_PASSIVE	0x0200	/* Only passive scan allowed */
 #define IEEE80211_CHAN_DYN	0x0400	/* Dynamic CCK-OFDM channel */
 #define IEEE80211_CHAN_XR	0x1000	/* Extended range OFDM channel */
-#define IEEE80211_CHAN_HT	0x2000	/* 11n/HT channel */
-#define IEEE80211_CHAN_VHT	0x4000	/* 11ac/VHT channel */
 
-#define IEEE80211_CHAN_6GHZ 0x0300
-#define IEEE80211_CHAN_60GHZ 0x0500
+#define IEEE80211_CHAN_HT20    0x00010000 /* HT 20 channel */
+#define IEEE80211_CHAN_HT40U    0x00020000 /* HT 40 channel w/ ext above */
+#define IEEE80211_CHAN_HT40D    0x00040000 /* HT 40 channel w/ ext below */
+#define IEEE80211_CHAN_DFS    0x00080000 /* DFS required */
+#define IEEE80211_CHAN_4MSXMIT    0x00100000 /* 4ms limit on frame length */
+#define IEEE80211_CHAN_NOADHOC    0x00200000 /* adhoc mode not allowed */
+#define IEEE80211_CHAN_NOHOSTAP    0x00400000 /* hostap mode not allowed */
+#define IEEE80211_CHAN_11D    0x00800000 /* 802.11d required */
+#define IEEE80211_CHAN_VHT20    0x01000000 /* VHT20 channel */
+#define IEEE80211_CHAN_VHT40U    0x02000000 /* VHT40 channel, ext above */
+#define IEEE80211_CHAN_VHT40D    0x04000000 /* VHT40 channel, ext below */
+#define IEEE80211_CHAN_VHT80    0x08000000 /* VHT80 channel */
+#define IEEE80211_CHAN_VHT160    0x10000000 /* VHT160 channel */
+#define IEEE80211_CHAN_VHT80_80    0x20000000 /* VHT80+80 channel */
+
+#define IEEE80211_CHAN_HT40    (IEEE80211_CHAN_HT40U | IEEE80211_CHAN_HT40D)
+#define IEEE80211_CHAN_HT    (IEEE80211_CHAN_HT20 | IEEE80211_CHAN_HT40)
+
+#define IEEE80211_CHAN_VHT40    (IEEE80211_CHAN_VHT40U | IEEE80211_CHAN_VHT40D)
+#define IEEE80211_CHAN_VHT    (IEEE80211_CHAN_VHT20 | IEEE80211_CHAN_VHT40 \
+                | IEEE80211_CHAN_VHT80 | IEEE80211_CHAN_VHT80_80 \
+                | IEEE80211_CHAN_VHT160)
+
+#define IEEE80211_CHAN_ALL  \
+    (IEEE80211_CHAN_2GHZ | IEEE80211_CHAN_5GHZ | \
+    IEEE80211_CHAN_CCK | IEEE80211_CHAN_OFDM | IEEE80211_CHAN_PASSIVE | IEEE80211_CHAN_DYN | IEEE80211_CHAN_XR | \
+    IEEE80211_CHAN_HT | IEEE80211_CHAN_VHT)
 
 /*
  * Useful combinations of channel characteristics.
@@ -328,9 +351,9 @@ struct ieee80211_channel {
 #define	IEEE80211_IS_CHAN_G(_c) \
 	(((_c)->ic_flags & IEEE80211_CHAN_G) == IEEE80211_CHAN_G)
 #define	IEEE80211_IS_CHAN_N(_c) \
-	(((_c)->ic_flags & IEEE80211_CHAN_HT) == IEEE80211_CHAN_HT)
+	(((_c)->ic_flags & IEEE80211_CHAN_HT) != 0)
 #define	IEEE80211_IS_CHAN_AC(_c) \
-	(((_c)->ic_flags & IEEE80211_CHAN_VHT) == IEEE80211_CHAN_VHT)
+	(((_c)->ic_flags & IEEE80211_CHAN_VHT) != 0)
 
 #define	IEEE80211_IS_CHAN_2GHZ(_c) \
 	(((_c)->ic_flags & IEEE80211_CHAN_2GHZ) != 0)

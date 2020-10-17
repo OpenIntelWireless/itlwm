@@ -597,6 +597,7 @@ ieee80211_ht_negotiate(struct ieee80211com *ic, struct ieee80211_node *ni)
 			if (isset(ni->ni_basic_mcs, i) &&
 			    !isset(ic->ic_sup_mcs, i)) {
 				ic->ic_stats.is_ht_nego_no_basic_mcs++;
+                XYLog("%s line=%d\n", __FUNCTION__, __LINE__);
 				return;
 			}
 		}
@@ -616,6 +617,8 @@ ieee80211_ht_negotiate(struct ieee80211com *ic, struct ieee80211_node *ni)
 		ic->ic_stats.is_ht_nego_bad_crypto++;
 		return;
 	}
+
+    XYLog("%s line=%d\n", __FUNCTION__, __LINE__);
 
 	ni->ni_flags |= IEEE80211_NODE_HT;
 
