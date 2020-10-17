@@ -309,7 +309,7 @@ ieee80211_decrypt(struct ieee80211com *ic, mbuf_t m0,
 	/* find key for decryption */
     k = ieee80211_get_rxkey(ic, m0, ni);
     if (k == NULL || (k->k_flags & IEEE80211_KEY_SWCRYPTO) == 0) {
-        mbuf_free(m0);
+        mbuf_freem(m0);
         return NULL;
     }
     
