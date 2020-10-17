@@ -481,6 +481,8 @@ struct ieee80211com {
 	u_int8_t		ic_des_bssid[IEEE80211_ADDR_LEN];
 #ifdef AIRPORT
 	u_int8_t		ic_rsn_ie_override[257];
+    u_int16_t       ic_deauth_reason;
+    u_int16_t       ic_assoc_status;
 #endif
 	struct ieee80211_key	ic_nw_keys[IEEE80211_GROUP_NKID];
 	int			ic_def_txkey;	/* group data key index */
