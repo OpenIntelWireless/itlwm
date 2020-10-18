@@ -134,7 +134,7 @@ iwm_phy_ctxt_cmd_hdr(struct iwm_softc *sc, struct iwm_phy_ctxt *ctxt,
 }
 
 static uint8_t
-iwx_get_channel_width(struct ieee80211com *ic, struct ieee80211_channel *c)
+iwm_get_channel_width(struct ieee80211com *ic, struct ieee80211_channel *c)
 {
     if (ic->ic_bss == NULL) {
         return IWM_PHY_VHT_CHANNEL_MODE20;
@@ -154,6 +154,25 @@ iwx_get_channel_width(struct ieee80211com *ic, struct ieee80211_channel *c)
     }
 }
 
+static uint8_t
+iwm_get_ctrl_pos(struct ieee80211com *ic, struct ieee80211_channel *c)
+{
+    if (ic->ic_bss == NULL) {
+        return IWM_PHY_VHT_CTRL_POS_1_BELOW;
+    }
+    // TODO only 40MHZ here
+    if (ic->ic_bss->ni_chw == 40) {
+        if ((ic->ic_bss->ni_htop0 & IEEE80211_HTOP0_SCO_MASK) == IEEE80211_HTOP0_SCO_SCA) {
+            XYLog("%s ht upper\n", __FUNCTION__);
+            return IWM_PHY_VHT_CTRL_POS_4_ABOVE;
+        } else if ((ic->ic_bss->ni_htop0 & IEEE80211_HTOP0_SCO_MASK) == IEEE80211_HTOP0_SCO_SCB) {
+            XYLog("%s ht lower\n", __FUNCTION__);
+            return IWM_PHY_VHT_CTRL_POS_1_BELOW;
+        }
+    }
+    return IWM_PHY_VHT_CTRL_POS_1_BELOW;
+}
+
 void ItlIwm::
 iwm_phy_ctxt_cmd_data(struct iwm_softc *sc, struct iwm_phy_context_cmd *cmd,
     struct ieee80211_channel *chan, uint8_t chains_static,
@@ -165,7 +184,7 @@ iwm_phy_ctxt_cmd_data(struct iwm_softc *sc, struct iwm_phy_context_cmd *cmd,
     cmd->ci.band = IEEE80211_IS_CHAN_2GHZ(chan) ?
         IWM_PHY_BAND_24 : IWM_PHY_BAND_5;
     cmd->ci.channel = ieee80211_chan2ieee(ic, chan);
-    cmd->ci.width = iwx_get_channel_width(ic, chan);
+    cmd->ci.width = iwm_get_channel_width(ic, chan);
     cmd->ci.ctrl_pos = IWM_PHY_VHT_CTRL_POS_1_BELOW;
 
     /* Set rx the chains */
