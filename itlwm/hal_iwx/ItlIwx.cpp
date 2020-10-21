@@ -6807,6 +6807,7 @@ _iwx_start_task(OSObject *target, void *arg0, void *arg1, void *arg2, void *arg3
             ifp->netStat->outputErrors++;
             continue;
         }
+        ifp->netStat->outputPackets++;
         
         if (ifp->if_flags & IFF_UP) {
             sc->sc_tx_timer = 15;
