@@ -237,7 +237,8 @@ setCIPHER_KEY(OSObject *object, struct apple80211_key *key)
     
     switch (key->key_cipher_type) {
         case APPLE80211_CIPHER_NONE:
-            XYLog("Setting NONE key is not supported\n");
+            // clear existing key
+//            XYLog("Setting NONE key is not supported\n");
             break;
         case APPLE80211_CIPHER_WEP_40:
         case APPLE80211_CIPHER_WEP_104:
@@ -748,18 +749,17 @@ getDEAUTH(OSObject *object,
     da->version = APPLE80211_VERSION;
     ieee80211com *ic = fHalService->get80211Controller();
     da->deauth_reason = ic->ic_deauth_reason;
-    XYLog("%s, %d\n", __FUNCTION__, da->deauth_reason);
+//    XYLog("%s, %d\n", __FUNCTION__, da->deauth_reason);
     return kIOReturnSuccess;
 }
 
 IOReturn AirportItlwm::
 getASSOCIATION_STATUS(OSObject *object, struct apple80211_assoc_status_data *hv) {
-//    XYLog("%s\n", __FUNCTION__);
     ieee80211com *ic = fHalService->get80211Controller();
     memset(hv, 0, sizeof(*hv));
     hv->version = APPLE80211_VERSION;
     hv->status = ic->ic_assoc_status;
-    XYLog("%s, %d\n", __FUNCTION__, hv->status);
+//    XYLog("%s, %d\n", __FUNCTION__, hv->status);
     return kIOReturnSuccess;
 }
 
