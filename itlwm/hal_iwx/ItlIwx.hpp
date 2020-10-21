@@ -179,7 +179,6 @@ public:
     
     void releaseAll();
     void joinSSID(const char *ssid, const char *pwd);
-    void associateSSID(const char *ssid, const char *pwd);
     
     //utils
     static void *mallocarray(size_t, size_t, int, int);

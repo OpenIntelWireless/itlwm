@@ -283,7 +283,9 @@ void itlwm::associateSSID(const char *ssid, const char *pwd)
     ieee80211_del_ess(ic, NULL, 0, 1);
     struct ieee80211_node *selbs = ieee80211_node_choose_bss(ic, 0, NULL);
     if (selbs == NULL) {
-        ieee80211_new_state(ic, IEEE80211_S_SCAN, -1);
+        if (ic->ic_state != IEEE80211_S_SCAN) {
+            ieee80211_new_state(ic, IEEE80211_S_SCAN, -1);
+        }
     } else {
         ieee80211_node_join_bss(ic, selbs, 1);
         fHalService->getDriverController()->clearScanningFlags();

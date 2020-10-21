@@ -34,37 +34,6 @@
 			<integer>2000</integer>
 			<key>IOProviderClass</key>
 			<string>IOPCIDevice</string>
-			<key>WiFiConfig</key>
-			<dict>
-				<key>WiFi_1</key>
-				<dict>
-					<key>password</key>
-					<string>zxyssdt112233</string>
-					<key>ssid</key>
-					<string>ssdt</string>
-				</dict>
-				<key>WiFi_2</key>
-				<dict>
-					<key>password</key>
-					<string>zxyssdt112233</string>
-					<key>ssid</key>
-					<string>ssdt_5G</string>
-				</dict>
-				<key>WiFi_3</key>
-				<dict>
-					<key>password</key>
-					<string></string>
-					<key>ssid</key>
-					<string>Redmi</string>
-				</dict>
-				<key>WiFi_4</key>
-				<dict>
-					<key>password</key>
-					<string>9utc5c5f</string>
-					<key>ssid</key>
-					<string>CMCC-KtG6</string>
-				</dict>
-			</dict>
 		</dict>
 	</dict>
 	<key>NSHumanReadableCopyright</key>
