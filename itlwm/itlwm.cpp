@@ -287,8 +287,14 @@ void itlwm::associateSSID(const char *ssid, const char *pwd)
             ieee80211_new_state(ic, IEEE80211_S_SCAN, -1);
         }
     } else {
-        ieee80211_node_join_bss(ic, selbs, 1);
-        fHalService->getDriverController()->clearScanningFlags();
+        if (ic->ic_state > IEEE80211_S_AUTH) {
+            ieee80211_node_join_bss(ic, selbs, 1);
+            fHalService->getDriverController()->clearScanningFlags();
+        } else {
+            if (ic->ic_state != IEEE80211_S_SCAN) {
+                ieee80211_new_state(ic, IEEE80211_S_SCAN, -1);
+            }
+        }
     }
 }
 

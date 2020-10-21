@@ -1738,7 +1738,7 @@ iwx_reset_tx_ring(struct iwx_softc *sc, struct iwx_tx_ring *ring)
     }
     
     /* Clear byte count table. */
-     memset(ring->bc_tbl.vaddr, 0, ring->bc_tbl.size);
+    memset(ring->bc_tbl.vaddr, 0, ring->bc_tbl.size);
     
     /* Clear TX descriptors. */
     memset(ring->desc, 0, ring->desc_dma.size);
@@ -5854,6 +5854,7 @@ iwx_disassoc(struct iwx_softc *sc)
     int err;
     struct iwx_add_sta_cmd cmd;
     uint32_t status;
+    int qid;
     
     splassert(IPL_NET);
     
@@ -5869,6 +5870,16 @@ iwx_disassoc(struct iwx_softc *sc)
         err = iwx_send_cmd_pdu_status(sc, IWX_ADD_STA, sizeof(cmd), &cmd,
                                       &status);
         err = iwx_flush_tx_path(sc);
+        cmd.sta_id = htole32(IWX_STATION_ID);
+        cmd.mac_id_n_color
+        = htole32(IWX_FW_CMD_ID_AND_COLOR(in->in_id, in->in_color));
+        cmd.add_modify = IWX_STA_MODE_MODIFY;
+        cmd.station_flags = 0;
+        cmd.station_flags_msk = htole32(IWX_STA_FLG_DRAIN_FLOW);
+        err = iwx_send_cmd_pdu_status(sc, IWX_ADD_STA, sizeof(cmd), &cmd,
+                                      &status);
+//        for (qid = 0; qid < nitems(sc->txq); qid++)
+//            iwx_reset_tx_ring(sc, &sc->txq[qid]);
         err = iwx_rm_sta_cmd(sc, in);
         if (err) {
             XYLog("%s: could not remove STA (error %d)\n",
