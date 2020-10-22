@@ -25,12 +25,12 @@ jobs:
         GIT_SHA="$(git rev-parse --short HEAD)"
         CUR_TAG="$(git tag -l | grep 'alpha\|beta' | tail -1)"
         eval $(grep -m 1 "MODULE_VERSION =" itlwm.xcodeproj/project.pbxproj | tr -d ';' | tr -d '\t' | tr -d " ")
-        echo "::set-env name=SHORT_SHA::$GIT_SHA"
-        echo "::set-env name=ITLWM_VER::$MODULE_VERSION"
+        echo "SHORT_SHA=$GIT_SHA" >> $GITHUB_ENV
+        echo "ITLWM_VER=$MODULE_VERSION" >> $GITHUB_ENV
         if [[ -z $CUR_TAG ]]; then
-          echo "::set-env name=OLD_PRE_TAG::NULL"
+          echo "OLD_PRE_TAG=NULL" >> $GITHUB_ENV
         else
-          echo "::set-env name=OLD_PRE_TAG::$CUR_TAG"
+          echo "OLD_PRE_TAG=$CUR_TAG" >> $GITHUB_ENV
         fi
 
     - name: Install MacKernelSDK
@@ -45,7 +45,7 @@ jobs:
       run: |
         xcodebuild -scheme "AirportItlwm (all)" -configuration Debug -derivedDataPath build | xcpretty && exit ${PIPESTATUS[0]}
 
-    - name: Finalize Artifacts
+    - name: Pack Artifacts
       run: |
         cd $BUILD_OUTPUT
           zip -r itlwm-v${ITLWM_VER}-DEBUG-alpha-${SHORT_SHA}.zip itlwm.kext
