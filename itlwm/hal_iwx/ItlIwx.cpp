@@ -885,9 +885,9 @@ iwx_read_firmware(struct iwx_softc *sc)
     struct iwx_fw_info *fw = &sc->sc_fw;
     struct iwx_tlv_ucode_header *uhdr;
     struct iwx_ucode_tlv tlv;
-    uint32_t tlv_type;
+    uint32_t tlv_type = 0;
     uint8_t *data;
-    int err;
+    int err = 0;
     size_t len;
     OSData *fwData = NULL;
     
@@ -1286,6 +1286,8 @@ out:
     } else
         fw->fw_status = IWX_FW_STATUS_DONE;
     wakeupOn(&sc->sc_fw);
+
+    OSSafeReleaseNULL(fwData);
     
     return err;
 }
