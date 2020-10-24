@@ -117,6 +117,8 @@ public:
     virtual UInt32 hardwareOutputQueueDepth(IO80211Interface* interface) override;
     virtual SInt32 performCountryCodeOperation(IO80211Interface* interface, IO80211CountryCodeOp op) override;
     virtual SInt32 enableFeature(IO80211FeatureCode code, void* data) override;
+
+    virtual int bpfOutputPacket(OSObject *,UInt,mbuf_t) override;
     
     //AirportSTAIOCTL
     FUNC_IOCTL(SSID, apple80211_ssid_data)

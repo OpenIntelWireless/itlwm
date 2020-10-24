@@ -939,3 +939,17 @@ createVirtualInterface(ether_addr *ether, UInt role)
     }
     return inf;
 }
+
+int AirportItlwm::
+bpfOutputPacket(OSObject *object, UInt dltType, mbuf_t m)
+{
+    XYLog("%s dltType=%d\n", __FUNCTION__, dltType);
+    if (dltType != DLT_RAW) {
+        if (dltType != DLT_IEEE802_11_RADIO) {
+            if (dltType == DLT_IEEE802_11) {
+
+            }
+        }
+    }
+    return kIOReturnError;
+}

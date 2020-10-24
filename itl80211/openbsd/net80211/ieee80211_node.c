@@ -1224,7 +1224,7 @@ ieee80211_node_switch_bss(struct ieee80211com *ic, struct ieee80211_node *ni)
 void
 ieee80211_node_join_bss(struct ieee80211com *ic, struct ieee80211_node *selbs, int force_reauth)
 {
-    XYLog("%s\n", __FUNCTION__);
+    XYLog("%s selbs=%s mac=%s chan=%d rssi=%d protos=%d akms=%d ciphers=%d\n", __FUNCTION__, selbs->ni_essid, ether_sprintf(selbs->ni_bssid), ieee80211_chan2ieee(ic, selbs->ni_chan), selbs->ni_rssi, selbs->ni_rsnprotos, selbs->ni_rsnakms, selbs->ni_rsnciphers);
     enum ieee80211_phymode mode;
     struct ieee80211_node *ni;
     uint32_t assoc_fail = 0;
@@ -1361,6 +1361,12 @@ ieee80211_node_choose_bss(struct ieee80211com *ic, int bgscan,
      * (as long as it meets the minimum RSSI threshold) since the 5Ghz band
      * is usually less saturated.
      */
+    if (selbs5 != NULL) {
+        XYLog("%s 5ghz ssid=%s mac=%s rssi=%d\n", __FUNCTION__, selbs5->ni_essid, ether_sprintf(selbs5->ni_bssid), selbs5->ni_rssi);
+    }
+    if (selbs2 != NULL) {
+        XYLog("%s 2ghz ssid=%s mac=%s rssi=%d\n", __FUNCTION__, selbs2->ni_essid, ether_sprintf(selbs2->ni_bssid), selbs2->ni_rssi);
+    }
     if (selbs5 && selbs5->ni_rssi > min_5ghz_rssi)
         selbs = selbs5;
     else if (selbs5 && selbs2)
