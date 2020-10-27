@@ -902,11 +902,19 @@ enableFeature(IO80211FeatureCode code, void *data)
 }
 
 int AirportItlwm::
-outputActionFrame(IO80211Interface *interface, mbuf_t m)
+outputActionFrame(OSObject *object, mbuf_t m)
 {
-    XYLog("%s len=%d\n", __FUNCTION__, mbuf_len(m));
-    freePacket(m);
-    return kIOReturnOutputDropped;
+    XYLog("%s len=%zu\n", __FUNCTION__, mbuf_len(m));
+    mbuf_freem(m);
+    return 0;
+}
+
+int AirportItlwm::
+bpfOutput80211Radio(OSObject *object, mbuf_t m)
+{
+    XYLog("%s len=%zu\n", __FUNCTION__, mbuf_len(m));
+    mbuf_freem(m);
+    return 0;
 }
 
 SInt32 AirportItlwm::
@@ -915,7 +923,8 @@ enableVirtualInterface(IO80211VirtualInterface *interface)
     XYLog("%s interface=%s role=%d", __FUNCTION__, interface->getBSDName(), interface->getInterfaceRole());
     SInt32 ret = super::enableVirtualInterface(interface);
     if (!ret) {
-//        interface->startOutputQueues();
+        interface->setLinkState(kIO80211NetworkLinkUp, 0);
+        interface->postMessage(APPLE80211_M_LINK_CHANGED);
         return kIOReturnSuccess;
     }
     return ret;
@@ -927,7 +936,8 @@ disableVirtualInterface(IO80211VirtualInterface *interface)
     XYLog("%s interface=%s role=%d", __FUNCTION__, interface->getBSDName(), interface->getInterfaceRole());
     SInt32 ret = super::disableVirtualInterface(interface);
     if (!ret) {
-//        interface->stopOutputQueues();
+        interface->setLinkState(kIO80211NetworkLinkDown, 0);
+        interface->postMessage(APPLE80211_M_LINK_CHANGED);
         return kIOReturnSuccess;
     }
     return ret;
@@ -955,12 +965,12 @@ int AirportItlwm::
 bpfOutputPacket(OSObject *object, UInt dltType, mbuf_t m)
 {
     XYLog("%s dltType=%d\n", __FUNCTION__, dltType);
-    if (dltType != DLT_RAW) {
-        if (dltType != DLT_IEEE802_11_RADIO) {
-            if (dltType == DLT_IEEE802_11) {
-
-            }
-        }
+    if (dltType == DLT_IEEE802_11_RADIO || dltType == DLT_IEEE802_11) {
+        return bpfOutput80211Radio(object, m);
     }
-    return kIOReturnError;
+    if (dltType == DLT_RAW) {
+        return outputActionFrame(object, m);
+    }
+    mbuf_freem(m);
+    return 1;
 }

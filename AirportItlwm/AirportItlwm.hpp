@@ -107,7 +107,6 @@ public:
     //authentication
     virtual bool useAppleRSNSupplicant(IO80211Interface *interface) override;
     virtual int outputRaw80211Packet(IO80211Interface *interface, mbuf_t m) override;
-    virtual int outputActionFrame(IO80211Interface *interface, mbuf_t m) override;
     //virtual interface
     virtual SInt32 enableVirtualInterface(IO80211VirtualInterface *interface) override;
     virtual SInt32 disableVirtualInterface(IO80211VirtualInterface *interface) override;
@@ -119,6 +118,10 @@ public:
     virtual SInt32 enableFeature(IO80211FeatureCode code, void* data) override;
 
     virtual int bpfOutputPacket(OSObject *,UInt,mbuf_t) override;
+    int outputActionFrame(OSObject *, mbuf_t m);
+    int bpfOutput80211Radio(OSObject *, mbuf_t m);
+    
+    
     
     //AirportSTAIOCTL
     FUNC_IOCTL(SSID, apple80211_ssid_data)
