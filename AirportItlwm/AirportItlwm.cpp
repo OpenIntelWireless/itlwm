@@ -15,6 +15,7 @@
 
 #include "sha1.h"
 #include <net80211/ieee80211_priv.h>
+#include <net80211/ieee80211_var.h>
 
 #define super IO80211Controller
 OSDefineMetaClassAndStructors(AirportItlwm, IO80211Controller);
@@ -522,6 +523,8 @@ void AirportItlwm::stop(IOService *provider)
 bool AirportItlwm::
 setLinkStatus(UInt32 status, const IONetworkMedium * activeMedium, UInt64 speed, OSData * data)
 {
+    struct apple80211_channel channel;
+    struct ieee80211com *ic = fHalService->get80211Controller();
     if (status == currentStatus) {
         return true;
     }
@@ -531,9 +534,17 @@ setLinkStatus(UInt32 status, const IONetworkMedium * activeMedium, UInt64 speed,
         if (status & kIONetworkLinkActive) {
             fNetIf->setLinkState(kIO80211NetworkLinkUp, 0);
             fNetIf->postMessage(APPLE80211_M_LINK_CHANGED);
+            if (fAWDLInterface) {
+                fAWDLInterface->setLinkState(kIO80211NetworkLinkUp, 0);
+                fAWDLInterface->postMessage(APPLE80211_M_LINK_CHANGED);
+            }
         } else if (!(status & kIONetworkLinkNoNetworkChange)) {
             fNetIf->setLinkState(kIO80211NetworkLinkDown, fHalService->get80211Controller()->ic_deauth_reason);
             fNetIf->postMessage(APPLE80211_M_LINK_CHANGED);
+            if (fAWDLInterface) {
+                fAWDLInterface->setLinkState(kIO80211NetworkLinkDown, fHalService->get80211Controller()->ic_deauth_reason);
+                fAWDLInterface->postMessage(APPLE80211_M_LINK_CHANGED);
+            }
         }
     }
     return ret;

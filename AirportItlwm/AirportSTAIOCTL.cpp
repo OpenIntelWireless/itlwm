@@ -986,6 +986,7 @@ IOReturn AirportItlwm::
 setVIRTUAL_IF_CREATE(OSObject *object, struct apple80211_virt_if_create_data* data)
 {
     struct ether_addr addr;
+    struct apple80211_channel chann;
     IOLog("%s role=%d, bsd_name=%s, mac=%s, unk1=%d\n", __FUNCTION__, data->role, data->bsd_name,
           ether_sprintf(data->mac), data->unk1);
     if (data->role - 2 < 2) {
@@ -1022,6 +1023,10 @@ setVIRTUAL_IF_CREATE(OSObject *object, struct apple80211_virt_if_create_data* da
         }
         memcpy(addr.octet, data->mac, 6);
         inf->init(this, &addr, data->role, "awdl");
+        chann.channel = 149;
+        chann.version = 1;
+        chann.flags = APPLE80211_C_FLAG_5GHZ | APPLE80211_C_FLAG_ACTIVE | APPLE80211_C_FLAG_80MHZ;
+        setInfraChannel(&chann);
         fAWDLInterface = inf;
         IOLog("啊啊啊啊 虚拟接口fAWDLInterface调用成功\n");
     }

@@ -174,6 +174,20 @@ public:
     FUNC_IOCTL(SYNC_FRAME_TEMPLATE, apple80211_awdl_sync_frame_template)
     FUNC_IOCTL_GET(AWDL_HT_CAPABILITY, apple80211_ht_capability)
     
+    //AWDL
+    FUNC_IOCTL(AWDL_BSSID, apple80211_awdl_bssid)
+    FUNC_IOCTL_GET(CHANNELS_INFO, apple80211_channels_info)
+    FUNC_IOCTL(PEER_CACHE_MAXIMUM_SIZE, apple80211_peer_cache_maximum_size)
+    FUNC_IOCTL(AWDL_ELECTION_ID, apple80211_awdl_election_id)
+    FUNC_IOCTL(AWDL_MASTER_CHANNEL, apple80211_awdl_master_channel)
+    FUNC_IOCTL(AWDL_SECONDARY_MASTER_CHANNEL, apple80211_awdl_secondary_master_channel)
+    FUNC_IOCTL(AWDL_MIN_RATE, apple80211_awdl_min_rate)
+    FUNC_IOCTL(AWDL_ELECTION_RSSI_THRESHOLDS, apple80211_awdl_election_rssi_thresholds)
+    FUNC_IOCTL(AWDL_SYNCHRONIZATION_CHANNEL_SEQUENCE, apple80211_awdl_sync_channel_sequence)
+    FUNC_IOCTL(AWDL_PRESENCE_MODE, apple80211_awdl_presence_mode)
+    FUNC_IOCTL(AWDL_EXTENSION_STATE_MACHINE_PARAMETERS, apple80211_awdl_extension_state_machine_parameter)
+    FUNC_IOCTL(AWDL_SYNC_STATE, apple80211_awdl_sync_state)
+    
     
     //-----------------------------------------------------------------------
     // Power management support.
@@ -228,4 +242,7 @@ public:
     //AWDL
     uint8_t *syncFrameTemplate;
     uint32_t syncFrameTemplateLength;
+    uint8_t awdlBSSID[6];
+    uint32_t awdlElectionId;
+    uint32_t awdlPresenceMode;
 };

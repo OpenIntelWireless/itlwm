@@ -76,6 +76,42 @@ apple80211VirtualRequest(UInt request_type, int request_number, IO80211VirtualIn
         case APPLE80211_IOC_AWDL_ELECTION_METRIC:
             IOCTL(request_type, AWDL_ELECTION_METRIC, apple80211_awdl_election_metric);
             break;
+        case APPLE80211_IOC_AWDL_BSSID:
+            IOCTL(request_type, AWDL_BSSID, apple80211_awdl_bssid);
+            break;
+//        case APPLE80211_IOC_CHANNELS_INFO:
+//            IOCTL_GET(request_type, CHANNELS_INFO, apple80211_channels_info);
+//            break;
+        case APPLE80211_IOC_PEER_CACHE_MAXIMUM_SIZE:
+            IOCTL(request_type, PEER_CACHE_MAXIMUM_SIZE, apple80211_peer_cache_maximum_size);
+            break;
+        case APPLE80211_IOC_AWDL_ELECTION_ID:
+            IOCTL(request_type, AWDL_ELECTION_ID, apple80211_awdl_election_id);            
+            break;
+        case APPLE80211_IOC_AWDL_MASTER_CHANNEL:
+            IOCTL(request_type, AWDL_MASTER_CHANNEL, apple80211_awdl_master_channel);
+            break;
+        case APPLE80211_IOC_AWDL_SECONDARY_MASTER_CHANNEL:
+            IOCTL(request_type, AWDL_SECONDARY_MASTER_CHANNEL, apple80211_awdl_secondary_master_channel);
+            break;
+        case APPLE80211_IOC_AWDL_MIN_RATE:
+            IOCTL(request_type, AWDL_MIN_RATE, apple80211_awdl_min_rate);
+            break;
+        case APPLE80211_IOC_AWDL_ELECTION_RSSI_THRESHOLDS:
+            IOCTL(request_type, AWDL_ELECTION_RSSI_THRESHOLDS, apple80211_awdl_election_rssi_thresholds);
+            break;
+        case APPLE80211_IOC_AWDL_SYNCHRONIZATION_CHANNEL_SEQUENCE:
+            IOCTL(request_type, AWDL_SYNCHRONIZATION_CHANNEL_SEQUENCE, apple80211_awdl_sync_channel_sequence);
+            break;
+        case APPLE80211_IOC_AWDL_PRESENCE_MODE:
+            IOCTL(request_type, AWDL_PRESENCE_MODE, apple80211_awdl_presence_mode);
+            break;
+        case APPLE80211_IOC_AWDL_EXTENSION_STATE_MACHINE_PARAMETERS:
+            IOCTL(request_type, AWDL_EXTENSION_STATE_MACHINE_PARAMETERS, apple80211_awdl_extension_state_machine_parameter);
+            break;
+        case APPLE80211_IOC_AWDL_SYNC_STATE:
+            IOCTL(request_type, AWDL_SYNC_STATE, apple80211_awdl_sync_state);
+            break;
         default:
         unhandled:
             if (!ml_at_interrupt_context()) {
@@ -188,5 +224,207 @@ getAWDL_HT_CAPABILITY(OSObject *object, struct apple80211_ht_capability *data)
 {
     memset(data, 0, sizeof(*data));
     data->version = APPLE80211_VERSION;
+    return kIOReturnSuccess;
+}
+
+IOReturn AirportItlwm::
+getAWDL_BSSID(OSObject *object, struct apple80211_awdl_bssid *data)
+{
+    XYLog("%s\n", __FUNCTION__);
+    data->version = APPLE80211_VERSION;
+    memcpy(data->bssid, awdlBSSID, 6);
+    return kIOReturnSuccess;
+}
+
+IOReturn AirportItlwm::
+setAWDL_BSSID(OSObject *object, struct apple80211_awdl_bssid *data)
+{
+    XYLog("%s bssid=%s unk_mac=%s\n", __FUNCTION__, ether_sprintf(data->bssid), ether_sprintf(data->unk_mac));
+    memcpy(awdlBSSID, data->bssid, 6);
+    return kIOReturnSuccess;
+}
+
+IOReturn AirportItlwm::
+getCHANNELS_INFO(OSObject *object, struct apple80211_channels_info *data)
+{
+    XYLog("%s\n", __FUNCTION__);
+    memset(data, 0, sizeof(*data));
+    data->version = APPLE80211_VERSION;
+    data->unk1 = 0;
+    data->num_chan_specs = 3;
+    data->channels[0].chan_num = 6;
+    data->channels[0].support_80Mhz = 0;
+    data->channels[0].support_40Mhz = 0;
+    data->channels[1].chan_num = 44;
+    data->channels[1].support_80Mhz = 1;
+    data->channels[1].support_40Mhz = 1;
+    data->channels[2].chan_num = 149;
+    data->channels[2].support_80Mhz = 1;
+    data->channels[2].support_40Mhz = 1;
+    return kIOReturnSuccess;
+}
+
+IOReturn AirportItlwm::
+getAWDL_ELECTION_ID(OSObject *object, struct apple80211_awdl_election_id *data)
+{
+    XYLog("%s\n", __FUNCTION__);
+    data->version = APPLE80211_VERSION;
+    
+    return kIOReturnSuccess;
+}
+
+IOReturn AirportItlwm::
+setAWDL_ELECTION_ID(OSObject *object, struct apple80211_awdl_election_id *data)
+{
+    XYLog("%s election_id=%d\n", __FUNCTION__, data->election_id);
+    awdlElectionId = data->election_id;
+    return kIOReturnSuccess;
+}
+
+IOReturn AirportItlwm::
+getPEER_CACHE_MAXIMUM_SIZE(OSObject *object, struct apple80211_peer_cache_maximum_size *data)
+{
+    XYLog("%s\n", __FUNCTION__);
+    data->version = APPLE80211_VERSION;
+    data->max_peers = 255;
+    return kIOReturnSuccess;
+}
+
+IOReturn AirportItlwm::
+setPEER_CACHE_MAXIMUM_SIZE(OSObject *object, struct apple80211_peer_cache_maximum_size *data)
+{
+    XYLog("%s max_peers=%d\n", __FUNCTION__, data->max_peers);
+    
+    return kIOReturnSuccess;
+}
+
+IOReturn AirportItlwm::
+getAWDL_MASTER_CHANNEL(OSObject *object, struct apple80211_awdl_master_channel *data)
+{
+    data->version = APPLE80211_VERSION;
+    data->master_channel = 149;
+    return kIOReturnSuccess;
+}
+
+IOReturn AirportItlwm::
+setAWDL_MASTER_CHANNEL(OSObject *object, struct apple80211_awdl_master_channel *data)
+{
+    XYLog("%s master_channel=%d\n", __FUNCTION__, data->master_channel);
+    
+    return kIOReturnSuccess;
+}
+
+IOReturn AirportItlwm::
+getAWDL_SECONDARY_MASTER_CHANNEL(OSObject *object, struct apple80211_awdl_secondary_master_channel *data)
+{
+    XYLog("%s temporary return channel 0\n", __FUNCTION__);
+    data->version = APPLE80211_VERSION;
+    data->secondary_master_channel = 0;
+    return kIOReturnSuccess;
+}
+
+IOReturn AirportItlwm::
+setAWDL_SECONDARY_MASTER_CHANNEL(OSObject *object, struct apple80211_awdl_secondary_master_channel *data)
+{
+    XYLog("%s secondary_master_channel=%d\n", __FUNCTION__, data->secondary_master_channel);
+    
+    return kIOReturnSuccess;
+}
+
+IOReturn AirportItlwm::
+setAWDL_MIN_RATE(OSObject *object, struct apple80211_awdl_min_rate *data)
+{
+    XYLog("%s min_rate=%d plus=%d\n", __FUNCTION__, data->min_rate, 2 *data->min_rate);
+    
+    return kIOReturnSuccess;
+}
+
+IOReturn AirportItlwm::
+getAWDL_MIN_RATE(OSObject *object, struct apple80211_awdl_min_rate *data)
+{
+    XYLog("%s\n", __FUNCTION__);
+    data->version = APPLE80211_VERSION;
+    
+    return kIOReturnSuccess;
+}
+
+IOReturn AirportItlwm::
+getAWDL_ELECTION_RSSI_THRESHOLDS(OSObject *object, struct apple80211_awdl_election_rssi_thresholds *data)
+{
+    XYLog("%s\n", __FUNCTION__);
+    return kIOReturnError;
+}
+
+IOReturn AirportItlwm::
+setAWDL_ELECTION_RSSI_THRESHOLDS(OSObject *object, struct apple80211_awdl_election_rssi_thresholds *data)
+{
+    XYLog("%s unk1=%d unk2=%d unk3=%d\n", __FUNCTION__, data->unk1, data->unk2, data->unk3);
+    
+    return kIOReturnSuccess;
+}
+
+IOReturn AirportItlwm::
+getAWDL_SYNCHRONIZATION_CHANNEL_SEQUENCE(OSObject *object, struct apple80211_awdl_sync_channel_sequence *data)
+{
+    XYLog("%s\n", __FUNCTION__);
+    data->version = APPLE80211_VERSION;
+    
+    return kIOReturnSuccess;
+}
+
+IOReturn AirportItlwm::
+setAWDL_SYNCHRONIZATION_CHANNEL_SEQUENCE(OSObject *object, struct apple80211_awdl_sync_channel_sequence *data)
+{
+    XYLog("%s\n", __FUNCTION__);
+    return kIOReturnSuccess;
+}
+
+IOReturn AirportItlwm::
+getAWDL_PRESENCE_MODE(OSObject *object, struct apple80211_awdl_presence_mode *data)
+{
+    XYLog("%s\n", __FUNCTION__);
+    data->version = APPLE80211_VERSION;
+    data->mode = awdlPresenceMode;
+    return kIOReturnSuccess;
+}
+
+IOReturn AirportItlwm::
+setAWDL_PRESENCE_MODE(OSObject *object, struct apple80211_awdl_presence_mode *data)
+{
+    XYLog("%s mode=%d\n", __FUNCTION__, data->mode);
+    awdlPresenceMode = data->mode;
+    return kIOReturnSuccess;
+}
+
+IOReturn AirportItlwm::
+getAWDL_EXTENSION_STATE_MACHINE_PARAMETERS(OSObject *object, struct apple80211_awdl_extension_state_machine_parameter *data)
+{
+    XYLog("%s\n", __FUNCTION__);
+    data->version = APPLE80211_VERSION;
+    
+    return kIOReturnSuccess;
+}
+
+IOReturn AirportItlwm::
+setAWDL_EXTENSION_STATE_MACHINE_PARAMETERS(OSObject *object, struct apple80211_awdl_extension_state_machine_parameter *data)
+{
+    XYLog("%s unk1=%d unk2=%d unk3=%d unk4=%d\n", __FUNCTION__, data->unk1, data->unk2, data->unk3, data->unk4);
+    
+    return kIOReturnSuccess;
+}
+
+IOReturn AirportItlwm::
+getAWDL_SYNC_STATE(OSObject *object, struct apple80211_awdl_sync_state *data)
+{
+    XYLog("%s\n", __FUNCTION__);
+    data->version = APPLE80211_VERSION;
+    
+    return kIOReturnSuccess;
+}
+
+IOReturn AirportItlwm::
+setAWDL_SYNC_STATE(OSObject *object, struct apple80211_awdl_sync_state *data)
+{
+    XYLog("%s\n", __FUNCTION__);
     return kIOReturnSuccess;
 }

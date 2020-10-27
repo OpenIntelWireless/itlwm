@@ -853,5 +853,87 @@ struct apple80211_awdl_sync_frame_template
     void        *payload;
 } __attribute__((packed));
 
+struct apple80211_awdl_bssid {
+    uint32_t    version;
+    uint8_t     bssid[APPLE80211_ADDR_LEN];
+    uint8_t     unk_mac[APPLE80211_ADDR_LEN];
+} __attribute__((packed));
+
+struct apple80211_awdl_channel {
+    uint16_t    chan_spec;
+    uint8_t     chan_num;
+    uint8_t     indoor_restric;
+    uint8_t     radar_dfs;
+    uint8_t     passive;
+    uint8_t     support_40Mhz;
+    uint8_t     support_80Mhz;
+    uint8_t     z;
+    uint32_t    per_chan;
+    uint32_t    chan_bitmap;
+} __attribute__((packed));
+
+struct apple80211_channels_info {
+    uint32_t    version;
+    uint32_t    unk1;
+    uint16_t    num_chan_specs;
+    struct apple80211_awdl_channel channels[APPLE80211_MAX_CHANNELS];
+} __attribute__((packed));
+
+struct apple80211_peer_cache_maximum_size {
+    uint32_t    version;
+    uint32_t    max_peers;
+} __attribute__((packed));
+
+struct apple80211_awdl_election_id {
+    uint32_t    version;
+    uint32_t    election_id;
+} __attribute__((packed));
+
+struct apple80211_awdl_master_channel {
+    uint32_t    version;
+    uint32_t    master_channel;
+} __attribute__((packed));
+
+struct apple80211_awdl_secondary_master_channel {
+    uint32_t    version;
+    uint32_t    secondary_master_channel;
+} __attribute__((packed));
+
+struct apple80211_awdl_min_rate {
+    uint32_t    version;
+    uint8_t    min_rate;
+} __attribute__((packed));
+
+struct apple80211_awdl_election_rssi_thresholds {
+    uint32_t    version;
+    uint32_t    unk1;
+    uint32_t    unk2;
+    uint32_t    unk3;
+} __attribute__((packed));
+
+struct apple80211_awdl_sync_channel_sequence {
+    uint32_t    version;
+    
+} __attribute__((packed));
+
+struct apple80211_awdl_presence_mode {
+    uint32_t    version;
+    uint32_t    mode;
+} __attribute__((packed));
+
+struct apple80211_awdl_extension_state_machine_parameter {
+    uint32_t    version;
+    uint32_t    unk1;
+    uint32_t    unk2;
+    uint32_t    unk3;
+    uint32_t    unk4;
+} __attribute__((packed));
+
+struct apple80211_awdl_sync_state {
+    uint32_t    version;
+    
+} __attribute__((packed));
+
+
 #endif // _APPLE80211_IOCTL_H_
 
