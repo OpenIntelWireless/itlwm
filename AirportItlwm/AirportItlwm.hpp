@@ -190,6 +190,7 @@ public:
     FUNC_IOCTL(AWDL_PRESENCE_MODE, apple80211_awdl_presence_mode)
     FUNC_IOCTL(AWDL_EXTENSION_STATE_MACHINE_PARAMETERS, apple80211_awdl_extension_state_machine_parameter)
     FUNC_IOCTL(AWDL_SYNC_STATE, apple80211_awdl_sync_state)
+    FUNC_IOCTL(AWDL_SYNC_PARAMS, apple80211_awdl_sync_params)
     
     
     //-----------------------------------------------------------------------
@@ -246,6 +247,9 @@ public:
     uint8_t *syncFrameTemplate;
     uint32_t syncFrameTemplateLength;
     uint8_t awdlBSSID[6];
+    uint32_t awdlSyncState;
     uint32_t awdlElectionId;
     uint32_t awdlPresenceMode;
+    uint16_t awdlMasterChannel;
+    uint16_t awdlSecondaryMasterChannel;
 };

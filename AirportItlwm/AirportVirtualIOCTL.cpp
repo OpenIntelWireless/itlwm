@@ -112,6 +112,9 @@ apple80211VirtualRequest(UInt request_type, int request_number, IO80211VirtualIn
         case APPLE80211_IOC_AWDL_SYNC_STATE:
             IOCTL(request_type, AWDL_SYNC_STATE, apple80211_awdl_sync_state);
             break;
+        case APPLE80211_IOC_AWDL_SYNC_PARAMS:
+            IOCTL(request_type, AWDL_SYNC_PARAMS, apple80211_awdl_sync_params);
+            break;
         default:
         unhandled:
             if (!ml_at_interrupt_context()) {
@@ -269,7 +272,7 @@ getAWDL_ELECTION_ID(OSObject *object, struct apple80211_awdl_election_id *data)
 {
     XYLog("%s\n", __FUNCTION__);
     data->version = APPLE80211_VERSION;
-    
+    data->election_id = awdlElectionId;
     return kIOReturnSuccess;
 }
 
@@ -302,7 +305,7 @@ IOReturn AirportItlwm::
 getAWDL_MASTER_CHANNEL(OSObject *object, struct apple80211_awdl_master_channel *data)
 {
     data->version = APPLE80211_VERSION;
-    data->master_channel = 149;
+    data->master_channel = awdlMasterChannel;
     return kIOReturnSuccess;
 }
 
@@ -310,7 +313,7 @@ IOReturn AirportItlwm::
 setAWDL_MASTER_CHANNEL(OSObject *object, struct apple80211_awdl_master_channel *data)
 {
     XYLog("%s master_channel=%d\n", __FUNCTION__, data->master_channel);
-    
+    awdlMasterChannel = data->master_channel;
     return kIOReturnSuccess;
 }
 
@@ -319,7 +322,7 @@ getAWDL_SECONDARY_MASTER_CHANNEL(OSObject *object, struct apple80211_awdl_second
 {
     XYLog("%s temporary return channel 0\n", __FUNCTION__);
     data->version = APPLE80211_VERSION;
-    data->secondary_master_channel = 0;
+    data->secondary_master_channel = awdlSecondaryMasterChannel;
     return kIOReturnSuccess;
 }
 
@@ -327,7 +330,7 @@ IOReturn AirportItlwm::
 setAWDL_SECONDARY_MASTER_CHANNEL(OSObject *object, struct apple80211_awdl_secondary_master_channel *data)
 {
     XYLog("%s secondary_master_channel=%d\n", __FUNCTION__, data->secondary_master_channel);
-    
+    awdlSecondaryMasterChannel = data->secondary_master_channel;
     return kIOReturnSuccess;
 }
 
@@ -418,13 +421,30 @@ getAWDL_SYNC_STATE(OSObject *object, struct apple80211_awdl_sync_state *data)
 {
     XYLog("%s\n", __FUNCTION__);
     data->version = APPLE80211_VERSION;
-    
+    data->state = awdlSyncState;
     return kIOReturnSuccess;
 }
 
 IOReturn AirportItlwm::
 setAWDL_SYNC_STATE(OSObject *object, struct apple80211_awdl_sync_state *data)
 {
+    XYLog("%s state=%d\n", __FUNCTION__, data->state);
+    awdlSyncState = data->state;
+    return kIOReturnSuccess;
+}
+
+IOReturn AirportItlwm::
+getAWDL_SYNC_PARAMS(OSObject *object, struct apple80211_awdl_sync_params *data)
+{
     XYLog("%s\n", __FUNCTION__);
+    data->version = APPLE80211_VERSION;
+
+    return kIOReturnSuccess;
+}
+
+IOReturn AirportItlwm::
+setAWDL_SYNC_PARAMS(OSObject *object, struct apple80211_awdl_sync_params *data)
+{
+    XYLog("%s availability_window_length=%d availability_window_period=%d extension_length=%d synchronization_frame_period=%d\n", __FUNCTION__, data->availability_window_length, data->availability_window_period, data->extension_length, data->synchronization_frame_period);
     return kIOReturnSuccess;
 }

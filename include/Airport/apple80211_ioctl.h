@@ -563,7 +563,7 @@ struct apple80211_scan_multiple_data
     uint32_t                  dwell_time;
     uint32_t                  rest_time;
     uint32_t                  num_channels;
-    struct apple80211_channel channels[128];
+    struct apple80211_channel channels[APPLE80211_MAX_CHANNELS];
     uint16_t                  unk_2;
 };
 
@@ -931,9 +931,16 @@ struct apple80211_awdl_extension_state_machine_parameter {
 
 struct apple80211_awdl_sync_state {
     uint32_t    version;
-    
+    uint32_t    state;
 } __attribute__((packed));
 
+struct apple80211_awdl_sync_params {
+    uint32_t    version;
+    uint32_t    availability_window_length;
+    uint32_t    availability_window_period;
+    uint32_t    extension_length;
+    uint32_t    synchronization_frame_period;
+} __attribute__((packed));
 
 #endif // _APPLE80211_IOCTL_H_
 

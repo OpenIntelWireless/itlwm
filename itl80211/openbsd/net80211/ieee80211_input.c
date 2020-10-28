@@ -2596,6 +2596,7 @@ void
 ieee80211_recv_assoc_resp(struct ieee80211com *ic, mbuf_t m,
                           struct ieee80211_node *ni, int reassoc)
 {
+    XYLog("%s reassoc=%d\n", __FUNCTION__, reassoc);
     struct _ifnet *ifp = &ic->ic_if;
     const struct ieee80211_frame *wh;
     const u_int8_t *frm, *efrm;
