@@ -37,7 +37,7 @@ enum
     kPowerStateCount
 };
 
-#define kWatchDogTimerPeriod 1000
+#define kWatchDogTimerPeriod 6000
 
 class itlwm : public IOEthernetController {
     OSDeclareDefaultStructors(itlwm)

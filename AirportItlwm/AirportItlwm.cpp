@@ -444,9 +444,6 @@ void AirportItlwm::watchdogAction(IOTimerEventSource *timer)
     struct _ifnet *ifp = &fHalService->get80211Controller()->ic_ac.ac_if;
     (*ifp->if_watchdog)(ifp);
     watchdogTimer->setTimeoutMS(kWatchDogTimerPeriod);
-//    if (fNetIf != NULL && fHalService->get80211Controller()->ic_state == IEEE80211_S_RUN) {
-//        fNetIf->postMessage(39);
-//    }
 }
 
 void AirportItlwm::fakeScanDone(OSObject *owner, IOTimerEventSource *sender)
@@ -973,4 +970,26 @@ bpfOutputPacket(OSObject *object, UInt dltType, mbuf_t m)
     }
     mbuf_freem(m);
     return 1;
+}
+
+void AirportItlwm::
+requestPacketTx(void *object, UInt )
+{
+    UInt32 ret;
+    struct TxPacketRequest request;
+    if (object == NULL) {
+        return;
+    }
+    IO80211VirtualInterface *interface = OSDynamicCast(IO80211VirtualInterface, (OSObject *)object);
+    if (interface) {
+        memset(&request, 0, sizeof(request));
+        if (interface->getInterfaceRole() == APPLE80211_VIF_AWDL) {
+//            interface->dequeueTxPackets(&request);
+//
+//            ret = outputPacket(NULL, interface);
+//            if (ret == kIOReturnSuccess) {
+//                interface->reportTransmitStatus(NULL, ret, NULL);
+//            }
+        }
+    }
 }

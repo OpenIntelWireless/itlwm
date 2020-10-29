@@ -34,7 +34,7 @@ enum
     kPowerStateCount
 };
 
-#define kWatchDogTimerPeriod 1000
+#define kWatchDogTimerPeriod 6000
 
 class AirportItlwm : public IO80211Controller {
     OSDeclareDefaultStructors(AirportItlwm)
@@ -116,7 +116,7 @@ public:
     virtual UInt32 hardwareOutputQueueDepth(IO80211Interface* interface) override;
     virtual SInt32 performCountryCodeOperation(IO80211Interface* interface, IO80211CountryCodeOp op) override;
     virtual SInt32 enableFeature(IO80211FeatureCode code, void* data) override;
-
+    virtual void requestPacketTx(void*, UInt) override;
     virtual int bpfOutputPacket(OSObject *,UInt,mbuf_t) override;
     int outputActionFrame(OSObject *, mbuf_t m);
     int bpfOutput80211Radio(OSObject *, mbuf_t m);
@@ -191,6 +191,9 @@ public:
     FUNC_IOCTL(AWDL_EXTENSION_STATE_MACHINE_PARAMETERS, apple80211_awdl_extension_state_machine_parameter)
     FUNC_IOCTL(AWDL_SYNC_STATE, apple80211_awdl_sync_state)
     FUNC_IOCTL(AWDL_SYNC_PARAMS, apple80211_awdl_sync_params)
+    FUNC_IOCTL_GET(AWDL_CAPABILITIES, apple80211_awdl_cap)
+    FUNC_IOCTL(AWDL_AF_TX_MODE, apple80211_awdl_af_tx_mode)
+    FUNC_IOCTL_SET(AWDL_OOB_AUTO_REQUEST, apple80211_awdl_oob_request)
     
     
     //-----------------------------------------------------------------------
@@ -252,4 +255,5 @@ public:
     uint32_t awdlPresenceMode;
     uint16_t awdlMasterChannel;
     uint16_t awdlSecondaryMasterChannel;
+    bool awdlSyncEnable;
 };

@@ -59,7 +59,23 @@ struct apple80211_leaky_ap_ssid_metrics;
 struct apple80211_interface_availability;
 struct apple80211_pmk_cache_data;
 struct apple80211_ap_cmp_data;
-struct TxPacketRequest;
+
+struct TxPacketRequest {
+    uint16_t    unk1;       // 0
+    uint16_t    t;       // 2
+    uint16_t    mU;       // 4
+    uint16_t    mM;       // 6
+    uint16_t    pkt_cnt;
+    uint16_t    unk2;
+    uint16_t    unk3;
+    uint16_t    unk4;
+    uint32_t    pad;
+    mbuf_t      bufs[8];    // 18
+    uint32_t    reqTx;
+};
+
+static_assert(sizeof(struct TxPacketRequest) == 0x60, "TxPacketRequest size error");
+
 struct AWSRequest;
 struct packet_info_tx;
 struct userPrintCtx;

@@ -717,7 +717,7 @@ IOReturn AirportItlwm::setDISASSOCIATE(OSObject *object)
     if (ic->ic_state <= IEEE80211_S_SCAN) {
         return kIOReturnSuccess;
     }
-    
+
     ieee80211_del_ess(ic, nullptr, 0, 1);
     ieee80211_deselect_ess(ic);
     ic->ic_rsn_ie_override[1] = 0;
@@ -769,7 +769,7 @@ getASSOCIATION_STATUS(OSObject *object, struct apple80211_assoc_status_data *hv)
     struct ieee80211com *ic = fHalService->get80211Controller();
     memset(hv, 0, sizeof(*hv));
     hv->version = APPLE80211_VERSION;
-    hv->status = ic->ic_assoc_status;
+    hv->status = APPLE80211_STATUS_SUCCESS;
 //    XYLog("%s, %d\n", __FUNCTION__, hv->status);
     return kIOReturnSuccess;
 }

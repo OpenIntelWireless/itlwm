@@ -53,6 +53,9 @@ struct apple80211req
 #define SIOCGA80211 3223873993
 #endif
 
+#define APPLE80211_AWDL_CAP_CCA_STATS   2
+#define APPLE80211_AWDL_CAP_SEC_PAYLOAD 0x100000000
+
 // req_type
 
 #define APPLE80211_IOC_SSID                     1    // req_type
@@ -350,6 +353,7 @@ struct apple80211req
 #define APPLE80211_IOC_OFFLOAD_TCPKA_ENABLE 265
 #define APPLE80211_IOC_RANGING_CAPS 266
 #define APPLE80211_IOC_PER_CORE_RSSI_REPORT 267
+#define APPLE80211_IOC_AWDL_CAPABILITIES    341
 #define APPLE80211_IOC_NSS  353
 
 #define APPLE80211_IOC_CARD_SPECIFIC            0xffffffff    // req_type
@@ -940,6 +944,36 @@ struct apple80211_awdl_sync_params {
     uint32_t    availability_window_period;
     uint32_t    extension_length;
     uint32_t    synchronization_frame_period;
+} __attribute__((packed));
+
+struct apple80211_awdl_cap {
+    uint32_t    version;
+    uint8_t     cap;
+} __attribute__((packed));
+
+struct apple80211_awdl_af_tx_mode {
+    uint32_t    version;
+    uint64_t    mode;
+} __attribute__((packed));
+
+#define AWDL_OOB_AF_PARAMS_SIZE 38
+
+struct apple80211_awdl_oob_request {
+    uint32_t    version;
+    uint32_t    unk1;               // 4
+    uint32_t    unk2;               // 8
+    uint32_t    unk3;               // 12
+    uint32_t    unk4;               // 16
+    uint16_t    pad1;
+    uint32_t    unk5;               // 22
+    uint16_t    unk6;               // 26
+    uint32_t    pad2;
+    uint32_t    unk7;               // 32
+    uint32_t    pad3;
+    uint16_t    data_len;           // 40
+    uint32_t    pad4;
+    uint16_t    unk9;               // 44
+    uint8_t     data[1782];         // 48
 } __attribute__((packed));
 
 #endif // _APPLE80211_IOCTL_H_

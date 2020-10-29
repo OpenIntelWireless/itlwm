@@ -115,6 +115,15 @@ apple80211VirtualRequest(UInt request_type, int request_number, IO80211VirtualIn
         case APPLE80211_IOC_AWDL_SYNC_PARAMS:
             IOCTL(request_type, AWDL_SYNC_PARAMS, apple80211_awdl_sync_params);
             break;
+        case APPLE80211_IOC_AWDL_CAPABILITIES:
+            IOCTL_GET(request_type, AWDL_CAPABILITIES, apple80211_awdl_cap);
+            break;
+        case APPLE80211_IOC_AWDL_AF_TX_MODE:
+            IOCTL(request_type, AWDL_AF_TX_MODE, apple80211_awdl_af_tx_mode);
+            break;
+        case APPLE80211_IOC_AWDL_OOB_AUTO_REQUEST:
+            IOCTL_SET(request_type, AWDL_OOB_AUTO_REQUEST, apple80211_awdl_oob_request);
+            break;
         default:
         unhandled:
             if (!ml_at_interrupt_context()) {
@@ -177,7 +186,7 @@ getSYNC_ENABLED(OSObject *object, struct apple80211_awdl_sync_enabled *data)
 {
     XYLog("%s\n", __FUNCTION__);
     data->version = APPLE80211_VERSION;
-    data->enabled = 1;
+    data->enabled = this->awdlSyncEnable;
     data->unk1 = 0;
     return kIOReturnSuccess;
 }
@@ -186,7 +195,7 @@ IOReturn AirportItlwm::
 setSYNC_ENABLED(OSObject *object, struct apple80211_awdl_sync_enabled *data)
 {
     XYLog("%s sync_enabled=%d\n", __FUNCTION__, data->enabled);
-    
+    this->awdlSyncEnable = data->enabled;
     return kIOReturnSuccess;
 }
 
@@ -446,5 +455,38 @@ IOReturn AirportItlwm::
 setAWDL_SYNC_PARAMS(OSObject *object, struct apple80211_awdl_sync_params *data)
 {
     XYLog("%s availability_window_length=%d availability_window_period=%d extension_length=%d synchronization_frame_period=%d\n", __FUNCTION__, data->availability_window_length, data->availability_window_period, data->extension_length, data->synchronization_frame_period);
+    return kIOReturnSuccess;
+}
+
+IOReturn AirportItlwm::
+getAWDL_CAPABILITIES(OSObject *object, struct apple80211_awdl_cap *data)
+{
+    XYLog("%s\n", __FUNCTION__);
+    data->version = APPLE80211_VERSION;
+    data->cap = APPLE80211_AWDL_CAP_CCA_STATS;
+    return kIOReturnSuccess;
+}
+
+IOReturn AirportItlwm::
+getAWDL_AF_TX_MODE(OSObject *object, struct apple80211_awdl_af_tx_mode *data)
+{
+    XYLog("%s\n", __FUNCTION__);
+    data->version = APPLE80211_VERSION;
+
+    return kIOReturnSuccess;
+}
+
+IOReturn AirportItlwm::
+setAWDL_AF_TX_MODE(OSObject *object, struct apple80211_awdl_af_tx_mode *data)
+{
+    XYLog("%s mode=%llu\n", __FUNCTION__, data->mode);
+
+    return kIOReturnSuccess;
+}
+
+IOReturn AirportItlwm::
+setAWDL_OOB_AUTO_REQUEST(OSObject *object, struct apple80211_awdl_oob_request *data)
+{
+    XYLog("%s data_len=%d unk1=%d unk2=%d unk3=%d unk4=%d unk5=%d unk6=%d unk7=%d unk9=%d\n", __FUNCTION__, data->data_len, data->unk1, data->unk2, data->unk3, data->unk4, data->unk5, data->unk6, data->unk7, data->unk9);
     return kIOReturnSuccess;
 }
