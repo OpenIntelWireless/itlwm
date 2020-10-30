@@ -26,7 +26,9 @@ IOCommandGate *_fCommandGate;
 
 bool AirportItlwm::init(OSDictionary *properties)
 {
-    return super::init(properties);
+    bool ret = super::init(properties);
+    awdlSyncEnable = true;
+    return ret;
 }
 
 #define  PCI_MSI_FLAGS        2    /* Message Control */
