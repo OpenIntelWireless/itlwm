@@ -714,7 +714,7 @@ IOReturn AirportItlwm::setDISASSOCIATE(OSObject *object)
     struct ieee80211com *ic = fHalService->get80211Controller();
     disassocIsVoluntary = true;
 
-    if (ic->ic_state <= IEEE80211_S_SCAN) {
+    if (ic->ic_state <= IEEE80211_S_ASSOC) {
         return kIOReturnSuccess;
     }
 
@@ -723,9 +723,7 @@ IOReturn AirportItlwm::setDISASSOCIATE(OSObject *object)
     ic->ic_rsn_ie_override[1] = 0;
     ic->ic_assoc_status = APPLE80211_STATUS_UNAVAILABLE;
     ic->ic_deauth_reason = APPLE80211_REASON_ASSOC_LEAVING;
-    if (ic->ic_state > IEEE80211_S_SCAN) {
-        ieee80211_new_state(ic, IEEE80211_S_SCAN, -1);
-    }
+    ieee80211_new_state(ic, IEEE80211_S_SCAN, -1);
     return kIOReturnSuccess;
 }
 
