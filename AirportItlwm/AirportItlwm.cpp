@@ -595,6 +595,10 @@ void AirportItlwm::free()
         syncFrameTemplateLength = 0;
         syncFrameTemplate = NULL;
     }
+    if (roamProfile != NULL) {
+        IOFree(roamProfile, sizeof(struct apple80211_roam_profile_band_data));
+        roamProfile = NULL;
+    }
     super::free();
 }
 

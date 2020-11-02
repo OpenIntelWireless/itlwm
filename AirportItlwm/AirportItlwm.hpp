@@ -194,6 +194,8 @@ public:
     FUNC_IOCTL_GET(AWDL_CAPABILITIES, apple80211_awdl_cap)
     FUNC_IOCTL(AWDL_AF_TX_MODE, apple80211_awdl_af_tx_mode)
     FUNC_IOCTL_SET(AWDL_OOB_AUTO_REQUEST, apple80211_awdl_oob_request)
+    FUNC_IOCTL(ROAM_PROFILE, apple80211_roam_profile_band_data)
+    FUNC_IOCTL(WOW_PARAMETERS, apple80211_wow_parameter_data)
     
     
     //-----------------------------------------------------------------------
@@ -255,5 +257,6 @@ public:
     uint32_t awdlPresenceMode;
     uint16_t awdlMasterChannel;
     uint16_t awdlSecondaryMasterChannel;
+    uint8_t *roamProfile;
     bool awdlSyncEnable;
 };

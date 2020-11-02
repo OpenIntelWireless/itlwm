@@ -160,6 +160,12 @@ SInt32 AirportItlwm::apple80211Request(unsigned int request_type,
         case APPLE80211_IOC_NSS:
             IOCTL_GET(request_type, NSS, apple80211_nss_data);
             break;
+        case APPLE80211_IOC_ROAM_PROFILE:
+            IOCTL(request_type, ROAM_PROFILE, apple80211_roam_profile_band_data);
+            break;
+        case APPLE80211_IOC_WOW_PARAMETERS:
+            IOCTL(request_type, WOW_PARAMETERS, apple80211_wow_parameter_data);
+            break;
         default:
         unhandled:
             if (!ml_at_interrupt_context()) {
@@ -375,6 +381,41 @@ getRATE(OSObject *object, struct apple80211_rate_data *rd)
         rd->rate[0] = ic->ic_bss->ni_rates.rs_rates[ic->ic_bss->ni_txrate];
         return kIOReturnSuccess;
     }
+    return kIOReturnError;
+}
+
+IOReturn AirportItlwm::
+getROAM_PROFILE(OSObject *object, struct apple80211_roam_profile_band_data *data)
+{
+    if (roamProfile == NULL) {
+        XYLog("%s no roam profile, return error\n", __FUNCTION__);
+        return kIOReturnError;
+    }
+    memcpy(data, roamProfile, sizeof(struct apple80211_roam_profile_band_data));
+    return kIOReturnSuccess;
+}
+
+IOReturn AirportItlwm::
+setROAM_PROFILE(OSObject *object, struct apple80211_roam_profile_band_data *data)
+{
+    XYLog("%s cnt=%d flags=%d\n", __FUNCTION__, data->profile_cnt, data->flags);
+    if (roamProfile != NULL) {
+        IOFree(roamProfile, sizeof(struct apple80211_roam_profile_band_data));
+    }
+    roamProfile = (uint8_t *)IOMalloc(sizeof(struct apple80211_roam_profile_band_data));
+    return kIOReturnSuccess;
+}
+
+IOReturn AirportItlwm::
+getWOW_PARAMETERS(OSObject *object, struct apple80211_wow_parameter_data *data)
+{
+    return kIOReturnError;
+}
+
+IOReturn AirportItlwm::
+setWOW_PARAMETERS(OSObject *object, struct apple80211_wow_parameter_data *data)
+{
+    XYLog("%s pattern_count=%d\n", __FUNCTION__, data->pattern_count);
     return kIOReturnError;
 }
 

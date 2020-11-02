@@ -54,6 +54,9 @@ apple80211VirtualRequest(UInt request_type, int request_number, IO80211VirtualIn
         case APPLE80211_IOC_AUTH_TYPE:
             IOCTL(request_type, AUTH_TYPE, apple80211_authtype_data);
             break;
+        case APPLE80211_IOC_ROAM_PROFILE:
+            IOCTL(request_type, ROAM_PROFILE, apple80211_roam_profile_band_data);
+            break;
         case APPLE80211_IOC_SSID:
             IOCTL(request_type, SSID, apple80211_ssid_data);
             break;

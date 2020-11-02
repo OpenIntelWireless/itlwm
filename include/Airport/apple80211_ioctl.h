@@ -976,5 +976,28 @@ struct apple80211_awdl_oob_request {
     uint8_t     data[1782];         // 48
 } __attribute__((packed));
 
+struct apple80211_roam_profile {
+    uint8_t     unk1;
+    uint8_t     unk2;
+    uint8_t     unk3;
+    uint8_t     unk4;
+    uint8_t     unk5;
+    uint8_t     unk6;
+    uint16_t    unk7;
+    uint16_t    unk8;
+    uint16_t    unk9;
+    uint16_t    unk10;
+    uint16_t    unk11;
+} __attribute__((packed));
+
+struct apple80211_roam_profile_band_data {
+    uint32_t    version;
+    uint32_t    flags;          // 4 (0x2, 0x4)
+    uint32_t    profile_cnt;    // 8
+    struct apple80211_roam_profile profiles[4];
+} __attribute__((packed));
+
+static_assert(sizeof(struct apple80211_roam_profile_band_data) == 76, "roam data size error");
+
 #endif // _APPLE80211_IOCTL_H_
 
