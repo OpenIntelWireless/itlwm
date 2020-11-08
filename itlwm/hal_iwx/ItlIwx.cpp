@@ -5200,7 +5200,10 @@ iwx_mac_ctxt_cmd_common(struct iwx_softc *sc, struct iwx_node *in,
     cmd->id_and_color = htole32(IWX_FW_CMD_ID_AND_COLOR(in->in_id,
                                                         in->in_color));
     cmd->action = htole32(action);
-    
+
+    if (action == IWX_FW_CTXT_ACTION_REMOVE)
+        return;
+
     if (ic->ic_opmode == IEEE80211_M_MONITOR)
         cmd->mac_type = htole32(IWX_FW_MAC_TYPE_LISTENER);
     else if (ic->ic_opmode == IEEE80211_M_STA)
@@ -5319,7 +5322,12 @@ iwx_mac_ctxt_cmd(struct iwx_softc *sc, struct iwx_node *in, uint32_t action,
     memset(&cmd, 0, sizeof(cmd));
     
     iwx_mac_ctxt_cmd_common(sc, in, &cmd, action);
-    
+
+    if (action == IWX_FW_CTXT_ACTION_REMOVE) {
+        return iwx_send_cmd_pdu(sc, IWX_MAC_CONTEXT_CMD, 0,
+                                sizeof(cmd), &cmd);
+    }
+
     if (ic->ic_opmode == IEEE80211_M_MONITOR) {
         cmd.filter_flags |= htole32(IWX_MAC_FILTER_IN_PROMISC |
                                     IWX_MAC_FILTER_IN_CONTROL_AND_MGMT |
@@ -5798,6 +5806,7 @@ iwx_deauth(struct iwx_softc *sc)
             return err;
         }
         sc->sc_flags &= ~IWX_FLAG_STA_ACTIVE;
+        sc->sc_rx_ba_sessions = 0;
     }
     
     if (sc->sc_flags & IWX_FLAG_BINDING_ACTIVE) {
@@ -5880,8 +5889,6 @@ iwx_disassoc(struct iwx_softc *sc)
         cmd.station_flags_msk = htole32(IWX_STA_FLG_DRAIN_FLOW);
         err = iwx_send_cmd_pdu_status(sc, IWX_ADD_STA, sizeof(cmd), &cmd,
                                       &status);
-//        for (qid = 0; qid < nitems(sc->txq); qid++)
-//            iwx_reset_tx_ring(sc, &sc->txq[qid]);
         err = iwx_rm_sta_cmd(sc, in);
         if (err) {
             XYLog("%s: could not remove STA (error %d)\n",
@@ -5889,6 +5896,7 @@ iwx_disassoc(struct iwx_softc *sc)
             return err;
         }
         sc->sc_flags &= ~IWX_FLAG_STA_ACTIVE;
+        sc->sc_rx_ba_sessions = 0;
     }
     
     return 0;
@@ -6890,6 +6898,8 @@ iwx_stop(struct _ifnet *ifp)
     sc->sc_flags &= ~IWX_FLAG_TE_ACTIVE;
     sc->sc_flags &= ~IWX_FLAG_HW_ERR;
     sc->sc_flags &= ~IWX_FLAG_SHUTDOWN;
+
+    sc->sc_rx_ba_sessions = 0;
     
     sc->sc_newstate(ic, IEEE80211_S_INIT, -1);
     
