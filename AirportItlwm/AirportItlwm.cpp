@@ -78,13 +78,13 @@ IOService* AirportItlwm::probe(IOService *provider, SInt32 *score)
         fHalService = new ItlIwm;
     }
     if (isMatch) {
-        device->findPCICapability(PCI_CAP_ID_MSI, &msiCap);
-        if (msiCap) {
-            pciMsiSetEnable(device, msiCap, 0);
-        }
         device->findPCICapability(PCI_CAP_ID_MSIX, &msixCap);
         if (msixCap) {
             pciMsiXClearAndSet(device, msixCap, PCI_MSIX_FLAGS_ENABLE, 0);
+        }
+        device->findPCICapability(PCI_CAP_ID_MSI, &msiCap);
+        if (msiCap) {
+            pciMsiSetEnable(device, msiCap, 1);
         }
         if (!msiCap && !msixCap) {
             XYLog("%s No MSI cap\n", __FUNCTION__);
