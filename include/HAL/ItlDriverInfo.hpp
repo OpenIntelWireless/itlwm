@@ -30,6 +30,8 @@ public:
     virtual const char *getFirmwareName() = 0;
     
     virtual UInt32 supportedFeatures() = 0;
+
+    virtual const char *getFirmwareCountryCode() = 0;
 };
 
 #endif /* ItlDriverInfo_h */

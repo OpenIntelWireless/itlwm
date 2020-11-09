@@ -241,6 +241,12 @@ supportedFeatures()
     return 0;
 }
 
+const char *ItlIwx::
+getFirmwareCountryCode()
+{
+    return com.sc_fw_mcc;
+}
+
 int16_t ItlIwx::
 getBSSNoise()
 {
@@ -933,6 +939,8 @@ iwx_read_firmware(struct iwx_softc *sc)
     sc->sc_capaflags = 0;
     sc->sc_capa_n_scan_channels = IWX_DEFAULT_SCAN_CHANNELS;
     memset(sc->sc_enabled_capa, 0, sizeof(sc->sc_enabled_capa));
+    memcpy(sc->sc_fw_mcc, "ZZ", sizeof(sc->sc_fw_mcc));
+    sc->sc_fw_mcc_int = 0x3030;
     
     uhdr = (struct iwx_tlv_ucode_header *)fw->fw_rawdata;
     if (*(uint32_t *)fw->fw_rawdata != 0
@@ -5058,15 +5066,18 @@ iwx_mcc_update(struct iwx_softc *sc, struct iwx_mcc_chub_notif *notif)
 {
    struct ieee80211com *ic = &sc->sc_ic;
    struct _ifnet *ifp = IC2IFP(ic);
-   char alpha2[3];
 
-   snprintf(alpha2, sizeof(alpha2), "%c%c",
-       (le16toh(notif->mcc) & 0xff00) >> 8, le16toh(notif->mcc) & 0xff);
+    snprintf(sc->sc_fw_mcc, sizeof(sc->sc_fw_mcc), "%c%c",
+             (le16toh(notif->mcc) & 0xff00) >> 8, le16toh(notif->mcc) & 0xff);
+    if (sc->sc_fw_mcc_int != notif->mcc && sc->sc_ic.ic_event_handler) {
+        (*sc->sc_ic.ic_event_handler)(&sc->sc_ic, IEEE80211_EVT_COUNTRY_CODE_UPDATE, NULL);
+    }
+    sc->sc_fw_mcc_int = notif->mcc;
 
-   if (ifp->if_flags & IFF_DEBUG) {
-       printf("%s: firmware has detected regulatory domain '%s' "
-           "(0x%x)\n", DEVNAME(sc), alpha2, le16toh(notif->mcc));
-   }
+    if (ifp->if_flags & IFF_DEBUG) {
+        DPRINTF(("%s: firmware has detected regulatory domain '%s' "
+               "(0x%x)\n", DEVNAME(sc), sc->sc_fw_mcc, le16toh(notif->mcc)));
+    }
 
    /* TODO: Schedule a task to send MCC_UPDATE_CMD? */
 }
@@ -6530,10 +6541,10 @@ iwx_send_update_mcc_cmd(struct iwx_softc *sc, const char *alpha2)
         err = EIO;
         goto out;
     }
-    
+
     DPRINTF(("MCC status=0x%x mcc=0x%x cap=0x%x time=0x%x geo_info=0x%x source_id=0x%d n_channels=%u\n",
              resp->status, resp->mcc, resp->cap, resp->time, resp->geo_info, resp->source_id, resp->n_channels));
-    
+
     /* Update channel map for net80211 and our scan configuration. */
     iwx_init_channel_map(sc, NULL, resp->channels, resp->n_channels);
     

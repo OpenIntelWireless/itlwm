@@ -832,10 +832,27 @@ setDEAUTH(OSObject *object,
     return kIOReturnSuccess;
 }
 
-void notify(IONetworkInterface *iface, unsigned int messageCode) {
-    IO80211Interface *interface = OSDynamicCast(IO80211Interface, iface);
-    if (interface != nullptr)
-        interface->postMessage(messageCode);
+void AirportItlwm::
+eventHandler(struct ieee80211com *ic, int msgCode, void *data)
+{
+#define INTERFACE_POST_MESSAGE(code) \
+    if (interface) { \
+        interface->postMessage(code); \
+    }
+    IO80211Interface *interface = OSDynamicCast(IO80211Interface, ic->ic_ac.ac_if.iface);
+    switch (msgCode) {
+        case IEEE80211_EVT_COUNTRY_CODE_UPDATE:
+            INTERFACE_POST_MESSAGE(APPLE80211_M_COUNTRY_CODE_CHANGED)
+            break;
+        case IEEE80211_EVT_STA_ASSOC_DONE:
+            INTERFACE_POST_MESSAGE(APPLE80211_M_ASSOC_DONE)
+            break;
+        case IEEE80211_EVT_STA_DEAUTH:
+            INTERFACE_POST_MESSAGE(APPLE80211_M_DEAUTH_RECEIVED)
+            break;
+        default:
+            break;
+    }
 }
 
 IOReturn AirportItlwm::
@@ -889,7 +906,7 @@ getCOUNTRY_CODE(OSObject *object,
                                 struct apple80211_country_code_data *cd)
 {
     cd->version = APPLE80211_VERSION;
-    strncpy((char*)cd->cc, "ZZ", sizeof(cd->cc));
+    strncpy((char*)cd->cc, fHalService->getDriverInfo()->getFirmwareCountryCode(), sizeof(cd->cc));
     return kIOReturnSuccess;
 }
 

@@ -136,6 +136,12 @@ supportedFeatures()
     return 0;
 }
 
+const char *ItlIwm::
+getFirmwareCountryCode()
+{
+    return com.sc_fw_mcc;
+}
+
 int16_t ItlIwm::
 getBSSNoise()
 {

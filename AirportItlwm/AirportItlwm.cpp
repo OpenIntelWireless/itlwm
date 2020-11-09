@@ -399,6 +399,7 @@ bool AirportItlwm::start(IOService *provider)
         return false;
     }
     fHalService->initWithController(this, _fWorkloop, _fCommandGate);
+    fHalService->get80211Controller()->ic_event_handler = eventHandler;
     if (!fHalService->attach(pciNub)) {
         XYLog("attach fail\n");
         super::stop(pciNub);

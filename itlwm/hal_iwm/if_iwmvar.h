@@ -468,6 +468,7 @@ struct iwm_softc {
 	uint8_t sc_ucode_api[howmany(IWM_NUM_UCODE_TLV_API, NBBY)];
     uint8_t sc_enabled_capa[howmany(IWM_NUM_UCODE_TLV_CAPA, NBBY)];
 	char sc_fw_mcc[3];
+    uint16_t sc_fw_mcc_int;
 
 	int sc_intmask;
 	int sc_flags;

@@ -139,10 +139,6 @@ void    ieee80211_recv_bar(struct ieee80211com *, mbuf_t,
 void    ieee80211_bar_tid(struct ieee80211com *, struct ieee80211_node *,
                           u_int8_t, u_int16_t);
 
-#ifdef AIRPORT
-void notify(IONetworkInterface *iface, unsigned int messageCode);
-#endif
-
 
 /*
  * Retrieve the length in bytes of an 802.11 header.
@@ -2621,13 +2617,13 @@ ieee80211_recv_assoc_resp(struct ieee80211com *ic, mbuf_t m,
     
     capinfo = LE_READ_2(frm); frm += 2;
     status =  LE_READ_2(frm); frm += 2;
-    
-#ifdef AIRPORT
+
     ic->ic_assoc_status = status;
     if (status == IEEE80211_STATUS_SUCCESS) {
-        notify(ic->ic_ac.ac_if.iface, 9 /* APPLE80211_M_ASSOC_DONE */);
+        if (ic->ic_event_handler) {
+            (*ic->ic_event_handler)(ic, IEEE80211_EVT_STA_ASSOC_DONE, NULL);
+        }
     }
-#endif
     
     if (status != IEEE80211_STATUS_SUCCESS) {
         if (ifp->if_flags & IFF_DEBUG)
@@ -2780,12 +2776,12 @@ ieee80211_recv_deauth(struct ieee80211com *ic, mbuf_t m,
     frm = (const u_int8_t *)&wh[1];
     
     reason = LE_READ_2(frm);
-    
-#ifdef AIRPORT
+
     XYLog("Deauth received, reason %d\n", reason);
     ic->ic_deauth_reason = reason;
-    notify(ic->ic_ac.ac_if.iface, 32 /* APPLE80211_M_DEAUTH_RECEIVED */);
-#endif
+    if (ic->ic_event_handler) {
+        (*ic->ic_event_handler)(ic, IEEE80211_EVT_STA_DEAUTH, NULL);
+    }
     
     ic->ic_stats.is_rx_deauth++;
     switch (ic->ic_opmode) {

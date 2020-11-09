@@ -421,6 +421,7 @@ struct ieee80211com {
 	int			(*ic_bgscan_start)(struct ieee80211com *);
     /* The channel width has changed (20<->2040) */
     void            (*ic_update_chw)(struct ieee80211com *);
+    void            (*ic_event_handler)(struct ieee80211com *, int, void *);
 	CTimeout*		ic_bgscan_timeout;
 	uint32_t		ic_bgscan_fail;
 	u_int8_t		ic_myaddr[IEEE80211_ADDR_LEN];
@@ -626,6 +627,11 @@ struct ieee80211_ess {
 #define	IEEE80211_F_DOFRATE	0x00000002	/* use fixed rate */
 #define	IEEE80211_F_DONEGO	0x00000004	/* calc negotiated rate */
 #define	IEEE80211_F_DODEL	0x00000008	/* delete ignore rate */
+
+#define IEEE80211_EVT_STA_ASSOC_DONE            1
+#define IEEE80211_EVT_STA_DEAUTH                2
+#define IEEE80211_EVT_COUNTRY_CODE_UPDATE       3
+#define IEEE80211_EVT_SCAN_DONE                 4
 
 void	ieee80211_ifattach(struct _ifnet *);
 void	ieee80211_ifdetach(struct _ifnet *);

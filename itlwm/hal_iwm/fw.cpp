@@ -277,7 +277,8 @@ iwm_read_firmware(struct iwm_softc *sc, enum iwm_ucode_type ucode_type)
     sc->sc_capaflags = 0;
     sc->sc_capa_n_scan_channels = IWM_DEFAULT_SCAN_CHANNELS;
     memset(sc->sc_enabled_capa, 0, sizeof(sc->sc_enabled_capa));
-    memset(sc->sc_fw_mcc, 0, sizeof(sc->sc_fw_mcc));
+    memcpy(sc->sc_fw_mcc, "ZZ", sizeof(sc->sc_fw_mcc));
+    sc->sc_fw_mcc_int = 0x3030;
     
     uhdr = (struct iwm_tlv_ucode_header *)fw->fw_rawdata;
     if (*(uint32_t *)fw->fw_rawdata != 0

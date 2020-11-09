@@ -741,6 +741,12 @@ iwm_rx_pkt(struct iwm_softc *sc, struct iwm_rx_data *data, struct mbuf_list *ml)
                 sc->sc_fw_mcc[0] = (notif->mcc & 0xff00) >> 8;
                 sc->sc_fw_mcc[1] = notif->mcc & 0xff;
                 sc->sc_fw_mcc[2] = '\0';
+
+                if (sc->sc_fw_mcc_int != notif->mcc && sc->sc_ic.ic_event_handler) {
+                    (*sc->sc_ic.ic_event_handler)(&sc->sc_ic, IEEE80211_EVT_COUNTRY_CODE_UPDATE, NULL);
+                }
+
+                sc->sc_fw_mcc_int = notif->mcc;
             }
                 
             case IWM_DTS_MEASUREMENT_NOTIFICATION:

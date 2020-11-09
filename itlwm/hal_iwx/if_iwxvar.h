@@ -469,6 +469,8 @@ struct iwx_softc {
 #define IWX_MAX_FW_CMD_VERSIONS	64
 	struct iwx_fw_cmd_version cmd_versions[IWX_MAX_FW_CMD_VERSIONS];
 	int n_cmd_versions;
+    char sc_fw_mcc[3];
+    uint16_t sc_fw_mcc_int;
 
 	int sc_intmask;
 	int sc_flags;
