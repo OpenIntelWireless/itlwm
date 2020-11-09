@@ -2231,10 +2231,8 @@ ieee80211_recv_auth(struct ieee80211com *ic, mbuf_t m,
 #endif
         return;
     }
-#ifdef AIRPORT
     ic->ic_deauth_reason = IEEE80211_REASON_UNSPECIFIED;
     ic->ic_assoc_status = 0xffff;
-#endif
     ieee80211_auth_open(ic, wh, ni, rxi, seq, status);
 }
 
