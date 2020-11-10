@@ -73,8 +73,7 @@ apple80211VirtualRequest(UInt request_type, int request_number, IO80211VirtualIn
             IOCTL_GET(request_type, AWDL_HT_CAPABILITY, apple80211_ht_capability);
             break;
         case APPLE80211_IOC_VHT_CAPABILITY:
-            *(uint32_t*)data = 1;
-            ret = kIOReturnSuccess;
+            IOCTL_GET(request_type, AWDL_VHT_CAPABILITY, apple80211_vht_capability);
             break;
         case APPLE80211_IOC_AWDL_ELECTION_METRIC:
             IOCTL(request_type, AWDL_ELECTION_METRIC, apple80211_awdl_election_metric);
@@ -239,6 +238,18 @@ getAWDL_HT_CAPABILITY(OSObject *object, struct apple80211_ht_capability *data)
 {
     memset(data, 0, sizeof(*data));
     data->version = APPLE80211_VERSION;
+    data->hc_id = IEEE80211_ELEMID_HTCAPS;
+    data->hc_cap = (IEEE80211_HTCAP_SGI20 | IEEE80211_HTCAP_CBW20_40 | IEEE80211_HTCAP_SGI40);
+    return kIOReturnSuccess;
+}
+
+IOReturn AirportItlwm::
+getAWDL_VHT_CAPABILITY(OSObject *object, struct apple80211_vht_capability *data)
+{
+    memset(data, 0, sizeof(*data));
+    data->version = APPLE80211_VERSION;
+    data->cap = 3263;
+
     return kIOReturnSuccess;
 }
 

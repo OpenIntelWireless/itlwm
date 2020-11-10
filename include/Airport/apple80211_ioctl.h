@@ -385,14 +385,25 @@ struct apple80211_virt_if_delete_data {
 
 struct apple80211_ht_capability {
     uint32_t    version;
-    uint8_t     unk1;
-    uint8_t     unk2;
-    uint16_t    unk3;
-    uint8_t     unk4;
-    uint8_t     unk5[16];
-    uint16_t    unk6;
-    uint        unk7;
-    uint8_t     unk8;
+    uint8_t     hc_id;              /* element ID */
+    uint8_t     hc_len;             /* length in bytes */
+    uint16_t    hc_cap;             /* HT caps (see below) */
+    uint8_t     hc_param;           /* HT params (see below) */
+    uint8_t     hc_mcsset[16];      /* supported MCS set */
+    uint16_t    hc_extcap;          /* extended HT capabilities */
+    uint32_t    hc_txbf;            /* txbf capabilities */
+    uint8_t     hc_antenna;         /* antenna capabilities */
+} __attribute__((packed));
+
+struct apple80211_vht_capability {
+    uint32_t    version;
+    uint16_t    cap;        // 4
+    uint32_t    unk1;       // 6
+    uint16_t    unk2;       // 10
+    uint16_t    unk3;       // 12
+    uint16_t    unk4;       // 14
+    uint16_t    unk5;       // 16
+    uint16_t    unk6;       // 18
 } __attribute__((packed));
 
 struct apple80211_channel_data

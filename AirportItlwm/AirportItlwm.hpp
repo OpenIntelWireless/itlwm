@@ -177,6 +177,7 @@ public:
     FUNC_IOCTL(SYNC_ENABLED, apple80211_awdl_sync_enabled)
     FUNC_IOCTL(SYNC_FRAME_TEMPLATE, apple80211_awdl_sync_frame_template)
     FUNC_IOCTL_GET(AWDL_HT_CAPABILITY, apple80211_ht_capability)
+    FUNC_IOCTL_GET(AWDL_VHT_CAPABILITY, apple80211_vht_capability)
     
     //AWDL
     FUNC_IOCTL(AWDL_BSSID, apple80211_awdl_bssid)
