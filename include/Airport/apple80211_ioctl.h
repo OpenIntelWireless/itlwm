@@ -926,10 +926,26 @@ struct apple80211_awdl_election_rssi_thresholds {
     uint32_t    unk3;
 } __attribute__((packed));
 
+struct apple80211_channel_sequence {
+    uint16_t    flags;
+    uint8_t     pad;
+} __attribute__((packed));
+
 struct apple80211_awdl_sync_channel_sequence {
     uint32_t    version;
-    
+    uint8_t     pad1;
+    uint8_t     length;             // 5
+    uint8_t     encoding;           // 6
+    uint8_t     step_count;         // 7
+    uint8_t     duplicate_count;    // 8
+    uint8_t     fill_channel;       // 9
+    uint8_t     pad2[6];
+    struct apple80211_channel_sequence seqs[APPLE80211_MAX_CHANNELS];
 } __attribute__((packed));
+
+static_assert(__offsetof(apple80211_awdl_sync_channel_sequence, seqs) == 16, "seqs offset error");
+
+static_assert(sizeof(struct apple80211_awdl_sync_channel_sequence) == 0x190, "apple80211_awdl_sync_channel_sequence struct corrupt");
 
 struct apple80211_awdl_presence_mode {
     uint32_t    version;

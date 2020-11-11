@@ -533,6 +533,7 @@ setLinkStatus(UInt32 status, const IONetworkMedium * activeMedium, UInt64 speed,
     if (fNetIf) {
         if (status & kIONetworkLinkActive) {
             fNetIf->setLinkState(kIO80211NetworkLinkUp, 0);
+            fNetIf->setLinkQualityMetric(100);
             fNetIf->postMessage(APPLE80211_M_LINK_CHANGED);
             if (fAWDLInterface) {
                 fAWDLInterface->setLinkState(kIO80211NetworkLinkUp, 0);
