@@ -166,6 +166,18 @@ SInt32 AirportItlwm::apple80211Request(unsigned int request_type,
         case APPLE80211_IOC_WOW_PARAMETERS:
             IOCTL(request_type, WOW_PARAMETERS, apple80211_wow_parameter_data);
             break;
+        case APPLE80211_IOC_IE:
+            IOCTL(request_type, IE, apple80211_ie_data);
+            break;
+        case APPLE80211_IOC_P2P_LISTEN:
+            IOCTL_SET(request_type, P2P_LISTEN, apple80211_p2p_listen_data);
+            break;
+        case APPLE80211_IOC_P2P_SCAN:
+            IOCTL_SET(request_type, P2P_SCAN, apple80211_scan_data);
+            break;
+        case APPLE80211_IOC_P2P_GO_CONF:
+            IOCTL_SET(request_type, P2P_GO_CONF, apple80211_p2p_go_conf_data);
+            break;
         default:
         unhandled:
             if (!ml_at_interrupt_context()) {

@@ -562,6 +562,15 @@ enum apple80211_virtual_interface_type
     APPLE80211_VIF_MAX
 };
 
+enum apple80211_ie_type
+{
+    APPLE80211_IE_FLAG_PROBE_REQ     = (1 << 0),
+    APPLE80211_IE_FLAG_PROBE_RESP    = (1 << 1),
+    APPLE80211_IE_FLAG_ASSOC_REQ     = (1 << 2),
+    APPLE80211_IE_FLAG_ASSOC_RESP    = (1 << 3),
+    APPLE80211_IE_FLAG_BEACON        = (1 << 4),
+};
+
 enum apple80211_assoc_flags {
     APPLE80211_ASSOC_F_CLOSED    = 1,    // flag: scan was directed, needed to remember closed networks
 };

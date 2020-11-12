@@ -198,6 +198,10 @@ public:
     FUNC_IOCTL_SET(AWDL_OOB_AUTO_REQUEST, apple80211_awdl_oob_request)
     FUNC_IOCTL(ROAM_PROFILE, apple80211_roam_profile_band_data)
     FUNC_IOCTL(WOW_PARAMETERS, apple80211_wow_parameter_data)
+    FUNC_IOCTL(IE, apple80211_ie_data)
+    FUNC_IOCTL_SET(P2P_SCAN, apple80211_scan_data)
+    FUNC_IOCTL_SET(P2P_LISTEN, apple80211_p2p_listen_data)
+    FUNC_IOCTL_SET(P2P_GO_CONF, apple80211_p2p_go_conf_data)
     
     
     //-----------------------------------------------------------------------

@@ -1026,5 +1026,35 @@ struct apple80211_roam_profile_band_data {
 
 static_assert(sizeof(struct apple80211_roam_profile_band_data) == 76, "roam data size error");
 
+struct apple80211_ie_data {
+    uint32_t    version;
+    uint32_t    frame_type_flags;   // 4
+    uint32_t    add;                // 8
+    uint32_t    signature_len;      // 12
+    uint32_t    ie_len;             // 16
+    uint32_t    pad1;               // 20
+    uint8_t     ie[2048];
+} __attribute__((packed));
+
+struct apple80211_p2p_listen_data {
+    uint32_t    version;
+    uint32_t    pad1;
+    uint32_t    channel;        // 8
+    uint32_t    flags;          // 12
+    uint32_t    duration;       // 16
+} __attribute__((packed));
+
+struct apple80211_p2p_go_conf_data {
+    uint32_t    version;
+    uint32_t    auth_upper;     // 4 should equal to 1
+    uint32_t    auth_lower;     // 6 should non zero
+    void        *dynbcn;        // 8
+    uint32_t    channel;        // 12
+    uint32_t    bcn_len;        // 16
+    uint32_t    ssid_len;       // 20
+    uint8_t     ssid[32];       // 24
+    uint32_t    suppress_beacon;// 56 security:1,4
+} __attribute__((packed));
+
 #endif // _APPLE80211_IOCTL_H_
 
