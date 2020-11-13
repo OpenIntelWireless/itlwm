@@ -82,6 +82,14 @@
 		024A08D223FCF395009FBA6C /* led.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 024A08D123FCF395009FBA6C /* led.cpp */; };
 		024A08D423FCF3E6009FBA6C /* power.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 024A08D323FCF3E6009FBA6C /* power.cpp */; };
 		024A08D623FCF4D7009FBA6C /* scan.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 024A08D523FCF4D7009FBA6C /* scan.cpp */; };
+		17FD7F10255E4AC800611406 /* ItlIwn.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 17FD7F0E255E4AC800611406 /* ItlIwn.cpp */; };
+		17FD7F11255E4AC800611406 /* ItlIwn.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 17FD7F0F255E4AC800611406 /* ItlIwn.hpp */; };
+		17FD7F63255E547100611406 /* ItlIwn.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 17FD7F0E255E4AC800611406 /* ItlIwn.cpp */; };
+		17FD7F6A255E547100611406 /* ItlIwn.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 17FD7F0E255E4AC800611406 /* ItlIwn.cpp */; };
+		17FD7F71255E547200611406 /* ItlIwn.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 17FD7F0E255E4AC800611406 /* ItlIwn.cpp */; };
+		17FD7F78255E547200611406 /* ItlIwn.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 17FD7F0E255E4AC800611406 /* ItlIwn.cpp */; };
+		17FD7F7F255E549500611406 /* if_iwnvar.h in Headers */ = {isa = PBXBuildFile; fileRef = 17FD7F0C255E4A0900611406 /* if_iwnvar.h */; };
+		17FD7F86255E549900611406 /* if_iwnreg.h in Headers */ = {isa = PBXBuildFile; fileRef = 17FD7F0D255E4AB000611406 /* if_iwnreg.h */; };
 		35CBE659251CB89700435CBC /* debug.h in Headers */ = {isa = PBXBuildFile; fileRef = F89B6C2225027609000F77FF /* debug.h */; };
 		35CBE65A251CB89700435CBC /* IOSkywalkEthernetInterface.h in Headers */ = {isa = PBXBuildFile; fileRef = F89B6BD025021E66000F77FF /* IOSkywalkEthernetInterface.h */; };
 		35CBE65B251CB89700435CBC /* apple80211_ioctl.h in Headers */ = {isa = PBXBuildFile; fileRef = F89B6BC525021DEC000F77FF /* apple80211_ioctl.h */; };
@@ -589,6 +597,23 @@
 		024A08D123FCF395009FBA6C /* led.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = led.cpp; sourceTree = "<group>"; };
 		024A08D323FCF3E6009FBA6C /* power.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = power.cpp; sourceTree = "<group>"; };
 		024A08D523FCF4D7009FBA6C /* scan.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = scan.cpp; sourceTree = "<group>"; };
+		17FD7F0C255E4A0900611406 /* if_iwnvar.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = if_iwnvar.h; sourceTree = "<group>"; };
+		17FD7F0D255E4AB000611406 /* if_iwnreg.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = if_iwnreg.h; sourceTree = "<group>"; };
+		17FD7F0E255E4AC800611406 /* ItlIwn.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ItlIwn.cpp; sourceTree = "<group>"; };
+		17FD7F0F255E4AC800611406 /* ItlIwn.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = ItlIwn.hpp; sourceTree = "<group>"; };
+		17FD7F38255E4EB200611406 /* iwn-6005 */ = {isa = PBXFileReference; lastKnownFileType = file; path = "iwn-6005"; sourceTree = "<group>"; };
+		17FD7F39255E4EB200611406 /* iwn-135 */ = {isa = PBXFileReference; lastKnownFileType = file; path = "iwn-135"; sourceTree = "<group>"; };
+		17FD7F3A255E4EB200611406 /* iwn-6030 */ = {isa = PBXFileReference; lastKnownFileType = file; path = "iwn-6030"; sourceTree = "<group>"; };
+		17FD7F3B255E4EB200611406 /* iwn-1000 */ = {isa = PBXFileReference; lastKnownFileType = file; path = "iwn-1000"; sourceTree = "<group>"; };
+		17FD7F3C255E4EB200611406 /* iwn-5000 */ = {isa = PBXFileReference; lastKnownFileType = file; path = "iwn-5000"; sourceTree = "<group>"; };
+		17FD7F3D255E4EB300611406 /* iwn-6000 */ = {isa = PBXFileReference; lastKnownFileType = file; path = "iwn-6000"; sourceTree = "<group>"; };
+		17FD7F3E255E4EB300611406 /* iwn-105 */ = {isa = PBXFileReference; lastKnownFileType = file; path = "iwn-105"; sourceTree = "<group>"; };
+		17FD7F3F255E4EB300611406 /* iwn-6050 */ = {isa = PBXFileReference; lastKnownFileType = file; path = "iwn-6050"; sourceTree = "<group>"; };
+		17FD7F40255E4EB300611406 /* iwn-2030 */ = {isa = PBXFileReference; lastKnownFileType = file; path = "iwn-2030"; sourceTree = "<group>"; };
+		17FD7F41255E4EB300611406 /* iwn-5150 */ = {isa = PBXFileReference; lastKnownFileType = file; path = "iwn-5150"; sourceTree = "<group>"; };
+		17FD7F42255E4EB300611406 /* iwn-2000 */ = {isa = PBXFileReference; lastKnownFileType = file; path = "iwn-2000"; sourceTree = "<group>"; };
+		17FD7F43255E4EB300611406 /* iwn-100 */ = {isa = PBXFileReference; lastKnownFileType = file; path = "iwn-100"; sourceTree = "<group>"; };
+		17FD7F44255E4EB300611406 /* iwn-4965 */ = {isa = PBXFileReference; lastKnownFileType = file; path = "iwn-4965"; sourceTree = "<group>"; };
 		35CBE6BA251CB89700435CBC /* AirportItlwm.kext */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AirportItlwm.kext; sourceTree = BUILT_PRODUCTS_DIR; };
 		35CBE724251CB8BF00435CBC /* AirportItlwm.kext */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AirportItlwm.kext; sourceTree = BUILT_PRODUCTS_DIR; };
 		35CBE78F251CB8CA00435CBC /* AirportItlwm.kext */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AirportItlwm.kext; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -791,6 +816,7 @@
 			isa = PBXGroup;
 			children = (
 				0250B31C23FD768400FF8CEA /* firmware */,
+				17FD7F0B255E496000611406 /* hal_iwn */,
 				F8AF3A2E24F9F25E008911C1 /* hal_iwm */,
 				F8AF3A2D24F9F246008911C1 /* hal_iwx */,
 				024A07AF23FCBC3C009FBA6C /* itlwm.hpp */,
@@ -886,8 +912,32 @@
 				F8A68DDB2482242E007EB376 /* iwlwifi-cc-a0-48.ucode */,
 				F8A68DD72482224F007EB376 /* iwlwifi-Qu-b0-hr-b0-48.ucode */,
 				F8A68DD92482241E007EB376 /* iwlwifi-QuZ-a0-hr-b0-48.ucode */,
+				17FD7F43255E4EB300611406 /* iwn-100 */,
+				17FD7F3E255E4EB300611406 /* iwn-105 */,
+				17FD7F39255E4EB200611406 /* iwn-135 */,
+				17FD7F3B255E4EB200611406 /* iwn-1000 */,
+				17FD7F42255E4EB300611406 /* iwn-2000 */,
+				17FD7F40255E4EB300611406 /* iwn-2030 */,
+				17FD7F44255E4EB300611406 /* iwn-4965 */,
+				17FD7F3C255E4EB200611406 /* iwn-5000 */,
+				17FD7F41255E4EB300611406 /* iwn-5150 */,
+				17FD7F3D255E4EB300611406 /* iwn-6000 */,
+				17FD7F38255E4EB200611406 /* iwn-6005 */,
+				17FD7F3A255E4EB200611406 /* iwn-6030 */,
+				17FD7F3F255E4EB300611406 /* iwn-6050 */,
 			);
 			path = firmware;
+			sourceTree = "<group>";
+		};
+		17FD7F0B255E496000611406 /* hal_iwn */ = {
+			isa = PBXGroup;
+			children = (
+				17FD7F0C255E4A0900611406 /* if_iwnvar.h */,
+				17FD7F0D255E4AB000611406 /* if_iwnreg.h */,
+				17FD7F0E255E4AC800611406 /* ItlIwn.cpp */,
+				17FD7F0F255E4AC800611406 /* ItlIwn.hpp */,
+			);
+			path = hal_iwn;
 			sourceTree = "<group>";
 		};
 		5088ECBB252884870068A63D /* Frameworks */ = {
@@ -1104,6 +1154,7 @@
 				024A084D23FCBC6C009FBA6C /* sha1.h in Headers */,
 				024A084B23FCBC6C009FBA6C /* rijndael.h in Headers */,
 				024A083923FCBC6C009FBA6C /* md5.h in Headers */,
+				17FD7F11255E4AC800611406 /* ItlIwn.hpp in Headers */,
 				F8C2EC5F2408031A007A9422 /* ieee80211_radiotap.h in Headers */,
 				024A084023FCBC6C009FBA6C /* rmd160.h in Headers */,
 				024A083823FCBC6C009FBA6C /* poly1305.h in Headers */,
@@ -1118,6 +1169,7 @@
 				F8F92586240974EF0088B8D5 /* types.h in Headers */,
 				024A083523FCBC6C009FBA6C /* des_locl.h in Headers */,
 				024A088B23FCBE38009FBA6C /* if_iwmreg.h in Headers */,
+				17FD7F7F255E549500611406 /* if_iwnvar.h in Headers */,
 				024A084A23FCBC6C009FBA6C /* cryptodev.h in Headers */,
 				F8D364FA24F93AFD0029340B /* ItlHalService.hpp in Headers */,
 				024A083E23FCBC6C009FBA6C /* sk.h in Headers */,
@@ -1165,6 +1217,7 @@
 				F8C2EC5A2408031A007A9422 /* ieee80211_crypto.h in Headers */,
 				F8C2EC582408031A007A9422 /* ieee80211_regdomain.h in Headers */,
 				024A085323FCBC6C009FBA6C /* spr.h in Headers */,
+				17FD7F86255E549900611406 /* if_iwnreg.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1505,6 +1558,7 @@
 				024A08C823FCE2ED009FBA6C /* hw.cpp in Sources */,
 				024A08CE23FCE67F009FBA6C /* nvm.cpp in Sources */,
 				024A083D23FCBC6C009FBA6C /* sha1.c in Sources */,
+				17FD7F10255E4AC800611406 /* ItlIwn.cpp in Sources */,
 				024A085923FCBC6C009FBA6C /* idgen.c in Sources */,
 				F8C2EC522408031A007A9422 /* ieee80211_ioctl.c in Sources */,
 				024A085823FCBC6C009FBA6C /* rmd160.c in Sources */,
@@ -1596,6 +1650,7 @@
 				35CBE6A6251CB89700435CBC /* rx.cpp in Sources */,
 				35CBE6A7251CB89700435CBC /* tx.cpp in Sources */,
 				35CBE6A8251CB89700435CBC /* hw.cpp in Sources */,
+				17FD7F78255E547200611406 /* ItlIwn.cpp in Sources */,
 				35CBE6A9251CB89700435CBC /* phy.cpp in Sources */,
 				35CBE6AA251CB89700435CBC /* mac80211.cpp in Sources */,
 				35CBE6AB251CB89700435CBC /* nvm.cpp in Sources */,
@@ -1671,6 +1726,7 @@
 				35CBE710251CB8BF00435CBC /* rx.cpp in Sources */,
 				35CBE711251CB8BF00435CBC /* tx.cpp in Sources */,
 				35CBE712251CB8BF00435CBC /* hw.cpp in Sources */,
+				17FD7F6A255E547100611406 /* ItlIwn.cpp in Sources */,
 				35CBE713251CB8BF00435CBC /* phy.cpp in Sources */,
 				35CBE714251CB8BF00435CBC /* mac80211.cpp in Sources */,
 				35CBE715251CB8BF00435CBC /* nvm.cpp in Sources */,
@@ -1746,6 +1802,7 @@
 				35CBE77B251CB8CA00435CBC /* rx.cpp in Sources */,
 				35CBE77C251CB8CA00435CBC /* tx.cpp in Sources */,
 				35CBE77D251CB8CA00435CBC /* hw.cpp in Sources */,
+				17FD7F63255E547100611406 /* ItlIwn.cpp in Sources */,
 				35CBE77E251CB8CA00435CBC /* phy.cpp in Sources */,
 				35CBE77F251CB8CA00435CBC /* mac80211.cpp in Sources */,
 				35CBE780251CB8CA00435CBC /* nvm.cpp in Sources */,
@@ -1821,6 +1878,7 @@
 				F89B6BE52502315B000F77FF /* rx.cpp in Sources */,
 				F89B6BE62502315B000F77FF /* tx.cpp in Sources */,
 				F89B6BE72502315B000F77FF /* hw.cpp in Sources */,
+				17FD7F71255E547200611406 /* ItlIwn.cpp in Sources */,
 				F89B6BE82502315B000F77FF /* phy.cpp in Sources */,
 				F89B6BE92502315B000F77FF /* mac80211.cpp in Sources */,
 				F89B6BEA2502315B000F77FF /* nvm.cpp in Sources */,
