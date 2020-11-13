@@ -175,6 +175,8 @@ public:
     virtual UInt32 supportedFeatures() override;
 
     virtual const char *getFirmwareCountryCode() override;
+
+    virtual uint32_t getTxQueueSize() override;
     
     //driver controller
     virtual void clearScanningFlags() override;

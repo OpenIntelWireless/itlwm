@@ -64,6 +64,14 @@ public:
     virtual const OSString * newModelString() const override;
     virtual IOReturn getMaxPacketSize(UInt32* maxSize) const override;
     virtual IONetworkInterface * createInterface() override;
+    virtual bool setLinkStatus(
+                               UInt32                  status,
+                               const IONetworkMedium * activeMedium = 0,
+                               UInt64                  speed        = 0,
+                               OSData *                data         = 0) override;
+#ifdef __PRIVATE_SPI__
+    virtual IOReturn outputStart(IONetworkInterface *interface, IOOptionBits options) override;
+#endif
     
     void releaseAll();
     void joinSSID(const char *ssid, const char *pwd);

@@ -247,6 +247,12 @@ getFirmwareCountryCode()
     return com.sc_fw_mcc;
 }
 
+uint32_t ItlIwx::
+getTxQueueSize()
+{
+    return IWX_TX_RING_COUNT;
+}
+
 int16_t ItlIwx::
 getBSSNoise()
 {
@@ -8825,7 +8831,7 @@ iwx_attach(struct iwx_softc *sc, struct pci_attach_args *pa)
     ic->ic_max_rssi = IWX_MAX_DBM - IWX_MIN_DBM;
     
     ifp->controller = getController();
-    ifp->if_snd = IOPacketQueue::withCapacity(4096);
+    ifp->if_snd = IOPacketQueue::withCapacity(getTxQueueSize());
     ifp->if_softc = sc;
     ifp->if_flags = IFF_BROADCAST | IFF_SIMPLEX | IFF_MULTICAST | IFF_DEBUG;
     ifp->if_ioctl = iwx_ioctl;

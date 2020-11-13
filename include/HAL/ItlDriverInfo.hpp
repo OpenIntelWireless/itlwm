@@ -32,6 +32,8 @@ public:
     virtual UInt32 supportedFeatures() = 0;
 
     virtual const char *getFirmwareCountryCode() = 0;
+
+    virtual uint32_t getTxQueueSize() = 0;
 };
 
 #endif /* ItlDriverInfo_h */
