@@ -17,6 +17,15 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#include "ieee80211_var.h"
+#include "ieee80211_amrr.h"
+#include "ieee80211_mira.h"
+#include "ieee80211_radiotap.h"
+#include "ieee80211_priv.h"
+
+#include <IOKit/network/IOMbufMemoryCursor.h>
+#include <IOKit/IODMACommand.h>
+
 struct iwn_rx_radiotap_header {
     struct ieee80211_radiotap_header wr_ihdr;
     uint64_t    wr_tsft;
@@ -50,19 +59,19 @@ struct iwn_tx_radiotap_header {
      (1 << IEEE80211_RADIOTAP_CHANNEL))
 
 struct iwn_dma_info {
-    bus_dma_tag_t        tag;
-    bus_dmamap_t        map;
-    bus_dma_segment_t    seg;
+    IOBufferMemoryDescriptor* buffer;
     bus_addr_t        paddr;
-    caddr_t            vaddr;
+    void             *vaddr;
     bus_size_t        size;
+    IOBufferMemoryDescriptor *bmd;
+    IODMACommand *cmd;
 };
 
 struct iwn_tx_data {
     bus_dmamap_t        map;
     bus_addr_t        cmd_paddr;
     bus_addr_t        scratch_paddr;
-    struct mbuf        *m;
+    mbuf_t        m;
     struct ieee80211_node    *ni;
     int totlen;
     int retries;
@@ -92,7 +101,7 @@ struct iwn_tx_ring {
 struct iwn_softc;
 
 struct iwn_rx_data {
-    struct mbuf    *m;
+    mbuf_t   m;
     bus_dmamap_t    map;
 };
 
@@ -195,19 +204,28 @@ struct iwn_tx_ba {
     struct iwn_node *    wn;
 };
 
+#define M_DEVBUF 2
+
+#ifdef DELAY
+#undef DELAY
+#define DELAY IODelay
+#endif
+
 struct iwn_softc {
     struct device        sc_dev;
 
     struct ieee80211com    sc_ic;
     int            (*sc_newstate)(struct ieee80211com *,
                     enum ieee80211_state, int);
+    
+    pci_intr_handle_t ih;
 
     struct ieee80211_amrr    amrr;
     uint8_t            fixed_ridx;
 
     bus_dma_tag_t        sc_dmat;
 
-    struct rwlock        sc_rwlock;
+//    struct rwlock        sc_rwlock;
     u_int            sc_flags;
 #define IWN_FLAG_HAS_5GHZ    (1 << 0)
 #define IWN_FLAG_HAS_OTPROM    (1 << 1)
@@ -260,13 +278,13 @@ struct iwn_softc {
 
     bus_space_tag_t        sc_st;
     bus_space_handle_t    sc_sh;
-    void             *sc_ih;
+    IOInterruptEventSource *sc_ih;
     pci_chipset_tag_t    sc_pct;
     pcitag_t        sc_pcitag;
     bus_size_t        sc_sz;
     int            sc_cap_off;    /* PCIe Capabilities. */
 
-    struct timeout        calib_to;
+    CTimeout *     calib_to;
     int            calib_cnt;
     struct iwn_calib_state    calib;
 

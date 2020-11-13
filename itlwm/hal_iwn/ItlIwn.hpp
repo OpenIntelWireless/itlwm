@@ -114,18 +114,17 @@ public:
     //utils
     static void *mallocarray(size_t, size_t, int, int);
     
-    int        iwn_match(struct device *, void *, void *);
-    void        iwn_attach(struct device *, struct device *, void *);
+    static int        iwn_match(struct IOPCIDevice *device);
+    bool       iwn_attach(struct iwn_softc *sc, struct pci_attach_args *pa);
     int        iwn4965_attach(struct iwn_softc *, pci_product_id_t);
     int        iwn5000_attach(struct iwn_softc *, pci_product_id_t);
     #if NBPFILTER > 0
     void        iwn_radiotap_attach(struct iwn_softc *);
     #endif
-    int        iwn_detach(struct device *, int);
-    int        iwn_activate(struct device *, int);
-    void        iwn_wakeup(struct iwn_softc *);
-    void        iwn_init_task(void *);
-    int        iwn_nic_lock(struct iwn_softc *);
+//    int        iwn_detach(struct device *, int);
+    int        iwn_activate(struct iwn_softc *sc, int);
+//    void        iwn_wakeup(struct iwn_softc *);
+    static void        iwn_init_task(void *);
     int        iwn_eeprom_lock(struct iwn_softc *);
     int        iwn_init_otprom(struct iwn_softc *);
     int        iwn_read_prom_data(struct iwn_softc *, uint32_t, void *, int);
@@ -149,19 +148,19 @@ public:
     void        iwn_free_tx_ring(struct iwn_softc *, struct iwn_tx_ring *);
     void        iwn5000_ict_reset(struct iwn_softc *);
     int        iwn_read_eeprom(struct iwn_softc *);
-    void        iwn4965_read_eeprom(struct iwn_softc *);
+    static void        iwn4965_read_eeprom(struct iwn_softc *);
     void        iwn4965_print_power_group(struct iwn_softc *, int);
-    void        iwn5000_read_eeprom(struct iwn_softc *);
+    static void        iwn5000_read_eeprom(struct iwn_softc *);
     void        iwn_read_eeprom_channels(struct iwn_softc *, int, uint32_t);
     void        iwn_read_eeprom_enhinfo(struct iwn_softc *);
-    struct        ieee80211_node *iwn_node_alloc(struct ieee80211com *);
-    void        iwn_newassoc(struct ieee80211com *, struct ieee80211_node *,
+    static struct        ieee80211_node *iwn_node_alloc(struct ieee80211com *);
+    static void        iwn_newassoc(struct ieee80211com *, struct ieee80211_node *,
                 int);
-    int        iwn_media_change(struct ifnet *);
-    int        iwn_newstate(struct ieee80211com *, enum ieee80211_state, int);
-    void        iwn_iter_func(void *, struct ieee80211_node *);
-    void        iwn_calib_timeout(void *);
-    int        iwn_ccmp_decap(struct iwn_softc *, struct mbuf *,
+    int        iwn_media_change(struct _ifnet *);
+    static int        iwn_newstate(struct ieee80211com *, enum ieee80211_state, int);
+    static void        iwn_iter_func(void *, struct ieee80211_node *);
+    static void        iwn_calib_timeout(void *);
+    int        iwn_ccmp_decap(struct iwn_softc *, mbuf_t,
                 struct ieee80211_node *);
     void        iwn_rx_phy(struct iwn_softc *, struct iwn_rx_desc *,
                 struct iwn_rx_data *);
@@ -181,9 +180,9 @@ public:
     void        iwn_ampdu_tx_done(struct iwn_softc *, struct iwn_tx_ring *,
                 struct iwn_rx_desc *, uint16_t, uint8_t, uint8_t, uint8_t,
                 int, uint32_t, struct iwn_txagg_status *);
-    void        iwn4965_tx_done(struct iwn_softc *, struct iwn_rx_desc *,
+    static void        iwn4965_tx_done(struct iwn_softc *, struct iwn_rx_desc *,
                 struct iwn_rx_data *);
-    void        iwn5000_tx_done(struct iwn_softc *, struct iwn_rx_desc *,
+    static void        iwn5000_tx_done(struct iwn_softc *, struct iwn_rx_desc *,
                 struct iwn_rx_data *);
     void        iwn_tx_done_free_txdata(struct iwn_softc *,
                 struct iwn_tx_data *);
@@ -194,46 +193,46 @@ public:
     void        iwn_notif_intr(struct iwn_softc *);
     void        iwn_wakeup_intr(struct iwn_softc *);
     void        iwn_fatal_intr(struct iwn_softc *);
-    int        iwn_intr(void *);
-    void        iwn4965_update_sched(struct iwn_softc *, int, int, uint8_t,
+    static int        iwn_intr(OSObject *object, IOInterruptEventSource* sender, int count);
+    static void        iwn4965_update_sched(struct iwn_softc *, int, int, uint8_t,
                 uint16_t);
-    void        iwn4965_reset_sched(struct iwn_softc *, int, int);
-    void        iwn5000_update_sched(struct iwn_softc *, int, int, uint8_t,
+    static void        iwn4965_reset_sched(struct iwn_softc *, int, int);
+    static void        iwn5000_update_sched(struct iwn_softc *, int, int, uint8_t,
                 uint16_t);
-    void        iwn5000_reset_sched(struct iwn_softc *, int, int);
-    int        iwn_tx(struct iwn_softc *, struct mbuf *,
+    static void        iwn5000_reset_sched(struct iwn_softc *, int, int);
+    int        iwn_tx(struct iwn_softc *, mbuf_t,
                 struct ieee80211_node *);
     int        iwn_rval2ridx(int);
-    void        iwn_start(struct ifnet *);
-    void        iwn_watchdog(struct ifnet *);
-    int        iwn_ioctl(struct ifnet *, u_long, caddr_t);
+    static void        iwn_start(struct _ifnet *);
+    static void        iwn_watchdog(struct _ifnet *);
+    static int        iwn_ioctl(struct _ifnet *, u_long, caddr_t);
     int        iwn_cmd(struct iwn_softc *, int, const void *, int, int);
-    int        iwn4965_add_node(struct iwn_softc *, struct iwn_node_info *,
+    static int        iwn4965_add_node(struct iwn_softc *, struct iwn_node_info *,
                 int);
-    int        iwn5000_add_node(struct iwn_softc *, struct iwn_node_info *,
+    static int        iwn5000_add_node(struct iwn_softc *, struct iwn_node_info *,
                 int);
     int        iwn_set_link_quality(struct iwn_softc *,
                 struct ieee80211_node *);
     int        iwn_add_broadcast_node(struct iwn_softc *, int, int);
-    void        iwn_updateedca(struct ieee80211com *);
+    static void        iwn_updateedca(struct ieee80211com *);
     void        iwn_set_led(struct iwn_softc *, uint8_t, uint8_t, uint8_t);
     int        iwn_set_critical_temp(struct iwn_softc *);
     int        iwn_set_timing(struct iwn_softc *, struct ieee80211_node *);
-    void        iwn4965_power_calibration(struct iwn_softc *, int);
-    int        iwn4965_set_txpower(struct iwn_softc *, int);
-    int        iwn5000_set_txpower(struct iwn_softc *, int);
-    int        iwn4965_get_rssi(const struct iwn_rx_stat *);
-    int        iwn5000_get_rssi(const struct iwn_rx_stat *);
+    static void        iwn4965_power_calibration(struct iwn_softc *, int);
+    static int        iwn4965_set_txpower(struct iwn_softc *, int);
+    static int        iwn5000_set_txpower(struct iwn_softc *, int);
+    static int        iwn4965_get_rssi(const struct iwn_rx_stat *);
+    static int        iwn5000_get_rssi(const struct iwn_rx_stat *);
     int        iwn_get_noise(const struct iwn_rx_general_stats *);
-    int        iwn4965_get_temperature(struct iwn_softc *);
-    int        iwn5000_get_temperature(struct iwn_softc *);
+    static int        iwn4965_get_temperature(struct iwn_softc *);
+    static int        iwn5000_get_temperature(struct iwn_softc *);
     int        iwn_init_sensitivity(struct iwn_softc *);
     void        iwn_collect_noise(struct iwn_softc *,
                 const struct iwn_rx_general_stats *);
-    int        iwn4965_init_gains(struct iwn_softc *);
-    int        iwn5000_init_gains(struct iwn_softc *);
-    int        iwn4965_set_gains(struct iwn_softc *);
-    int        iwn5000_set_gains(struct iwn_softc *);
+    static int        iwn4965_init_gains(struct iwn_softc *);
+    static int        iwn5000_init_gains(struct iwn_softc *);
+    static int        iwn4965_set_gains(struct iwn_softc *);
+    static int        iwn5000_set_gains(struct iwn_softc *);
     void        iwn_tune_sensitivity(struct iwn_softc *,
                 const struct iwn_rx_stats *);
     int        iwn_send_sensitivity(struct iwn_softc *);
@@ -248,45 +247,45 @@ public:
     uint16_t    iwn_get_passive_dwell_time(struct iwn_softc *, uint16_t);
     int        iwn_scan(struct iwn_softc *, uint16_t, int);
     void        iwn_scan_abort(struct iwn_softc *);
-    int        iwn_bgscan(struct ieee80211com *);
+    static int        iwn_bgscan(struct ieee80211com *);
     int        iwn_auth(struct iwn_softc *, int);
     int        iwn_run(struct iwn_softc *);
-    int        iwn_set_key(struct ieee80211com *, struct ieee80211_node *,
+    static int        iwn_set_key(struct ieee80211com *, struct ieee80211_node *,
                 struct ieee80211_key *);
-    void        iwn_delete_key(struct ieee80211com *, struct ieee80211_node *,
+    static void        iwn_delete_key(struct ieee80211com *, struct ieee80211_node *,
                 struct ieee80211_key *);
-    void        iwn_update_htprot(struct ieee80211com *,
+    static void        iwn_update_htprot(struct ieee80211com *,
                 struct ieee80211_node *);
-    int        iwn_ampdu_rx_start(struct ieee80211com *,
+    static int        iwn_ampdu_rx_start(struct ieee80211com *,
                 struct ieee80211_node *, uint8_t);
-    void        iwn_ampdu_rx_stop(struct ieee80211com *,
+    static void        iwn_ampdu_rx_stop(struct ieee80211com *,
                 struct ieee80211_node *, uint8_t);
-    int        iwn_ampdu_tx_start(struct ieee80211com *,
+    static int        iwn_ampdu_tx_start(struct ieee80211com *,
                 struct ieee80211_node *, uint8_t);
-    void        iwn_ampdu_tx_stop(struct ieee80211com *,
+    static void        iwn_ampdu_tx_stop(struct ieee80211com *,
                 struct ieee80211_node *, uint8_t);
-    void        iwn4965_ampdu_tx_start(struct iwn_softc *,
+    static void        iwn4965_ampdu_tx_start(struct iwn_softc *,
                 struct ieee80211_node *, uint8_t, uint16_t);
-    void        iwn4965_ampdu_tx_stop(struct iwn_softc *,
+    static void        iwn4965_ampdu_tx_stop(struct iwn_softc *,
                 uint8_t, uint16_t);
-    void        iwn5000_ampdu_tx_start(struct iwn_softc *,
+    static void        iwn5000_ampdu_tx_start(struct iwn_softc *,
                 struct ieee80211_node *, uint8_t, uint16_t);
-    void        iwn5000_ampdu_tx_stop(struct iwn_softc *,
+    static void        iwn5000_ampdu_tx_stop(struct iwn_softc *,
                 uint8_t, uint16_t);
-    int        iwn5000_query_calibration(struct iwn_softc *);
-    int        iwn5000_send_calibration(struct iwn_softc *);
-    int        iwn5000_send_wimax_coex(struct iwn_softc *);
-    int        iwn5000_crystal_calib(struct iwn_softc *);
-    int        iwn6000_temp_offset_calib(struct iwn_softc *);
-    int        iwn2000_temp_offset_calib(struct iwn_softc *);
-    int        iwn4965_post_alive(struct iwn_softc *);
-    int        iwn5000_post_alive(struct iwn_softc *);
-    int        iwn4965_load_bootcode(struct iwn_softc *, const uint8_t *,
+    static int        iwn5000_query_calibration(struct iwn_softc *);
+    static int        iwn5000_send_calibration(struct iwn_softc *);
+    static int        iwn5000_send_wimax_coex(struct iwn_softc *);
+    static int        iwn5000_crystal_calib(struct iwn_softc *);
+    static int        iwn6000_temp_offset_calib(struct iwn_softc *);
+    static int        iwn2000_temp_offset_calib(struct iwn_softc *);
+    static int        iwn4965_post_alive(struct iwn_softc *);
+    static int        iwn5000_post_alive(struct iwn_softc *);
+    static int        iwn4965_load_bootcode(struct iwn_softc *, const uint8_t *,
                 int);
-    int        iwn4965_load_firmware(struct iwn_softc *);
-    int        iwn5000_load_firmware_section(struct iwn_softc *, uint32_t,
+    static int        iwn4965_load_firmware(struct iwn_softc *);
+    static int        iwn5000_load_firmware_section(struct iwn_softc *, uint32_t,
                 const uint8_t *, int);
-    int        iwn5000_load_firmware(struct iwn_softc *);
+    static int        iwn5000_load_firmware(struct iwn_softc *);
     int        iwn_read_firmware_leg(struct iwn_softc *,
                 struct iwn_fw_info *);
     int        iwn_read_firmware_tlv(struct iwn_softc *,
@@ -296,13 +295,13 @@ public:
     int        iwn_apm_init(struct iwn_softc *);
     void        iwn_apm_stop_master(struct iwn_softc *);
     void        iwn_apm_stop(struct iwn_softc *);
-    int        iwn4965_nic_config(struct iwn_softc *);
-    int        iwn5000_nic_config(struct iwn_softc *);
+    static int        iwn4965_nic_config(struct iwn_softc *);
+    static int        iwn5000_nic_config(struct iwn_softc *);
     int        iwn_hw_prepare(struct iwn_softc *);
     int        iwn_hw_init(struct iwn_softc *);
     void        iwn_hw_stop(struct iwn_softc *);
-    int        iwn_init(struct ifnet *);
-    void        iwn_stop(struct ifnet *);
+    int        iwn_init(struct _ifnet *);
+    void        iwn_stop(struct _ifnet *);
     
 public:
     IOInterruptEventSource* fInterrupt;

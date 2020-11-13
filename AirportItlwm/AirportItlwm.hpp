@@ -24,6 +24,7 @@
 
 #include "ItlIwm.hpp"
 #include "ItlIwx.hpp"
+#include "ItlIwn.hpp"
 
 #include "AirportItlwmInterface.hpp"
 

@@ -758,6 +758,13 @@ struct iwn_cmd_led {
 } __packed;
 
 /* Structure for command IWN5000_CMD_WIMAX_COEX. */
+struct iwn5000_wimax_event {
+    uint8_t    request;
+    uint8_t    window;
+    uint8_t    reserved;
+    uint8_t    flags;
+} __packed;
+
 struct iwn5000_wimax_coex {
     uint32_t    flags;
 #define IWN_WIMAX_COEX_STA_TABLE_VALID        (1 << 0)
@@ -765,12 +772,7 @@ struct iwn5000_wimax_coex {
 #define IWN_WIMAX_COEX_ASSOC_WA_UNMASK        (1 << 3)
 #define IWN_WIMAX_COEX_ENABLE            (1 << 7)
 
-    struct iwn5000_wimax_event {
-        uint8_t    request;
-        uint8_t    window;
-        uint8_t    reserved;
-        uint8_t    flags;
-    } __packed    events[16];
+    struct iwn5000_wimax_event events[16];
 } __packed;
 
 /* Structures for command IWN5000_CMD_CALIB_CONFIG. */
@@ -797,21 +799,21 @@ struct iwn5000_calib_config {
 } __packed;
 
 /* Structure for command IWN_CMD_SET_POWER_MODE. */
-struct iwn_pmgt_cmd {
-    uint16_t    flags;
-#define IWN_PS_ALLOW_SLEEP    (1 << 0)
-#define IWN_PS_NOTIFY        (1 << 1)
-#define IWN_PS_SLEEP_OVER_DTIM    (1 << 2)
-#define IWN_PS_PCI_PMGT        (1 << 3)
-#define IWN_PS_FAST_PD        (1 << 4)
+ struct iwn_pmgt_cmd {
+     uint16_t    flags;
+ #define IWN_PS_ALLOW_SLEEP    (1 << 0)
+ #define IWN_PS_NOTIFY        (1 << 1)
+ #define IWN_PS_SLEEP_OVER_DTIM    (1 << 2)
+ #define IWN_PS_PCI_PMGT        (1 << 3)
+ #define IWN_PS_FAST_PD        (1 << 4)
 
-    uint8_t        keepalive;
-    uint8_t        debug;
-    uint32_t    rxtimeout;
-    uint32_t    txtimeout;
-    uint32_t    intval[5];
-    uint32_t    beacons;
-} __packed;
+     uint8_t        keepalive;
+     uint8_t        debug;
+     uint32_t    rxtimeout;
+     uint32_t    txtimeout;
+     uint32_t    intval[5];
+     uint32_t    beacons;
+ } __packed;
 
 /* Structures for command IWN_CMD_SCAN. */
 struct iwn_scan_essid {
@@ -1869,42 +1871,42 @@ static const uint8_t iwn4965_dsp_gain_5ghz[IWN4965_MAX_PWR_INDEX + 1] = {
 /*
  * Power saving settings (values obtained from the reference driver.)
  */
-#define IWN_NDTIMRANGES        3
-#define IWN_NPOWERLEVELS    6
-static const struct iwn_pmgt {
-    uint32_t    rxtimeout;
-    uint32_t    txtimeout;
-    uint32_t    intval[5];
-    int        skip_dtim;
-} iwn_pmgt[IWN_NDTIMRANGES][IWN_NPOWERLEVELS] = {
-    /* DTIM <= 2 */
-    {
-    {   0,   0, {  0,  0,  0,  0,  0 }, 0 },    /* CAM */
-    { 200, 500, {  1,  2,  2,  2, -1 }, 0 },    /* PS level 1 */
-    { 200, 300, {  1,  2,  2,  2, -1 }, 0 },    /* PS level 2 */
-    {  50, 100, {  2,  2,  2,  2, -1 }, 0 },    /* PS level 3 */
-    {  50,  25, {  2,  2,  4,  4, -1 }, 1 },    /* PS level 4 */
-    {  25,  25, {  2,  2,  4,  6, -1 }, 2 }        /* PS level 5 */
-    },
-    /* 3 <= DTIM <= 10 */
-    {
-    {   0,   0, {  0,  0,  0,  0,  0 }, 0 },    /* CAM */
-    { 200, 500, {  1,  2,  3,  4,  4 }, 0 },    /* PS level 1 */
-    { 200, 300, {  1,  2,  3,  4,  7 }, 0 },    /* PS level 2 */
-    {  50, 100, {  2,  4,  6,  7,  9 }, 0 },    /* PS level 3 */
-    {  50,  25, {  2,  4,  6,  9, 10 }, 1 },    /* PS level 4 */
-    {  25,  25, {  2,  4,  7, 10, 10 }, 2 }        /* PS level 5 */
-    },
-    /* DTIM >= 11 */
-    {
-    {   0,   0, {  0,  0,  0,  0,  0 }, 0 },    /* CAM */
-    { 200, 500, {  1,  2,  3,  4, -1 }, 0 },    /* PS level 1 */
-    { 200, 300, {  2,  4,  6,  7, -1 }, 0 },    /* PS level 2 */
-    {  50, 100, {  2,  7,  9,  9, -1 }, 0 },    /* PS level 3 */
-    {  50,  25, {  2,  7,  9,  9, -1 }, 0 },    /* PS level 4 */
-    {  25,  25, {  4,  7, 10, 10, -1 }, 0 }        /* PS level 5 */
-    }
-};
+ #define IWN_NDTIMRANGES        3
+ #define IWN_NPOWERLEVELS    6
+ static const struct iwn_pmgt {
+     uint32_t    rxtimeout;
+     uint32_t    txtimeout;
+     uint32_t    intval[5];
+     int        skip_dtim;
+ } iwn_pmgt[IWN_NDTIMRANGES][IWN_NPOWERLEVELS] = {
+     /* DTIM <= 2 */
+     {
+     {   0,   0, {  0,  0,  0,  0,  0 }, 0 },    /* CAM */
+     { 200, 500, {  1,  2,  2,  2, (uint32_t)-1 }, 0 },    /* PS level 1 */
+     { 200, 300, {  1,  2,  2,  2, (uint32_t)-1 }, 0 },    /* PS level 2 */
+     {  50, 100, {  2,  2,  2,  2, (uint32_t)-1 }, 0 },    /* PS level 3 */
+     {  50,  25, {  2,  2,  4,  4, (uint32_t)-1 }, 1 },    /* PS level 4 */
+     {  25,  25, {  2,  2,  4,  6, (uint32_t)-1 }, 2 }        /* PS level 5 */
+     },
+     /* 3 <= DTIM <= 10 */
+     {
+     {   0,   0, {  0,  0,  0,  0,  0 }, 0 },    /* CAM */
+     { 200, 500, {  1,  2,  3,  4,  4 }, 0 },    /* PS level 1 */
+     { 200, 300, {  1,  2,  3,  4,  7 }, 0 },    /* PS level 2 */
+     {  50, 100, {  2,  4,  6,  7,  9 }, 0 },    /* PS level 3 */
+     {  50,  25, {  2,  4,  6,  9, 10 }, 1 },    /* PS level 4 */
+     {  25,  25, {  2,  4,  7, 10, 10 }, 2 }        /* PS level 5 */
+     },
+     /* DTIM >= 11 */
+     {
+     {   0,   0, {  0,  0,  0,  0,  0 }, 0 },    /* CAM */
+     { 200, 500, {  1,  2,  3,  4, (uint32_t)-1 }, 0 },    /* PS level 1 */
+     { 200, 300, {  2,  4,  6,  7, (uint32_t)-1 }, 0 },    /* PS level 2 */
+     {  50, 100, {  2,  7,  9,  9, (uint32_t)-1 }, 0 },    /* PS level 3 */
+     {  50,  25, {  2,  7,  9,  9, (uint32_t)-1 }, 0 },    /* PS level 4 */
+     {  25,  25, {  4,  7, 10, 10, (uint32_t)-1 }, 0 }        /* PS level 5 */
+     }
+ };
 
 struct iwn_sensitivity_limits {
     uint32_t    min_ofdm_x1;
@@ -2089,3 +2091,5 @@ static const char * const iwn_fw_errmsg[] = {
 #define IWN_BARRIER_READ_WRITE(sc)                    \
     bus_space_barrier((sc)->sc_st, (sc)->sc_sh, 0, (sc)->sc_sz,    \
         BUS_SPACE_BARRIER_READ | BUS_SPACE_BARRIER_WRITE)
+
+#define IWN_TFH_NUM_TBS        25
