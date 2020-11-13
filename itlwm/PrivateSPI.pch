@@ -1,0 +1,6 @@
+#include <libkern/libkern.h>
+#include <IOKit/IOTypes.h>
+#include <machine/types.h>
+#ifdef __PRIVATE_SPI__
+typedef u_int32_t ifnet_ctl_cmd_t;
+#endif
