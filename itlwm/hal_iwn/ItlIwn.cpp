@@ -450,6 +450,8 @@ iwn_attach(struct iwn_softc *sc, struct pci_attach_args *pa)
     XYLog(", MIMO %dT%dR, %.4s, address %s\n", sc->ntxchains,
         sc->nrxchains, sc->eeprom_domain, ether_sprintf(ic->ic_myaddr));
 
+    taskq_init();
+    
     ic->ic_phytype = IEEE80211_T_OFDM;    /* not only, but not used */
     ic->ic_opmode = IEEE80211_M_STA;    /* default to BSS mode */
     ic->ic_state = IEEE80211_S_INIT;
@@ -757,6 +759,7 @@ iwn_radiotap_attach(struct iwn_softc *sc)
 int ItlIwn::
 iwn_activate(struct iwn_softc *sc, int act)
 {
+    XYLog("%s\n", __FUNCTION__);
     struct _ifnet *ifp = &sc->sc_ic.ic_if;
 
     switch (act) {
@@ -765,28 +768,30 @@ iwn_activate(struct iwn_softc *sc, int act)
             iwn_stop(ifp);
         break;
     case DVACT_WAKEUP:
-        wakeupOn(sc);
+//        iwn_wakeup(sc);
+        task_add(systq, &sc->init_task);
         break;
     }
 
     return 0;
 }
 
-//void ItlIwn::
-//iwn_wakeup(struct iwn_softc *sc)
-//{
-//    pcireg_t reg;
-//
-//    /* Clear device-specific "PCI retry timeout" register (41h). */
-//    reg = pci_conf_read(sc->sc_pct, sc->sc_pcitag, 0x40);
-//    if (reg & 0xff00)
-//        pci_conf_write(sc->sc_pct, sc->sc_pcitag, 0x40, reg & ~0xff00);
-//    iwn_init_task(sc);
-//}
+void ItlIwn::
+iwn_wakeup(struct iwn_softc *sc)
+{
+    pcireg_t reg;
+
+    /* Clear device-specific "PCI retry timeout" register (41h). */
+    reg = pci_conf_read(sc->sc_pct, sc->sc_pcitag, 0x40);
+    if (reg & 0xff00)
+        pci_conf_write(sc->sc_pct, sc->sc_pcitag, 0x40, reg & ~0xff00);
+    iwn_init_task(sc);
+}
 
 void ItlIwn::
 iwn_init_task(void *arg1)
 {
+    XYLog("%s\n", __FUNCTION__);
     struct iwn_softc *sc = (struct iwn_softc *)arg1;
     struct _ifnet *ifp = &sc->sc_ic.ic_if;
     ItlIwn *that = container_of(sc, ItlIwn, com);
@@ -2097,9 +2102,9 @@ iwn_rx_done(struct iwn_softc *sc, struct iwn_rx_desc *desc,
         ifp->if_ierrors++;
         return;
     }
-    data->map->dm_nsegs = data->map->cursor->getPhysicalSegments(m, &data->map->dm_segs[0], 1);
+    data->map->dm_nsegs = data->map->cursor->getPhysicalSegments(m1, &data->map->dm_segs[0], 1);
     if (data->map->dm_nsegs == 0) {
-        mbuf_freem(m);
+        mbuf_freem(m1);
         ifp->if_ierrors++;
         return;
     }
@@ -3922,6 +3927,7 @@ iwn_ioctl(struct _ifnet *ifp, u_long cmd, caddr_t data)
 int ItlIwn::
 iwn_cmd(struct iwn_softc *sc, int code, const void *buf, int size, int async)
 {
+    XYLog("%s code=%d size=%d\n", __FUNCTION__, code, size);
     struct iwn_ops *ops = &sc->ops;
     struct iwn_tx_ring *ring = &sc->txq[4];
     struct iwn_tx_desc *desc;
@@ -3929,7 +3935,9 @@ iwn_cmd(struct iwn_softc *sc, int code, const void *buf, int size, int async)
     struct iwn_tx_cmd *cmd;
     mbuf_t m;
     bus_addr_t paddr;
-    int totlen, error;
+    int totlen, error = 0;
+    unsigned int max_chunks = 1;
+    IOPhysicalSegment seg;
 
     desc = &ring->desc[ring->cur];
     data = &ring->data[ring->cur];
@@ -3939,10 +3947,7 @@ iwn_cmd(struct iwn_softc *sc, int code, const void *buf, int size, int async)
         /* Command is too large to fit in a descriptor. */
         if (totlen > MCLBYTES)
             return EINVAL;
-        //        MGETHDR(m, M_DONTWAIT, MT_DATA);
-        m = getController()->allocatePacket(MCLBYTES);
-        if (m == NULL)
-            return ENOMEM;
+//        MGETHDR(m, M_DONTWAIT, MT_DATA);
 //        if (totlen > MHLEN) {
 //            MCLGET(m, M_DONTWAIT);
 //            if (!(m->m_flags & M_EXT)) {
@@ -3950,15 +3955,31 @@ iwn_cmd(struct iwn_softc *sc, int code, const void *buf, int size, int async)
 //                return ENOMEM;
 //            }
 //        }
+        mbuf_allocpacket(MBUF_WAITOK, totlen, &max_chunks, &m);
+        if (m == NULL) {
+            XYLog("%s: could not get fw cmd mbuf (%zd bytes)\n",
+                  DEVNAME(sc), totlen);
+            return ENOMEM;
+        }
+        mbuf_setlen(m, totlen);
+        mbuf_pkthdr_setlen(m, totlen);
+
         cmd = mtod(m, struct iwn_tx_cmd *);
 //        error = bus_dmamap_load(sc->sc_dmat, data->map, cmd, totlen,
 //            NULL, BUS_DMA_NOWAIT | BUS_DMA_WRITE);
-        if (error != 0) {
+//        if (error != 0) {
+//            mbuf_freem(m);
+//            return error;
+//        }
+        data->map->dm_nsegs = data->map->cursor->getPhysicalSegmentsWithCoalesce(m, &seg, 1);
+        if (data->map->dm_nsegs == 0) {
+            XYLog("%s: could not load fw cmd mbuf (%zd bytes)\n",
+                  DEVNAME(sc), totlen);
             mbuf_freem(m);
-            return error;
+            return ENOMEM;
         }
         data->m = m;
-        paddr = data->map->dm_segs[0].location;
+        paddr = seg.location;
     } else {
         cmd = &ring->cmd[ring->cur];
         paddr = data->cmd_paddr;
@@ -5051,6 +5072,7 @@ iwn5000_runtime_calib(struct iwn_softc *sc)
 int ItlIwn::
 iwn_config(struct iwn_softc *sc)
 {
+    XYLog("%s\n", __FUNCTION__);
     struct iwn_ops *ops = &sc->ops;
     struct ieee80211com *ic = &sc->sc_ic;
     struct _ifnet *ifp = &ic->ic_if;
@@ -5117,7 +5139,7 @@ iwn_config(struct iwn_softc *sc)
 
     /* Set mode, channel, RX filter and enable RX. */
     memset(&sc->rxon, 0, sizeof (struct iwn_rxon));
-    IEEE80211_ADDR_COPY(ic->ic_myaddr, LLADDR(ifp->if_sadl));
+//    IEEE80211_ADDR_COPY(ic->ic_myaddr, LLADDR(ifp->if_sadl));
     IEEE80211_ADDR_COPY(sc->rxon.myaddr, ic->ic_myaddr);
     IEEE80211_ADDR_COPY(sc->rxon.wlap, ic->ic_myaddr);
     sc->rxon.chan = ieee80211_chan2ieee(ic, ic->ic_ibss_chan);
@@ -5259,6 +5281,7 @@ iwn_get_passive_dwell_time(struct iwn_softc *sc, uint16_t flags)
 int ItlIwn::
 iwn_scan(struct iwn_softc *sc, uint16_t flags, int bgscan)
 {
+    XYLog("%s flags=%d bgscan=%d\n", __FUNCTION__, flags, bgscan);
     struct ieee80211com *ic = &sc->sc_ic;
     struct iwn_scan_hdr *hdr;
     struct iwn_cmd_data *tx;
@@ -5486,6 +5509,7 @@ iwn_scan(struct iwn_softc *sc, uint16_t flags, int bgscan)
 void ItlIwn::
 iwn_scan_abort(struct iwn_softc *sc)
 {
+    XYLog("%s\n", __FUNCTION__);
     iwn_cmd(sc, IWN_CMD_SCAN_ABORT, NULL, 0, 1);
 
     /* XXX Cannot wait for status response in interrupt context. */
@@ -5498,6 +5522,7 @@ iwn_scan_abort(struct iwn_softc *sc)
 int ItlIwn::
 iwn_bgscan(struct ieee80211com *ic)
 {
+    XYLog("%s\n", __FUNCTION__);
     struct iwn_softc *sc = (struct iwn_softc *)ic->ic_softc;
     ItlIwn *that = container_of(sc, ItlIwn, com);
     int error;
@@ -5515,6 +5540,7 @@ iwn_bgscan(struct ieee80211com *ic)
 int ItlIwn::
 iwn_auth(struct iwn_softc *sc, int arg)
 {
+    XYLog("%s\n", __FUNCTION__);
     struct iwn_ops *ops = &sc->ops;
     struct ieee80211com *ic = &sc->sc_ic;
     struct ieee80211_node *ni = ic->ic_bss;
@@ -5604,6 +5630,7 @@ iwn_auth(struct iwn_softc *sc, int arg)
 int ItlIwn::
 iwn_run(struct iwn_softc *sc)
 {
+    XYLog("%s\n", __FUNCTION__);
     struct iwn_ops *ops = &sc->ops;
     struct ieee80211com *ic = &sc->sc_ic;
     struct ieee80211_node *ni = ic->ic_bss;
@@ -6248,6 +6275,7 @@ iwn2000_temp_offset_calib(struct iwn_softc *sc)
 int ItlIwn::
 iwn4965_post_alive(struct iwn_softc *sc)
 {
+    XYLog("%s\n", __FUNCTION__);
     int error, qid;
 
     if ((error = iwn_nic_lock(sc)) != 0)
@@ -6301,6 +6329,7 @@ iwn4965_post_alive(struct iwn_softc *sc)
 int ItlIwn::
 iwn5000_post_alive(struct iwn_softc *sc)
 {
+    XYLog("%s\n", __FUNCTION__);
     ItlIwn *that = container_of(sc, ItlIwn, com);
     int error, qid;
 
@@ -6395,6 +6424,7 @@ iwn5000_post_alive(struct iwn_softc *sc)
 int ItlIwn::
 iwn4965_load_bootcode(struct iwn_softc *sc, const uint8_t *ucode, int size)
 {
+    XYLog("%s\n", __FUNCTION__);
     int error, ntries;
 
     size /= sizeof (uint32_t);
@@ -6437,6 +6467,7 @@ iwn4965_load_bootcode(struct iwn_softc *sc, const uint8_t *ucode, int size)
 int ItlIwn::
 iwn4965_load_firmware(struct iwn_softc *sc)
 {
+    XYLog("%s\n", __FUNCTION__);
     ItlIwn *that = container_of(sc, ItlIwn, com);
     struct iwn_fw_info *fw = &sc->fw;
     struct iwn_dma_info *dma = &sc->fw_dma;
@@ -6509,6 +6540,7 @@ int ItlIwn::
 iwn5000_load_firmware_section(struct iwn_softc *sc, uint32_t dst,
     const uint8_t *section, int size)
 {
+    XYLog("%s\n", __FUNCTION__);
     ItlIwn *that = container_of(sc, ItlIwn, com);
     struct iwn_dma_info *dma = &sc->fw_dma;
     int error;
@@ -6546,6 +6578,7 @@ iwn5000_load_firmware_section(struct iwn_softc *sc, uint32_t dst,
 int ItlIwn::
 iwn5000_load_firmware(struct iwn_softc *sc)
 {
+    XYLog("%s\n", __FUNCTION__);
     struct iwn_fw_part *fw;
     int error;
 
@@ -6743,6 +6776,7 @@ iwn_read_firmware_tlv(struct iwn_softc *sc, struct iwn_fw_info *fw,
 int ItlIwn::
 iwn_read_firmware(struct iwn_softc *sc)
 {
+    XYLog("%s\n", __FUNCTION__);
     struct iwn_fw_info *fw = &sc->fw;
     int error = 0;
     OSData *fwData = NULL;
@@ -7177,6 +7211,7 @@ iwn_hw_stop(struct iwn_softc *sc)
 int ItlIwn::
 iwn_init(struct _ifnet *ifp)
 {
+    XYLog("%s\n", __FUNCTION__);
     struct iwn_softc *sc = (struct iwn_softc *)ifp->if_softc;
     struct ieee80211com *ic = &sc->sc_ic;
     int error;
