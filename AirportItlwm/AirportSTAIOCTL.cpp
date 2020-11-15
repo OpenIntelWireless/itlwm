@@ -917,8 +917,11 @@ IOReturn AirportItlwm::
 getCOUNTRY_CODE(OSObject *object,
                                 struct apple80211_country_code_data *cd)
 {
+    char cc[3];
     cd->version = APPLE80211_VERSION;
-    strncpy((char*)cd->cc, fHalService->getDriverInfo()->getFirmwareCountryCode(), sizeof(cd->cc));
+    memset(cc, 0, sizeof(cc));
+    PE_parse_boot_argn("itlwm_cc", cc, 3);
+    strncpy((char*)cd->cc, cc[0] == 0 ? fHalService->getDriverInfo()->getFirmwareCountryCode() : cc, sizeof(cd->cc));
     return kIOReturnSuccess;
 }
 
