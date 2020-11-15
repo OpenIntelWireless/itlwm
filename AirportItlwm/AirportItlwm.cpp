@@ -126,7 +126,7 @@ IONetworkInterface *AirportItlwm::createInterface()
     if (!netif) {
         return NULL;
     }
-    if (!netif->init(this)) {
+    if (!netif->init(this, fHalService)) {
         netif->release();
         return NULL;
     }

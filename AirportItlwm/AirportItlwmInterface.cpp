@@ -22,6 +22,16 @@ const char* hexdump(uint8_t *buf, size_t len) {
     return str;
 }
 
+bool AirportItlwmInterface::
+init(IO80211Controller *controller, ItlHalService *halService)
+{
+    if (!super::init(controller)) {
+        return false;
+    }
+    this->fHalService = halService;
+    return true;
+}
+
 UInt32 AirportItlwmInterface::
 inputPacket(mbuf_t packet, UInt32 length, IOOptionBits options, void *param)
 {

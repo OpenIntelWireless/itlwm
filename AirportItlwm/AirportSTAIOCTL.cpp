@@ -320,7 +320,18 @@ IOReturn AirportItlwm::
 setCHANNEL(OSObject *object, struct apple80211_channel_data *data)
 {
     XYLog("%s channel=%d\n", __FUNCTION__, data->channel.channel);
-    return kIOReturnSuccess;
+    struct ieee80211_channel *channel;
+    struct ieee80211com *ic = fHalService->get80211Controller();
+    struct _ifnet *ifp = &ic->ic_ac.ac_if;
+    if (data->channel.channel >= IEEE80211_CHAN_MAX) {
+        XYLog("%s channel set error, channel=%d IEEE80211_CHAN_MAX=%d\n", __FUNCTION__, data->channel.channel, IEEE80211_CHAN_MAX);
+        return kIOReturnError;
+    }
+    channel = &ic->ic_channels[data->channel.channel];
+    if (!ifp->if_ioctl(ifp, SIOCS80211CHANNEL, (caddr_t)channel)) {
+        return kIOReturnSuccess;
+    }
+    return kIOReturnError;
 }
 
 IOReturn AirportItlwm::
@@ -501,9 +512,16 @@ IOReturn AirportItlwm::
 getSTATE(OSObject *object,
                          struct apple80211_state_data *sd)
 {
-    struct ieee80211com *ic = fHalService->get80211Controller();
+    memset(sd, 0, sizeof(*sd));
     sd->version = APPLE80211_VERSION;
-    sd->state = ic->ic_state;
+    IO80211Interface *inf = OSDynamicCast(IO80211Interface, object);
+    if (inf && inf->linkState() == kIO80211NetworkLinkUp) {
+        sd->state = APPLE80211_S_RUN;
+    }
+    IO80211VirtualInterface *vif = OSDynamicCast(IO80211VirtualInterface, object);
+    if (vif && vif->linkState() == kIO80211NetworkLinkUp) {
+        sd->state = APPLE80211_S_RUN;
+    }
     return kIOReturnSuccess;
 }
 
@@ -884,9 +902,6 @@ IOReturn AirportItlwm::
 getANTENNA_DIVERSITY(OSObject *object,
                                      apple80211_antenna_data *ad)
 {
-    struct ieee80211com *ic = fHalService->get80211Controller();
-    if (ic->ic_state != IEEE80211_S_RUN ||  ic->ic_bss == NULL)
-        return kIOReturnError;
     ad->version = APPLE80211_VERSION;
     ad->num_radios = 1;
     ad->antenna_index[0] = 1;
@@ -939,9 +954,6 @@ getMCS(OSObject *object, struct apple80211_mcs_data* md)
 IOReturn AirportItlwm::
 getROAM_THRESH(OSObject *object, struct apple80211_roam_threshold_data* md)
 {
-    struct ieee80211com *ic = fHalService->get80211Controller();
-    if (ic->ic_state != IEEE80211_S_RUN ||  ic->ic_bss == NULL)
-        return kIOReturnError;
     md->threshold = 100;
     md->count = 0;
     return kIOReturnSuccess;
@@ -950,9 +962,6 @@ getROAM_THRESH(OSObject *object, struct apple80211_roam_threshold_data* md)
 IOReturn AirportItlwm::
 getRADIO_INFO(OSObject *object, struct apple80211_radio_info_data* md)
 {
-    struct ieee80211com *ic = fHalService->get80211Controller();
-    if (ic->ic_state != IEEE80211_S_RUN ||  ic->ic_bss == NULL)
-        return kIOReturnError;
     md->version = APPLE80211_VERSION;
     md->count = 1;
     return kIOReturnSuccess;
