@@ -739,7 +739,14 @@ IOReturn AirportItlwm::
 setASSOCIATE(OSObject *object,
                              struct apple80211_assoc_data *ad)
 {
-    XYLog("%s [%s] mode=%d ad_auth_lower=%d ad_auth_upper=%d\n", __FUNCTION__, ad->ad_ssid, ad->ad_mode, ad->ad_auth_lower, ad->ad_auth_upper);
+    XYLog("%s [%s] mode=%d ad_auth_lower=%d ad_auth_upper=%d rsn_ie_len=%d%s%s%s%s%s%s%s\n", __FUNCTION__, ad->ad_ssid, ad->ad_mode, ad->ad_auth_lower, ad->ad_auth_upper, ad->ad_rsn_ie_len,
+          (ad->ad_flags & 2) ? ", Instant Hotspot" : "",
+          (ad->ad_flags & 4) ? ", Auto Instant Hotspot" : "",
+          (ad->ad_rsn_ie[APPLE80211_MAX_RSN_IE_LEN] & 1) ? ", don't disassociate" : "",
+          (ad->ad_rsn_ie[APPLE80211_MAX_RSN_IE_LEN] & 2) ? ", don't blacklist" : "",
+          (ad->ad_rsn_ie[APPLE80211_MAX_RSN_IE_LEN] & 4) ? ", closed Network" : "",
+          (ad->ad_rsn_ie[APPLE80211_MAX_RSN_IE_LEN] & 8) ? ", 802.1X" : "",
+          (ad->ad_rsn_ie[APPLE80211_MAX_RSN_IE_LEN] & 0x20) ? ", force BSSID" : "");
     
     struct apple80211_rsn_ie_data rsn_ie_data;
     struct apple80211_authtype_data auth_type_data;

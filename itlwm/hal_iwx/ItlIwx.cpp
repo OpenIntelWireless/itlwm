@@ -7386,7 +7386,7 @@ iwx_rx_pkt(struct iwx_softc *sc, struct iwx_rx_data *data, struct mbuf_list *ml)
             case IWX_ALIVE: {
                 struct iwx_alive_resp_v4 *resp4;
                 
-                DPRINTF(("%s: firmware alive\n", __func__));
+                DPRINTF(("%s: firmware alive, size=%d\n", __FUNCTION__, iwx_rx_packet_payload_len(pkt)));
                 if (iwx_rx_packet_payload_len(pkt) == sizeof(*resp4)) {
                     SYNC_RESP_STRUCT(resp4, pkt, struct iwx_alive_resp_v4 *);
                     sc->sc_uc.uc_lmac_error_event_table[0] = le32toh(

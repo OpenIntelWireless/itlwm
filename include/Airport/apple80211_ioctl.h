@@ -609,14 +609,15 @@ struct apple80211_assoc_data
     u_int8_t                 ad_ssid[ APPLE80211_MAX_SSID_LEN ];
     struct ether_addr        ad_bssid;         // prefer over ssid if not zeroed
     struct apple80211_key    ad_key;
-    uint16_t                 pad;
-    u_int8_t                 ad_rsn_ie[ APPLE80211_MAX_RSN_IE_LEN ];
+    uint16_t                 ad_rsn_ie_len;
+    u_int8_t                 ad_rsn_ie[ APPLE80211_MAX_RSN_IE_LEN + 1 ];
     u_int32_t                ad_flags;         // apple80211_assoc_flags
 };
 
 static_assert(offsetof(apple80211_assoc_data, ad_key) == 0x38, "aaaa");
 
 static_assert(offsetof(apple80211_assoc_data, ad_rsn_ie) == 206, "offsetof(apple80211_assoc_data, ad_rsn_ie)");
+static_assert(offsetof(apple80211_assoc_data, ad_flags) == 464, "ad_flags offset error");
 
 struct apple80211_deauth_data
 {
