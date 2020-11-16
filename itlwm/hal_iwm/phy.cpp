@@ -607,10 +607,8 @@ iwm_send_cmd(struct iwm_softc *sc, struct iwm_host_cmd *hcmd)
             goto out;
         }
     }
-    
-#if 0
+
     iwm_update_sched(sc, ring->qid, ring->cur, 0, 0);
-#endif
     /* Kick command ring. */
     ring->queued++;
     ring->cur = (ring->cur + 1) % IWM_TX_RING_COUNT;
