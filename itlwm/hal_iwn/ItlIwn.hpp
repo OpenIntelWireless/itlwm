@@ -1,16 +1,16 @@
 /*
-* Copyright (C) 2020  pigworlds
-*
-* This program is free software; you can redistribute it and/or modify
-* it under the terms of the GNU General Public License as published by
-* the Free Software Foundation; either version 2 of the License, or
-* (at your option) any later version.
-*
-* This program is distributed in the hope that it will be useful,
-* but WITHOUT ANY WARRANTY; without even the implied warranty of
-* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-* GNU General Public License for more details.
-*/
+ * Copyright (C) 2020  pigworlds
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
 /*    $OpenBSD: if_iwn.c,v 1.243 2020/11/12 15:16:18 krw Exp $    */
 
 /*-
@@ -105,6 +105,8 @@ public:
 
     virtual const char *getFirmwareCountryCode() override;
     
+    virtual uint32_t getTxQueueSize() override;
+    
     //driver controller
     virtual void clearScanningFlags() override;
     
@@ -123,7 +125,7 @@ public:
     #endif
 //    int        iwn_detach(struct device *, int);
     int        iwn_activate(struct iwn_softc *sc, int);
-    void        iwn_wakeup(struct iwn_softc *);
+//    void        iwn_wakeup(struct iwn_softc *);
     static void        iwn_init_task(void *);
     int        iwn_eeprom_lock(struct iwn_softc *);
     int        iwn_init_otprom(struct iwn_softc *);

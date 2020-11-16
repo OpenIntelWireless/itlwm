@@ -67,6 +67,12 @@ int iwn_debug = 1;
 #endif
 
 #define abs(N) ((N<0)?(-N):(N))
+#define M_DEVBUF 2
+
+#ifdef DELAY
+#undef DELAY
+#define DELAY IODelay
+#endif
 
 bool ItlIwn::attach(IOPCIDevice *device)
 {
@@ -155,7 +161,7 @@ clearScanningFlags()
 const char *ItlIwn::
 getFirmwareVersion()
 {
-    return com.fwname; // pigworldsTODO: com.sc_fwver
+    return com.fwname;
 }
 
 const char *ItlIwn::
@@ -173,7 +179,13 @@ supportedFeatures()
 const char *ItlIwn::
 getFirmwareCountryCode()
 {
-    return "ZZ"; // pigworldsTODO: com.sc_fw_mcc;
+    return "ZZ";
+}
+
+uint32_t ItlIwn::
+getTxQueueSize()
+{
+    return IWN_TX_RING_COUNT;
 }
 
 int16_t ItlIwn::
@@ -191,7 +203,8 @@ is5GBandSupport()
 int ItlIwn::
 getTxNSS()
 {
-    return 1; // pigworldsTODO: !com.sc_nvm.sku_cap_mimo_disable ? (iwn_mimo_enabled(&com) ? 2 : 1) : 1;
+    // return !com.sc_nvm.sku_cap_mimo_disable ? (iwn_mimo_enabled(&com) ? 2 : 1) : 1;
+    return 1;
 }
 
 struct ieee80211com *ItlIwn::
@@ -515,7 +528,7 @@ iwn_attach(struct iwn_softc *sc, struct pci_attach_args *pa)
     ic->ic_ibss_chan = &ic->ic_channels[0];
 
     ifp->controller = getController();
-    ifp->if_snd = IOPacketQueue::withCapacity(4096);
+    ifp->if_snd = IOPacketQueue::withCapacity(getTxQueueSize());
     ifp->if_softc = sc;
     ifp->if_flags = IFF_BROADCAST | IFF_SIMPLEX | IFF_MULTICAST | IFF_DEBUG;
     ifp->if_ioctl = iwn_ioctl;
@@ -776,17 +789,17 @@ iwn_activate(struct iwn_softc *sc, int act)
     return 0;
 }
 
-void ItlIwn::
-iwn_wakeup(struct iwn_softc *sc)
-{
-    pcireg_t reg;
-
-    /* Clear device-specific "PCI retry timeout" register (41h). */
-    reg = pci_conf_read(sc->sc_pct, sc->sc_pcitag, 0x40);
-    if (reg & 0xff00)
-        pci_conf_write(sc->sc_pct, sc->sc_pcitag, 0x40, reg & ~0xff00);
-    iwn_init_task(sc);
-}
+//void ItlIwn::
+//iwn_wakeup(struct iwn_softc *sc)
+//{
+//    pcireg_t reg;
+//
+//    /* Clear device-specific "PCI retry timeout" register (41h). */
+//    reg = pci_conf_read(sc->sc_pct, sc->sc_pcitag, 0x40);
+//    if (reg & 0xff00)
+//        pci_conf_write(sc->sc_pct, sc->sc_pcitag, 0x40, reg & ~0xff00);
+//    iwn_init_task(sc);
+//}
 
 void ItlIwn::
 iwn_init_task(void *arg1)
@@ -1177,7 +1190,6 @@ iwn_alloc_rx_ring(struct iwn_softc *sc, struct iwn_rx_ring *ring)
     bus_size_t size;
     int i, error;
     mbuf_t m;
-    int fatal = 0;
 
     ring->cur = 0;
 
@@ -1215,17 +1227,14 @@ iwn_alloc_rx_ring(struct iwn_softc *sc, struct iwn_rx_ring *ring)
             goto fail;
         }
 
-        m = getController()->allocatePacket(size);
+        m = getController()->allocatePacket(IWN_RBUF_SIZE);
         if (m == NULL) {
             XYLog("could not allocate RX mbuf\n");
-            error = ENOMEM;
+            error = ENOBUFS;
             goto fail;
         }
         data->map->dm_nsegs = data->map->cursor->getPhysicalSegments(m, &data->map->dm_segs[0], 1);
         if (data->map->dm_nsegs == 0) {
-            /* XXX */
-            if (fatal)
-                panic("%s: could not load RX mbuf", DEVNAME(sc));
             mbuf_freem(m);
             error = ENOMEM;
             goto fail;
@@ -1803,6 +1812,7 @@ iwn_media_change(struct _ifnet *ifp)
 int ItlIwn::
 iwn_newstate(struct ieee80211com *ic, enum ieee80211_state nstate, int arg)
 {
+    XYLog("%s nstate=%d\n", __FUNCTION__, nstate);
     struct _ifnet *ifp = &ic->ic_if;
     struct iwn_softc *sc = (struct iwn_softc *)ifp->if_softc;
     struct ieee80211_node *ni = ic->ic_bss;
@@ -2098,12 +2108,14 @@ iwn_rx_done(struct iwn_softc *sc, struct iwn_rx_desc *desc,
     
     m1 = getController()->allocatePacket(IWN_RBUF_SIZE);
     if (m1 == NULL) {
+        XYLog("could not allocate RX mbuf\n");
         ic->ic_stats.is_rx_nombuf++;
         ifp->if_ierrors++;
         return;
     }
     data->map->dm_nsegs = data->map->cursor->getPhysicalSegments(m1, &data->map->dm_segs[0], 1);
     if (data->map->dm_nsegs == 0) {
+        XYLog("could not map RX mbuf\n");
         mbuf_freem(m1);
         ifp->if_ierrors++;
         return;
@@ -3446,7 +3458,7 @@ iwn_tx(struct iwn_softc *sc, mbuf_t m, struct ieee80211_node *ni)
     uint16_t qos;
     u_int hdrlen;
     IOPhysicalSegment *seg;
-    IOPhysicalSegment segs[IWN_TFH_NUM_TBS - 1];
+    IOPhysicalSegment segs[IWN_MAX_SCATTER - 1];
     int nsegs = 0;
     uint8_t *ivp, tid, ridx, txant, type, subtype;
     int i, totlen, hasqos, error, pad;
@@ -3715,7 +3727,7 @@ iwn_tx(struct iwn_softc *sc, mbuf_t m, struct ieee80211_node *ni)
     }
     tx->flags = htole32(flags);
 
-    nsegs = data->map->cursor->getPhysicalSegmentsWithCoalesce(m, &segs[0], IWN_TFH_NUM_TBS - 1);
+    nsegs = data->map->cursor->getPhysicalSegmentsWithCoalesce(m, &segs[0], IWN_MAX_SCATTER - 1);
     if (nsegs == 0) {
         XYLog("%s: can't map mbuf (error %d)\n", DEVNAME(sc),
               nsegs);
@@ -3730,21 +3742,20 @@ iwn_tx(struct iwn_softc *sc, mbuf_t m, struct ieee80211_node *ni)
     data->ampdu_txmcs = ni->ni_txmcs; /* updated upon Tx interrupt */
 
     DPRINTFN(4, ("sending data: qid=%d idx=%d len=%d nsegs=%d\n",
-        ring->qid, ring->cur, mbuf_pkthdr_len(m), data->map->dm_nsegs));
+        ring->qid, ring->cur, mbuf_pkthdr_len(m), nsegs));
 
     /* Fill TX descriptor. */
-    desc->nsegs = 1 + data->map->dm_nsegs;
+    desc->nsegs = 1 + nsegs;
     /* First DMA segment is used by the TX command. */
     desc->segs[0].addr = htole32(IWN_LOADDR(data->cmd_paddr));
     desc->segs[0].len  = htole16(IWN_HIADDR(data->cmd_paddr) |
         (4 + sizeof (*tx) + hdrlen + pad) << 4);
     /* Other DMA segments are for data payload. */
-    for (i = 1; i <= data->map->dm_nsegs; i++) {
+    for (i = 0; i < nsegs; i++) {
         seg = &segs[i];
-        desc->segs[i].addr = htole32(IWN_LOADDR(seg->location));
-        desc->segs[i].len  = htole16(IWN_HIADDR(seg->location) |
+        desc->segs[i + 1].addr = htole32(IWN_LOADDR(seg->location));
+        desc->segs[i + 1].len  = htole16(IWN_HIADDR(seg->location) |
             seg->length << 4);
-        seg++;
 //        XYLog("DMA segments index=%d location=0x%llx length=%llu", i, seg->location, seg->length);
     }
 //    XYLog("----------end sending data------\n");
@@ -3851,6 +3862,7 @@ iwn_watchdog(struct _ifnet *ifp)
         if (--sc->sc_tx_timer == 0) {
             XYLog("%s: device timeout\n", sc->sc_dev.dv_xname);
             that->iwn_stop(ifp);
+            task_add(systq, &sc->init_task);
             ifp->if_oerrors++;
             return;
         }
@@ -3927,7 +3939,7 @@ iwn_ioctl(struct _ifnet *ifp, u_long cmd, caddr_t data)
 int ItlIwn::
 iwn_cmd(struct iwn_softc *sc, int code, const void *buf, int size, int async)
 {
-    XYLog("%s code=%d size=%d\n", __FUNCTION__, code, size);
+    DPRINTFN(2, ("%s code=%d size=%d\n", __FUNCTION__, code, size));
     struct iwn_ops *ops = &sc->ops;
     struct iwn_tx_ring *ring = &sc->txq[4];
     struct iwn_tx_desc *desc;

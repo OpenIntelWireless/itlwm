@@ -1,3 +1,16 @@
+/*
+ * Copyright (C) 2020  pigworlds
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
 /*    $OpenBSD: if_iwnreg.h,v 1.56 2019/07/29 10:50:08 stsp Exp $    */
 
 /*-
@@ -2091,5 +2104,3 @@ static const char * const iwn_fw_errmsg[] = {
 #define IWN_BARRIER_READ_WRITE(sc)                    \
     bus_space_barrier((sc)->sc_st, (sc)->sc_sh, 0, (sc)->sc_sz,    \
         BUS_SPACE_BARRIER_READ | BUS_SPACE_BARRIER_WRITE)
-
-#define IWN_TFH_NUM_TBS        25
