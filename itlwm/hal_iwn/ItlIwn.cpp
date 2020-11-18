@@ -525,6 +525,8 @@ iwn_attach(struct iwn_softc *sc, struct pci_attach_args *pa)
 
     /* IBSS channel undefined for now. */
     ic->ic_ibss_chan = &ic->ic_channels[0];
+    
+    ic->ic_max_rssi = IWN_MAX_DBM - IWN_MIN_DBM;
 
     ifp->controller = getController();
     ifp->if_snd = IOPacketQueue::withCapacity(getTxQueueSize());
@@ -2172,6 +2174,8 @@ iwn_rx_done(struct iwn_softc *sc, struct iwn_rx_desc *desc,
     }
 
     rssi = ops->get_rssi(stat);
+    rssi = (0 - IWN_MIN_DBM) + rssi;    /* normalize */
+    rssi = MIN(rssi, ic->ic_max_rssi);    /* clip to max. 100% */
 
     chan = stat->chan;
     if (chan > IEEE80211_CHAN_MAX)
