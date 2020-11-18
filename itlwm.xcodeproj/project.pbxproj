@@ -612,7 +612,6 @@
 		17FD7F40255E4EB300611406 /* iwn-2030 */ = {isa = PBXFileReference; lastKnownFileType = file; path = "iwn-2030"; sourceTree = "<group>"; };
 		17FD7F41255E4EB300611406 /* iwn-5150 */ = {isa = PBXFileReference; lastKnownFileType = file; path = "iwn-5150"; sourceTree = "<group>"; };
 		17FD7F42255E4EB300611406 /* iwn-2000 */ = {isa = PBXFileReference; lastKnownFileType = file; path = "iwn-2000"; sourceTree = "<group>"; };
-		17FD7F43255E4EB300611406 /* iwn-100 */ = {isa = PBXFileReference; lastKnownFileType = file; path = "iwn-100"; sourceTree = "<group>"; };
 		17FD7F44255E4EB300611406 /* iwn-4965 */ = {isa = PBXFileReference; lastKnownFileType = file; path = "iwn-4965"; sourceTree = "<group>"; };
 		35CBE6BA251CB89700435CBC /* AirportItlwm.kext */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AirportItlwm.kext; sourceTree = BUILT_PRODUCTS_DIR; };
 		35CBE724251CB8BF00435CBC /* AirportItlwm.kext */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AirportItlwm.kext; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -912,7 +911,6 @@
 				F8A68DDB2482242E007EB376 /* iwlwifi-cc-a0-48.ucode */,
 				F8A68DD72482224F007EB376 /* iwlwifi-Qu-b0-hr-b0-48.ucode */,
 				F8A68DD92482241E007EB376 /* iwlwifi-QuZ-a0-hr-b0-48.ucode */,
-				17FD7F43255E4EB300611406 /* iwn-100 */,
 				17FD7F3E255E4EB300611406 /* iwn-105 */,
 				17FD7F39255E4EB200611406 /* iwn-135 */,
 				17FD7F3B255E4EB200611406 /* iwn-1000 */,

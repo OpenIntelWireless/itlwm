@@ -203,8 +203,7 @@ is5GBandSupport()
 int ItlIwn::
 getTxNSS()
 {
-    // return !com.sc_nvm.sku_cap_mimo_disable ? (iwn_mimo_enabled(&com) ? 2 : 1) : 1;
-    return 1;
+    return com.ntxchains;
 }
 
 struct ieee80211com *ItlIwn::
@@ -737,38 +736,6 @@ iwn_radiotap_attach(struct iwn_softc *sc)
 }
 #endif
 
-//int ItlIwn::
-//iwn_detach(struct device *self, int flags)
-//{
-//    struct iwn_softc *sc = (struct iwn_softc *)self;
-//    struct _ifnet *ifp = &sc->sc_ic.ic_if;
-//    int qid;
-//
-//    timeout_del(&sc->calib_to);
-//    task_del(systq, &sc->init_task);
-//
-//    /* Uninstall interrupt handler. */
-//    if (sc->sc_ih != NULL)
-//        pci_intr_disestablish(sc->sc_pct, sc->sc_ih);
-//
-//    /* Free DMA resources. */
-//    iwn_free_rx_ring(sc, &sc->rxq);
-//    for (qid = 0; qid < sc->ntxqs; qid++)
-//        iwn_free_tx_ring(sc, &sc->txq[qid]);
-//    iwn_free_sched(sc);
-//    iwn_free_kw(sc);
-//    if (sc->ict != NULL)
-//        iwn_free_ict(sc);
-//    iwn_free_fwmem(sc);
-//
-//    bus_space_unmap(sc->sc_st, sc->sc_sh, sc->sc_sz);
-//
-//    ieee80211_ifdetach(ifp);
-//    if_detach(ifp);
-//
-//    return 0;
-//}
-
 int ItlIwn::
 iwn_activate(struct iwn_softc *sc, int act)
 {
@@ -776,30 +743,17 @@ iwn_activate(struct iwn_softc *sc, int act)
     struct _ifnet *ifp = &sc->sc_ic.ic_if;
 
     switch (act) {
-    case DVACT_SUSPEND:
+    case DVACT_QUIESCE:
         if (ifp->if_flags & IFF_RUNNING)
             iwn_stop(ifp);
         break;
     case DVACT_WAKEUP:
-//        iwn_wakeup(sc);
         task_add(systq, &sc->init_task);
         break;
     }
 
     return 0;
 }
-
-//void ItlIwn::
-//iwn_wakeup(struct iwn_softc *sc)
-//{
-//    pcireg_t reg;
-//
-//    /* Clear device-specific "PCI retry timeout" register (41h). */
-//    reg = pci_conf_read(sc->sc_pct, sc->sc_pcitag, 0x40);
-//    if (reg & 0xff00)
-//        pci_conf_write(sc->sc_pct, sc->sc_pcitag, 0x40, reg & ~0xff00);
-//    iwn_init_task(sc);
-//}
 
 void ItlIwn::
 iwn_init_task(void *arg1)
@@ -3267,8 +3221,7 @@ iwn_intr(OSObject *object, IOInterruptEventSource* sender, int count)
     struct _ifnet *ifp = &sc->sc_ic.ic_if;
     uint32_t r1, r2, tmp;
 
-    /* Disable interrupts. */
-    IWN_WRITE(sc, IWN_INT_MASK, 0);
+//    IWN_WRITE(sc, IWN_INT_MASK, 0);
 
     /* Read interrupts from ICT (fast) or from registers (slow). */
     if (sc->sc_flags & IWN_FLAG_USE_ICT) {
