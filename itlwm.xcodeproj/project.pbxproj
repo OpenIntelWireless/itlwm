@@ -2073,6 +2073,7 @@
 					"$(PROJECT_DIR)/itl80211/linux",
 					"$(PROJECT_DIR)/MacKernelSDK/Library/x86_64",
 				);
+				MACOSX_DEPLOYMENT_TARGET = 10.9;
 				MODULE_NAME = com.zxystd.itlwm;
 				PRODUCT_BUNDLE_IDENTIFIER = com.zxystd.itlwm;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -2099,6 +2100,7 @@
 					"$(PROJECT_DIR)/itl80211/linux",
 					"$(PROJECT_DIR)/MacKernelSDK/Library/x86_64",
 				);
+				MACOSX_DEPLOYMENT_TARGET = 10.9;
 				MODULE_NAME = com.zxystd.itlwm;
 				PRODUCT_BUNDLE_IDENTIFIER = com.zxystd.itlwm;
 				PRODUCT_NAME = "$(TARGET_NAME)";
