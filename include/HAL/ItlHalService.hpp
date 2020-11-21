@@ -69,6 +69,11 @@ private:
     IOEthernetController *controller;
     IOCommandGate *mainCommandGate;
     IOWorkLoop *mainWorkLoop;
+
+    lck_grp_t *inner_gp;
+    lck_grp_attr_t *inner_gp_attr;
+    lck_attr_t *inner_attr;
+    lck_mtx_t *inner_lock;
 };
 
 #endif /* ItlHalService_hpp */

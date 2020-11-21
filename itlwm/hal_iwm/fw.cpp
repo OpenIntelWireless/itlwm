@@ -914,7 +914,7 @@ int ItlIwm::
 iwm_load_firmware(struct iwm_softc *sc, enum iwm_ucode_type ucode_type)
 {
     XYLog("%s\n", __FUNCTION__);
-    int err, w;
+    int err/*, w*/;
     
     sc->sc_uc.uc_intr = 0;
     
@@ -927,9 +927,10 @@ iwm_load_firmware(struct iwm_softc *sc, enum iwm_ucode_type ucode_type)
         return err;
     
     /* wait for the firmware to load */
-    for (w = 0; !sc->sc_uc.uc_intr && w < 10; w++) {
-        err = tsleep_nsec(&sc->sc_uc, 0, "iwmuc", MSEC_TO_NSEC(100));
-    }
+//    for (w = 0; !sc->sc_uc.uc_intr && w < 10; w++) {
+//        err = tsleep_nsec(&sc->sc_uc, 0, "iwmuc", MSEC_TO_NSEC(100));
+//    }
+    err = tsleep_nsec(&sc->sc_uc, 0, "iwmuc", SEC_TO_NSEC(1));
     if (err || !sc->sc_uc.uc_ok)
         XYLog("%s: could not load firmware\n", DEVNAME(sc));
     

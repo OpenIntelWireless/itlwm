@@ -2973,8 +2973,8 @@ iwx_load_firmware(struct iwx_softc *sc)
 {
     XYLog("%s\n", __FUNCTION__);
     struct iwx_fw_sects *fws;
-    int err, w;
-    
+    int err/*, w*/;
+
     sc->sc_uc.uc_intr = 0;
     
     fws = &sc->sc_fw.fw_sects[IWX_UCODE_TYPE_REGULAR];
@@ -2985,9 +2985,10 @@ iwx_load_firmware(struct iwx_softc *sc)
     }
     
     /* wait for the firmware to load */
-    for (w = 0; !sc->sc_uc.uc_intr && w < 10; w++) {
-        err = tsleep_nsec(&sc->sc_uc, 0, "iwxuc", MSEC_TO_NSEC(100));
-    }
+//    for (w = 0; !sc->sc_uc.uc_intr && w < 10; w++) {
+//        err = tsleep_nsec(&sc->sc_uc, 0, "iwxuc", MSEC_TO_NSEC(100));
+//    }
+    err = tsleep_nsec(&sc->sc_uc, 0, "iwxuc", SEC_TO_NSEC(1));
     if (err || !sc->sc_uc.uc_ok)
         XYLog("%s: could not load firmware\n", DEVNAME(sc));
     
@@ -7386,7 +7387,7 @@ iwx_rx_pkt(struct iwx_softc *sc, struct iwx_rx_data *data, struct mbuf_list *ml)
             case IWX_ALIVE: {
                 struct iwx_alive_resp_v4 *resp4;
                 
-                DPRINTF(("%s: firmware alive, size=%d\n", __FUNCTION__, iwx_rx_packet_payload_len(pkt)));
+//                DPRINTF(("%s: firmware alive, size=%d\n", __FUNCTION__, iwx_rx_packet_payload_len(pkt)));
                 if (iwx_rx_packet_payload_len(pkt) == sizeof(*resp4)) {
                     SYNC_RESP_STRUCT(resp4, pkt, struct iwx_alive_resp_v4 *);
                     sc->sc_uc.uc_lmac_error_event_table[0] = le32toh(
@@ -7544,7 +7545,6 @@ iwx_rx_pkt(struct iwx_softc *sc, struct iwx_rx_data *data, struct mbuf_list *ml)
                  * messages. Just ignore them for now.
                  */
             case IWX_DEBUG_LOG_MSG:
-                XYLog("%s, pkt_len=%d\n", (char*)pkt->data, iwx_rx_packet_len(pkt));
                 break;
                 
             case IWX_MCAST_FILTER_CMD:

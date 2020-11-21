@@ -669,7 +669,7 @@ iwm_rx_pkt(struct iwm_softc *sc, struct iwm_rx_data *data, struct mbuf_list *ml)
                 struct iwm_alive_resp_v2 *resp2;
                 struct iwm_alive_resp_v3 *resp3;
 
-                XYLog("%s: firmware alive, size=%d\n", __FUNCTION__, iwm_rx_packet_payload_len(pkt));
+//                XYLog("%s: firmware alive, size=%d\n", __FUNCTION__, iwm_rx_packet_payload_len(pkt));
 
                 if (iwm_rx_packet_payload_len(pkt) == sizeof(*resp1)) {
                     SYNC_RESP_STRUCT(resp1, pkt, struct iwm_alive_resp_v1 *);
