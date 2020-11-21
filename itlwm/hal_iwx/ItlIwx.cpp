@@ -3131,11 +3131,15 @@ iwx_run_init_mvm_ucode(struct iwx_softc *sc, int readnvm)
         return err;
 
     /* Wait for the init complete notification from the firmware. */
-    while ((sc->sc_init_complete & wait_flags) != wait_flags) {
-        err = tsleep_nsec(&sc->sc_init_complete, 0, "iwxinit",
-            SEC_TO_NSEC(2));
-        if (err)
-            return err;
+//    while ((sc->sc_init_complete & wait_flags) != wait_flags) {
+//        err = tsleep_nsec(&sc->sc_init_complete, 0, "iwxinit",
+//            SEC_TO_NSEC(2));
+//        if (err)
+//            return err;
+//    }
+    err = tsleep_nsec(&sc->sc_init_complete, 0, "iwxinit", SEC_TO_NSEC(2));
+    if (err) {
+        return err;
     }
 
     if (readnvm) {
