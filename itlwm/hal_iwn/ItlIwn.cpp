@@ -489,6 +489,7 @@ iwn_attach(struct iwn_softc *sc, struct pci_attach_args *pa)
         ic->ic_caps |= (IEEE80211_C_QOS | IEEE80211_C_TX_AMPDU);
         /* Set HT capabilities. */
         ic->ic_htcaps = IEEE80211_HTCAP_SGI20;
+        ic->ic_htcaps |= (IEEE80211_HTCAP_SMPS_DIS << IEEE80211_HTCAP_SMPS_SHIFT);
 #ifdef notyet
         ic->ic_htcaps |=
 #if IWN_RBUF_SIZE == 8192
@@ -513,14 +514,15 @@ iwn_attach(struct iwn_softc *sc, struct pci_attach_args *pa)
             ieee80211_std_rateset_11a;
     }
     if (sc->sc_flags & IWN_FLAG_HAS_11N) {
+        /* TX is supported with the same MCS as RX. */
+        ic->ic_tx_mcs_set = IEEE80211_TX_MCS_SET_DEFINED;
+        
         /* Set supported HT rates. */
         ic->ic_sup_mcs[0] = 0xff;        /* MCS 0-7 */
-#ifdef notyet
         if (sc->nrxchains > 1)
             ic->ic_sup_mcs[1] = 0xff;    /* MCS 8-15 */
         if (sc->nrxchains > 2)
             ic->ic_sup_mcs[2] = 0xff;    /* MCS 16-23 */
-#endif
     }
 
     /* IBSS channel undefined for now. */
