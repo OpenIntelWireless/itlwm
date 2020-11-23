@@ -3738,8 +3738,10 @@ iwn_tx(struct iwn_softc *sc, mbuf_t m, struct ieee80211_node *ni)
     IWN_WRITE(sc, IWN_HBUS_TARG_WRPTR, ring->qid << 8 | ring->cur);
 
     /* Mark TX ring as full if we reach a certain threshold. */
-    if (++ring->queued > IWN_TX_RING_HIMARK)
+    if (++ring->queued > IWN_TX_RING_HIMARK) {
+        XYLog("%s sc->qfullmsk is FULL ring->cur=%d ring->queued=%d\n", __FUNCTION__, ring->cur, ring->queued);
         sc->qfullmsk |= 1 << ring->qid;
+    }
 
     return 0;
 }
