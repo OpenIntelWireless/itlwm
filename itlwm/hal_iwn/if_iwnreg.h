@@ -2104,3 +2104,6 @@ static const char * const iwn_fw_errmsg[] = {
 #define IWN_BARRIER_READ_WRITE(sc)                    \
     bus_space_barrier((sc)->sc_st, (sc)->sc_sh, 0, (sc)->sc_sz,    \
         BUS_SPACE_BARRIER_READ | BUS_SPACE_BARRIER_WRITE)
+
+#define IWN_MIN_DBM    -100
+#define IWN_MAX_DBM    -33    /* realistic guess */
