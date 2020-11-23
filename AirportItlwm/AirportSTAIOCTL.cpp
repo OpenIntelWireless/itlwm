@@ -722,11 +722,13 @@ setPOWER(OSObject *object,
     if (pd->num_radios > 0) {
         bool isRunning = (fHalService->get80211Controller()->ic_ac.ac_if.if_flags & (IFF_UP | IFF_RUNNING)) ==
         (IFF_UP | IFF_RUNNING);
-        if (pd->power_state[0] == 0 && isRunning) {
-            disable(fNetIf);
+        if (pd->power_state[0] == 0) {
+            if (isRunning) {
+                disableAdapter(fNetIf);
+            }
         } else {
             if (!isRunning) {
-                enable(fNetIf);
+                enableAdapter(fNetIf);
             }
         }
         power_state = (pd->power_state[0]);

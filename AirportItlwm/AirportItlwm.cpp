@@ -519,6 +519,7 @@ void AirportItlwm::stop(IOService *provider)
     XYLog("%s\n", __FUNCTION__);
     struct _ifnet *ifp = &fHalService->get80211Controller()->ic_ac.ac_if;
     super::stop(provider);
+    disableAdapter(fNetIf);
     setLinkStatus(kIONetworkLinkValid);
     fHalService->detach(pciNub);
     detachInterface(fNetIf, true);
@@ -623,24 +624,33 @@ void AirportItlwm::free()
 
 IOReturn AirportItlwm::enable(IONetworkInterface *netif)
 {
-    XYLog("%s\n", __FUNCTION__);
+    XYLog("%s\n", __PRETTY_FUNCTION__);
     super::enable(netif);
     _fCommandGate->enable();
+    return kIOReturnSuccess;
+}
+
+IOReturn AirportItlwm::disable(IONetworkInterface *netif)
+{
+    XYLog("%s\n", __PRETTY_FUNCTION__);
+    super::disable(netif);
+    setLinkStatus(kIONetworkLinkValid);
+    return kIOReturnSuccess;
+}
+
+IOReturn AirportItlwm::enableAdapter(IONetworkInterface *netif)
+{
     fHalService->enable(netif);
     watchdogTimer->setTimeoutMS(kWatchDogTimerPeriod);
     watchdogTimer->enable();
     return kIOReturnSuccess;
 }
 
-IOReturn AirportItlwm::disable(IONetworkInterface *netif)
+void AirportItlwm::disableAdapter(IONetworkInterface *netif)
 {
-    XYLog("%s\n", __FUNCTION__);
-    super::disable(netif);
-    fHalService->disable(netif);
     watchdogTimer->cancelTimeout();
     watchdogTimer->disable();
-    setLinkStatus(kIONetworkLinkValid);
-    return kIOReturnSuccess;
+    fHalService->disable(netif);
 }
 
 IOReturn AirportItlwm::getHardwareAddress(IOEthernetAddress *addrP) {

@@ -90,6 +90,8 @@ enable(IONetworkInterface *netif)
 IOReturn ItlIwm::
 disable(IONetworkInterface *netif)
 {
+    struct _ifnet *ifp = &com.sc_ic.ic_ac.ac_if;
+    ifp->if_flags &= ~IFF_UP;
     iwm_activate(&com, DVACT_QUIESCE);
     return kIOReturnSuccess;
 }

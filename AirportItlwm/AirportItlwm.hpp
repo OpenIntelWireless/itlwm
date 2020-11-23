@@ -99,6 +99,8 @@ public:
     bool initPCIPowerManagment(IOPCIDevice *provider);
     static IOReturn tsleepHandler(OSObject* owner, void* arg0 = 0, void* arg1 = 0, void* arg2 = 0, void* arg3 = 0);
     static void eventHandler(struct ieee80211com *, int, void *);
+    IOReturn enableAdapter(IONetworkInterface *netif);
+    void disableAdapter(IONetworkInterface *netif);
     
     //IO80211
     virtual IOReturn getHardwareAddressForInterface(IO80211Interface* netif,
