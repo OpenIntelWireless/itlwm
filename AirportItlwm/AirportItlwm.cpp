@@ -28,6 +28,7 @@ bool AirportItlwm::init(OSDictionary *properties)
 {
     bool ret = super::init(properties);
     awdlSyncEnable = true;
+    power_state = 0;
     return ret;
 }
 
@@ -627,6 +628,9 @@ IOReturn AirportItlwm::enable(IONetworkInterface *netif)
     XYLog("%s\n", __PRETTY_FUNCTION__);
     super::enable(netif);
     _fCommandGate->enable();
+    if (power_state) {
+        enableAdapter(netif);
+    }
     return kIOReturnSuccess;
 }
 
