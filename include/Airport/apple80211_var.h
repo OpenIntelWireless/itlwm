@@ -144,12 +144,18 @@ enum apple80211_authtype_upper
     APPLE80211_AUTHTYPE_WPA_PSK      = 1 << 1,    //    WPA PSK
     APPLE80211_AUTHTYPE_WPA2         = 1 << 2,    //    WPA2
     APPLE80211_AUTHTYPE_WPA2_PSK     = 1 << 3,    //    WPA2 PSK
-    APPLE80211_AUTHTYPE_LEAP         = 1 << 4,    //    LEAP
-    APPLE80211_AUTHTYPE_8021X        = 1 << 5,    //    802.1x
-    APPLE80211_AUTHTYPE_WPS          = 1 << 6,    //    WiFi Protected Setup
-    APPLE80211_AUTHTYPE_SHA256_PSK   = 1 << 7,
-    APPLE80211_AUTHTYPE_SHA256_8021X = 1 << 8,
-    APPLE80211_AUTHTYPE_WPA3_SAE     = 1 << 9
+    APPLE80211_AUTHTYPE_FT_PSK       = 1 << 4,    //
+    APPLE80211_AUTHTYPE_LEAP         = 1 << 5,    //    LEAP
+    APPLE80211_AUTHTYPE_WEP_8021X    = 1 << 6,    //    WEP 802.1x
+    APPLE80211_AUTHTYPE_FT_8021X     = 1 << 7,    //    802.1x
+    APPLE80211_AUTHTYPE_WPS          = 1 << 8,    //    WiFi Protected Setup
+    APPLE80211_AUTHTYPE_WAPI         = 1 << 9,
+    APPLE80211_AUTHTYPE_SHA256_PSK   = 1 << 10,
+    APPLE80211_AUTHTYPE_SHA256_8021X = 1 << 11,
+    APPLE80211_AUTHTYPE_WPA3_SAE     = 1 << 12,
+    APPLE80211_AUTHTYPE_WPA3_FT_SAE  = 1 << 13,
+    APPLE80211_AUTHTYPE_WPA3_ENTERPRISE = 1 << 14,
+    APPLE80211_AUTHTYPE_WPA3_FT_ENTERPRISE = 1 << 15,
 };
 
 // Unify association status code and deauth reason codes into a single enum describing
