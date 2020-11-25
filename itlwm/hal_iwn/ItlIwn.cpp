@@ -796,6 +796,8 @@ iwn_nic_lock(struct iwn_softc *sc)
             return 0;
         DELAY(10);
     }
+    
+    XYLog("%s acquiring device failed.", __FUNCTION__);
     return ETIMEDOUT;
 }
 
@@ -2047,7 +2049,7 @@ iwn_rx_done(struct iwn_softc *sc, struct iwn_rx_desc *desc,
     /* Discard frames with a bad FCS early. */
     if ((flags & IWN_RX_NOERROR) != IWN_RX_NOERROR) {
         DPRINTFN(2, ("RX flags error %x\n", flags));
-        ifp->if_ierrors++;
+        ifp->netStat->inputErrors++;
         return;
     }
     /* Discard frames that are too short. */
@@ -2056,13 +2058,13 @@ iwn_rx_done(struct iwn_softc *sc, struct iwn_rx_desc *desc,
         if (len < sizeof (struct ieee80211_frame_cts)) {
             DPRINTF(("frame too short: %d\n", len));
             ic->ic_stats.is_rx_tooshort++;
-            ifp->if_ierrors++;
+            ifp->netStat->inputErrors++;
             return;
         }
     } else if (len < sizeof (*wh)) {
         DPRINTF(("frame too short: %d\n", len));
         ic->ic_stats.is_rx_tooshort++;
-        ifp->if_ierrors++;
+        ifp->netStat->inputErrors++;
         return;
     }
     
@@ -2070,21 +2072,21 @@ iwn_rx_done(struct iwn_softc *sc, struct iwn_rx_desc *desc,
     if (m1 == NULL) {
         XYLog("could not allocate RX mbuf\n");
         ic->ic_stats.is_rx_nombuf++;
-        ifp->if_ierrors++;
+        ifp->netStat->inputErrors++;
         return;
     }
     data->map->dm_nsegs = data->map->cursor->getPhysicalSegments(m1, &data->map->dm_segs[0], 1);
     if (data->map->dm_nsegs == 0) {
         XYLog("could not map RX mbuf\n");
         mbuf_freem(m1);
-        ifp->if_ierrors++;
+        ifp->netStat->inputErrors++;
         return;
     }
     
 //    m1 = MCLGETI(NULL, M_DONTWAIT, NULL, IWN_RBUF_SIZE);
 //    if (m1 == NULL) {
 //        ic->ic_stats.is_rx_nombuf++;
-//        ifp->if_ierrors++;
+//        ifp->netStat->inputErrors++;
 //        return;
 //    }
 //    bus_dmamap_unload(sc->sc_dmat, data->map);
@@ -2108,7 +2110,7 @@ iwn_rx_done(struct iwn_softc *sc, struct iwn_rx_desc *desc,
 //        bus_dmamap_sync(sc->sc_dmat, ring->desc_dma.map,
 //            ring->cur * sizeof (uint32_t), sizeof (uint32_t),
 //            BUS_DMASYNC_PREWRITE);
-//        ifp->if_ierrors++;
+//        ifp->netStat->inputErrors++;
 //        return;
 //    }
 
@@ -2136,7 +2138,7 @@ iwn_rx_done(struct iwn_softc *sc, struct iwn_rx_desc *desc,
     if (len < sizeof (*wh) &&
        (wh->i_fc[0] & IEEE80211_FC0_TYPE_MASK) != IEEE80211_FC0_TYPE_CTL) {
         ic->ic_stats.is_rx_tooshort++;
-        ifp->if_ierrors++;
+        ifp->netStat->inputErrors++;
         mbuf_freem(m);
         return;
     }
@@ -2150,7 +2152,7 @@ iwn_rx_done(struct iwn_softc *sc, struct iwn_rx_desc *desc,
         ni->ni_pairwise_key.k_cipher == IEEE80211_CIPHER_CCMP) {
         if ((flags & IWN_RX_CIPHER_MASK) != IWN_RX_CIPHER_CCMP) {
             ic->ic_stats.is_ccmp_dec_errs++;
-            ifp->if_ierrors++;
+            ifp->netStat->inputErrors++;
             mbuf_freem(m);
             ieee80211_release_node(ic, ni);
             return;
@@ -2163,13 +2165,13 @@ iwn_rx_done(struct iwn_softc *sc, struct iwn_rx_desc *desc,
              (flags & IWN_RX_DECRYPT_MASK) != IWN_RX_DECRYPT_OK)) {
             DPRINTF(("CCMP decryption failed 0x%x\n", flags));
             ic->ic_stats.is_ccmp_dec_errs++;
-            ifp->if_ierrors++;
+            ifp->netStat->inputErrors++;
             mbuf_freem(m);
             ieee80211_release_node(ic, ni);
             return;
         }
         if (iwn_ccmp_decap(sc, m, ni) != 0) {
-            ifp->if_ierrors++;
+            ifp->netStat->inputErrors++;
             mbuf_freem(m);
             ieee80211_release_node(ic, ni);
             return;
@@ -2594,6 +2596,7 @@ iwn_ampdu_tx_done(struct iwn_softc *sc, struct iwn_tx_ring *txq,
     struct iwn_txagg_status *agg_status)
 {
     struct ieee80211com *ic = &sc->sc_ic;
+    struct _ifnet *ifp = &ic->ic_if;
     int tid = desc->qid - sc->first_agg_txq;
     struct iwn_tx_data *txdata = &txq->data[desc->idx];
     struct ieee80211_node *ni = txdata->ni;
@@ -2648,8 +2651,11 @@ iwn_ampdu_tx_done(struct iwn_softc *sc, struct iwn_tx_ring *txq,
 
             if (rflags & IWN_RFLAG_MCS)
                 txdata->ampdu_txmcs = rate;
-            if (txstatus != IWN_AGG_TX_STATE_TRANSMITTED)
+            if (txstatus != IWN_AGG_TX_STATE_TRANSMITTED) {
                 txdata->txfail++;
+                ifp->netStat->outputErrors++;
+                XYLog("%s %d OUTPUT_ERROR status=%d\n", __FUNCTION__, __LINE__, txstatus);
+            }
             if (trycnt > 1)
                 txdata->retries++;
 
@@ -2706,8 +2712,9 @@ iwn_ampdu_tx_done(struct iwn_softc *sc, struct iwn_tx_ring *txq,
         iwn_mira_choose(sc, ni);
     }
 
-    if (txfail)
+    if (txfail) {
         ieee80211_tx_compressed_bar(ic, ni, tid, ssn);
+    }
     else if (!SEQ_LT(seq, ba->ba_winstart)) {
         /*
          * Move window forward if SEQ lies beyond end of window,
@@ -2768,14 +2775,12 @@ iwn4965_tx_done(struct iwn_softc *sc, struct iwn_rx_desc *desc,
         stat->nframes * sizeof(stat->stat) > len)
         return;
 
-    if (desc->qid < sc->first_agg_txq) {
+   if (desc->qid < sc->first_agg_txq) {
         /* XXX 4965 does not report byte count */
         struct iwn_tx_data *txdata = &ring->data[desc->idx];
         uint16_t framelen = txdata->totlen + IEEE80211_CRC_LEN;
-        int txfail = (status != IWN_TX_STATUS_SUCCESS &&
-            status != IWN_TX_STATUS_DIRECT_DONE);
 
-        that->iwn_tx_done(sc, desc, stat->ackfailcnt, stat->rate, txfail,
+        that->iwn_tx_done(sc, desc, stat->ackfailcnt, stat->rate, status,
             desc->qid, framelen);
     } else {
         memcpy(&ssn, &stat->stat.status + stat->nframes, sizeof(ssn));
@@ -2818,13 +2823,10 @@ iwn5000_tx_done(struct iwn_softc *sc, struct iwn_rx_desc *desc,
 
     /* If this was not an aggregated frame, complete it now. */
     if (desc->qid < sc->first_agg_txq) {
-        int txfail = (status != IWN_TX_STATUS_SUCCESS &&
-            status != IWN_TX_STATUS_DIRECT_DONE);
-
         /* Reset TX scheduler slot. */
         iwn5000_reset_sched(sc, desc->qid, desc->idx);
 
-        that->iwn_tx_done(sc, desc, stat->ackfailcnt, stat->rate, txfail,
+        that->iwn_tx_done(sc, desc, stat->ackfailcnt, stat->rate, status,
             desc->qid, letoh16(stat->len));
     } else {
         memcpy(&ssn, &stat->stat.status + stat->nframes, sizeof(ssn));
@@ -2876,13 +2878,15 @@ iwn_clear_oactive(struct iwn_softc *sc, struct iwn_tx_ring *ring)
  */
 void ItlIwn::
 iwn_tx_done(struct iwn_softc *sc, struct iwn_rx_desc *desc,
-    uint8_t ackfailcnt, uint8_t rate, int txfail, int qid, uint16_t len)
+    uint8_t ackfailcnt, uint8_t rate, int status, int qid, uint16_t len)
 {
     struct ieee80211com *ic = &sc->sc_ic;
     struct _ifnet *ifp = &ic->ic_if;
     struct iwn_tx_ring *ring = &sc->txq[qid];
     struct iwn_tx_data *data = &ring->data[desc->idx];
     struct iwn_node *wn = (struct iwn_node *)data->ni;
+    int txfail = (status != IWN_TX_STATUS_SUCCESS &&
+        status != IWN_TX_STATUS_DIRECT_DONE);
 
     if (data->ni == NULL)
         return;
@@ -2907,8 +2911,10 @@ iwn_tx_done(struct iwn_softc *sc, struct iwn_rx_desc *desc,
         if (txfail)
             wn->amn.amn_retrycnt++;
     }
-    if (txfail)
-        ifp->if_oerrors++;
+    if (txfail) {
+        XYLog("%s %d OUTPUT_ERROR status=%d\n", __FUNCTION__, __LINE__, status);
+        ifp->netStat->outputErrors++;
+    }
 
     iwn_tx_done_free_txdata(sc, data);
 
@@ -3802,9 +3808,10 @@ sendit:
 #endif
         if (that->iwn_tx(sc, m, ni) != 0) {
             ieee80211_release_node(ic, ni);
-            ifp->if_oerrors++;
+            ifp->netStat->outputErrors++;
             continue;
         }
+        ifp->netStat->outputPackets++;
 
         sc->sc_tx_timer = 5;
         ifp->if_timer = 1;
@@ -3826,7 +3833,7 @@ iwn_watchdog(struct _ifnet *ifp)
             XYLog("%s: device timeout\n", sc->sc_dev.dv_xname);
             that->iwn_stop(ifp);
             task_add(systq, &sc->init_task);
-            ifp->if_oerrors++;
+            ifp->netStat->outputErrors++;
             return;
         }
         ifp->if_timer = 1;
