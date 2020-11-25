@@ -3,7 +3,7 @@
 #ifndef kernel_h
 #define kernel_h
 
-#include "types.h"
+#include <linux/types.h>
 
 #include <sys/errno.h>
 #include <libkern/OSTypes.h>

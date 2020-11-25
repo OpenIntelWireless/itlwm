@@ -103,10 +103,10 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#include "ieee80211_var.h"
-#include "ieee80211_amrr.h"
-#include "ieee80211_mira.h"
-#include "ieee80211_radiotap.h"
+#include <net80211/ieee80211_var.h>
+#include <net80211/ieee80211_amrr.h>
+#include <net80211/ieee80211_mira.h>
+#include <net80211/ieee80211_radiotap.h>
 
 #include <IOKit/network/IOMbufMemoryCursor.h>
 #include <IOKit/IODMACommand.h>

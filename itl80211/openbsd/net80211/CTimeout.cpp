@@ -20,7 +20,7 @@
 * GNU General Public License for more details.
 */
 
-#include "CTimeout.hpp"
+#include <sys/CTimeout.hpp>
 
 void CTimeout::timeoutOccurred(OSObject* owner, IOTimerEventSource* timer)
 {

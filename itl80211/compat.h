@@ -29,9 +29,9 @@
 #include <IOKit/IOBufferMemoryDescriptor.h>
 #include <sys/kpi_mbuf.h>
 #include <IOKit/network/IOMbufMemoryCursor.h>
-#include "ieee80211_var.h"
-#include "ieee80211_mira.h"
-#include "ieee80211_amrr.h"
+#include <net80211/ieee80211_var.h>
+#include <net80211/ieee80211_mira.h>
+#include <net80211/ieee80211_amrr.h>
 #include <sys/pcireg.h>
 
 // the following isn't actually used

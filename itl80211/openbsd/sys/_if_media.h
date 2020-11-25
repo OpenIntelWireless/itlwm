@@ -71,7 +71,7 @@
 #include <sys/queue.h>
 
 #include <IOKit/IOLib.h>
-#include "types.h"
+#include <linux/types.h>
 
 #define _KERNEL
 

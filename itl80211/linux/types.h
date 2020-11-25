@@ -25,7 +25,7 @@
 
 #include <IOKit/IOTypes.h>
 #include <libkern/OSAtomic.h>
-#include "bitfield.h"
+#include <linux/bitfield.h>
 
 #define local_bh_disable()
 #define local_bh_enable()
@@ -80,7 +80,7 @@
 #endif
 
 #ifndef unlikely
-#include "kernel.h"
+#include <linux/kernel.h>
 #endif
 
 #ifndef WARN_ON_ONCE

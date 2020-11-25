@@ -11,14 +11,14 @@
 * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 * GNU General Public License for more details.
 */
-#include "compat.h"
+#include <compat.h>
 #include "itlhdr.h"
-#include "kernel.h"
+#include <linux/kernel.h>
 
 #include "itlwm_interface.hpp"
 #include <IOKit/network/IOEthernetController.h>
 #include <IOKit/IOWorkLoop.h>
-#include "IOKit/network/IOGatedOutputQueue.h"
+#include <IOKit/network/IOGatedOutputQueue.h>
 #include <libkern/c++/OSString.h>
 #include <IOKit/IOService.h>
 #include <IOKit/pci/IOPCIDevice.h>

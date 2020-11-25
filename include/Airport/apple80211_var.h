@@ -118,6 +118,11 @@ enum apple80211_cipher_type {
     APPLE80211_CIPHER_AES_CCM     = 5,        // AES (CCM)
     APPLE80211_CIPHER_PMK         = 6,        // PMK
     APPLE80211_CIPHER_PMKSA       = 7,        // PMK obtained from pre-authentication
+    APPLE80211_CIPHER_SMS4        = 8,
+    APPLE80211_CIPHER_MSK         = 9,
+    APPLE80211_CIPHER_PWD         = 10,
+    APPLE80211_CIPHER_AES_GCM     = 11,
+    APPLE80211_CIPHER_AES_GCM256  = 12,
 };
 
 enum apple80211_cipher_key_type

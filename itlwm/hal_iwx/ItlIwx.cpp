@@ -107,10 +107,10 @@
  */
 
 #include "ItlIwx.hpp"
-#include "types.h"
-#include "kernel.h"
-#include "FwData.h"
-#include "sha1.h"
+#include <linux/types.h>
+#include <linux/kernel.h>
+#include <FwData.h>
+#include <crypto/sha1.h>
 
 #include <IOKit/IOInterruptController.h>
 #include <IOKit/IOCommandGate.h>

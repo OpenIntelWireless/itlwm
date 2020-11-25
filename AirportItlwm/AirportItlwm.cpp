@@ -13,7 +13,7 @@
 */
 #include "AirportItlwm.hpp"
 
-#include "sha1.h"
+#include <crypto/sha1.h>
 #include <net80211/ieee80211_priv.h>
 #include <net80211/ieee80211_var.h>
 

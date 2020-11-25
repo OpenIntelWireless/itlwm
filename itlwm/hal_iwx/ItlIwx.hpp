@@ -107,8 +107,8 @@
  */
 #ifndef _ITLWMX_H
 #define _ITLWMX_H
-#include "compat.h"
-#include "kernel.h"
+#include <compat.h>
+#include <linux/kernel.h>
 
 #include <sys/param.h>
 #include <sys/conf.h>
@@ -128,7 +128,7 @@
 
 #include <IOKit/network/IOEthernetController.h>
 #include <IOKit/IOWorkLoop.h>
-#include "IOKit/network/IOGatedOutputQueue.h"
+#include <IOKit/network/IOGatedOutputQueue.h>
 #include <libkern/c++/OSString.h>
 #include <IOKit/IOService.h>
 #include <IOKit/pci/IOPCIDevice.h>

@@ -120,7 +120,7 @@
  */
 
 #include "ItlIwm.hpp"
-#include "FwData.h"
+#include <FwData.h>
 
 int ItlIwm::
 iwm_is_mimo_ht_plcp(uint8_t ht_plcp)

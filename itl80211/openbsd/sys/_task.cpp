@@ -20,7 +20,7 @@
 * GNU General Public License for more details.
 */
 
-#include "_task.h"
+#include <sys/_task.h>
 #include <sys/proc.h>
 
 #include <IOKit/IOLib.h>
