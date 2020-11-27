@@ -4137,14 +4137,16 @@ iwn_add_broadcast_node(struct iwn_softc *sc, int async, int ridx)
 void ItlIwn::
 iwn_updateedca(struct ieee80211com *ic)
 {
+    XYLog("%s\n", __FUNCTION__);
+
 #define IWN_EXP2(x)    ((1 << (x)) - 1)    /* CWmin = 2^ECWmin - 1 */
     struct iwn_softc *sc = (struct iwn_softc *)ic->ic_softc;
+    struct ieee80211_node *ni = ic->ic_bss;
     ItlIwn *that = container_of(sc, ItlIwn, com);
     struct iwn_edca_params cmd;
     int aci;
 
     memset(&cmd, 0, sizeof cmd);
-    cmd.flags = htole32(IWN_EDCA_UPDATE);
     for (aci = 0; aci < EDCA_NUM_AC; aci++) {
         const struct ieee80211_edca_ac_params *ac =
             &ic->ic_edca_ac[aci];
@@ -4154,6 +4156,12 @@ iwn_updateedca(struct ieee80211com *ic)
         cmd.ac[aci].txoplimit =
             htole16(IEEE80211_TXOP_TO_US(ac->ac_txoplimit));
     }
+    if (ni->ni_flags & IEEE80211_NODE_QOS)
+        cmd.flags |= htole32(IWN_EDCA_UPDATE);
+
+    if (ni->ni_flags & IEEE80211_NODE_HT)
+        cmd.flags |= htole32(IWN_EDCA_FLG_TGN);
+
     (void)that->iwn_cmd(sc, IWN_CMD_EDCA_PARAMS, &cmd, sizeof cmd, 1);
 #undef IWN_EXP2
 }

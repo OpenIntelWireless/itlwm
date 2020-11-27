@@ -575,6 +575,7 @@ struct iwn_assoc {
 struct iwn_edca_params {
     uint32_t    flags;
 #define IWN_EDCA_UPDATE    (1 << 0)
+#define IWN_EDCA_FLG_TGN    (1 << 1)
 #define IWN_EDCA_TXOP    (1 << 4)
 
     struct {
