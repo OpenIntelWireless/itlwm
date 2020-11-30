@@ -4078,7 +4078,8 @@ iwn_set_link_quality(struct iwn_softc *sc, struct ieee80211_node *ni)
     linkq.ampdu_limit = htole16(4000);    /* 4ms */
 
     if (ic->ic_flags & IEEE80211_F_USEPROT)
-        linkq.flags |= IWN_TX_NEED_RTS;
+        if (sc->hw_type != IWN_HW_REV_TYPE_4965)
+            linkq.flags |= IWN_LINK_QUAL_FLAGS_SET_STA_TLC_RTS;
     
     if ((ni->ni_flags & IEEE80211_NODE_HT) &&
         ieee80211_node_supports_ht_sgi20(ni)) {

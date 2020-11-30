@@ -740,6 +740,7 @@ struct iwn_cmd_link_quality {
     uint8_t        reserved1;
     uint16_t    ctl;
     uint8_t        flags;
+#define IWN_LINK_QUAL_FLAGS_SET_STA_TLC_RTS    (1 << 0)
     uint8_t        mimo;
     uint8_t        antmsk_1stream;
     uint8_t        antmsk_2stream;
