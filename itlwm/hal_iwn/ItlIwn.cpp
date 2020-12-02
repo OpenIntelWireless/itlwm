@@ -3657,18 +3657,18 @@ iwn_tx(struct iwn_softc *sc, mbuf_t m, struct ieee80211_node *ni)
         tx->rflags = IWN_RFLAG_MCS;
         if (ni->ni_htcaps & IEEE80211_HTCAP_SGI20)
             tx->rflags |= IWN_RFLAG_SGI;
+        if (iwn_is_mimo_ht_plcp(rinfo->ht_plcp))
+            tx->rflags |= IWN_RFLAG_ANT(sc->txchainmask);
+        else
+            tx->rflags |= IWN_RFLAG_ANT(IWN_LSB(sc->txchainmask));
     }
     else {
         tx->plcp = rinfo->plcp;
         if (IWN_RIDX_IS_CCK(ridx))
             tx->rflags = IWN_RFLAG_CCK;
+        else
+            tx->rflags = 0;
     }
-    
-    if (iwn_is_mimo_ht_plcp(rinfo->ht_plcp))
-        tx->rflags |= IWN_RFLAG_ANT(sc->txchainmask);
-    else
-        tx->rflags |= IWN_RFLAG_ANT(IWN_LSB(sc->txchainmask));
-
     /*
      * Keep the Tx rate constant while mira is probing, or if this is
      * an aggregation queue in which case a fixed Tx rate works around
