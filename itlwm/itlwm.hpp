@@ -46,19 +46,19 @@ class itlwm : public IOEthernetController {
 public:
     
     //kext
-    bool init(OSDictionary *properties) override;
-    void free() override;
-    IOService* probe(IOService* provider, SInt32* score) override;
-    bool start(IOService *provider) override;
-    void stop(IOService *provider) override;
-    IOReturn getHardwareAddress(IOEthernetAddress* addrP) override;
-    IOReturn enable(IONetworkInterface *netif) override;
-    IOReturn disable(IONetworkInterface *netif) override;
-    UInt32 outputPacket(mbuf_t, void * param) override;
-    IOReturn setPromiscuousMode(IOEnetPromiscuousMode mode) override;
-    IOReturn setMulticastMode(IOEnetMulticastMode mode) override;
-    IOReturn setMulticastList(IOEthernetAddress* addr, UInt32 len) override;
-    bool configureInterface(IONetworkInterface *netif) override;
+    virtual bool init(OSDictionary *properties) override;
+    virtual void free() override;
+    virtual IOService* probe(IOService* provider, SInt32* score) override;
+    virtual bool start(IOService *provider) override;
+    virtual void stop(IOService *provider) override;
+    virtual IOReturn getHardwareAddress(IOEthernetAddress* addrP) override;
+    virtual IOReturn enable(IONetworkInterface *netif) override;
+    virtual IOReturn disable(IONetworkInterface *netif) override;
+    virtual UInt32 outputPacket(mbuf_t, void * param) override;
+    virtual IOReturn setPromiscuousMode(IOEnetPromiscuousMode mode) override;
+    virtual IOReturn setMulticastMode(IOEnetMulticastMode mode) override;
+    virtual IOReturn setMulticastList(IOEthernetAddress* addr, UInt32 len) override;
+    virtual bool configureInterface(IONetworkInterface *netif) override;
     virtual bool createWorkLoop() override;
     virtual IOWorkLoop* getWorkLoop() const override;
     virtual const OSString * newVendorString() const override;
@@ -73,6 +73,13 @@ public:
 #ifdef __PRIVATE_SPI__
     virtual IOReturn outputStart(IONetworkInterface *interface, IOOptionBits options) override;
 #endif
+    virtual IOReturn getPacketFilters(const OSSymbol *group, UInt32 *filters) const override;
+    virtual IOReturn selectMedium(const IONetworkMedium *medium) override;
+    virtual UInt32 getFeatures() const override;
+    virtual IOReturn registerWithPolicyMaker( IOService * policyMaker ) override;
+    virtual IOReturn setPowerState( unsigned long powerStateOrdinal,
+                                    IOService *   policyMaker) override;
+    virtual IOReturn setWakeOnMagicPacket( bool active ) override;
     
     void releaseAll();
     void joinSSID(const char *ssid, const char *pwd);
@@ -85,22 +92,11 @@ public:
     IOEthernetInterface *getNetworkInterface();
     
     static IOReturn tsleepHandler(OSObject* owner, void* arg0 = 0, void* arg1 = 0, void* arg2 = 0, void* arg3 = 0);
-    
-    //-----------------------------------------------------------------------
-    // Power management support.
-    //-----------------------------------------------------------------------
-    virtual IOReturn registerWithPolicyMaker( IOService * policyMaker ) override;
-    virtual IOReturn setPowerState( unsigned long powerStateOrdinal,
-                                    IOService *   policyMaker) override;
-    virtual IOReturn setWakeOnMagicPacket( bool active ) override;
     void setPowerStateOff(void);
     void setPowerStateOn(void);
     void unregistPM();
     
     bool createMediumTables(const IONetworkMedium **primary);
-    virtual IOReturn getPacketFilters(const OSSymbol *group, UInt32 *filters) const override;
-    virtual IOReturn selectMedium(const IONetworkMedium *medium) override;
-    virtual UInt32 getFeatures() const override;
     
 public:
     IOInterruptEventSource* fInterrupt;

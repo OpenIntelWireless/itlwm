@@ -43,4 +43,10 @@ ifq_is_oactive(IOPacketQueue **ifq)
     return (ifq_oactive);
 }
 
+static inline mbuf_t
+ifq_dequeue(IOPacketQueue **ifq)
+{
+    return (*ifq)->lockDequeue();
+}
+
 #endif /* _ifq_h */

@@ -80,4 +80,9 @@ int timeout_pending(CTimeout **to)
     return _fCommandGate->runAction(&CTimeout::timeout_pending, to) == kIOReturnSuccess ? 1 : 0;
 }
 
+int timeout_initialized(CTimeout **to)
+{
+    return (*to) != NULL;
+}
+
 #endif /* timeout_cpp */

@@ -226,6 +226,11 @@ ieee80211_ifattach(struct _ifnet *ifp)
     memcpy(((struct arpcom *)ifp)->ac_enaddr, ic->ic_myaddr,
            ETHER_ADDR_LEN);
     //	ether_ifattach(ifp);
+    if (ifp->if_sadl) {
+        ::free(ifp->if_sadl);
+    }
+    ifp->if_sadl = (struct sockaddr_dl *)::malloc(sizeof(struct sockaddr_dl), 0, 0);
+    memcpy(LLADDR(ifp->if_sadl), ic->ic_myaddr, ETHER_ADDR_LEN);
     
     ifp->if_output = ieee80211_output;
     
@@ -279,6 +284,9 @@ ieee80211_ifdetach(struct _ifnet *ifp)
     if (ifp->if_slowtimo) {
         ifp->if_slowtimo->release();
         ifp->if_slowtimo = NULL;
+    }
+    if (ifp->if_sadl) {
+        ::free(ifp->if_sadl);
     }
     ifp->netStat = NULL;
     ifp->controller = NULL;

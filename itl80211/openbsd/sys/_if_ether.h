@@ -281,4 +281,11 @@ if_attach(struct _ifnet *ifp)
     return 0;
 }
 
+static inline int
+if_detach(struct _ifnet *ifp)
+{
+    ifp->if_link_state = -1;
+    return 0;
+}
+
 #endif /* _if_ether_h */

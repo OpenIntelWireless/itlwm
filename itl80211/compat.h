@@ -58,6 +58,13 @@ MSEC_TO_NSEC(uint64_t milliseconds)
     return milliseconds * 1000000ULL;
 }
 
+#define MHLEN mbuf_get_mhlen()
+#define M_DONTWAIT MBUF_DONTWAIT
+#define M_EXT MBUF_EXT
+#define m_freem mbuf_freem
+#define m_free mbuf_free
+#define m_copydata mbuf_copydata
+
 static inline int
 flsl(long mask)
 {
