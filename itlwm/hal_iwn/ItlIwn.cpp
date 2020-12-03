@@ -516,15 +516,24 @@ iwn_attach(struct iwn_softc *sc, struct pci_attach_args *pa)
             ieee80211_std_rateset_11a;
     }
     if (sc->sc_flags & IWN_FLAG_HAS_11N) {
-        /* TX is supported with the same MCS as RX. */
-        ic->ic_tx_mcs_set = IEEE80211_TX_MCS_SET_DEFINED;
+        int ntxstreams = sc->ntxchains;
+        int nrxstreams = sc->nrxchains;
         
         /* Set supported HT rates. */
+        if (ic->ic_userflags & IEEE80211_F_NOMIMO)
+            ntxstreams = nrxstreams = 1;
+
         ic->ic_sup_mcs[0] = 0xff;        /* MCS 0-7 */
-        if (sc->nrxchains > 1)
+        if (nrxstreams > 1)
             ic->ic_sup_mcs[1] = 0xff;    /* MCS 8-15 */
-        if (sc->nrxchains > 2)
+        if (nrxstreams > 2)
             ic->ic_sup_mcs[2] = 0xff;    /* MCS 16-23 */
+
+        ic->ic_tx_mcs_set = IEEE80211_TX_MCS_SET_DEFINED;
+        if (ntxstreams != nrxstreams) {
+            ic->ic_tx_mcs_set |= IEEE80211_TX_RX_MCS_NOT_EQUAL;
+            ic->ic_tx_mcs_set |= (ntxstreams - 1) << 2;
+        }
     }
 
     /* IBSS channel undefined for now. */
@@ -796,6 +805,8 @@ iwn_nic_lock(struct iwn_softc *sc)
             return 0;
         DELAY(10);
     }
+    
+    XYLog("%s acquiring device failed.", __FUNCTION__);
     return ETIMEDOUT;
 }
 
@@ -1728,7 +1739,7 @@ iwn_newassoc(struct ieee80211com *ic, struct ieee80211_node *ni, int isnew)
         rate = ni->ni_rates.rs_rates[i] & IEEE80211_RATE_VAL;
         /* Map 802.11 rate to HW rate index. */
         for (ridx = 0; ridx <= IWN_RIDX_MAX; ridx++) {
-            if (iwn_rates[ridx].plcp != IWN_PLCP_INVALID &&
+            if (iwn_rates[ridx].plcp != IWN_RATE_INVM_PLCP &&
                 iwn_rates[ridx].rate == rate)
                 break;
         }
@@ -1755,7 +1766,7 @@ iwn_media_change(struct _ifnet *ifp)
             rs_rates[ic->ic_fixed_rate] & IEEE80211_RATE_VAL;
         /* Map 802.11 rate to HW rate index. */
         for (ridx = 0; ridx <= IWN_RIDX_MAX; ridx++)
-            if (iwn_rates[ridx].plcp != IWN_PLCP_INVALID &&
+            if (iwn_rates[ridx].plcp != IWN_RATE_INVM_PLCP &&
                 iwn_rates[ridx].rate == rate)
                 break;
         sc->fixed_ridx = ridx;
@@ -2047,7 +2058,7 @@ iwn_rx_done(struct iwn_softc *sc, struct iwn_rx_desc *desc,
     /* Discard frames with a bad FCS early. */
     if ((flags & IWN_RX_NOERROR) != IWN_RX_NOERROR) {
         DPRINTFN(2, ("RX flags error %x\n", flags));
-        ifp->if_ierrors++;
+        ifp->netStat->inputErrors++;
         return;
     }
     /* Discard frames that are too short. */
@@ -2056,13 +2067,13 @@ iwn_rx_done(struct iwn_softc *sc, struct iwn_rx_desc *desc,
         if (len < sizeof (struct ieee80211_frame_cts)) {
             DPRINTF(("frame too short: %d\n", len));
             ic->ic_stats.is_rx_tooshort++;
-            ifp->if_ierrors++;
+            ifp->netStat->inputErrors++;
             return;
         }
     } else if (len < sizeof (*wh)) {
         DPRINTF(("frame too short: %d\n", len));
         ic->ic_stats.is_rx_tooshort++;
-        ifp->if_ierrors++;
+        ifp->netStat->inputErrors++;
         return;
     }
     
@@ -2070,21 +2081,21 @@ iwn_rx_done(struct iwn_softc *sc, struct iwn_rx_desc *desc,
     if (m1 == NULL) {
         XYLog("could not allocate RX mbuf\n");
         ic->ic_stats.is_rx_nombuf++;
-        ifp->if_ierrors++;
+        ifp->netStat->inputErrors++;
         return;
     }
     data->map->dm_nsegs = data->map->cursor->getPhysicalSegments(m1, &data->map->dm_segs[0], 1);
     if (data->map->dm_nsegs == 0) {
         XYLog("could not map RX mbuf\n");
         mbuf_freem(m1);
-        ifp->if_ierrors++;
+        ifp->netStat->inputErrors++;
         return;
     }
     
 //    m1 = MCLGETI(NULL, M_DONTWAIT, NULL, IWN_RBUF_SIZE);
 //    if (m1 == NULL) {
 //        ic->ic_stats.is_rx_nombuf++;
-//        ifp->if_ierrors++;
+//        ifp->netStat->inputErrors++;
 //        return;
 //    }
 //    bus_dmamap_unload(sc->sc_dmat, data->map);
@@ -2108,7 +2119,7 @@ iwn_rx_done(struct iwn_softc *sc, struct iwn_rx_desc *desc,
 //        bus_dmamap_sync(sc->sc_dmat, ring->desc_dma.map,
 //            ring->cur * sizeof (uint32_t), sizeof (uint32_t),
 //            BUS_DMASYNC_PREWRITE);
-//        ifp->if_ierrors++;
+//        ifp->netStat->inputErrors++;
 //        return;
 //    }
 
@@ -2136,7 +2147,7 @@ iwn_rx_done(struct iwn_softc *sc, struct iwn_rx_desc *desc,
     if (len < sizeof (*wh) &&
        (wh->i_fc[0] & IEEE80211_FC0_TYPE_MASK) != IEEE80211_FC0_TYPE_CTL) {
         ic->ic_stats.is_rx_tooshort++;
-        ifp->if_ierrors++;
+        ifp->netStat->inputErrors++;
         mbuf_freem(m);
         return;
     }
@@ -2150,7 +2161,7 @@ iwn_rx_done(struct iwn_softc *sc, struct iwn_rx_desc *desc,
         ni->ni_pairwise_key.k_cipher == IEEE80211_CIPHER_CCMP) {
         if ((flags & IWN_RX_CIPHER_MASK) != IWN_RX_CIPHER_CCMP) {
             ic->ic_stats.is_ccmp_dec_errs++;
-            ifp->if_ierrors++;
+            ifp->netStat->inputErrors++;
             mbuf_freem(m);
             ieee80211_release_node(ic, ni);
             return;
@@ -2163,13 +2174,13 @@ iwn_rx_done(struct iwn_softc *sc, struct iwn_rx_desc *desc,
              (flags & IWN_RX_DECRYPT_MASK) != IWN_RX_DECRYPT_OK)) {
             DPRINTF(("CCMP decryption failed 0x%x\n", flags));
             ic->ic_stats.is_ccmp_dec_errs++;
-            ifp->if_ierrors++;
+            ifp->netStat->inputErrors++;
             mbuf_freem(m);
             ieee80211_release_node(ic, ni);
             return;
         }
         if (iwn_ccmp_decap(sc, m, ni) != 0) {
-            ifp->if_ierrors++;
+            ifp->netStat->inputErrors++;
             mbuf_freem(m);
             ieee80211_release_node(ic, ni);
             return;
@@ -2594,6 +2605,7 @@ iwn_ampdu_tx_done(struct iwn_softc *sc, struct iwn_tx_ring *txq,
     struct iwn_txagg_status *agg_status)
 {
     struct ieee80211com *ic = &sc->sc_ic;
+    struct _ifnet *ifp = &ic->ic_if;
     int tid = desc->qid - sc->first_agg_txq;
     struct iwn_tx_data *txdata = &txq->data[desc->idx];
     struct ieee80211_node *ni = txdata->ni;
@@ -2648,8 +2660,11 @@ iwn_ampdu_tx_done(struct iwn_softc *sc, struct iwn_tx_ring *txq,
 
             if (rflags & IWN_RFLAG_MCS)
                 txdata->ampdu_txmcs = rate;
-            if (txstatus != IWN_AGG_TX_STATE_TRANSMITTED)
+            if (txstatus != IWN_AGG_TX_STATE_TRANSMITTED) {
                 txdata->txfail++;
+                ifp->netStat->outputErrors++;
+                XYLog("%s %d OUTPUT_ERROR status=%d\n", __FUNCTION__, __LINE__, txstatus);
+            }
             if (trycnt > 1)
                 txdata->retries++;
 
@@ -2772,10 +2787,8 @@ iwn4965_tx_done(struct iwn_softc *sc, struct iwn_rx_desc *desc,
         /* XXX 4965 does not report byte count */
         struct iwn_tx_data *txdata = &ring->data[desc->idx];
         uint16_t framelen = txdata->totlen + IEEE80211_CRC_LEN;
-        int txfail = (status != IWN_TX_STATUS_SUCCESS &&
-            status != IWN_TX_STATUS_DIRECT_DONE);
 
-        that->iwn_tx_done(sc, desc, stat->ackfailcnt, stat->rate, txfail,
+        that->iwn_tx_done(sc, desc, stat->ackfailcnt, stat->rate, status,
             desc->qid, framelen);
     } else {
         memcpy(&ssn, &stat->stat.status + stat->nframes, sizeof(ssn));
@@ -2818,13 +2831,10 @@ iwn5000_tx_done(struct iwn_softc *sc, struct iwn_rx_desc *desc,
 
     /* If this was not an aggregated frame, complete it now. */
     if (desc->qid < sc->first_agg_txq) {
-        int txfail = (status != IWN_TX_STATUS_SUCCESS &&
-            status != IWN_TX_STATUS_DIRECT_DONE);
-
         /* Reset TX scheduler slot. */
         iwn5000_reset_sched(sc, desc->qid, desc->idx);
 
-        that->iwn_tx_done(sc, desc, stat->ackfailcnt, stat->rate, txfail,
+        that->iwn_tx_done(sc, desc, stat->ackfailcnt, stat->rate, status,
             desc->qid, letoh16(stat->len));
     } else {
         memcpy(&ssn, &stat->stat.status + stat->nframes, sizeof(ssn));
@@ -2876,13 +2886,15 @@ iwn_clear_oactive(struct iwn_softc *sc, struct iwn_tx_ring *ring)
  */
 void ItlIwn::
 iwn_tx_done(struct iwn_softc *sc, struct iwn_rx_desc *desc,
-    uint8_t ackfailcnt, uint8_t rate, int txfail, int qid, uint16_t len)
+    uint8_t ackfailcnt, uint8_t rate, int status, int qid, uint16_t len)
 {
     struct ieee80211com *ic = &sc->sc_ic;
     struct _ifnet *ifp = &ic->ic_if;
     struct iwn_tx_ring *ring = &sc->txq[qid];
     struct iwn_tx_data *data = &ring->data[desc->idx];
     struct iwn_node *wn = (struct iwn_node *)data->ni;
+    int txfail = (status != IWN_TX_STATUS_SUCCESS &&
+        status != IWN_TX_STATUS_DIRECT_DONE);
 
     if (data->ni == NULL)
         return;
@@ -2907,8 +2919,10 @@ iwn_tx_done(struct iwn_softc *sc, struct iwn_rx_desc *desc,
         if (txfail)
             wn->amn.amn_retrycnt++;
     }
-    if (txfail)
-        ifp->if_oerrors++;
+    if (txfail) {
+        XYLog("%s %d OUTPUT_ERROR status=%d\n", __FUNCTION__, __LINE__, status);
+        ifp->netStat->outputErrors++;
+    }
 
     iwn_tx_done_free_txdata(sc, data);
 
@@ -3399,6 +3413,21 @@ iwn_rval2ridx(int rval)
     return ridx;
 }
 
+static int
+iwn_is_mimo_ht_plcp(uint8_t ht_plcp)
+{
+    return (ht_plcp != IWN_RATE_HT_SISO_MCS_INV_PLCP &&
+            (ht_plcp & IWN_RATE_HT_MCS_NSS_MSK));
+}
+
+static int
+iwn_is_mimo_mcs(int mcs)
+{
+    int ridx = iwn_mcs2ridx[mcs];
+    return iwn_is_mimo_ht_plcp(iwn_rates[ridx].ht_plcp);
+    
+}
+
 int ItlIwn::
 iwn_tx(struct iwn_softc *sc, mbuf_t m, struct ieee80211_node *ni)
 {
@@ -3571,7 +3600,7 @@ iwn_tx(struct iwn_softc *sc, mbuf_t m, struct ieee80211_node *ni)
         if (totlen + IEEE80211_CRC_LEN > rtsthres) {
             flags |= IWN_TX_NEED_RTS;
         } else if ((ic->ic_flags & IEEE80211_F_USEPROT) &&
-            ridx >= IWN_RIDX_OFDM6) {
+            IWN_RIDX_IS_OFDM(ridx)) {
             if (ic->ic_protmode == IEEE80211_PROT_CTSONLY)
                 flags |= IWN_TX_NEED_CTS;
             else if (ic->ic_protmode == IEEE80211_PROT_RTSCTS)
@@ -3622,19 +3651,24 @@ iwn_tx(struct iwn_softc *sc, mbuf_t m, struct ieee80211_node *ni)
     tx->lifetime = htole32(IWN_LIFETIME_INFINITE);
 
     if ((ni->ni_flags & IEEE80211_NODE_HT) &&
-        tx->id != sc->broadcast_id)
+        tx->id != sc->broadcast_id &&
+        rinfo->ht_plcp != IWN_RATE_HT_SISO_MCS_INV_PLCP) {
         tx->plcp = rinfo->ht_plcp;
-    else
-        tx->plcp = rinfo->plcp;
-
-    if ((ni->ni_flags & IEEE80211_NODE_HT) &&
-        tx->id != sc->broadcast_id) {
-        tx->rflags = rinfo->ht_flags;
+        tx->rflags = IWN_RFLAG_MCS;
         if (ni->ni_htcaps & IEEE80211_HTCAP_SGI20)
             tx->rflags |= IWN_RFLAG_SGI;
+        if (iwn_is_mimo_ht_plcp(rinfo->ht_plcp))
+            tx->rflags |= IWN_RFLAG_ANT(sc->txchainmask);
+        else
+            tx->rflags |= IWN_RFLAG_ANT(IWN_LSB(sc->txchainmask));
     }
-    else
-        tx->rflags = rinfo->flags;
+    else {
+        tx->plcp = rinfo->plcp;
+        if (IWN_RIDX_IS_CCK(ridx))
+            tx->rflags = IWN_RFLAG_CCK;
+        else
+            tx->rflags = 0;
+    }
     /*
      * Keep the Tx rate constant while mira is probing, or if this is
      * an aggregation queue in which case a fixed Tx rate works around
@@ -3738,8 +3772,10 @@ iwn_tx(struct iwn_softc *sc, mbuf_t m, struct ieee80211_node *ni)
     IWN_WRITE(sc, IWN_HBUS_TARG_WRPTR, ring->qid << 8 | ring->cur);
 
     /* Mark TX ring as full if we reach a certain threshold. */
-    if (++ring->queued > IWN_TX_RING_HIMARK)
+    if (++ring->queued > IWN_TX_RING_HIMARK) {
+        XYLog("%s sc->qfullmsk is FULL ring->cur=%d ring->queued=%d\n", __FUNCTION__, ring->cur, ring->queued);
         sc->qfullmsk |= 1 << ring->qid;
+    }
 
     return 0;
 }
@@ -3800,9 +3836,10 @@ sendit:
 #endif
         if (that->iwn_tx(sc, m, ni) != 0) {
             ieee80211_release_node(ic, ni);
-            ifp->if_oerrors++;
+            ifp->netStat->outputErrors++;
             continue;
         }
+        ifp->netStat->outputPackets++;
 
         sc->sc_tx_timer = 5;
         ifp->if_timer = 1;
@@ -3824,7 +3861,7 @@ iwn_watchdog(struct _ifnet *ifp)
             XYLog("%s: device timeout\n", sc->sc_dev.dv_xname);
             that->iwn_stop(ifp);
             task_add(systq, &sc->init_task);
-            ifp->if_oerrors++;
+            ifp->netStat->outputErrors++;
             return;
         }
         ifp->if_timer = 1;
@@ -4025,9 +4062,9 @@ iwn_set_link_quality(struct iwn_softc *sc, struct ieee80211_node *ni)
     struct ieee80211com *ic = &sc->sc_ic;
     struct iwn_node *wn = (struct iwn_node *)ni;
     struct iwn_cmd_link_quality linkq;
-    const struct iwn_rate *rinfo;
+    struct ieee80211_rateset *rs = &ni->ni_rates;
     uint8_t txant;
-    int i;
+    int i, ridx, ridx_min, ridx_max, j, sgi_ok = 0, mimo, tab = 0, rflags = 0;
 
     /* Use the first valid TX antenna. */
     txant = IWN_LSB(sc->txchainmask);
@@ -4040,42 +4077,93 @@ iwn_set_link_quality(struct iwn_softc *sc, struct ieee80211_node *ni)
     linkq.ampdu_threshold = 3;
     linkq.ampdu_limit = htole16(4000);    /* 4ms */
 
-    i = 0;
-    if (ni->ni_flags & IEEE80211_NODE_HT) {
-        int txmcs;
-        for (txmcs = ni->ni_txmcs; txmcs >= 0; txmcs--) {
-            rinfo = &iwn_rates[iwn_mcs2ridx[txmcs]];
-            linkq.retry[i].plcp = rinfo->ht_plcp;
-            linkq.retry[i].rflags = rinfo->ht_flags;
-
-            if (ni->ni_htcaps & IEEE80211_HTCAP_SGI20)
-                linkq.retry[i].rflags |= IWN_RFLAG_SGI;
-
-            /* XXX set correct ant mask for MIMO rates here */
-            linkq.retry[i].rflags |= IWN_RFLAG_ANT(txant);
-
-            if (++i >= IWN_MAX_TX_RETRIES)
-                break;
-        }
-    } else {
-        int txrate;
-        for (txrate = ni->ni_txrate; txrate >= 0; txrate--) {
-            rinfo = &iwn_rates[wn->ridx[txrate]];
-            linkq.retry[i].plcp = rinfo->plcp;
-            linkq.retry[i].rflags = rinfo->flags;
-            linkq.retry[i].rflags |= IWN_RFLAG_ANT(txant);
-            if (++i >= IWN_MAX_TX_RETRIES)
-                break;
-        }
+    if (ic->ic_flags & IEEE80211_F_USEPROT)
+        if (sc->hw_type != IWN_HW_REV_TYPE_4965)
+            linkq.flags |= IWN_LINK_QUAL_FLAGS_SET_STA_TLC_RTS;
+    
+    if ((ni->ni_flags & IEEE80211_NODE_HT) &&
+        ieee80211_node_supports_ht_sgi20(ni)) {
+        ni->ni_flags |= IEEE80211_NODE_HT_SGI20;
+        sgi_ok = 1;
     }
+    
+    /*
+     * Fill the LQ rate selection table with legacy and/or HT rates
+     * in descending order, i.e. with the node's current TX rate first.
+     * In cases where throughput of an HT rate corresponds to a legacy
+     * rate it makes no sense to add both. We rely on the fact that
+     * iwm_rates is laid out such that equivalent HT/legacy rates share
+     * the same IWM_RATE_*_INDEX value. Also, rates not applicable to
+     * legacy/HT are assumed to be marked with an 'invalid' PLCP value.
+     */
+    j = 0;
+    ridx_min = iwn_rval2ridx(ieee80211_min_basic_rate(ic));
+    mimo = iwn_is_mimo_mcs(ni->ni_txmcs);
+    ridx_max = (mimo ? IWN_LAST_HT_RATE : IWN_LAST_HT_SISO_RATE);
+    for (ridx = ridx_max; ridx >= ridx_min; ridx--) {
+        uint8_t plcp = iwn_rates[ridx].plcp;
+        uint8_t ht_plcp = iwn_rates[ridx].ht_plcp;
+        
+        if (j >= IWN_MAX_TX_RETRIES)
+            break;
+        tab = 0;
+        rflags = 0;
+        if (ni->ni_flags & IEEE80211_NODE_HT) {
+            if (ht_plcp == IWN_RATE_HT_SISO_MCS_INV_PLCP)
+                continue;
+            /* Do not mix SISO and MIMO HT rates. */
+            if ((mimo && !iwn_is_mimo_ht_plcp(ht_plcp)) ||
+                (!mimo && iwn_is_mimo_ht_plcp(ht_plcp)))
+                continue;
+            for (i = ni->ni_txmcs; i >= 0; i--) {
+                if (isclr(ni->ni_rxmcs, i))
+                    continue;
+                if (ridx == iwn_mcs2ridx[i]) {
+                    tab = ht_plcp;
+                    rflags |= IWN_RFLAG_MCS;
+                    if (sgi_ok)
+                        rflags |= IWN_RFLAG_SGI;
+                    break;
+                }
+            }
+        } else if (plcp != IWN_RATE_INVM_PLCP) {
+            for (i = ni->ni_txrate; i >= 0; i--) {
+                if (iwn_rates[ridx].rate == (rs->rs_rates[i] &
+                                             IEEE80211_RATE_VAL)) {
+                    tab = plcp;
+                    break;
+                }
+            }
+        }
+        
+        if (tab == 0)
+            continue;
+        
+        if (iwn_is_mimo_ht_plcp(ht_plcp))
+            rflags |= IWN_RFLAG_ANT(sc->txchainmask);
+        else
+            rflags |= IWN_RFLAG_ANT(txant);
+        
+        if (IWN_RIDX_IS_CCK(ridx))
+            rflags |= IWN_RFLAG_CCK;
 
-    /* Fill the rest with the lowest basic rate. */
-    rinfo = &iwn_rates[iwn_rval2ridx(ieee80211_min_basic_rate(ic))];
-    while (i < IWN_MAX_TX_RETRIES) {
-        linkq.retry[i].plcp = rinfo->plcp;
-        linkq.retry[i].rflags = rinfo->flags;
-        linkq.retry[i].rflags |= IWN_RFLAG_ANT(txant);
-        i++;
+        linkq.retry[j].plcp = tab;
+        linkq.retry[j].rflags = rflags;
+        j++;
+    }
+    
+    linkq.mimo = (mimo ? j : 0);
+    
+    /* Fill the rest with the lowest possible rate */
+    while (j < IWN_MAX_TX_RETRIES) {
+        tab = iwn_rates[ridx_min].plcp;
+        rflags = 0;
+        if (IWN_RIDX_IS_CCK(ridx_min))
+            rflags |= IWN_RFLAG_CCK;
+        rflags |= IWN_RFLAG_ANT(txant);
+        linkq.retry[j].plcp = tab;
+        linkq.retry[j].rflags = rflags;
+        j++;
     }
 
     return iwn_cmd(sc, IWN_CMD_LINK_QUALITY, &linkq, sizeof linkq, 1);
@@ -4115,7 +4203,8 @@ iwn_add_broadcast_node(struct iwn_softc *sc, int async, int ridx)
     /* Use lowest mandatory bit-rate. */
     rinfo = &iwn_rates[ridx];
     linkq.retry[0].plcp = rinfo->plcp;
-    linkq.retry[0].rflags = rinfo->flags;
+    if (IWN_RIDX_IS_CCK(ridx))
+        linkq.retry[0].rflags = IWN_RFLAG_CCK;
     linkq.retry[0].rflags |= IWN_RFLAG_ANT(txant);
     /* Use same bit-rate for all TX retries. */
     for (i = 1; i < IWN_MAX_TX_RETRIES; i++) {
@@ -4128,14 +4217,16 @@ iwn_add_broadcast_node(struct iwn_softc *sc, int async, int ridx)
 void ItlIwn::
 iwn_updateedca(struct ieee80211com *ic)
 {
+    XYLog("%s\n", __FUNCTION__);
+
 #define IWN_EXP2(x)    ((1 << (x)) - 1)    /* CWmin = 2^ECWmin - 1 */
     struct iwn_softc *sc = (struct iwn_softc *)ic->ic_softc;
+    struct ieee80211_node *ni = ic->ic_bss;
     ItlIwn *that = container_of(sc, ItlIwn, com);
     struct iwn_edca_params cmd;
     int aci;
 
     memset(&cmd, 0, sizeof cmd);
-    cmd.flags = htole32(IWN_EDCA_UPDATE);
     for (aci = 0; aci < EDCA_NUM_AC; aci++) {
         const struct ieee80211_edca_ac_params *ac =
             &ic->ic_edca_ac[aci];
@@ -4145,6 +4236,12 @@ iwn_updateedca(struct ieee80211com *ic)
         cmd.ac[aci].txoplimit =
             htole16(IEEE80211_TXOP_TO_US(ac->ac_txoplimit));
     }
+    if (ni->ni_flags & IEEE80211_NODE_QOS)
+        cmd.flags |= htole32(IWN_EDCA_UPDATE);
+
+    if (ni->ni_flags & IEEE80211_NODE_HT)
+        cmd.flags |= htole32(IWN_EDCA_FLG_TGN);
+
     (void)that->iwn_cmd(sc, IWN_CMD_EDCA_PARAMS, &cmd, sizeof cmd, 1);
 #undef IWN_EXP2
 }
@@ -5164,7 +5261,7 @@ iwn_config(struct iwn_softc *sc)
     }
 
     ridx = (sc->sc_ic.ic_curmode == IEEE80211_MODE_11A) ?
-        IWN_RIDX_OFDM6 : IWN_RIDX_CCK1;
+        IWN_RIDX_OFDM : IWN_RIDX_CCK;
     if ((error = iwn_add_broadcast_node(sc, 0, ridx)) != 0) {
         XYLog("%s: could not add broadcast node\n",
             sc->sc_dev.dv_xname);
@@ -5318,7 +5415,7 @@ iwn_scan(struct iwn_softc *sc, uint16_t flags, int bgscan)
 
     if (flags & IEEE80211_CHAN_5GHZ) {
         /* Send probe requests at 6Mbps. */
-        tx->plcp = iwn_rates[IWN_RIDX_OFDM6].plcp;
+        tx->plcp = iwn_rates[IWN_RATE_6M_INDEX].plcp;
         rs = &ic->ic_sup_rates[IEEE80211_MODE_11A];
     } else {
         hdr->flags = htole32(IWN_RXON_24GHZ | IWN_RXON_AUTO);
@@ -5329,10 +5426,10 @@ iwn_scan(struct iwn_softc *sc, uint16_t flags, int bgscan)
              * with CCK rates while associated to a 5GHz AP.
              * Send probe requests at 6Mbps OFDM as a workaround.
              */
-            tx->plcp = iwn_rates[IWN_RIDX_OFDM6].plcp;
+            tx->plcp = iwn_rates[IWN_RATE_6M_INDEX].plcp;
         } else {
             /* Send probe requests at 1Mbps. */
-            tx->plcp = iwn_rates[IWN_RIDX_CCK1].plcp;
+            tx->plcp = iwn_rates[IWN_RATE_1M_INDEX].plcp;
             tx->rflags = IWN_RFLAG_CCK;
         }
         rs = &ic->ic_sup_rates[IEEE80211_MODE_11G];
@@ -5573,7 +5670,7 @@ iwn_auth(struct iwn_softc *sc, int arg)
      * add the broadcast node again.
      */
     ridx = IEEE80211_IS_CHAN_5GHZ(ni->ni_chan) ?
-        IWN_RIDX_OFDM6 : IWN_RIDX_CCK1;
+        IWN_RIDX_OFDM : IWN_RIDX_CCK;
     if ((error = iwn_add_broadcast_node(sc, 1, ridx)) != 0) {
         XYLog("%s: could not add broadcast node\n",
             sc->sc_dev.dv_xname);

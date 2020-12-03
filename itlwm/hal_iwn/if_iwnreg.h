@@ -575,6 +575,7 @@ struct iwn_assoc {
 struct iwn_edca_params {
     uint32_t    flags;
 #define IWN_EDCA_UPDATE    (1 << 0)
+#define IWN_EDCA_FLG_TGN    (1 << 1)
 #define IWN_EDCA_TXOP    (1 << 4)
 
     struct {
@@ -739,6 +740,7 @@ struct iwn_cmd_link_quality {
     uint8_t        reserved1;
     uint16_t    ctl;
     uint8_t        flags;
+#define IWN_LINK_QUAL_FLAGS_SET_STA_TLC_RTS    (1 << 0)
     uint8_t        mimo;
     uint8_t        antmsk_1stream;
     uint8_t        antmsk_2stream;
@@ -1787,37 +1789,147 @@ static const struct iwn_chan_band {
 #define IWN6000_OTP_NBLOCKS    4
 #define IWN6050_OTP_NBLOCKS    7
 
-/* HW rate indices. */
-#define IWN_RIDX_CCK1    0
-#define IWN_RIDX_OFDM6    4
+/* fw API values for legacy bit rates, both OFDM and CCK */
+#define IWN_RATE_6M_PLCP     13
+#define IWN_RATE_9M_PLCP     15
+#define IWN_RATE_12M_PLCP    5
+#define IWN_RATE_18M_PLCP    7
+#define IWN_RATE_24M_PLCP    9
+#define IWN_RATE_36M_PLCP    11
+#define IWN_RATE_48M_PLCP    1
+#define IWN_RATE_54M_PLCP    3
+#define IWN_RATE_1M_PLCP     10
+#define IWN_RATE_2M_PLCP     20
+#define IWN_RATE_5M_PLCP     55
+#define IWN_RATE_11M_PLCP    110
+#define IWN_RATE_INVM_PLCP   0xff
 
-#define IWN_PLCP_INVALID 0xff
+/* uCode API values for HT/VHT bit rates */
+#define IWN_RATE_HT_SISO_MCS_0_PLCP    0
+#define IWN_RATE_HT_SISO_MCS_1_PLCP    1
+#define IWN_RATE_HT_SISO_MCS_2_PLCP    2
+#define IWN_RATE_HT_SISO_MCS_3_PLCP    3
+#define IWN_RATE_HT_SISO_MCS_4_PLCP    4
+#define IWN_RATE_HT_SISO_MCS_5_PLCP    5
+#define IWN_RATE_HT_SISO_MCS_6_PLCP    6
+#define IWN_RATE_HT_SISO_MCS_7_PLCP    7
+#define IWN_RATE_HT_MIMO2_MCS_8_PLCP   0x8
+#define IWN_RATE_HT_MIMO2_MCS_9_PLCP   0x9
+#define IWN_RATE_HT_MIMO2_MCS_10_PLCP  0xA
+#define IWN_RATE_HT_MIMO2_MCS_11_PLCP  0xB
+#define IWN_RATE_HT_MIMO2_MCS_12_PLCP  0xC
+#define IWN_RATE_HT_MIMO2_MCS_13_PLCP  0xD
+#define IWN_RATE_HT_MIMO2_MCS_14_PLCP  0xE
+#define IWN_RATE_HT_MIMO2_MCS_15_PLCP  0xF
+#define IWN_RATE_HT_SISO_MCS_INV_PLCP  0x20
+#define IWN_RATE_HT_MIMO2_MCS_INV_PLCP IWN_RATE_HT_SISO_MCS_INV_PLCP
+#define IWN_RATE_HT_SISO_MCS_8_PLCP    IWN_RATE_HT_SISO_MCS_INV_PLCP
+#define IWN_RATE_HT_SISO_MCS_9_PLCP    IWN_RATE_HT_SISO_MCS_INV_PLCP
 
-static const struct iwn_rate {
-    uint8_t    rate;
-    uint8_t    plcp;
-    uint8_t    flags;
-    uint8_t    ht_plcp;
-    uint8_t    ht_flags;
-} iwn_rates[IWN_RIDX_MAX + 1] = {
-        /* Legacy */        /* HT */
-    {   2,  10, IWN_RFLAG_CCK,    IWN_PLCP_INVALID, 0 },
-    {   4,  20, IWN_RFLAG_CCK,    IWN_PLCP_INVALID, 0 },
-    {  11,  55, IWN_RFLAG_CCK,    IWN_PLCP_INVALID, 0 },
-    {  22, 110, IWN_RFLAG_CCK,    IWN_PLCP_INVALID, 0 },
-    {  12, 0xd, 0,            0, IWN_RFLAG_MCS    },
-    {  18, 0xf, 0,             IWN_PLCP_INVALID, 0 },
-    {  24, 0x5, 0,             1, IWN_RFLAG_MCS    },
-    {  36, 0x7, 0,             2, IWN_RFLAG_MCS,   },
-    {  48, 0x9, 0,            3, IWN_RFLAG_MCS,   },
-    {  72, 0xb, 0,            4, IWN_RFLAG_MCS,   },
-    {  96, 0x1, 0,             5, IWN_RFLAG_MCS,   },
-    { 108, 0x3, 0,             6, IWN_RFLAG_MCS,   },
-    { 128, IWN_PLCP_INVALID, 0,    7, IWN_RFLAG_MCS,   }
+#define IWN_RATE_HT_MCS_RATE_CODE_MSK  0x7
+#define IWN_RATE_HT_MCS_NSS_POS        3
+#define IWN_RATE_HT_MCS_NSS_MSK        (3 << IWN_RATE_HT_MCS_NSS_POS)
+
+/*
+ * These serve as indexes into struct iwn_rate iwn_rates[IWN_RIDX_MAX].
+ */
+enum {
+    IWN_RATE_1M_INDEX = 0,
+    IWN_FIRST_CCK_RATE = IWN_RATE_1M_INDEX,
+    IWN_RATE_2M_INDEX,
+    IWN_RATE_5M_INDEX,
+    IWN_RATE_11M_INDEX,
+    IWN_LAST_CCK_RATE = IWN_RATE_11M_INDEX,
+    IWN_RATE_6M_INDEX,
+    IWN_FIRST_OFDM_RATE = IWN_RATE_6M_INDEX,
+    IWN_RATE_MCS_0_INDEX = IWN_RATE_6M_INDEX,
+    IWN_FIRST_HT_RATE = IWN_RATE_MCS_0_INDEX,
+    IWN_FIRST_VHT_RATE = IWN_RATE_MCS_0_INDEX,
+    IWN_RATE_9M_INDEX,
+    IWN_RATE_12M_INDEX,
+    IWN_RATE_MCS_1_INDEX = IWN_RATE_12M_INDEX,
+    IWN_RATE_MCS_8_INDEX,
+    IWN_FIRST_HT_MIMO2_RATE = IWN_RATE_MCS_8_INDEX,
+    IWN_RATE_18M_INDEX,
+    IWN_RATE_MCS_2_INDEX = IWN_RATE_18M_INDEX,
+    IWN_RATE_24M_INDEX,
+    IWN_RATE_MCS_3_INDEX = IWN_RATE_24M_INDEX,
+    IWN_RATE_MCS_9_INDEX,
+    IWN_RATE_36M_INDEX,
+    IWN_RATE_MCS_4_INDEX = IWN_RATE_36M_INDEX,
+    IWN_RATE_MCS_10_INDEX,
+    IWN_RATE_48M_INDEX,
+    IWN_RATE_MCS_5_INDEX = IWN_RATE_48M_INDEX,
+    IWN_RATE_MCS_11_INDEX,
+    IWN_RATE_54M_INDEX,
+    IWN_RATE_MCS_6_INDEX = IWN_RATE_54M_INDEX,
+    IWN_LAST_NON_HT_RATE = IWN_RATE_54M_INDEX,
+    IWN_RATE_MCS_7_INDEX,
+    IWN_LAST_HT_SISO_RATE = IWN_RATE_MCS_7_INDEX,
+    IWN_RATE_MCS_12_INDEX,
+    IWN_RATE_MCS_13_INDEX,
+    IWN_RATE_MCS_14_INDEX,
+    IWN_RATE_MCS_15_INDEX,
+    IWN_LAST_HT_RATE = IWN_RATE_MCS_15_INDEX,
+    IWN_LAST_VHT_RATE = IWN_RATE_MCS_9_INDEX,
+    IWN_RATE_COUNT_LEGACY = IWN_LAST_NON_HT_RATE + 1,
+    IWN_RATE_COUNT = IWN_LAST_HT_RATE + 1,
 };
 
+static const struct iwn_rate {
+    uint16_t    rate;
+    uint8_t    plcp;
+    uint8_t    ht_plcp;
+} iwn_rates[IWN_RIDX_MAX + 1] = {
+               /* Legacy */                /* HT */
+    {   2,    IWN_RATE_1M_PLCP,   IWN_RATE_HT_SISO_MCS_INV_PLCP,}, // 0
+    {   4,    IWN_RATE_2M_PLCP,   IWN_RATE_HT_SISO_MCS_INV_PLCP,}, // 1
+    {  11,    IWN_RATE_5M_PLCP,   IWN_RATE_HT_SISO_MCS_INV_PLCP,}, // 2
+    {  22,    IWN_RATE_11M_PLCP,  IWN_RATE_HT_SISO_MCS_INV_PLCP,}, // 3
+    {  12,    IWN_RATE_6M_PLCP,   IWN_RATE_HT_SISO_MCS_0_PLCP,  }, // 4
+    {  18,    IWN_RATE_9M_PLCP,   IWN_RATE_HT_SISO_MCS_INV_PLCP,}, // 5
+    {  24,    IWN_RATE_12M_PLCP,  IWN_RATE_HT_SISO_MCS_1_PLCP,  }, // 6
+    {  26,    IWN_RATE_INVM_PLCP, IWN_RATE_HT_MIMO2_MCS_8_PLCP, }, // 7
+    {  36,    IWN_RATE_18M_PLCP,  IWN_RATE_HT_SISO_MCS_2_PLCP,  }, // 8
+    {  48,    IWN_RATE_24M_PLCP,  IWN_RATE_HT_SISO_MCS_3_PLCP,  }, // 9
+    {  52,    IWN_RATE_INVM_PLCP, IWN_RATE_HT_MIMO2_MCS_9_PLCP, }, // 10
+    {  72,    IWN_RATE_36M_PLCP,  IWN_RATE_HT_SISO_MCS_4_PLCP,  }, // 11
+    {  78,    IWN_RATE_INVM_PLCP, IWN_RATE_HT_MIMO2_MCS_10_PLCP,}, // 12
+    {  96,    IWN_RATE_48M_PLCP,  IWN_RATE_HT_SISO_MCS_5_PLCP,  }, // 13
+    { 104,    IWN_RATE_INVM_PLCP, IWN_RATE_HT_MIMO2_MCS_11_PLCP,}, // 14
+    { 108,    IWN_RATE_54M_PLCP,  IWN_RATE_HT_SISO_MCS_6_PLCP,  }, // 15
+    { 128,    IWN_RATE_INVM_PLCP, IWN_RATE_HT_SISO_MCS_7_PLCP,  }, // 16
+    { 156,    IWN_RATE_INVM_PLCP, IWN_RATE_HT_MIMO2_MCS_12_PLCP,}, // 17
+    { 208,    IWN_RATE_INVM_PLCP, IWN_RATE_HT_MIMO2_MCS_13_PLCP,}, // 18
+    { 234,    IWN_RATE_INVM_PLCP, IWN_RATE_HT_MIMO2_MCS_14_PLCP,}, // 19
+    { 260,    IWN_RATE_INVM_PLCP, IWN_RATE_HT_MIMO2_MCS_15_PLCP,}, // 20
+};
+
+#define IWN_RIDX_CCK    0
+#define IWN_RIDX_OFDM    4
+#define IWN_RIDX_IS_CCK(_i_) ((_i_) < IWN_RIDX_OFDM)
+#define IWN_RIDX_IS_OFDM(_i_) ((_i_) >= IWN_RIDX_OFDM)
+#define IWN_RVAL_IS_OFDM(_i_) ((_i_) >= 12 && (_i_) != 22)
+
 /* Convert an MCS index into an iwn_rates[] index. */
-const int iwn_mcs2ridx[] = { 4, 6, 7, 8, 9, 10, 11, 12 };
+const int iwn_mcs2ridx[] = {
+    IWN_RATE_MCS_0_INDEX,
+    IWN_RATE_MCS_1_INDEX,
+    IWN_RATE_MCS_2_INDEX,
+    IWN_RATE_MCS_3_INDEX,
+    IWN_RATE_MCS_4_INDEX,
+    IWN_RATE_MCS_5_INDEX,
+    IWN_RATE_MCS_6_INDEX,
+    IWN_RATE_MCS_7_INDEX,
+    IWN_RATE_MCS_8_INDEX,
+    IWN_RATE_MCS_9_INDEX,
+    IWN_RATE_MCS_10_INDEX,
+    IWN_RATE_MCS_11_INDEX,
+    IWN_RATE_MCS_12_INDEX,
+    IWN_RATE_MCS_13_INDEX,
+    IWN_RATE_MCS_14_INDEX,
+    IWN_RATE_MCS_15_INDEX,
+};
 
 #define IWN4965_MAX_PWR_INDEX    107
 
