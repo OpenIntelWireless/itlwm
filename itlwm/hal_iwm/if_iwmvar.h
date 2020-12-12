@@ -154,8 +154,7 @@ struct iwm_tx_radiotap_header {
 #define IWM_TX_RADIOTAP_PRESENT                        \
     ((1 << IEEE80211_RADIOTAP_FLAGS) |                \
      (1 << IEEE80211_RADIOTAP_RATE) |                \
-     (1 << IEEE80211_RADIOTAP_CHANNEL) |                \
-     (1 << IEEE80211_RADIOTAP_HWQUEUE))
+     (1 << IEEE80211_RADIOTAP_CHANNEL))
 
 #define IWM_UCODE_SECT_MAX 16
 #define IWM_FWDMASEGSZ (192*1024)
