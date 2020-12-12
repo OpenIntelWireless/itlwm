@@ -2998,12 +2998,7 @@ ieee80211_recv_addba_req(struct ieee80211com *ic, mbuf_t m,
     ba->ba_params |= ((ba->ba_winsize << IEEE80211_ADDBA_BUFSZ_SHIFT) |
                       (tid << IEEE80211_ADDBA_TID_SHIFT));
 #if 0
-    /*
-     * XXX A-MSDUs inside A-MPDUs expose a problem with bad TCP connection
-     * sharing behaviour. One connection eats all available bandwidth
-     * while others stall. Leave this disabled for now to give packets
-     * from disparate connections better chances of interleaving.
-     */
+    /* iwm(4) 9k and iwx(4) need more work before AMSDU can be enabled. */
     ba->ba_params |= IEEE80211_ADDBA_AMSDU;
 #endif
     ba->ba_winstart = ssn;
