@@ -1175,7 +1175,7 @@ ieee80211_amsdu_decap(struct ieee80211com *ic, mbuf_t m,
         mbuf_pullup(&m, ETHER_HDR_LEN + LLC_SNAPFRAMELEN);
         if (m == NULL) {
             ic->ic_stats.is_rx_decap++;
-            break;
+            return;
         }
         eh = mtod(m, struct ether_header *);
         /* examine 802.3 header */
@@ -1185,7 +1185,7 @@ ieee80211_amsdu_decap(struct ieee80211com *ic, mbuf_t m,
             /* stop processing A-MSDU subframes */
             ic->ic_stats.is_rx_decap++;
             mbuf_freem(m);
-            break;
+            return;
         }
         llc = (struct llc *)&eh[1];
         /* examine 802.2 LLC header */
@@ -1209,7 +1209,7 @@ ieee80211_amsdu_decap(struct ieee80211com *ic, mbuf_t m,
             DPRINTF(("A-MSDU subframe too long (%d)\n", len));
             ic->ic_stats.is_rx_decap++;
             mbuf_freem(m);
-            break;
+            return;
         }
         
         /* "detach" our A-MSDU subframe from the others */
@@ -1218,7 +1218,7 @@ ieee80211_amsdu_decap(struct ieee80211com *ic, mbuf_t m,
             /* stop processing A-MSDU subframes */
             ic->ic_stats.is_rx_decap++;
             mbuf_freem(m);
-            break;
+            return;
         }
         ieee80211_enqueue_data(ic, m, ni, mcast, ml);
         
