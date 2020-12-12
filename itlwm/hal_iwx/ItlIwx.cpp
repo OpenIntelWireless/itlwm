@@ -11,7 +11,7 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  */
-/*    $OpenBSD: if_iwx.c,v 1.43 2020/08/02 11:11:07 stsp Exp $    */
+/*    $OpenBSD: if_iwx.c,v 1.45 2020/10/11 07:05:28 mpi Exp $    */
 
 /*
  * Copyright (c) 2014, 2016 genua gmbh <info@genua.de>
@@ -4230,7 +4230,6 @@ iwx_tx(struct iwx_softc *sc, mbuf_t m, struct ieee80211_node *ni, int ac)
             tap->wt_rate = (0x80 | rinfo->ht_plcp);
         } else
             tap->wt_rate = rinfo->rate;
-        tap->wt_hwqueue = ac;
         if ((ic->ic_flags & IEEE80211_F_WEPON) &&
             (wh->i_fc[1] & IEEE80211_FC1_PROTECTED))
             tap->wt_flags |= IEEE80211_RADIOTAP_F_WEP;
