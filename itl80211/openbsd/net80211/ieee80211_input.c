@@ -11,7 +11,7 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  */
-/*    $OpenBSD: ieee80211_input.c,v 1.215 2020/03/11 12:39:27 tobhe Exp $    */
+/*	$OpenBSD: ieee80211_input.c,v 1.228 2020/12/10 12:52:49 stsp Exp $	*/
 
 /*-
  * Copyright (c) 2001 Atsushi Onoe
@@ -530,14 +530,14 @@ ieee80211_inputm(struct _ifnet *ifp, mbuf_t m, struct ieee80211_node *ni,
                     goto out;
             }
             
-#if NBPFILTER > 0
             /* Do not process "no data" frames any further. */
             if (subtype & IEEE80211_FC0_SUBTYPE_NODATA) {
+#if NBPFILTER > 0
                 if (ic->ic_rawbpf)
                     bpf_mtap(ic->ic_rawbpf, m, BPF_DIRECTION_IN);
+#endif
                 goto out;
             }
-#endif
             
             if ((ic->ic_flags & IEEE80211_F_WEPON) ||
                 ((ic->ic_flags & IEEE80211_F_RSNON) &&
