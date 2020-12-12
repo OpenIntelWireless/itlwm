@@ -2155,7 +2155,7 @@ ieee80211_recv_probe_req(struct ieee80211com *ic, mbuf_t m,
         return;
     }
     /* refuse wildcard SSID if we're hiding our SSID in beacons */
-    if (ssid[1] == 0 && (ic->ic_flags & IEEE80211_F_HIDENWID)) {
+    if (ssid[1] == 0 && (ic->ic_userflags & IEEE80211_F_HIDENWID)) {
         DPRINTF(("wildcard SSID rejected"));
         ic->ic_stats.is_rx_ssidmismatch++;
         return;
