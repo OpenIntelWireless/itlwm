@@ -369,6 +369,17 @@ ieee80211_inputm(struct _ifnet *ifp, mbuf_t m, struct ieee80211_node *ni,
             /* go through A-MPDU reordering */
             ieee80211_input_ba(ic, m, ni, tid, rxi, ml);
             return;    /* don't free m! */
+        } else if (ba_state == IEEE80211_BA_REQUESTED &&
+            (qos & IEEE80211_QOS_ACK_POLICY_MASK) ==
+            IEEE80211_QOS_ACK_POLICY_NORMAL) {
+            /*
+             * Apparently, qos frames for a tid where a
+             * block ack agreement was requested but not
+             * yet confirmed by us should still contribute
+             * to the sequence number for this tid.
+             */
+            ieee80211_input_ba(ic, m, ni, tid, rxi, ml);
+            return;    /* don't free m! */
         }
     }
     
@@ -2938,6 +2949,9 @@ ieee80211_recv_addba_req(struct ieee80211com *ic, mbuf_t m,
     ssn = LE_READ_2(&frm[7]) >> 4;
     
     ba = &ni->ni_rx_ba[tid];
+    /* The driver is still processing an ADDBA request for this tid. */
+    if (ba->ba_state == IEEE80211_BA_REQUESTED)
+        return;
     /* check if we already have a Block Ack agreement for this RA/TID */
     if (ba->ba_state == IEEE80211_BA_AGREED) {
         /* XXX should we update the timeout value? */
@@ -2977,7 +2991,7 @@ ieee80211_recv_addba_req(struct ieee80211com *ic, mbuf_t m,
         goto refuse;
     
     /* setup Block Ack agreement */
-    ba->ba_state = IEEE80211_BA_INIT;
+    ba->ba_state = IEEE80211_BA_REQUESTED;
     ba->ba_timeout_val = timeout * IEEE80211_DUR_TU;
     ba->ba_ni = ni;
     ba->ba_token = token;
@@ -3055,6 +3069,7 @@ ieee80211_addba_req_refuse(struct ieee80211com *ic, struct ieee80211_node *ni,
     IOFree(ba->ba_buf,
            IEEE80211_BA_MAX_WINSZ * sizeof(*ba->ba_buf));
     ba->ba_buf = NULL;
+    ba->ba_state = IEEE80211_BA_INIT;
     
     /* MLME-ADDBA.response */
     IEEE80211_SEND_ACTION(ic, ni, IEEE80211_CATEG_BA,
