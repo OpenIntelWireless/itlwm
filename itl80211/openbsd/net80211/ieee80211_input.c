@@ -1170,14 +1170,12 @@ ieee80211_amsdu_decap(struct ieee80211com *ic, mbuf_t m,
     /* strip 802.11 header */
     mbuf_adj(m, hdrlen);
     
-    for (;;) {
+    while (mbuf_pkthdr_len(m) >= ETHER_HDR_LEN + LLC_SNAPFRAMELEN) {
         /* process an A-MSDU subframe */
-        if (mbuf_len(m) < ETHER_HDR_LEN + LLC_SNAPFRAMELEN) {
-            mbuf_pullup(&m, ETHER_HDR_LEN + LLC_SNAPFRAMELEN);
-            if (m == NULL) {
-                ic->ic_stats.is_rx_decap++;
-                break;
-            }
+        mbuf_pullup(&m, ETHER_HDR_LEN + LLC_SNAPFRAMELEN);
+        if (m == NULL) {
+            ic->ic_stats.is_rx_decap++;
+            break;
         }
         eh = mtod(m, struct ether_header *);
         /* examine 802.3 header */
@@ -1224,15 +1222,13 @@ ieee80211_amsdu_decap(struct ieee80211com *ic, mbuf_t m,
         }
         ieee80211_enqueue_data(ic, m, ni, mcast, ml);
         
-        if (mbuf_pkthdr_len(n) == 0) {
-            mbuf_freem(n);
-            break;
-        }
         m = n;
         /* remove padding */
         pad = ((len + 3) & ~3) - len;
         mbuf_adj(m, pad);
     }
+    
+    mbuf_freem(m);
 }
 
 /*
