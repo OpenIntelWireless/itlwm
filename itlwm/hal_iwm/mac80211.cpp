@@ -1495,7 +1495,9 @@ iwm_tx(struct iwm_softc *sc, mbuf_t m, struct ieee80211_node *ni, int ac)
         tx->sec_ctl = 0;
     }
     
-    flags |= (IWM_TX_CMD_FLG_BT_DIS | IWM_TX_CMD_FLG_SEQ_CTL);
+    flags |= IWM_TX_CMD_FLG_BT_DIS;
+    if (!hasqos)
+        flags |= IWM_TX_CMD_FLG_SEQ_CTL;
     
     tx->tx_flags |= htole32(flags);
     
