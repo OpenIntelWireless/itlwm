@@ -144,7 +144,10 @@ public:
     int    iwm_nic_tx_init(struct iwm_softc *);
     int    iwm_nic_init(struct iwm_softc *);
     int    iwm_enable_ac_txq(struct iwm_softc *, int, int);
-    int    iwm_enable_txq(struct iwm_softc *, int, int, int);
+    int    iwm_enable_txq(struct iwm_softc *, int, int, int, int, int, int);
+    int    iwm_disable_txq(struct iwm_softc *, uint8_t, uint8_t, uint8_t);
+    int    iwm_enable_default_tx_queues(struct iwm_softc *);
+    int    iwm_disable_tx_queues(struct iwm_softc *);
     int    iwm_post_alive(struct iwm_softc *);
     struct iwm_phy_db_entry *iwm_phy_db_get_section(struct iwm_softc *, uint16_t,
                                                     uint16_t);
@@ -183,12 +186,12 @@ public:
                                      uint8_t);
     void    iwm_sta_rx_agg(struct iwm_softc *, struct ieee80211_node *, uint8_t,
                            uint16_t, uint16_t, int);
-#ifdef notyet
-    int    iwm_ampdu_tx_start(struct ieee80211com *, struct ieee80211_node *,
+    static int    iwm_ampdu_tx_start(struct ieee80211com *, struct ieee80211_node *,
                               uint8_t);
-    void    iwm_ampdu_tx_stop(struct ieee80211com *, struct ieee80211_node *,
+    static void    iwm_ampdu_tx_stop(struct ieee80211com *, struct ieee80211_node *,
                               uint8_t);
-#endif
+    int iwm_sta_tx_agg(struct iwm_softc *, struct ieee80211_node *,
+                        uint8_t, uint8_t, uint16_t, int);
     static void    iwm_ba_task(void *);
     
     int    iwm_parse_nvm_data(struct iwm_softc *, const uint16_t *,
@@ -228,10 +231,13 @@ public:
                          uint32_t, struct ieee80211_rxinfo *, struct mbuf_list *);
     void    iwm_rx_tx_cmd_single(struct iwm_softc *, struct iwm_rx_packet *,
                                  struct iwm_node *, int, int);
+    void    iwm_rx_tx_cmd_agg(struct iwm_softc *, struct iwm_rx_packet *,
+                              struct iwm_node *, int, int);
+    void    iwm_rx_tx_ba_notif(struct iwm_softc *, struct iwm_rx_packet *, struct iwm_rx_data *);
     void    iwm_rx_tx_cmd(struct iwm_softc *, struct iwm_rx_packet *,
                           struct iwm_rx_data *);
-    void
-    iwm_rx_mpdu_mq(struct iwm_softc *sc, mbuf_t m, void *pktdata,
+    void    iwm_ampdu_rate_control(struct iwm_softc *, struct ieee80211_node *, struct iwm_tx_ring *, int, uint16_t, uint16_t);
+    void iwm_rx_mpdu_mq(struct iwm_softc *sc, mbuf_t m, void *pktdata,
                    size_t maxlen, struct mbuf_list *ml);
     void    iwm_rx_bmiss(struct iwm_softc *, struct iwm_rx_packet *,
                          struct iwm_rx_data *);
@@ -252,9 +258,13 @@ public:
     void    iwm_free_resp(struct iwm_softc *, struct iwm_host_cmd *);
     void    iwm_cmd_done(struct iwm_softc *, int, int, int);
     void    iwm_update_sched(struct iwm_softc *, int, int, uint8_t, uint16_t);
+    void    iwm_reset_sched(struct iwm_softc *, int, int);
     const struct iwm_rate *iwm_tx_fill_cmd(struct iwm_softc *, struct iwm_node *,
                                            struct ieee80211_frame *, struct iwm_tx_cmd *);
     void iwm_txd_done(struct iwm_softc *, struct iwm_tx_data *);
+    void iwm_ampdu_txq_advance(struct iwm_softc *, struct iwm_tx_ring *, int, int);
+    void iwm_clear_oactive(struct iwm_softc *, struct iwm_tx_ring *);
+    void iwm_mira_choose(struct iwm_softc *, struct iwm_node *);
     int    iwm_tx(struct iwm_softc *, mbuf_t, struct ieee80211_node *, int);
     int    iwm_flush_tx_path(struct iwm_softc *, int);
     void    iwm_led_enable(struct iwm_softc *);
@@ -274,9 +284,10 @@ public:
     int    iwm_power_update_device(struct iwm_softc *);
     int    iwm_enable_beacon_filter(struct iwm_softc *, struct iwm_node *);
     int    iwm_disable_beacon_filter(struct iwm_softc *);
-    int    iwm_add_sta_cmd(struct iwm_softc *, struct iwm_node *, int);
+    int    iwm_add_sta_cmd(struct iwm_softc *, struct iwm_node *, int, unsigned int);
     int    iwm_add_aux_sta(struct iwm_softc *);
     int    iwm_rm_sta_cmd(struct iwm_softc *, struct iwm_node *);
+    int    iwm_drain_sta(struct iwm_softc *, struct iwm_node *, bool);
     uint16_t iwm_scan_rx_chain(struct iwm_softc *);
     uint32_t iwm_scan_rate_n_flags(struct iwm_softc *, int, int);
     uint8_t    iwm_lmac_scan_fill_channels(struct iwm_softc *,

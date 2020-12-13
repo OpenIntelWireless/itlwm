@@ -194,28 +194,6 @@ iwm_alloc_tx_ring(iwm_softc *sc, struct iwm_tx_ring *ring, int qid)
     }
     ring->desc = (struct iwm_tfd *)ring->desc_dma.vaddr;
     
-    /*
-     * There is no need to allocate DMA buffers for unused rings.
-     * 7k/8k/9k hardware supports up to 31 Tx rings which is more
-     * than we currently need.
-     *
-     * In DQA mode we use 1 command queue + 4 DQA mgmt/data queues.
-     * The command is queue 0 (sc->txq[0]), and 4 mgmt/data frame queues
-     * are sc->tqx[IWM_DQA_MIN_MGMT_QUEUE + ac], i.e. sc->txq[5:8],
-     * in order to provide one queue per EDCA category.
-     *
-     * In non-DQA mode, we use rings 0 through 9 (0-3 are EDCA, 9 is cmd).
-     *
-     * Tx aggregation will require additional queues (one queue per TID
-     * for which aggregation is enabled) but we do not implement this yet.
-     *
-     * Unfortunately, we cannot tell if DQA will be used until the
-     * firmware gets loaded later, so just allocate sufficient rings
-     * in order to satisfy both cases.
-     */
-    if (qid > IWM_CMD_QUEUE)
-        return 0;
-    
     size = IWM_TX_RING_COUNT * sizeof(struct iwm_device_cmd);
     err = iwm_dma_contig_alloc(sc->sc_dmat, &ring->cmd_dma, size, 4);
     if (err) {
@@ -263,17 +241,17 @@ iwm_enable_ac_txq(struct iwm_softc *sc, int qid, int fifo)
 {
     XYLog("%s\n", __FUNCTION__);
     iwm_nic_assert_locked(sc);
-    
+
     IWM_WRITE(sc, IWM_HBUS_TARG_WRPTR, qid << 8 | 0);
-    
+
     iwm_write_prph(sc, IWM_SCD_QUEUE_STATUS_BITS(qid),
                    (0 << IWM_SCD_QUEUE_STTS_REG_POS_ACTIVE)
                    | (1 << IWM_SCD_QUEUE_STTS_REG_POS_SCD_ACT_EN));
-    
+
     iwm_clear_bits_prph(sc, IWM_SCD_AGGR_SEL, (1 << qid));
-    
+
     iwm_write_prph(sc, IWM_SCD_QUEUE_RDPTR(qid), 0);
-    
+
     iwm_write_mem32(sc,
                     sc->sched_base + IWM_SCD_CONTEXT_QUEUE_OFFSET(qid), 0);
     
@@ -300,31 +278,114 @@ iwm_enable_ac_txq(struct iwm_softc *sc, int qid, int fifo)
     return 0;
 }
 
+/* Receiver address (actually, Rx station's index into station table),
+ * combined with Traffic ID (QOS priority), in format used by Tx Scheduler */
+#define BUILD_RAxTID(sta_id, tid)    (((sta_id) << 4) + (tid))
 int ItlIwm::
-iwm_enable_txq(struct iwm_softc *sc, int sta_id, int qid, int fifo)
+iwm_enable_txq(struct iwm_softc *sc, int sta_id, int qid, int fifo, int ssn, int tid, int agg)
 {
-    XYLog("%s\n", __FUNCTION__);
+    XYLog("%s qid=%d tid=%d agg=%d\n", __FUNCTION__, qid, tid, agg);
     struct iwm_scd_txq_cfg_cmd cmd;
-    int err;
+    int err = 0;
+    uint16_t ra_tid, scd_q2ratid;
+    int32_t tbl_dw_addr, tbl_dw;
+    uint16_t idx = IWM_AGG_SSN_TO_TXQ_IDX(ssn);
     
     iwm_nic_assert_locked(sc);
     
-    IWM_WRITE(sc, IWM_HBUS_TARG_WRPTR, qid << 8 | 0);
-    
     memset(&cmd, 0, sizeof(cmd));
     cmd.scd_queue = qid;
-    cmd.enable = 1;
-    cmd.sta_id = sta_id;
-    cmd.tx_fifo = fifo;
-    cmd.aggregate = 0;
+    cmd.enable = IWM_SCD_CFG_ENABLE_QUEUE;
     cmd.window = IWM_FRAME_LIMIT;
-    
+    cmd.sta_id = sta_id;
+    cmd.ssn = ssn;
+    cmd.tx_fifo = fifo;
+    cmd.aggregate = agg;
+    cmd.tid = tid;
+
+    iwm_nic_assert_locked(sc);
+
+    //Disable the scheduler prior configuring the cmd queue
+    if (qid == sc->cmdqid) {
+        iwm_write_prph(sc, IWM_SCD_EN_CTRL, 0);
+    }
+
+    //set tx queue inactive
+    iwm_write_prph(sc, IWM_SCD_QUEUE_STATUS_BITS(qid),
+                   (0 << IWM_SCD_QUEUE_STTS_REG_POS_ACTIVE)
+                   | (1 << IWM_SCD_QUEUE_STTS_REG_POS_SCD_ACT_EN));
+
+    /* Set this queue as a chain-building queue unless it is CMD */
+    if (qid != sc->cmdqid) {
+        iwm_set_bits_prph(sc, IWM_SCD_QUEUECHAIN_SEL, (1 << qid));
+    }
+
+    if (agg) {
+        /* Map receiver-address / traffic-ID to this queue */
+        ra_tid = BUILD_RAxTID(sta_id, tid);
+        scd_q2ratid = ra_tid & IWM_SCD_QUEUE_RA_TID_MAP_RATID_MSK;
+        tbl_dw_addr = sc->sched_base + IWM_SCD_TRANS_TBL_OFFSET_QUEUE(qid);
+        iwm_read_mem(sc, tbl_dw_addr, &tbl_dw, 1);
+        if (qid & 0x1)
+            tbl_dw = (scd_q2ratid << 16) | (tbl_dw & 0x0000FFFF);
+        else
+            tbl_dw = scd_q2ratid | (tbl_dw & 0xFFFF0000);
+        iwm_write_mem32(sc, tbl_dw_addr, tbl_dw);
+        iwm_set_bits_prph(sc, IWM_SCD_AGGR_SEL, (1 << qid));
+    } else {
+        //disable agg
+        iwm_clear_bits_prph(sc, IWM_SCD_AGGR_SEL, (1 << qid));
+    }
+
+    sc->txq[qid].cur = sc->txq[qid].read = idx;
+    IWM_WRITE(sc, IWM_HBUS_TARG_WRPTR, (qid << 8) | idx);
+
+    iwm_write_prph(sc, IWM_SCD_QUEUE_RDPTR(qid), ssn);
+
+    iwm_write_mem32(sc,
+                    sc->sched_base + IWM_SCD_CONTEXT_QUEUE_OFFSET(qid), 0);
+
+    /* Set scheduler window size and frame limit. */
+    iwm_write_mem32(sc,
+                    sc->sched_base + IWM_SCD_CONTEXT_QUEUE_OFFSET(qid) +
+                    sizeof(uint32_t),
+                    ((IWM_FRAME_LIMIT << IWM_SCD_QUEUE_CTX_REG2_WIN_SIZE_POS) &
+                     IWM_SCD_QUEUE_CTX_REG2_WIN_SIZE_MSK) |
+                    ((IWM_FRAME_LIMIT
+                      << IWM_SCD_QUEUE_CTX_REG2_FRAME_LIMIT_POS) &
+                     IWM_SCD_QUEUE_CTX_REG2_FRAME_LIMIT_MSK));
+
+    iwm_write_prph(sc, IWM_SCD_QUEUE_STATUS_BITS(qid),
+                   (1 << IWM_SCD_QUEUE_STTS_REG_POS_ACTIVE) |
+                   (fifo << IWM_SCD_QUEUE_STTS_REG_POS_TXF) |
+                   (1 << IWM_SCD_QUEUE_STTS_REG_POS_WSL) |
+                   IWM_SCD_QUEUE_STTS_REG_MSK);
+
+    if (qid == sc->cmdqid)
+        iwm_write_prph(sc, IWM_SCD_EN_CTRL,
+                       iwm_read_prph(sc, IWM_SCD_EN_CTRL) | (1 << qid));
+
     err = iwm_send_cmd_pdu(sc, IWM_SCD_QUEUE_CFG, 0,
                            sizeof(cmd), &cmd);
     if (err)
-        return err;
+        XYLog("%s failed error=%d\n", __FUNCTION__, err);
     
-    return 0;
+    return err;
+}
+
+int ItlIwm::
+iwm_disable_txq(struct iwm_softc *sc, uint8_t qid, uint8_t tid, uint8_t flags)
+{
+    int err;
+    struct iwm_scd_txq_cfg_cmd cmd = {
+        .scd_queue = qid,
+        .enable = IWM_SCD_CFG_DISABLE_QUEUE,
+        .sta_id = IWM_STATION_ID,
+    };
+    
+    err = iwm_send_cmd_pdu(sc, IWM_SCD_QUEUE_CFG, flags,
+                               sizeof(struct iwm_scd_txq_cfg_cmd), &cmd);
+    return err;
 }
 
 int ItlIwm::

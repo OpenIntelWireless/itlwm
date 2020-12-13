@@ -312,8 +312,6 @@ ieee80211_decrypt(struct ieee80211com *ic, mbuf_t m0,
         mbuf_freem(m0);
         return NULL;
     }
-    
-    DPRINTF(("%s kid=%d cipher=%d\n", __FUNCTION__, k->k_id, k->k_cipher));
 
     switch (k->k_cipher) {
     case IEEE80211_CIPHER_WEP40:

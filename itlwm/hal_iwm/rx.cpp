@@ -656,6 +656,9 @@ iwm_rx_pkt(struct iwm_softc *sc, struct iwm_rx_data *data, struct mbuf_list *ml)
             case IWM_TX_CMD:
                 iwm_rx_tx_cmd(sc, pkt, data);
                 break;
+            case IWM_BA_NOTIF:
+                iwm_rx_tx_ba_notif(sc, pkt, data);
+                break;
                 
             case IWM_MISSED_BEACONS_NOTIFICATION:
                 iwm_rx_bmiss(sc, pkt, data);

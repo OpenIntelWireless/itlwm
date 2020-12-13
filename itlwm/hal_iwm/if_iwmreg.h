@@ -1934,6 +1934,11 @@ struct iwm_agn_scd_bc_tbl {
 /* scheduler config */
 #define IWM_SCD_QUEUE_CFG    0x1d
 
+/* Available options for the SCD_QUEUE_CFG HCMD */
+#define IWM_SCD_CFG_DISABLE_QUEUE   0
+#define IWM_SCD_CFG_ENABLE_QUEUE    1
+#define IWM_SCD_CFG_UPDATE_QUEUE_TID    2
+
 /* global key */
 #define IWM_WEP_KEY    0x20
 
@@ -4721,6 +4726,9 @@ struct iwm_tx_cmd {
     struct ieee80211_frame hdr[0];
 } __packed; /* IWM_TX_CMD_API_S_VER_3 */
 
+/* For aggregation queues, index must be aligned to frame sequence number. */
+#define IWM_AGG_SSN_TO_TXQ_IDX(x)    ((x) & (IWM_TX_RING_COUNT - 1))
+
 /*
  * TX response related data
  */
@@ -4782,7 +4790,7 @@ struct iwm_tx_cmd {
 #define IWM_AGG_TX_STATE_BT_PRIO        0x0002
 #define IWM_AGG_TX_STATE_FEW_BYTES        0x0004
 #define IWM_AGG_TX_STATE_ABORT            0x0008
-#define IWM_AGG_TX_STATE_LAST_SENT_TTL        0x0010
+#define IWM_AGG_TX_STATE_TX_ON_AIR_DROP        0x0010
 #define IWM_AGG_TX_STATE_LAST_SENT_TRY_CNT    0x0020
 #define IWM_AGG_TX_STATE_LAST_SENT_BT_KILL    0x0040
 #define IWM_AGG_TX_STATE_SCD_QUERY        0x0080
@@ -5039,6 +5047,31 @@ struct iwm_scd_txq_cfg_rsp {
     uint8_t tid;
     uint8_t scd_queue;
 } __packed; /* SCD_QUEUE_CFG_RSP_API_S_VER_1 */
+
+struct iwm_txq_scd_cfg {
+    uint8_t fifo;
+    uint8_t sta_id;
+    uint8_t tid;
+    bool aggregate;
+    int frame_limit;
+};
+
+const uint8_t tid_to_mac80211_ac[] = {
+    EDCA_AC_BE,
+    EDCA_AC_BK,
+    EDCA_AC_BK,
+    EDCA_AC_BE,
+    EDCA_AC_VI,
+    EDCA_AC_VI,
+    EDCA_AC_VO,
+    EDCA_AC_VO,
+    EDCA_AC_VO, /* We treat MGMT as TID 8, which is set as AC_VO */
+};
+
+/*
+ * TID for non QoS frames - to be written in tid_tspec
+ */
+#define IWM_TID_NON_QOS    0
 
 
 /* Scan Commands, Responses, Notifications */
