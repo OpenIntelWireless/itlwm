@@ -287,7 +287,6 @@ struct iwm_tx_data {
     int totlen;
     int retries;
     int txfail;
-    int flags;
     
     /* A-MPDU subframes */
     int ampdu_id;

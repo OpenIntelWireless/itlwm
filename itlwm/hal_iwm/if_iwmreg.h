@@ -1889,6 +1889,11 @@ struct iwm_agn_scd_bc_tbl {
 #define IWM_DQA_MIN_DATA_QUEUE        10
 #define IWM_DQA_MAX_DATA_QUEUE        31
 
+/* Reserve 8 DQA Tx queues, from 10 up to 17, for A-MPDU aggregation. */
+#define IWM_MAX_TID_COUNT      8
+#define IWM_FIRST_AGG_TX_QUEUE IWM_DQA_MIN_DATA_QUEUE
+#define IWM_LAST_AGG_TX_QUEUE  (IWM_FIRST_AGG_TX_QUEUE + IWM_MAX_TID_COUNT - 1)
+
 /* legacy non-DQA queues; the legacy command queue uses a different number! */
 #define IWM_OFFCHANNEL_QUEUE    8
 #define IWM_CMD_QUEUE        9
@@ -4646,7 +4651,8 @@ struct iwm_lq_cmd {
 /*
  * TID for non QoS frames - to be written in tid_tspec
  */
-#define IWM_TID_NON_QOS    IWM_MAX_TID_COUNT
+#define IWM_TID_NON_QOS    0
+#define IWM_TID_MGMT   15
 
 /*
  * Limits on the retransmissions - to be written in {data,rts}_retry_limit
@@ -4920,21 +4926,23 @@ struct iwm_tx_resp {
 /**
  * struct iwm_ba_notif - notifies about reception of BA
  * ( IWM_BA_NOTIF = 0xc5 )
- * @sta_addr_lo32: lower 32 bits of the MAC address
- * @sta_addr_hi16: upper 16 bits of the MAC address
+ * @sta_addr: MAC address
  * @sta_id: Index of recipient (BA-sending) station in fw's station table
  * @tid: tid of the session
- * @seq_ctl: sequence control field from IEEE80211 frame header (it is unclear
- *  which frame this relates to; info or reverse engineering welcome)
+ * @seq_ctl: sequence control field from IEEE80211 frame header (the first
+ * bit in @bitmap corresponds to the sequence number stored here)
  * @bitmap: the bitmap of the BA notification as seen in the air
  * @scd_flow: the tx queue this BA relates to
  * @scd_ssn: the index of the last contiguously sent packet
  * @txed: number of Txed frames in this batch
  * @txed_2_done: number of Acked frames in this batch
+ * @reduced_txp: power reduced according to TPC. This is the actual value and
+ *     not a copy from the LQ command. Thus, if not the first rate was used
+ *     for Tx-ing then this value will be set to 0 by FW.
+ * @reserved1: reserved
  */
 struct iwm_ba_notif {
-    uint32_t sta_addr_lo32;
-    uint16_t sta_addr_hi16;
+    uint8_t sta_addr[ETHER_ADDR_LEN];
     uint16_t reserved;
 
     uint8_t sta_id;
@@ -4945,6 +4953,7 @@ struct iwm_ba_notif {
     uint16_t scd_ssn;
     uint8_t txed;
     uint8_t txed_2_done;
+    uint8_t reduced_txp;
     uint16_t reserved1;
 } __packed;
 
@@ -5067,12 +5076,6 @@ const uint8_t tid_to_mac80211_ac[] = {
     EDCA_AC_VO,
     EDCA_AC_VO, /* We treat MGMT as TID 8, which is set as AC_VO */
 };
-
-/*
- * TID for non QoS frames - to be written in tid_tspec
- */
-#define IWM_TID_NON_QOS    0
-
 
 /* Scan Commands, Responses, Notifications */
 
