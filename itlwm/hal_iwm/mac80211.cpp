@@ -1501,14 +1501,16 @@ iwm_tx(struct iwm_softc *sc, mbuf_t m, struct ieee80211_node *ni, int ac)
     if (!amsdu) {
         tb1_len = _ALIGN(len, 4);
         /* Tell NIC about any 2-byte padding after MAC header */
-        if (tb1_len != len)
+        if (tb1_len != len) {
             flags |= IWM_TX_CMD_FLG_MH_PAD;
+            tx->offload_assist |= htole16(IWM_TX_CMD_OFFLD_PAD);
+        }
     } else {
         tb1_len = len;
+        tx->offload_assist |= htole16(IWM_TX_CMD_OFFLD_AMSDU);
     }
     
     tx->driver_txop = 0;
-    tx->next_frame_len = 0;
     
     tx->len = htole16(totlen);
     tx->tid_tspec = tid;
@@ -1623,6 +1625,8 @@ iwm_tx(struct iwm_softc *sc, mbuf_t m, struct ieee80211_node *ni, int ac)
 void ItlIwm::
 iwm_update_sched(struct iwm_softc *sc, int qid, int cur, uint8_t sta_id, uint16_t len)
 {
+    DPRINTFN(3, ("%s qid=%d cur=%d sta=%d len=%d\n", __FUNCTION__, qid, cur, sta_id, len));
+
     struct iwm_agn_scd_bc_tbl *scd_bc_tbl;
     uint8_t sec_ctl = 0;
     uint16_t bc_ent;

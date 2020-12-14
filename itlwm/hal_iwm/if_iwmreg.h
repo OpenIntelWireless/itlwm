@@ -4663,13 +4663,38 @@ struct iwm_lq_cmd {
 #define IWM_BAR_DFAULT_RETRY_LIMIT        60
 #define IWM_LOW_RETRY_LIMIT            7
 
+/**
+ * %iwl_tx_cmd offload_assist values
+ * @TX_CMD_OFFLD_IP_HDR: offset to start of IP header (in words)
+ *    from mac header end. For normal case it is 4 words for SNAP.
+ *    note: tx_cmd, mac header and pad are not counted in the offset.
+ *    This is used to help the offload in case there is tunneling such as
+ *    IPv6 in IPv4, in such case the ip header offset should point to the
+ *    inner ip header and IPv4 checksum of the external header should be
+ *    calculated by driver.
+ * @TX_CMD_OFFLD_L4_EN: enable TCP/UDP checksum
+ * @TX_CMD_OFFLD_L3_EN: enable IP header checksum
+ * @TX_CMD_OFFLD_MH_SIZE: size of the mac header in words. Includes the IV
+ *    field. Doesn't include the pad.
+ * @TX_CMD_OFFLD_PAD: mark 2-byte pad was inserted after the mac header for
+ *    alignment
+ * @TX_CMD_OFFLD_AMSDU: mark TX command is A-MSDU
+ */
+#define IWM_TX_CMD_OFFLD_IP_HDR(x)    ((x) << 0)
+#define IWM_TX_CMD_OFFLD_L4_EN        (1 << 6)
+#define IWM_TX_CMD_OFFLD_L3_EN        (1 << 7)
+#define IWM_TX_CMD_OFFLD_MH_SIZE(x)    ((x) << 8)
+#define IWM_TX_CMD_OFFLD_PAD        (1 << 13)
+#define IWM_TX_CMD_OFFLD_AMSDU        (1 << 14)
+#define IWM_TX_CMD_OFFLD_MH_MASK    0x1f
+#define IWM_TX_CMD_OFFLD_IP_HDR_MASK    0x3f
+
 /* TODO: complete documentation for try_cnt and btkill_cnt */
 /**
  * struct iwm_tx_cmd - TX command struct to FW
  * ( IWM_TX_CMD = 0x1c )
  * @len: in bytes of the payload, see below for details
- * @next_frame_len: same as len, but for next frame (0 if not applicable)
- *    Used for fragmentation and bursting, but not in 11n aggregation.
+ * @offload_assist: TX offload configuration
  * @tx_flags: combination of IWM_TX_CMD_FLG_*
  * @rate_n_flags: rate for *all* Tx attempts, if IWM_TX_CMD_FLG_STA_RATE_MSK is
  *    cleared. Combination of IWM_RATE_MCS_*
@@ -4705,7 +4730,7 @@ struct iwm_lq_cmd {
  */
 struct iwm_tx_cmd {
     uint16_t len;
-    uint16_t next_frame_len;
+    uint16_t offload_assist;
     uint32_t tx_flags;
     struct {
         uint8_t try_cnt;
