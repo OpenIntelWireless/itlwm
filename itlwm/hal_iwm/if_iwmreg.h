@@ -4979,7 +4979,7 @@ struct iwm_ba_notif {
     uint8_t txed;
     uint8_t txed_2_done;
     uint8_t reduced_txp;
-    uint16_t reserved1;
+    uint8_t reserved1;
 } __packed;
 
 /*
