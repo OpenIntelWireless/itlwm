@@ -458,7 +458,7 @@ iwm_rm_sta_cmd(struct iwm_softc *sc, struct iwm_node *in)
             XYLog("%s can not drain sta(FALSE)\n", __FUNCTION__);
             goto done;
         }
-        for (qid = IWM_DQA_MIN_DATA_QUEUE; qid < IWM_DQA_MAX_DATA_QUEUE; qid++) {
+        for (qid = IWM_FIRST_AGG_TX_QUEUE; qid <= IWM_LAST_AGG_TX_QUEUE; qid++) {
             if (sc->agg_queue_mask & (1 << qid)) {
 //                iwm_disable_txq(sc, qid, 0, 0);
             }

@@ -124,6 +124,10 @@
 #include <IOKit/IOCommandGate.h>
 #include <net80211/ieee80211_priv.h>
 
+#ifdef IWM_DEBUG
+int iwm_debug = 1;
+#endif
+
 int ItlIwm::
 iwm_is_valid_channel(uint16_t ch_id)
 {
@@ -694,14 +698,14 @@ static const char *iwm_get_agg_tx_status(u16 status)
 }
 
 void ItlIwm::
-iwm_txq_advance(struct iwm_softc *sc, struct iwm_tx_ring *ring, int idx)
+iwm_ampdu_txq_advance(struct iwm_softc *sc, struct iwm_tx_ring *ring, int idx)
 {
     struct iwm_tx_data *txd;
 
     while (ring->tail != idx) {
         txd = &ring->data[ring->tail];
         if (txd->m != NULL) {
-            if (ring->qid < IWM_FIRST_AGG_TX_QUEUE)
+            if (ring->qid < sc->first_agg_txq)
                 DPRINTF(("%s: missed Tx completion: tail=%d "
                          "idx=%d\n", __func__, ring->tail, idx));
             iwm_reset_sched(sc, ring->qid, ring->tail, IWM_STATION_ID);
@@ -807,10 +811,10 @@ iwm_rx_tx_ba_notif(struct iwm_softc *sc, struct iwm_rx_packet *pkt, struct iwm_r
     ring = &sc->txq[qid];
     struct ieee80211_node *ni = ic->ic_bss;
     
-    XYLog("TID = %d, SeqCtl = %d, bitmap = 0x%llx, scd_flow = %d, scd_ssn = %d sent:%d, acked:%d\n",
-          ba_notif->tid, le16_to_cpu(ba_notif->seq_ctl),
-          le64_to_cpu(ba_notif->bitmap), le16_to_cpu(ba_notif->scd_flow), le16_to_cpu(ba_notif->scd_ssn),
-          ba_notif->txed, ba_notif->txed_2_done);
+    DPRINTFN(3, ("TID = %d, SeqCtl = %d, bitmap = 0x%llx, scd_flow = %d, scd_ssn = %d sent:%d, acked:%d\n",
+                 ba_notif->tid, le16_to_cpu(ba_notif->seq_ctl),
+                 le64_to_cpu(ba_notif->bitmap), le16_to_cpu(ba_notif->scd_flow), le16_to_cpu(ba_notif->scd_ssn),
+                 ba_notif->txed, ba_notif->txed_2_done));
     
     if (ic->ic_state != IEEE80211_S_RUN)
         return;
@@ -855,7 +859,7 @@ iwm_rx_tx_ba_notif(struct iwm_softc *sc, struct iwm_rx_packet *pkt, struct iwm_r
      */
     if (SEQ_LT(ba->ba_winstart, ssn)) {
         ieee80211_output_ba_move_window(ic, ni, tid, ssn);
-        iwm_txq_advance(sc, ring, IWM_AGG_SSN_TO_TXQ_IDX(ssn));
+        iwm_ampdu_txq_advance(sc, ring, IWM_AGG_SSN_TO_TXQ_IDX(ssn));
         iwm_clear_oactive(sc, ring);
     }
 }
@@ -867,7 +871,7 @@ iwm_ampdu_tx_done(struct iwm_softc *sc, struct iwm_cmd_header *cmd_hdr,
     struct iwm_agg_tx_status *agg_status)
 {
     struct ieee80211com *ic = &sc->sc_ic;
-    int tid = cmd_hdr->qid - IWM_FIRST_AGG_TX_QUEUE;
+    int tid = cmd_hdr->qid - sc->first_agg_txq;
     struct iwm_tx_data *txdata = &txq->data[cmd_hdr->idx];
     struct ieee80211_node *ni = &in->in_ni;
     int txfail = (status != IWM_TX_STATUS_SUCCESS &&
@@ -961,9 +965,9 @@ iwm_ampdu_tx_done(struct iwm_softc *sc, struct iwm_cmd_header *cmd_hdr,
         return;
     
     /* This is a final single-frame Tx attempt. */
-    XYLog("%s: final tx status=0x%x qid=%d queued=%d idx=%d ssn=%u "
-          "bitmap=0x%llx\n", __func__, status, cmd_hdr->qid, txq->queued,
-          cmd_hdr->idx, ssn, ba->ba_bitmap);
+    DPRINTFN(3, ("%s: final tx status=0x%x qid=%d queued=%d idx=%d ssn=%u "
+                 "bitmap=0x%llx\n", __func__, status, cmd_hdr->qid, txq->queued,
+                 cmd_hdr->idx, ssn, ba->ba_bitmap));
     
     /*
      * Skip rate control if our Tx rate is fixed.
@@ -993,7 +997,7 @@ iwm_ampdu_tx_done(struct iwm_softc *sc, struct iwm_cmd_header *cmd_hdr,
         uint16_t s = ssn;
         while (SEQ_LT(ba->ba_winend, s)) {
             ieee80211_output_ba_move_window(ic, ni, tid, s);
-            iwm_txq_advance(sc, txq, IWM_AGG_SSN_TO_TXQ_IDX(s));
+            iwm_ampdu_txq_advance(sc, txq, IWM_AGG_SSN_TO_TXQ_IDX(s));
             s = (s + 1) % 0xfff;
         }
         /* SSN should now be within window; set corresponding bit. */
@@ -1002,7 +1006,7 @@ iwm_ampdu_tx_done(struct iwm_softc *sc, struct iwm_cmd_header *cmd_hdr,
     
     /* Move window forward up to the first hole in the bitmap. */
     ieee80211_output_ba_move_window_to_first_unacked(ic, ni, tid, ssn);
-    iwm_txq_advance(sc, txq, IWM_AGG_SSN_TO_TXQ_IDX(ba->ba_winstart));
+    iwm_ampdu_txq_advance(sc, txq, IWM_AGG_SSN_TO_TXQ_IDX(ba->ba_winstart));
     
     iwm_clear_oactive(sc, txq);
 }
@@ -1055,7 +1059,7 @@ iwm_rx_tx_cmd_single(struct iwm_softc *sc, struct iwm_tx_resp *tx_resp,
         XYLog("%s %d OUTPUT_ERROR status=%d\n", __FUNCTION__, __LINE__, status);
         ifp->netStat->outputErrors++;
     } else {
-        XYLog("%s %d succeed status=%d\n", __FUNCTION__, __LINE__, status);
+        DPRINTFN(2, ("%s %d succeed status=%d\n", __FUNCTION__, __LINE__, status));
     }
 }
 
@@ -1145,22 +1149,23 @@ iwm_rx_tx_cmd(struct iwm_softc *sc, struct iwm_rx_packet *pkt,
     /* Sanity checks. */
     if (sizeof(*tx_resp) > len)
         return;
-    if (qid < IWM_FIRST_AGG_TX_QUEUE && tx_resp->frame_count > 1)
+    if (qid < sc->first_agg_txq && tx_resp->frame_count > 1)
         return;
-    if (qid >= IWM_FIRST_AGG_TX_QUEUE && sizeof(*tx_resp) + sizeof(ssn) +
+    if (qid >= sc->first_agg_txq && sizeof(*tx_resp) + sizeof(ssn) +
         tx_resp->frame_count * sizeof(tx_resp->status) > len)
         return;
     
-    for (int i = 1; i < tx_resp->frame_count; i++) {
-        u16 fstatus = le16_to_cpu((&tx_resp->status)[i].status);
+    if (tx_resp->frame_count > 1)
+        for (int i = 0; i < tx_resp->frame_count; i++) {
+            u16 fstatus = le16_to_cpu((&tx_resp->status)[i].status);
 
-        XYLog("status %s (0x%04x), try-count (%d) qid (%d) seq (0x%x)\n",
-              iwm_get_agg_tx_status(fstatus),
-              fstatus & IWM_AGG_TX_STATE_STATUS_MSK,
-              (fstatus & IWM_AGG_TX_STATE_TRY_CNT_MSK) >>
-              IWM_AGG_TX_STATE_TRY_CNT_POS,
-              qid,
-              le16_to_cpu((&tx_resp->status)[i].idx));
+            DPRINTFN(3, ("status %s (0x%04x), try-count (%d) qid (%d) seq (0x%x)\n",
+                         iwm_get_agg_tx_status(fstatus),
+                         fstatus & IWM_AGG_TX_STATE_STATUS_MSK,
+                         (fstatus & IWM_AGG_TX_STATE_TRY_CNT_MSK) >>
+                         IWM_AGG_TX_STATE_TRY_CNT_POS,
+                         qid,
+                         le16_to_cpu((&tx_resp->status)[i].idx)));
     }
     
     /*
@@ -1179,9 +1184,9 @@ iwm_rx_tx_cmd(struct iwm_softc *sc, struct iwm_rx_packet *pkt,
     if (txd->m == NULL)
         return;
     
-    XYLog("%s idx=%d qid=%d txd->txmcs=%d txd->txrate=%d, frame_count=%d len=%d\n", __FUNCTION__, idx, qid, txd->txmcs, txd->txrate, ((struct iwm_tx_resp *)pkt->data)->frame_count, ((struct iwm_tx_resp *)pkt->data)->byte_cnt);
+    DPRINTFN(2, ("%s idx=%d qid=%d txd->txmcs=%d txd->txrate=%d, frame_count=%d len=%d\n", __FUNCTION__, idx, qid, txd->txmcs, txd->txrate, ((struct           iwm_tx_resp *)pkt->data)->frame_count, ((struct iwm_tx_resp *)pkt->data)->byte_cnt));
     
-    if (qid >= IWM_FIRST_AGG_TX_QUEUE) {
+    if (qid >= sc->first_agg_txq) {
         int status;
         
         memcpy(&ssn, &tx_resp->status + tx_resp->frame_count, sizeof(ssn));
@@ -1203,7 +1208,7 @@ iwm_rx_tx_cmd(struct iwm_softc *sc, struct iwm_rx_packet *pkt,
          * just free the associated mbuf and release the associated
          * node reference.
          */
-        iwm_txq_advance(sc, ring, idx);
+        iwm_ampdu_txq_advance(sc, ring, idx);
         iwm_clear_oactive(sc, ring);
     }
 }
@@ -1366,7 +1371,7 @@ iwm_tx(struct iwm_softc *sc, mbuf_t m, struct ieee80211_node *ni, int ac)
              if (!IEEE80211_IS_MULTICAST(wh->i_addr1) &&
                  ba->ba_state == IEEE80211_BA_AGREED) {
                  qid = sc->first_agg_txq + tid;
-                 XYLog("%s agg packet qid=%d send\n", __FUNCTION__, qid);
+                 DPRINTFN(3, ("%s agg packet qid=%d send\n", __FUNCTION__, qid));
                  if (sc->qfullmsk & (1 << qid)) {
                      mbuf_freem(m);
                      return ENOBUFS;
@@ -1565,11 +1570,11 @@ iwm_tx(struct iwm_softc *sc, mbuf_t m, struct ieee80211_node *ni, int ac)
     data->totlen = totlen;
     data->ampdu_txmcs = ni->ni_txmcs;
     
-    XYLog("sending data: 嘤嘤嘤 amsdu=%d qid=%d idx=%d len=%d nsegs=%d txflags=0x%08x rate_n_flags=0x%08x rateidx=%u txmcs=%d ni_txrate=%d\n",
-          amsdu, ring->qid, ring->cur, totlen, nsegs, le32toh(tx->tx_flags),
-          le32toh(tx->rate_n_flags), tx->initial_rate_index,
-          data->txmcs,
-          data->txrate);
+    DPRINTFN(3, ("sending data: 嘤嘤嘤 amsdu=%d qid=%d idx=%d len=%d nsegs=%d txflags=0x%08x rate_n_flags=0x%08x rateidx=%u txmcs=%d ni_txrate=%d\n",
+                 amsdu, ring->qid, ring->cur, totlen, nsegs, le32toh(tx->tx_flags),
+                 le32toh(tx->rate_n_flags), tx->initial_rate_index,
+                 data->txmcs,
+                 data->txrate));
     
     /* Fill TX descriptor. */
     desc->num_tbs = 2 + nsegs;
@@ -1660,7 +1665,7 @@ iwm_update_sched(struct iwm_softc *sc, int qid, int cur, uint8_t sta_id, uint16_
 void ItlIwm::
 iwm_reset_sched(struct iwm_softc *sc, int qid, int idx, uint8_t sta_id)
 {
-    XYLog("%s qid=%d idx=%d\n", __FUNCTION__, qid, idx);
+    DPRINTFN(3, ("%s qid=%d idx=%d\n", __FUNCTION__, qid, idx));
     
     struct iwm_agn_scd_bc_tbl *scd_bc_tbl;
     uint16_t val;
@@ -2583,7 +2588,7 @@ iwm_ampdu_tx_start(struct ieee80211com *ic, struct ieee80211_node *ni, uint8_t t
     ItlIwm *that = container_of(sc, ItlIwm, com);
     int qid = sc->first_agg_txq + tid;
     
-    if ((sc->agg_queue_mask & (1 << qid)) || qid < IWM_DQA_MIN_DATA_QUEUE || qid > IWM_DQA_MAX_DATA_QUEUE) {
+    if ((sc->agg_queue_mask & (1 << qid)) || qid < IWM_FIRST_AGG_TX_QUEUE || qid > IWM_LAST_AGG_TX_QUEUE) {
         XYLog("%s tx agg refused. qid=%d tid=%d\n", __FUNCTION__, qid, tid);
         return ENOSPC;
     }
@@ -2612,8 +2617,8 @@ iwm_ampdu_tx_stop(struct ieee80211com *ic, struct ieee80211_node *ni, uint8_t ti
     XYLog("%s\n", __FUNCTION__);
 
     /* Discard all frames in the current window. */
-    that->iwm_txq_advance(sc, &sc->txq[qid],
-                          IWM_AGG_SSN_TO_TXQ_IDX(ba->ba_winend));
+    that->iwm_ampdu_txq_advance(sc, &sc->txq[qid],
+                                IWM_AGG_SSN_TO_TXQ_IDX(ba->ba_winend));
 
     if (!that->iwm_nic_lock(sc))
         return;
@@ -3154,7 +3159,7 @@ iwm_init(struct _ifnet *ifp)
     
     //    rw_assert_wrlock(&sc->ioctl_rwl);
     
-    sc->first_agg_txq = IWM_DQA_MIN_DATA_QUEUE;
+    sc->first_agg_txq = IWM_FIRST_AGG_TX_QUEUE;
     sc->agg_tid_disable = 0xffff;
     sc->agg_queue_mask = 0;
     memset(sc->sc_tx_ba, 0, sizeof(sc->sc_tx_ba));

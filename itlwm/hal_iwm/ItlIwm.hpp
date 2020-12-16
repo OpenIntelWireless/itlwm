@@ -263,8 +263,8 @@ public:
     const struct iwm_rate *iwm_tx_fill_cmd(struct iwm_softc *, struct iwm_node *,
                                            struct ieee80211_frame *, struct iwm_tx_cmd *);
     void iwm_txd_done(struct iwm_softc *, struct iwm_tx_data *);
-    void iwm_txq_advance(struct iwm_softc *, struct iwm_tx_ring *, int);
-        void iwm_clear_oactive(struct iwm_softc *, struct iwm_tx_ring *);
+    void iwm_ampdu_txq_advance(struct iwm_softc *, struct iwm_tx_ring *, int);
+    void iwm_clear_oactive(struct iwm_softc *, struct iwm_tx_ring *);
     void iwm_mira_choose(struct iwm_softc *, struct ieee80211_node *);
     int    iwm_tx(struct iwm_softc *, mbuf_t, struct ieee80211_node *, int);
     int    iwm_flush_tx_path(struct iwm_softc *, int);
