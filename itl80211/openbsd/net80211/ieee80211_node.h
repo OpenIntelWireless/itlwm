@@ -11,7 +11,7 @@
 * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 * GNU General Public License for more details.
 */
-/*	$OpenBSD: ieee80211_node.h,v 1.83 2019/09/02 12:54:21 stsp Exp $	*/
+/*	$OpenBSD: ieee80211_node.h,v 1.87 2020/07/21 08:38:59 stsp Exp $	*/
 /*	$NetBSD: ieee80211_node.h,v 1.9 2004/04/30 22:57:32 dyoung Exp $	*/
 
 /*-
@@ -243,6 +243,13 @@ struct ieee80211_rx_ba {
 	u_int16_t		ba_head;
 	CTimeout*		ba_gap_to;
 #define IEEE80211_BA_GAP_TIMEOUT	300 /* msec */
+
+	/*
+	 * Counter for frames forced to wait in the reordering buffer
+	 * due to a leading gap caused by one or more missing frames.
+	 */
+	int			ba_gapwait;
+
 	/* Counter for consecutive frames which missed the BA window. */
 	int			ba_winmiss;
 	/* Sequence number of previous frame which missed the BA window. */

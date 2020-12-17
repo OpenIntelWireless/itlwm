@@ -11,7 +11,7 @@
 * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 * GNU General Public License for more details.
 */
-/*    $OpenBSD: if_iwm.c,v 1.313 2020/07/10 13:22:20 patrick Exp $    */
+/*    $OpenBSD: if_iwm.c,v 1.316 2020/12/07 20:09:24 tobhe Exp $    */
 
 /*
  * Copyright (c) 2014, 2016 genua gmbh <info@genua.de>
@@ -541,7 +541,6 @@ iwm_rx_pkt(struct iwm_softc *sc, struct iwm_rx_data *data, struct mbuf_list *ml)
     uint32_t offset = 0, nextoff = 0, nmpdu = 0, len;
     mbuf_t m0, m = NULL;
     const size_t minsz = sizeof(pkt->len_n_flags) + sizeof(pkt->hdr);
-    size_t remain = IWM_RBUF_SIZE;
     int qid, idx, code, handled = 1;
     bool replaced = false;
     
@@ -606,7 +605,7 @@ iwm_rx_pkt(struct iwm_softc *sc, struct iwm_rx_data *data, struct mbuf_list *ml)
                 break;
                 
             case IWM_REPLY_RX_MPDU_CMD: {
-                size_t maxlen = remain - minsz;
+                size_t maxlen = IWM_RBUF_SIZE - offset - minsz;
                 nextoff = offset +
                 roundup(len, IWM_FH_RSCSR_FRAME_ALIGN);
                 nextpkt = (struct iwm_rx_packet *)
@@ -646,10 +645,6 @@ iwm_rx_pkt(struct iwm_softc *sc, struct iwm_rx_data *data, struct mbuf_list *ml)
                                     maxlen, ml);
                 }
                 
-                if (offset + minsz < remain)
-                    remain -= offset;
-                else
-                    remain = minsz;
                 break;
             }
                 
