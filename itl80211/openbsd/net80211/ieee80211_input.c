@@ -2993,10 +2993,9 @@ ieee80211_recv_addba_req(struct ieee80211com *ic, mbuf_t m,
     ba->ba_params = (params & IEEE80211_ADDBA_BA_POLICY);
     ba->ba_params |= ((ba->ba_winsize << IEEE80211_ADDBA_BUFSZ_SHIFT) |
                       (tid << IEEE80211_ADDBA_TID_SHIFT));
-#if 0
-    /* iwm(4) 9k and iwx(4) need more work before AMSDU can be enabled. */
-    ba->ba_params |= IEEE80211_ADDBA_AMSDU;
-#endif
+    if (ic->ic_caps & IEEE80211_C_AMSDU_IN_AMPDU) {
+        ba->ba_params |= IEEE80211_ADDBA_AMSDU;
+    }
     ba->ba_winstart = ssn;
     ba->ba_winend = (ba->ba_winstart + ba->ba_winsize - 1) & 0xfff;
     /* allocate and setup our reordering buffer */

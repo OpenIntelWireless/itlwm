@@ -488,7 +488,7 @@ iwn_attach(struct iwn_softc *sc, struct pci_attach_args *pa)
     ic->ic_aselcaps = 0;
     ic->ic_ampdu_params = (IEEE80211_AMPDU_PARAM_SS_4 | 0x3 /* 64k */);
     if (sc->sc_flags & IWN_FLAG_HAS_11N) {
-        ic->ic_caps |= (IEEE80211_C_QOS | IEEE80211_C_TX_AMPDU);
+        ic->ic_caps |= (IEEE80211_C_QOS | IEEE80211_C_TX_AMPDU | IEEE80211_C_AMSDU_IN_AMPDU);
         /* Set HT capabilities. */
         ic->ic_htcaps = IEEE80211_HTCAP_SGI20;
         ic->ic_htcaps |= (IEEE80211_HTCAP_SMPS_DIS << IEEE80211_HTCAP_SMPS_SHIFT);

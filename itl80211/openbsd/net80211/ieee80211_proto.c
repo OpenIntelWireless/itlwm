@@ -712,10 +712,9 @@ ieee80211_addba_request(struct ieee80211com *ic, struct ieee80211_node *ni,
 	ba->ba_params =
 	    (ba->ba_winsize << IEEE80211_ADDBA_BUFSZ_SHIFT) |
 	    (tid << IEEE80211_ADDBA_TID_SHIFT);
-#if 0
-	/* iwm(4) 9k and iwx(4) need more work before AMSDU can be enabled. */
-	ba->ba_params |= IEEE80211_ADDBA_AMSDU;
-#endif
+    if (ic->ic_caps & IEEE80211_C_AMSDU_IN_AMPDU) {
+        ba->ba_params |= IEEE80211_ADDBA_AMSDU;
+    }
 	if ((ic->ic_htcaps & IEEE80211_HTCAP_DELAYEDBA) == 0)
 		/* immediate BA */
 		ba->ba_params |= IEEE80211_ADDBA_BA_POLICY;
