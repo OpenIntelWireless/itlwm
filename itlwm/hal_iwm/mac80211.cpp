@@ -2603,8 +2603,8 @@ iwm_ampdu_tx_stop(struct ieee80211com *ic, struct ieee80211_node *ni, uint8_t ti
 
     that->iwm_nic_unlock(sc);
 
+    /* In DQA-mode the queue isn't removed on agg termination */
     sc->agg_tid_disable |= (1 << tid);
-    sc->agg_queue_mask &= ~(1 << qid);
     sc->sc_tx_ba[tid].wn = NULL;
     ba->ba_bitmap = 0;
 
