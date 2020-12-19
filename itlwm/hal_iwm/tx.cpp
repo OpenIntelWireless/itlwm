@@ -184,6 +184,10 @@ iwm_alloc_tx_ring(iwm_softc *sc, struct iwm_tx_ring *ring, int qid)
     ring->cur = 0;
     ring->tail = 0;
     
+    /* We are using 10:17 for DQA tx agg */
+    if (qid > IWM_LAST_AGG_TX_QUEUE)
+        return 0;
+    
     /* Allocate TX descriptors (256-byte aligned). */
     size = IWM_TX_RING_COUNT * sizeof (struct iwm_tfd);
     err = iwm_dma_contig_alloc(sc->sc_dmat, &ring->desc_dma, size, 256);
@@ -278,18 +282,15 @@ iwm_enable_ac_txq(struct iwm_softc *sc, int qid, int fifo)
     return 0;
 }
 
-/* Receiver address (actually, Rx station's index into station table),
- * combined with Traffic ID (QOS priority), in format used by Tx Scheduler */
-#define BUILD_RAxTID(sta_id, tid)    (((sta_id) << 4) + (tid))
 int ItlIwm::
 iwm_enable_txq(struct iwm_softc *sc, int sta_id, int qid, int fifo, int ssn, int tid, int agg)
 {
     XYLog("%s qid=%d tid=%d agg=%d\n", __FUNCTION__, qid, tid, agg);
     struct iwm_scd_txq_cfg_cmd cmd;
     int err = 0;
-    uint16_t ra_tid, scd_q2ratid;
-    int32_t tbl_dw_addr, tbl_dw;
-    uint16_t idx = IWM_AGG_SSN_TO_TXQ_IDX(ssn);
+    uint16_t idx;
+    struct iwm_tx_ring *ring = &sc->txq[qid];
+    bool scd_bug = false;
     
     iwm_nic_assert_locked(sc);
     
@@ -304,40 +305,27 @@ iwm_enable_txq(struct iwm_softc *sc, int sta_id, int qid, int fifo, int ssn, int
     cmd.tid = tid;
 
     iwm_nic_assert_locked(sc);
-
-    //Disable the scheduler prior configuring the cmd queue
-    if (qid == sc->cmdqid) {
-        iwm_write_prph(sc, IWM_SCD_EN_CTRL, 0);
+    
+    /*
+     * If we need to move the SCD write pointer by steps of
+     * 0x40, 0x80 or 0xc0, it gets stuck. Avoids this and let
+     * the op_mode know by returning true later.
+     * Do this only in case cfg is NULL since this trick can
+     * be done only if we have DQA enabled which is true for mvm
+     * only. And mvm never sets a cfg pointer.
+     * This is really ugly, but this is the easiest way out for
+     * this sad hardware issue.
+     * This bug has been fixed on devices 9000 and up.
+     */
+    scd_bug = !sc->sc_mqrx_supported &&
+    !((ssn - ring->cur) & 0x3f) &&
+    (ssn != ring->cur);
+    if (scd_bug) {
+        ssn = (ssn + 1) & 0xfff;
     }
-
-    //set tx queue inactive
-    iwm_write_prph(sc, IWM_SCD_QUEUE_STATUS_BITS(qid),
-                   (0 << IWM_SCD_QUEUE_STTS_REG_POS_ACTIVE)
-                   | (1 << IWM_SCD_QUEUE_STTS_REG_POS_SCD_ACT_EN));
-
-    /* Set this queue as a chain-building queue unless it is CMD */
-    if (qid != sc->cmdqid) {
-        iwm_set_bits_prph(sc, IWM_SCD_QUEUECHAIN_SEL, (1 << qid));
-    }
-
-    if (agg) {
-        /* Map receiver-address / traffic-ID to this queue */
-        ra_tid = BUILD_RAxTID(sta_id, tid);
-        scd_q2ratid = ra_tid & IWM_SCD_QUEUE_RA_TID_MAP_RATID_MSK;
-        tbl_dw_addr = sc->sched_base + IWM_SCD_TRANS_TBL_OFFSET_QUEUE(qid);
-        iwm_read_mem(sc, tbl_dw_addr, &tbl_dw, 1);
-        if (qid & 0x1)
-            tbl_dw = (scd_q2ratid << 16) | (tbl_dw & 0x0000FFFF);
-        else
-            tbl_dw = scd_q2ratid | (tbl_dw & 0xFFFF0000);
-        iwm_write_mem32(sc, tbl_dw_addr, tbl_dw);
-        iwm_set_bits_prph(sc, IWM_SCD_AGGR_SEL, (1 << qid));
-    } else {
-        //disable agg
-        iwm_clear_bits_prph(sc, IWM_SCD_AGGR_SEL, (1 << qid));
-    }
-
-    sc->txq[qid].cur = sc->txq[qid].read = idx;
+    
+    idx = IWM_AGG_SSN_TO_TXQ_IDX(ssn);
+    ring->cur = ring->read = idx;
     IWM_WRITE(sc, IWM_HBUS_TARG_WRPTR, (qid << 8) | idx);
 
     iwm_write_prph(sc, IWM_SCD_QUEUE_RDPTR(qid), ssn);

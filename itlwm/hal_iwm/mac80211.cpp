@@ -801,7 +801,6 @@ iwm_rx_tx_ba_notif(struct iwm_softc *sc, struct iwm_rx_packet *pkt, struct iwm_r
     struct ieee80211com *ic = &sc->sc_ic;
     struct iwm_ba_notif *ba_notif = (struct iwm_ba_notif *)pkt->data;
     struct iwm_tx_ring *ring;
-    uint16_t seq;
     uint32_t ssn;
     uint8_t tid;
     uint8_t qid;
@@ -828,16 +827,6 @@ iwm_rx_tx_ba_notif(struct iwm_softc *sc, struct iwm_rx_packet *pkt, struct iwm_r
     ba = &ni->ni_tx_ba[tid];
     if (ba->ba_state != IEEE80211_BA_AGREED)
         return;
-    
-    /*
-     * The first bit in cba->bitmap corresponds to the sequence number
-     * stored in the sequence control field cba->seq.
-     * Multiple BA notifications in a row may be using this number, with
-     * additional bits being set in cba->bitmap. It is unclear how the
-     * firmware decides to shift this window forward.
-     * We rely on ba->ba_winstart instead.
-     */
-    seq = le16toh(ba_notif->seq_ctl) >> IEEE80211_SEQ_SEQ_SHIFT;
     
     /*
      * The firmware's new BA window starting sequence number
@@ -1339,7 +1328,7 @@ iwm_tx(struct iwm_softc *sc, mbuf_t m, struct ieee80211_node *ni, int ac)
     IOPhysicalSegment segs[IWM_NUM_OF_TBS - 2];
     int nsegs = 0;
     uint8_t tid, type, subtype;
-    int i, totlen, err, pad, hasqos;
+    int i, totlen, hasqos;
     int rtsthres = ic->ic_rtsthreshold;
     int qid;
     uint16_t qos;
@@ -1489,12 +1478,6 @@ iwm_tx(struct iwm_softc *sc, mbuf_t m, struct ieee80211_node *ni, int ac)
         tx->pm_frame_timeout = htole16(0);
     }
     
-//    if (hdrlen & 3) {
-//        /* First segment length must be a multiple of 4. */
-//        flags |= IWM_TX_CMD_FLG_MH_PAD;
-//        pad = 4 - (hdrlen & 3);
-//    } else
-//        pad = 0;
     len = sizeof(struct iwm_tx_cmd) + sizeof(struct iwm_cmd_header) + hdrlen - TB0_SIZE;
     /* do not align A-MSDU to dword as the subframe header aligns it */
     amsdu = ieee80211_has_qos(wh) &&
@@ -1581,9 +1564,6 @@ iwm_tx(struct iwm_softc *sc, mbuf_t m, struct ieee80211_node *ni, int ac)
     desc->tbs[0].hi_n_len = htole16(iwm_get_dma_hi_addr(data->cmd_paddr) |
                                     (TB0_SIZE << 4));
     desc->tbs[1].lo = htole32(data->cmd_paddr + TB0_SIZE);
-//    desc->tbs[1].hi_n_len = htole16(iwm_get_dma_hi_addr(data->cmd_paddr) |
-//                                    ((sizeof(struct iwm_cmd_header) + sizeof(*tx)
-//                                      + hdrlen + pad - TB0_SIZE) << 4));
     desc->tbs[1].hi_n_len = htole16(iwm_get_dma_hi_addr(data->cmd_paddr) |
                                     (tb1_len << 4));
     
@@ -4604,13 +4584,12 @@ iwm_ba_task(void *arg)
         return;
     }
 
-    XYLog("%s ba_tx=%d ba_start=%d, tid=%d, ssn=%d\n", __FUNCTION__, sc->ba_tx, sc->ba_start, sc->ba_tid, sc->ba_ssn);
-
     if (sc->ba_tx) {
         if (sc->ba_start) {
             uint8_t fifo = iwm_ac_to_tx_fifo[tid_to_mac80211_ac[sc->ba_tid]];
             int qid = sc->first_agg_txq + sc->ba_tid;
             struct ieee80211_tx_ba *ba = &ni->ni_tx_ba[sc->ba_tid];
+            struct iwm_tx_ring *ring = &sc->txq[qid];
 
             XYLog("%s start=%d ssn=%d, tid=%d scd_queue=%d\n", __FUNCTION__, sc->ba_start, sc->ba_ssn, sc->ba_tid, qid);
 
@@ -4618,6 +4597,16 @@ iwm_ba_task(void *arg)
                 goto out;
             if (that->iwm_enable_txq(sc, IWM_STATION_ID, qid, fifo, sc->ba_ssn, sc->ba_tid, 1))
                 goto out;
+            /*
+             * If iwm_enable_txq() employed the SCD hardware bug
+             * workaround we must skip the frame with seqnum SSN.
+             */
+            if (IWM_AGG_SSN_TO_TXQ_IDX(ring->cur) !=
+                IWM_AGG_SSN_TO_TXQ_IDX(sc->ba_ssn)) {
+                sc->ba_ssn = (sc->ba_ssn + 1) & 0xfff;
+                ieee80211_output_ba_move_window(ic, ni, sc->ba_tid, sc->ba_ssn);
+                ni->ni_qos_txseqs[sc->ba_tid] = sc->ba_ssn;
+            }
             if (that->iwm_add_sta_cmd(sc, (struct iwm_node *)ni, 1, IWM_STA_MODIFY_QUEUES))
                 goto out;
 
