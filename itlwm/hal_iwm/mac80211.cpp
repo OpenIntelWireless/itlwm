@@ -4614,12 +4614,12 @@ iwm_ba_task(void *arg)
             sc->agg_queue_mask |= (1 << qid);
             sc->sc_tx_ba[sc->ba_tid].wn = (iwm_node *)ni;
             ba->ba_bitmap = 0;
-            if (that->iwm_sta_tx_agg(sc, ni, sc->ba_tid, 0, sc->ba_ssn, 1)) {
-                ieee80211_addba_resp_refuse(ic, ni, sc->ba_tid,
-                                            IEEE80211_STATUS_UNSPECIFIED);
+            if (!that->iwm_sta_tx_agg(sc, ni, sc->ba_tid, 0, sc->ba_ssn, 1)) {
+                ieee80211_addba_resp_accept(ic, ni, sc->ba_tid);
             } else {
             out:
-                ieee80211_addba_resp_accept(ic, ni, sc->ba_tid);
+                ieee80211_addba_resp_refuse(ic, ni, sc->ba_tid,
+                                            IEEE80211_STATUS_UNSPECIFIED);
             }
             that->iwm_nic_unlock(sc);
         } else {
