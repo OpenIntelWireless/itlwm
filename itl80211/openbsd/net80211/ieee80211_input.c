@@ -147,18 +147,41 @@ void    ieee80211_bar_tid(struct ieee80211com *, struct ieee80211_node *,
 u_int
 ieee80211_get_hdrlen(const struct ieee80211_frame *wh)
 {
-    u_int size = sizeof(*wh);
+    unsigned int hdrlen = 24;
+    if (ieee80211_is_data(wh)) {
+        if (ieee80211_has_addr4(wh))
+            hdrlen = 30;
+        if (ieee80211_has_qos(wh)) {
+            hdrlen += 2;
+            if (ieee80211_has_order(wh))
+                hdrlen += 4;
+        }
+        goto out;
+    }
     
-    /* NB: does not work with control frames */
-    _KASSERT(ieee80211_has_seq(wh));
+    if (ieee80211_is_mgmt(wh)) {
+        if (ieee80211_has_order(wh))
+            hdrlen += 4;
+        goto out;
+    }
     
-    if (ieee80211_has_addr4(wh))
-        size += IEEE80211_ADDR_LEN;    /* i_addr4 */
-    if (ieee80211_has_qos(wh))
-        size += sizeof(u_int16_t);    /* i_qos */
-    if (ieee80211_has_htc(wh))
-        size += sizeof(u_int32_t);    /* i_ht */
-    return size;
+    if (ieee80211_is_ctl(wh)) {
+        /*
+         * ACK and CTS are 10 bytes, all others 16. To see how
+         * to get this condition consider
+         *   subtype mask:   0b0000000011110000 (0x00F0)
+         *   ACK subtype:    0b0000000011010000 (0x00D0)
+         *   CTS subtype:    0b0000000011000000 (0x00C0)
+         *   bits that matter:         ^^^      (0x00E0)
+         *   value of those: 0b0000000011000000 (0x00C0)
+         */
+        if ((wh->i_fc[0] & cpu_to_le16(0x00E0)) == cpu_to_le16(0x00C0))
+            hdrlen = 10;
+        else
+            hdrlen = 16;
+    }
+out:
+    return hdrlen;
 }
 
 /* Post-processing for drivers which perform decryption in hardware. */
