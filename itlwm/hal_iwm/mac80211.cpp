@@ -1318,7 +1318,6 @@ iwm_tx_fill_cmd(struct iwm_softc *sc, struct iwm_node *in,
     return rinfo;
 }
 
-//#define TB0_SIZE 16
 #define TB0_SIZE 20
 int ItlIwm::
 iwm_tx(struct iwm_softc *sc, mbuf_t m, struct ieee80211_node *ni, int ac)
