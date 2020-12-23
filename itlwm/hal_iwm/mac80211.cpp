@@ -773,9 +773,9 @@ iwm_ampdu_rate_control(struct iwm_softc *sc, struct ieee80211_node *ni,
                 (SEQ_LT(ba->ba_winend, s) ||
                 (ba->ba_bitmap & (1 << bit)) == 0)) {
                 have_ack++;
-                wn->in_mn.frames = txdata->ampdu_nframes;
-                wn->in_mn.agglen = txdata->ampdu_nframes;
-                wn->in_mn.ampdu_size = txdata->ampdu_size;
+                wn->in_mn.frames++;
+                wn->in_mn.agglen++;
+                wn->in_mn.ampdu_size = txdata->ampdu_size / txdata->ampdu_nframes;
                 if (txdata->retries > 1)
                     wn->in_mn.retries++;
                 if (!SEQ_LT(ba->ba_winend, s))
@@ -788,7 +788,6 @@ iwm_ampdu_rate_control(struct iwm_softc *sc, struct ieee80211_node *ni,
         }
 
         if (have_ack > 0) {
-            wn->in_mn.txfail = wn->in_mn.frames - have_ack;
             iwm_mira_choose(sc, ni);
         }
     }
@@ -1156,18 +1155,6 @@ iwm_rx_tx_cmd(struct iwm_softc *sc, struct iwm_rx_packet *pkt,
                          qid,
                          le16_to_cpu((&tx_resp->status)[i].idx)));
     }
-    
-    /*
-     * In the multi-frame case the firmware has just transmitted a bunch
-     * of frames in an A-MPDU. The final Tx status of those frames won't
-     * be known until the peer ACKs subframes with a block ack or firmware
-     * gives up on a particular subframe.
-     * Subframes for which the firmware never sees an ACK will be retried
-     * and will eventually arrive here as a single-frame Tx failure.
-     * So there is nothing to do, for now.
-     */
-    if (tx_resp->frame_count != 1)
-        return;
     
     txd = &ring->data[idx];
     if (txd->m == NULL)
