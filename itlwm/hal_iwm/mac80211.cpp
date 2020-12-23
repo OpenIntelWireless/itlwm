@@ -2788,7 +2788,7 @@ iwm_newstate(struct ieee80211com *ic, enum ieee80211_state nstate, int arg)
              ieee80211_ba_del(ni);
          }
         timeout_del(&sc->sc_calib_to);
-        ieee80211_mira_cancel_timeouts(&in->in_mn);
+        ieee80211_mira_node_free(&in->in_mn);
         that->iwm_del_task(sc, systq, &sc->ba_task);
         that->iwm_del_task(sc, systq, &sc->htprot_task);
     }
@@ -3316,7 +3316,7 @@ iwm_stop(struct _ifnet *ifp)
     
     in->in_phyctxt = NULL;
     if (ic->ic_state == IEEE80211_S_RUN)
-        ieee80211_mira_cancel_timeouts(&in->in_mn); /* XXX refcount? */
+        ieee80211_mira_node_free(&in->in_mn); /* XXX refcount? */
     
     sc->sc_flags &= ~(IWM_FLAG_SCANNING | IWM_FLAG_BGSCAN);
     sc->sc_flags &= ~IWM_FLAG_MAC_ACTIVE;

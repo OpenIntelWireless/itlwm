@@ -1275,6 +1275,15 @@ ieee80211_mira_cancel_timeouts(struct ieee80211_mira_node *mn)
 {
     int t;
     
+    for (t = 0; t < nitems(mn->probe_to); t++)
+        timeout_del(&mn->probe_to[t]);
+}
+
+void
+ieee80211_mira_node_free(struct ieee80211_mira_node *mn)
+{
+    int t;
+    
     for (t = 0; t < nitems(mn->probe_to); t++) {
         timeout_del(&mn->probe_to[t]);
         timeout_free(&mn->probe_to[t]);
