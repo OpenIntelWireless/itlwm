@@ -361,6 +361,166 @@ const int iwx_mcs2ridx[] = {
     IWX_RATE_MCS_14_INDEX,
     IWX_RATE_MCS_15_INDEX,
 };
+#define IWX_LAST_HE_RATE IWX_RATE_MCS_11_INDEX
+#define IWL_RATE_COUNT IWX_LAST_HE_RATE
+#define IWX_MAX_MCS_DISPLAY_SIZE    12
+
+#define IWL_RATE_60M_PLCP 3
+
+enum {
+    IWX_RATE_INVM_INDEX = IWX_RATE_COUNT,
+    IWX_RATE_INVALID = IWX_RATE_COUNT,
+};
+
+struct iwx_rate_mcs_info {
+    char    mbps[IWX_MAX_MCS_DISPLAY_SIZE];
+    char    mcs[IWX_MAX_MCS_DISPLAY_SIZE];
+};
+
+/* mbps, mcs */
+static const struct iwx_rate_mcs_info iwx_rate_mcs[IWX_RATE_COUNT] = {
+    {  "1", "BPSK DSSS"},
+    {  "2", "QPSK DSSS"},
+    {"5.5", "BPSK CCK"},
+    { "11", "QPSK CCK"},
+    {  "6", "BPSK 1/2"},
+    {  "9", "BPSK 1/2"},
+    { "12", "QPSK 1/2"},
+    { "18", "QPSK 3/4"},
+    { "24", "16QAM 1/2"},
+    { "36", "16QAM 3/4"},
+    { "48", "64QAM 2/3"},
+    { "54", "64QAM 3/4"},
+    { "60", "64QAM 5/6"},
+};
+
+#define IWX_MCS_INDEX_PER_STREAM    (8)
+
+static const char *iwx_rs_pretty_ant(u8 ant)
+{
+    static const char * const ant_name[] = {
+        [IWX_ANT_NONE] = "None",
+        [IWX_ANT_A]    = "A",
+        [IWX_ANT_B]    = "B",
+        [IWX_ANT_AB]   = "AB",
+        [IWX_ANT_C]    = "C",
+        [IWX_ANT_AC]   = "AC",
+        [IWX_ANT_BC]   = "BC",
+        [IWX_ANT_ABC]  = "ABC",
+    };
+
+    if (ant > IWX_ANT_ABC)
+        return "UNKNOWN";
+
+    return ant_name[ant];
+}
+
+static uint8_t iwx_rs_extract_rate(uint32_t rate_n_flags)
+{
+    /* also works for HT because bits 7:6 are zero there */
+    return (uint8_t)(rate_n_flags & IWX_RATE_LEGACY_RATE_MSK);
+}
+
+static int iwx_hwrate_to_plcp_idx(uint32_t rate_n_flags)
+{
+    int idx = 0;
+
+    if (rate_n_flags & IWX_RATE_MCS_HT_MSK) {
+        idx = rate_n_flags & IWX_RATE_HT_MCS_RATE_CODE_MSK;
+        idx += IWX_RATE_MCS_0_INDEX;
+
+        /* skip 9M not supported in HT*/
+        if (idx >= IWX_RATE_9M_INDEX)
+            idx += 1;
+        if ((idx >= IWX_FIRST_HT_RATE) && (idx <= IWX_LAST_HT_RATE))
+            return idx;
+    } else if (rate_n_flags & IWX_RATE_MCS_VHT_MSK ||
+           rate_n_flags & IWX_RATE_MCS_HE_MSK) {
+        idx = rate_n_flags & IWX_RATE_VHT_MCS_RATE_CODE_MSK;
+        idx += IWX_RATE_MCS_0_INDEX;
+
+        /* skip 9M not supported in VHT*/
+        if (idx >= IWX_RATE_9M_INDEX)
+            idx++;
+        if ((idx >= IWX_FIRST_VHT_RATE) && (idx <= IWX_LAST_VHT_RATE))
+            return idx;
+        if ((rate_n_flags & IWX_RATE_MCS_HE_MSK) &&
+            (idx <= IWX_LAST_HE_RATE))
+            return idx;
+    } else {
+        /* legacy rate format, search for match in table */
+
+        uint8_t legacy_rate = iwx_rs_extract_rate(rate_n_flags);
+        for (idx = 0; idx < ARRAY_SIZE(iwx_rates); idx++)
+            if (iwx_rates[idx].plcp == legacy_rate)
+                return idx;
+    }
+
+    return IWX_RATE_INVALID;
+}
+
+static int iwx_rs_pretty_print_rate(char *buf, int bufsz, const uint32_t rate)
+{
+
+    char *type, *bw;
+    uint8_t mcs = 0, nss = 0;
+    uint8_t ant = (rate & IWX_RATE_MCS_ANT_ABC_MSK) >> IWX_RATE_MCS_ANT_POS;
+
+    if (!(rate & IWX_RATE_MCS_HT_MSK) &&
+        !(rate & IWX_RATE_MCS_VHT_MSK) &&
+        !(rate & IWX_RATE_MCS_HE_MSK)) {
+        int index = iwx_hwrate_to_plcp_idx(rate);
+
+        return scnprintf(buf, bufsz, "Legacy | ANT: %s Rate: %s Mbps\n",
+                 iwx_rs_pretty_ant(ant),
+                 index == IWX_RATE_INVALID ? "BAD" :
+                 iwx_rate_mcs[index].mbps);
+    }
+
+    if (rate & IWX_RATE_MCS_VHT_MSK) {
+        type = "VHT";
+        mcs = rate & IWX_RATE_VHT_MCS_RATE_CODE_MSK;
+        nss = ((rate & IWX_RATE_VHT_MCS_NSS_MSK)
+               >> IWX_RATE_VHT_MCS_NSS_POS) + 1;
+    } else if (rate & IWX_RATE_MCS_HT_MSK) {
+        type = "HT";
+        mcs = rate & IWX_RATE_HT_MCS_INDEX_MSK;
+        nss = ((rate & IWX_RATE_HT_MCS_NSS_MSK)
+               >> IWX_RATE_HT_MCS_NSS_POS) + 1;
+    } else if (rate & IWX_RATE_MCS_HE_MSK) {
+        type = "HE";
+        mcs = rate & IWX_RATE_VHT_MCS_RATE_CODE_MSK;
+        nss = ((rate & IWX_RATE_VHT_MCS_NSS_MSK)
+               >> IWX_RATE_VHT_MCS_NSS_POS) + 1;
+    } else {
+        type = "Unknown"; /* shouldn't happen */
+    }
+
+    switch (rate & IWX_RATE_MCS_CHAN_WIDTH_MSK) {
+    case IWX_RATE_MCS_CHAN_WIDTH_20:
+        bw = "20Mhz";
+        break;
+    case IWX_RATE_MCS_CHAN_WIDTH_40:
+        bw = "40Mhz";
+        break;
+    case IWX_RATE_MCS_CHAN_WIDTH_80:
+        bw = "80Mhz";
+        break;
+    case IWX_RATE_MCS_CHAN_WIDTH_160:
+        bw = "160Mhz";
+        break;
+    default:
+        bw = "BAD BW";
+    }
+
+    return scnprintf(buf, bufsz,
+             "0x%x: %s | ANT: %s BW: %s MCS: %d NSS: %d %s%s%s%s\n",
+             rate, type, iwx_rs_pretty_ant(ant), bw, mcs, nss,
+             (rate & IWX_RATE_MCS_SGI_MSK) ? "SGI " : "NGI ",
+             (rate & IWX_RATE_MCS_STBC_MSK) ? "STBC " : "",
+             (rate & IWX_RATE_MCS_LDPC_MSK) ? "LDPC " : "",
+             (rate & IWX_RATE_MCS_BF_MSK) ? "BF " : "");
+}
 
 #if NBPFILTER > 0
 void    iwx_radiotap_attach(struct iwx_softc *);
@@ -4626,7 +4786,7 @@ iwx_add_sta_cmd(struct iwx_softc *sc, struct iwx_node *in, int update)
                 break;
         }
     }
-    
+
     status = IWX_ADD_STA_SUCCESS;
     err = iwx_send_cmd_pdu_status(sc, IWX_ADD_STA, sizeof(add_sta_cmd),
                                   &add_sta_cmd, &status);
@@ -5770,41 +5930,45 @@ iwx_rs_init(struct iwx_softc *sc, struct iwx_node *in, bool update)
 void ItlIwx::
 iwx_rs_update(struct iwx_softc *sc, struct iwx_tlc_update_notif *notif)
 {
-   struct ieee80211com *ic = &sc->sc_ic;
-   struct ieee80211_node *ni = ic->ic_bss;
-   struct ieee80211_rateset *rs = &ni->ni_rates;
-   uint32_t rate_n_flags;
-   int i;
+    struct ieee80211com *ic = &sc->sc_ic;
+    struct ieee80211_node *ni = ic->ic_bss;
+    struct ieee80211_rateset *rs = &ni->ni_rates;
+    uint32_t rate_n_flags;
+    int i;
+    char pretty_rate[100];
 
-   if (notif->sta_id != IWX_STATION_ID ||
-       (le32toh(notif->flags) & IWX_TLC_NOTIF_FLAG_RATE) == 0)
-       return;
+    if (notif->sta_id != IWX_STATION_ID ||
+        (le32toh(notif->flags) & IWX_TLC_NOTIF_FLAG_RATE) == 0)
+        return;
 
-   rate_n_flags = le32toh(notif->rate);
-   if (rate_n_flags & IWX_RATE_MCS_HT_MSK) {
-       ni->ni_txmcs = (rate_n_flags &
-           (IWX_RATE_HT_MCS_RATE_CODE_MSK |
-           IWX_RATE_HT_MCS_NSS_MSK));
-   } else {
-       uint8_t plcp = (rate_n_flags & IWX_RATE_LEGACY_RATE_MSK);
-       uint8_t rval = 0;
-       for (i = IWX_RATE_1M_INDEX; i < nitems(iwx_rates); i++) {
-           if (iwx_rates[i].plcp == plcp) {
-               rval = iwx_rates[i].rate;
-               break;
-           }
-       }
-       if (rval) {
-           uint8_t rv;
-           for (i = 0; i < rs->rs_nrates; i++) {
-               rv = rs->rs_rates[i] & IEEE80211_RATE_VAL;
-               if (rv == rval) {
-                   ni->ni_txrate = i;
-                   break;
-               }
-           }
-       }
-   }
+    rate_n_flags = le32toh(notif->rate);
+    iwx_rs_pretty_print_rate(pretty_rate, sizeof(pretty_rate),
+                 rate_n_flags);
+    XYLog("%s new rate: %s\n", __FUNCTION__, pretty_rate);
+    if (rate_n_flags & IWX_RATE_MCS_HT_MSK) {
+        ni->ni_txmcs = (rate_n_flags &
+                        (IWX_RATE_HT_MCS_RATE_CODE_MSK |
+                         IWX_RATE_HT_MCS_NSS_MSK));
+    } else {
+        uint8_t plcp = (rate_n_flags & IWX_RATE_LEGACY_RATE_MSK);
+        uint8_t rval = 0;
+        for (i = IWX_RATE_1M_INDEX; i < nitems(iwx_rates); i++) {
+            if (iwx_rates[i].plcp == plcp) {
+                rval = iwx_rates[i].rate;
+                break;
+            }
+        }
+        if (rval) {
+            uint8_t rv;
+            for (i = 0; i < rs->rs_nrates; i++) {
+                rv = rs->rs_rates[i] & IEEE80211_RATE_VAL;
+                if (rv == rval) {
+                    ni->ni_txrate = i;
+                    break;
+                }
+            }
+        }
+    }
 }
 
 int ItlIwx::
