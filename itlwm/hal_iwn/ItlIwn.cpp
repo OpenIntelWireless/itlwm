@@ -1800,7 +1800,7 @@ iwn_newstate(struct ieee80211com *ic, enum ieee80211_state nstate, int arg)
             ieee80211_stop_ampdu_tx(ic, ni, -1);
             ieee80211_ba_del(ni);
         }
-        ieee80211_mira_cancel_timeouts(&wn->mn);
+        ieee80211_mira_node_free(&wn->mn);
         timeout_del(&sc->calib_to);
         sc->calib.state = IWN_CALIB_STATE_INIT;
         if (sc->sc_flags & IWN_FLAG_BGSCAN)

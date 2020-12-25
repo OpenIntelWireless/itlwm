@@ -120,6 +120,9 @@ void	ieee80211_mira_choose(struct ieee80211_mira_node *,
 /* Cancel timeouts scheduled by ieee80211_mira_choose(). */
 void	ieee80211_mira_cancel_timeouts(struct ieee80211_mira_node *);
 
+/* Release rate control state. */
+void    ieee80211_mira_node_free(struct ieee80211_mira_node *);
+
 /* Returns RTS threshold to be used for a frame about to be transmitted. */
 int	ieee80211_mira_get_rts_threshold(struct ieee80211_mira_node *,
     struct ieee80211com *, struct ieee80211_node *, size_t);
