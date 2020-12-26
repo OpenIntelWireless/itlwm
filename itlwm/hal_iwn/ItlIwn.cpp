@@ -2347,9 +2347,9 @@ iwn_ampdu_rate_control(struct iwn_softc *sc, struct ieee80211_node *ni,
                 (SEQ_LT(ba->ba_winend, s) ||
                 (ba->ba_bitmap & (1 << bit)) == 0)) {
                 have_ack++;
-                wn->mn.frames = txdata->ampdu_nframes;
-                wn->mn.agglen = txdata->ampdu_nframes;
-                wn->mn.ampdu_size = txdata->ampdu_size;
+                wn->mn.frames++;
+                wn->mn.agglen++;
+                wn->mn.ampdu_size = txdata->ampdu_size / txdata->ampdu_nframes;
                 if (txdata->retries > 1)
                     wn->mn.retries++;
                 if (!SEQ_LT(ba->ba_winend, s))
@@ -2362,7 +2362,6 @@ iwn_ampdu_rate_control(struct iwn_softc *sc, struct ieee80211_node *ni,
         }
 
         if (have_ack > 0) {
-            wn->mn.txfail = wn->mn.frames - have_ack;
             iwn_mira_choose(sc, ni);
         }
     }
