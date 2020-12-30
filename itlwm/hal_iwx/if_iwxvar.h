@@ -369,6 +369,17 @@ struct iwx_self_init_dram {
 	int paging_cnt;
 };
 
+
+#define IWX_MAX_TID_COUNT 8
+#define IWX_INVALID_QUEUE 0xFFFF
+
+struct iwx_tid_data {
+    uint16_t seq_number;
+    uint16_t next_reclaimed;
+    uint16_t qid;
+    uint16_t ssn;
+};
+
 #define    INFSLP    UINT64_MAX
 #ifdef DELAY
 #undef DELAY
@@ -404,8 +415,13 @@ struct iwx_softc {
 	struct task	ba_task;
 	int			ba_start;
 	int			ba_tid;
-	uint16_t		ba_ssn;
-	uint16_t		ba_winsize;
+    int         ba_tx;
+	uint16_t    ba_ssn;
+	uint16_t	ba_winsize;
+    
+    struct iwx_tid_data sc_tid_data[IWX_MAX_TID_COUNT + 1];//per tid data + mgmt. Look at %iwx_tid_data.
+    uint32_t sc_tfd_queue_msk;//the tfd queues used by the station
+    uint16_t sc_tid_disable_agg;//bitmap: if bit(tid) is set, the fw won't send ampdus for tid
 
 	/* Task for HT protection updates. */
 	struct task	htprot_task;
@@ -424,7 +440,7 @@ struct iwx_softc {
 	uint32_t			sched_base;
 
 	/* TX/RX rings. */
-	struct iwx_tx_ring txq[IWX_MAX_QUEUES];
+	struct iwx_tx_ring txq[IWX_MAX_TVQM_QUEUES];
 	struct iwx_rx_ring rxq;
 	int qfullmsk;
 

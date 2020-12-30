@@ -619,8 +619,15 @@ fallback:
         if (ba->ba_state != IEEE80211_BA_AGREED) {
             hdrlen = sizeof(struct ieee80211_frame);
             addqos = 0;
-            if (ieee80211_can_use_ampdu(ic, ni))
-                ieee80211_node_trigger_addba_req(ni, tid);
+            if (ieee80211_can_use_ampdu(ic, ni)) {
+                if (ic->ic_caps & IEEE80211_C_TX_AMPDU_SETUP_IN_HW) {
+                    if (ic->ic_ampdu_tx_start && ba->ba_state == IEEE80211_BA_INIT) {
+                        (*ic->ic_ampdu_tx_start)(ic, ni, tid);
+                    }
+                } else {
+                    ieee80211_node_trigger_addba_req(ni, tid);
+                }
+            }
         } else {
             hdrlen = sizeof(struct ieee80211_qosframe);
             addqos = 1;

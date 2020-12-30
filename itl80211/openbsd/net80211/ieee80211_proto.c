@@ -969,8 +969,8 @@ ieee80211_stop_ampdu_tx(struct ieee80211com *ic, struct ieee80211_node *ni,
 		struct ieee80211_tx_ba *ba = &ni->ni_tx_ba[tid];
 		if (ba->ba_state != IEEE80211_BA_AGREED)
 			continue;
-		ieee80211_delba_request(ic, ni,
-		    mgt == -1 ? 0 : IEEE80211_REASON_AUTH_LEAVE, 1, tid);
+        ieee80211_delba_request(ic, ni,
+                                ((ic->ic_caps & IEEE80211_C_TX_AMPDU_SETUP_IN_HW) || mgt == -1) ? 0 : IEEE80211_REASON_AUTH_LEAVE, 1, tid);
 	}
 }
 

@@ -255,6 +255,8 @@ public:
     int    iwx_nic_rx_init(struct iwx_softc *);
     int    iwx_nic_init(struct iwx_softc *);
     int    iwx_enable_txq(struct iwx_softc *, int, int, int, int);
+    int     iwx_tvqm_alloc_txq(struct iwx_softc *, int, int);
+    int     iwx_tvqm_enable_txq(struct iwx_softc *, int, int);
     void    iwx_post_alive(struct iwx_softc *);
     int iwx_send_time_event_cmd(struct iwx_softc *sc,
                             const struct iwx_time_event_cmd *cmd);
@@ -274,12 +276,10 @@ public:
             uint8_t);
     void    iwx_sta_rx_agg(struct iwx_softc *, struct ieee80211_node *, uint8_t,
             uint16_t, uint16_t, int);
-    #ifdef notyet
-    int    iwx_ampdu_tx_start(struct ieee80211com *, struct ieee80211_node *,
+    static int    iwx_ampdu_tx_start(struct ieee80211com *, struct ieee80211_node *,
             uint8_t);
-    void    iwx_ampdu_tx_stop(struct ieee80211com *, struct ieee80211_node *,
+    static void    iwx_ampdu_tx_stop(struct ieee80211com *, struct ieee80211_node *,
             uint8_t);
-    #endif
     static void    iwx_ba_task(void *);
 
     int    iwx_set_mac_addr_from_csr(struct iwx_softc *, struct iwx_nvm_data *);
@@ -308,6 +308,9 @@ public:
     void    iwx_rx_tx_cmd_single(struct iwx_softc *, struct iwx_rx_packet *,
             struct iwx_node *);
     void iwx_txd_done(struct iwx_softc *sc, struct iwx_tx_data *txd);
+    void iwx_clear_oactive(struct iwx_softc *sc, struct iwx_tx_ring *ring);
+    void iwx_ampdu_txq_advance(struct iwx_softc *sc, struct iwx_tx_ring *ring, int idx);
+    void iwx_rx_tx_ba_notif(struct iwx_softc *sc, struct iwx_rx_packet *pkt, struct iwx_rx_data *data);
     void    iwx_rx_tx_cmd(struct iwx_softc *, struct iwx_rx_packet *,
             struct iwx_rx_data *);
     void    iwx_rx_bmiss(struct iwx_softc *, struct iwx_rx_packet *,
