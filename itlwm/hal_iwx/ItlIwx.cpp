@@ -1797,6 +1797,7 @@ iwx_free_tx_ring(struct iwx_softc *sc, struct iwx_tx_ring *ring)
         if (data->map != NULL)
             bus_dmamap_destroy(sc->sc_dmat, data->map);
     }
+    ring->qid = IWX_INVALID_QUEUE;
 }
 
 void ItlIwx::
@@ -2566,6 +2567,7 @@ iwx_tvqm_enable_txq(struct iwx_softc *sc, int tid, int ssn)
     wr_idx &= (IWX_DEFAULT_QUEUE_SIZE - 1);
     ring.cur = max(IWX_AGG_SSN_TO_TXQ_IDX(wr_idx), IWX_AGG_SSN_TO_TXQ_IDX(ssn));
     ring.qid = fwqid;
+    iwx_free_tx_ring(sc, &sc->txq[fwqid]);
     memcpy(&sc->txq[fwqid], &ring, sizeof(ring));
     return fwqid;
 fail:
@@ -4836,8 +4838,6 @@ iwx_add_sta_cmd(struct iwx_softc *sc, struct iwx_node *in, int update)
     add_sta_cmd.station_flags_msk
     |= htole32(IWX_STA_FLG_FAT_EN_MSK | IWX_STA_FLG_MIMO_EN_MSK);
     add_sta_cmd.tid_disable_tx = htole16(0xffff);
-    if (update)
-        add_sta_cmd.modify_mask |= (IWX_STA_MODIFY_TID_DISABLE_TX);
     
     if (in->in_ni.ni_flags & IEEE80211_NODE_HT) {
         add_sta_cmd.station_flags_msk
