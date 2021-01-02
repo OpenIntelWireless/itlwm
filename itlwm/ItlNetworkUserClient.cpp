@@ -118,6 +118,9 @@ sSTA_INFO(OSObject* target, void* data, bool isSet)
     if (ic_bss->ni_chan == NULL) {
         return kIOReturnError;
     }
+    if (ic->ic_state != IEEE80211_S_RUN) {
+        return kIOReturnError;
+    }
     st->version = IOCTL_VERSION;
     st->op_mode = ITL80211_MODE_11N;
     st->max_mcs = ic_bss->ni_txmcs;
