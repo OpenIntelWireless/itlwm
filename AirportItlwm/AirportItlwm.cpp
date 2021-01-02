@@ -214,23 +214,6 @@ void AirportItlwm::associateSSID(uint8_t *ssid, uint32_t ssid_len, const struct 
             ieee80211_ioctl_setnwkeys(ic, &nwkey);
         }
     }
-    
-    ieee80211_del_ess(ic, NULL, 0, 1);
-    struct ieee80211_node *selbs = ieee80211_node_choose_bss(ic, 0, NULL);
-    if (selbs == NULL) {
-        if (ic->ic_state != IEEE80211_S_SCAN) {
-            ieee80211_new_state(ic, IEEE80211_S_SCAN, -1);
-        }
-    } else {
-        if (ic->ic_state > IEEE80211_S_AUTH) {
-            ieee80211_node_join_bss(ic, selbs, 1);
-            fHalService->getDriverController()->clearScanningFlags();
-        } else {
-            if (ic->ic_state != IEEE80211_S_SCAN) {
-                ieee80211_new_state(ic, IEEE80211_S_SCAN, -1);
-            }
-        }
-    }
 }
 
 void AirportItlwm::setPTK(const u_int8_t *key, size_t key_len) {
