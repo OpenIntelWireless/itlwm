@@ -719,9 +719,12 @@ ieee80211_addba_request(struct ieee80211com *ic, struct ieee80211_node *ni,
 		/* immediate BA */
 		ba->ba_params |= IEEE80211_ADDBA_BA_POLICY;
 
-	timeout_add_sec(&ba->ba_to, 1);	/* dot11ADDBAResponseTimeout */
-	IEEE80211_SEND_ACTION(ic, ni, IEEE80211_CATEG_BA,
-	    IEEE80211_ACTION_ADDBA_REQ, tid);
+    /* we are waiting BA response */
+    if ((ic->ic_caps & IEEE80211_C_TX_AMPDU_SETUP_IN_HW) == 0) {
+        timeout_add_sec(&ba->ba_to, 1);	/* dot11ADDBAResponseTimeout */
+        IEEE80211_SEND_ACTION(ic, ni, IEEE80211_CATEG_BA,
+                              IEEE80211_ACTION_ADDBA_REQ, tid);
+    }
 	return 0;
 }
 

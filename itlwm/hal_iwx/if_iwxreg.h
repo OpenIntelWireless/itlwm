@@ -236,8 +236,6 @@ struct iwx_context_info {
     uint32_t reserved3[16];
 } __packed;
 
-#define IWX_MGMT_TID        15
-
 #define IWX_MQ_RX_TABLE_SIZE    512
 
 /* cb size is the exponent */
@@ -4744,6 +4742,9 @@ struct iwx_tlc_update_notif {
  * TID for non QoS frames - to be written in tid_tspec
  */
 #define IWX_TID_NON_QOS    0
+#define IWX_MGMT_TID       15
+
+#define IWX_QID_MGMT       EDCA_AC_BE + IWX_DQA_AUX_QUEUE + 1
 
 /*
  * Limits on the retransmissions - to be written in {data,rts}_retry_limit

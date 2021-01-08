@@ -420,8 +420,6 @@ struct iwx_softc {
 	uint16_t	ba_winsize;
     
     struct iwx_tid_data sc_tid_data[IWX_MAX_TID_COUNT + 1];//per tid data + mgmt. Look at %iwx_tid_data.
-    uint32_t sc_tfd_queue_msk;//the tfd queues used by the station
-    uint16_t sc_tid_disable_agg;//bitmap: if bit(tid) is set, the fw won't send ampdus for tid
 
 	/* Task for HT protection updates. */
 	struct task	htprot_task;

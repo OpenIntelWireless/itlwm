@@ -415,33 +415,33 @@ ieee80211_classify(struct ieee80211com *ic, mbuf_t m)
 	if (m->m_flags & M_VLANTAG)	/* use VLAN 802.1D user-priority */
 		return EVL_PRIOFTAG(m->m_pkthdr.ether_vtag);
 #endif
-	mbuf_copydata(m, 0, sizeof(eh), (caddr_t)&eh);
-        if (eh.ether_type == htons(ETHERTYPE_IP)) {
-            struct ip ip;
-            mbuf_copydata(m, sizeof(eh), sizeof(ip), (caddr_t)&ip);
-            if (ip.ip_v != 4)
-                return 0;
-            ds_field = ip.ip_tos;
-        }
-    #ifdef INET6
-        else if (eh.ether_type == htons(ETHERTYPE_IPV6)) {
-            struct ip6_hdr ip6;
-            u_int32_t flowlabel;
-            mbuf_copydata(m, sizeof(eh), sizeof(ip6), (caddr_t)&ip6);
-            flowlabel = ntohl(ip6.ip6_flow);
-            if ((flowlabel >> 28) != 6)
-                return 0;
-            ds_field = (flowlabel >> 20) & 0xff;
-        }
-    #endif    /* INET6 */
-        else    /* neither IPv4 nor IPv6 */
+    mbuf_copydata(m, 0, sizeof(eh), (caddr_t)&eh);
+    if (eh.ether_type == htons(ETHERTYPE_IP)) {
+        struct ip ip;
+        mbuf_copydata(m, sizeof(eh), sizeof(ip), (caddr_t)&ip);
+        if (ip.ip_v != 4)
             return 0;
+        ds_field = ip.ip_tos;
+    }
+#ifdef INET6
+    else if (eh.ether_type == htons(ETHERTYPE_IPV6)) {
+        struct ip6_hdr ip6;
+        u_int32_t flowlabel;
+        mbuf_copydata(m, sizeof(eh), sizeof(ip6), (caddr_t)&ip6);
+        flowlabel = ntohl(ip6.ip6_flow);
+        if ((flowlabel >> 28) != 6)
+            return 0;
+        ds_field = (flowlabel >> 20) & 0xff;
+    }
+#endif    /* INET6 */
+    else    /* neither IPv4 nor IPv6 */
+        return 0;
 
-        /*
-         * Map Differentiated Services Codepoint field (see RFC2474).
-         * Preserves backward compatibility with IP Precedence field.
-         */
-        switch (ds_field & 0xfc) {
+    /*
+     * Map Differentiated Services Codepoint field (see RFC2474).
+     * Preserves backward compatibility with IP Precedence field.
+     */
+    switch (ds_field & 0xfc) {
         case IPTOS_PREC_PRIORITY:
             return EDCA_AC_VI;
         case IPTOS_PREC_IMMEDIATE:
@@ -454,26 +454,7 @@ ieee80211_classify(struct ieee80211com *ic, mbuf_t m)
             return EDCA_AC_VO;
         default:
             return EDCA_AC_BE;
-        }
-
-	/*
-	 * Map Differentiated Services Codepoint field (see RFC2474).
-	 * Preserves backward compatibility with IP Precedence field.
-	 */
-	switch (ds_field & 0xfc) {
-	case IPTOS_PREC_PRIORITY:
-		return EDCA_AC_VI;
-	case IPTOS_PREC_IMMEDIATE:
-		return EDCA_AC_BK;
-	case IPTOS_PREC_FLASH:
-	case IPTOS_PREC_FLASHOVERRIDE:
-	case IPTOS_PREC_CRITIC_ECP:
-	case IPTOS_PREC_INTERNETCONTROL:
-	case IPTOS_PREC_NETCONTROL:
-		return EDCA_AC_VO;
-	default:
-		return EDCA_AC_BE;
-	}
+    }
 }
 
 int
@@ -620,12 +601,11 @@ fallback:
             hdrlen = sizeof(struct ieee80211_frame);
             addqos = 0;
             if (ieee80211_can_use_ampdu(ic, ni)) {
+                ieee80211_node_trigger_addba_req(ni, tid);
                 if (ic->ic_caps & IEEE80211_C_TX_AMPDU_SETUP_IN_HW) {
                     if (ic->ic_ampdu_tx_start && ba->ba_state == IEEE80211_BA_INIT) {
                         (*ic->ic_ampdu_tx_start)(ic, ni, tid);
                     }
-                } else {
-                    ieee80211_node_trigger_addba_req(ni, tid);
                 }
             }
         } else {

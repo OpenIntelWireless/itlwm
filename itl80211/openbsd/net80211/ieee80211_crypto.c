@@ -274,8 +274,11 @@ mbuf_t
 ieee80211_encrypt(struct ieee80211com *ic, mbuf_t m0,
     struct ieee80211_key *k)
 {
-	if ((k->k_flags & IEEE80211_KEY_SWCRYPTO) == 0)
-		panic("%s: key unset for sw crypto: %d", __FUNCTION__, k->k_id);
+    if ((k->k_flags & IEEE80211_KEY_SWCRYPTO) == 0) {
+		XYLog("%s: BUG! key unset for sw crypto. k_id: %d k_cipher: %d k_flags: %d\n", __FUNCTION__, k->k_id, k->k_cipher, k->k_flags);
+        mbuf_freem(m0);
+        return NULL;
+    }
     
     XYLog("%s kid=%d cipher=%d\n", __FUNCTION__, k->k_id, k->k_cipher);
 
