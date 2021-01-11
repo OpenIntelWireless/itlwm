@@ -5210,6 +5210,18 @@ iwx_ack_rates(struct iwx_softc *sc, struct iwx_node *in, int *cck_rates,
     *ofdm_rates = ofdm;
 }
 
+static uint8_t iwx_mvm_mac80211_ac_to_ucode_ac(enum ieee80211_edca_ac ac)
+{
+   static const uint8_t mac80211_ac_to_ucode_ac[] = {
+       IWX_AC_VO,
+       IWX_AC_VI,
+       IWX_AC_BE,
+       IWX_AC_BK
+   };
+
+   return mac80211_ac_to_ucode_ac[ac];
+}
+
 void ItlIwx::
 iwx_mac_ctxt_cmd_common(struct iwx_softc *sc, struct iwx_node *in,
                         struct iwx_mac_ctx_cmd *cmd, uint32_t action)
@@ -5256,12 +5268,13 @@ iwx_mac_ctxt_cmd_common(struct iwx_softc *sc, struct iwx_node *in,
     for (i = 0; i < EDCA_NUM_AC; i++) {
         struct ieee80211_edca_ac_params *ac = &ic->ic_edca_ac[i];
         int txf = iwx_ac_to_tx_fifo[i];
+        uint8_t ucode_ac = iwx_mvm_mac80211_ac_to_ucode_ac((enum ieee80211_edca_ac)i);
         
-        cmd->ac[txf].cw_min = htole16(IWX_EXP2(ac->ac_ecwmin));
-        cmd->ac[txf].cw_max = htole16(IWX_EXP2(ac->ac_ecwmax));
-        cmd->ac[txf].aifsn = ac->ac_aifsn;
-        cmd->ac[txf].fifos_mask = (1 << txf);
-        cmd->ac[txf].edca_txop = htole16(ac->ac_txoplimit * 32);
+        cmd->ac[ucode_ac].cw_min = htole16(IWX_EXP2(ac->ac_ecwmin));
+        cmd->ac[ucode_ac].cw_max = htole16(IWX_EXP2(ac->ac_ecwmax));
+        cmd->ac[ucode_ac].aifsn = ac->ac_aifsn;
+        cmd->ac[ucode_ac].fifos_mask = (1 << txf);
+        cmd->ac[ucode_ac].edca_txop = htole16(ac->ac_txoplimit * 32);
     }
     if (ni->ni_flags & IEEE80211_NODE_QOS)
         cmd->qos_flags |= htole32(IWX_MAC_QOS_FLG_UPDATE_EDCA);
