@@ -141,15 +141,6 @@
 #define DEVNAME(_s)    ("itlwm")
 #define IWM_DEBUG
 
-#ifdef IWM_DEBUG
-#define DPRINTF(x)    do { if (iwm_debug > 0) XYLog x; } while (0)
-#define DPRINTFN(n, x)    do { if (iwm_debug >= (n)) XYLog x; } while (0)
-extern int iwm_debug;
-#else
-#define DPRINTF(x)    do { ; } while (0)
-#define DPRINTFN(n, x)    do { ; } while (0)
-#endif
-
 #define M_DEVBUF 2
 #define M_WAIT 3
 #define DELAY IODelay

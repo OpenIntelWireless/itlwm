@@ -282,15 +282,6 @@ struct iwm_tx_data {
     struct iwm_node *in;
     int txmcs;
     int txrate;
-    int totlen;
-    int retries;
-    int txfail;
-    
-    /* A-MPDU subframes */
-    int ampdu_id;
-    int ampdu_txmcs;
-    int ampdu_nframes;
-    int ampdu_size;
 };
 
 struct iwm_tx_ring {
@@ -302,7 +293,6 @@ struct iwm_tx_ring {
     int            qid;
     int            queued;
     int            cur;
-    int            read;
     int            tail;
 };
 
@@ -395,10 +385,6 @@ struct iwm_bf_data {
     int last_cqm_event;
 };
 
-struct iwm_tx_ba {
-   struct iwm_node *    wn;
-};
-
 struct iwm_softc {
 	struct device sc_dev;
 	struct ieee80211com sc_ic;
@@ -422,7 +408,6 @@ struct iwm_softc {
 	int			ba_tid;
 	uint16_t		ba_ssn;
     uint16_t        ba_winsize;
-    int         ba_tx;
 
 	/* Task for HT protection updates. */
 	struct task		htprot_task;
@@ -536,11 +521,6 @@ struct iwm_softc {
 
 	struct iwm_rx_phy_info sc_last_phy_info;
 	int sc_ampdu_ref;
-    
-    int first_agg_txq;
-    int agg_queue_mask;
-    int agg_tid_disable;
-    struct iwm_tx_ba sc_tx_ba[IEEE80211_NUM_TID];
 
 	uint32_t sc_time_event_uid;
 
@@ -595,7 +575,6 @@ struct iwm_node {
     int chosen_txrate;
     struct ieee80211_mira_node in_mn;
     int chosen_txmcs;
-    uint32_t next_ampdu_id;
 };
 #define IWM_STATION_ID 0
 #define IWM_AUX_STA_ID 1

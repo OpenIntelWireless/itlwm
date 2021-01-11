@@ -660,8 +660,14 @@ IOReturn AirportItlwm::outputStart(IONetworkInterface *interface, IOOptionBits o
 {
     _ifnet *ifp = &fHalService->get80211Controller()->ic_ac.ac_if;
     mbuf_t m = NULL;
+    if (!ifq_is_oactive(&ifp->if_snd)) {
+        return kIOReturnNoResources;
+    }
     while (kIOReturnSuccess == interface->dequeueOutputPackets(1, &m)) {
         outputPacket(m, NULL);
+        if (!ifq_is_oactive(&ifp->if_snd)) {
+            return kIOReturnNoResources;
+        }
     }
     return kIOReturnNoResources;
 }
