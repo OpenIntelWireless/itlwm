@@ -22,15 +22,21 @@ If you have other questions or feedback, feel free to [![Join the chat at https:
 
 We only accept bug reports in GitHub Issues, before opening an issue, you're recommended to reconfirm it with us on [Gitter](https://gitter.im/OpenIntelWireless/itlwm); once it's confirmed, please use the given issue template and follow our [GitHub Issues Guide Line](/General/Issues.md).
 
-## Credit
+## Credits
 
-- [AppleIntelWiFi/Black80211-Catalina](https://github.com/AppleIntelWiFi/Black80211-Catalina)
-- [mercurysquad/Voodoo80211](https://github.com/mercurysquad/Voodoo80211)
-- [openbsd/src](https://github.com/openbsd/src)
-- [rpeshkov/black80211](https://github.com/rpeshkov/black80211)
-- [torvalds/linux](https://github.com/torvalds/linux)
+- [Apple](.) for macOS
+- [AppleIntelWiFi](https://github.com/AppleIntelWiFi) for [Black80211-Catalina](https://github.com/AppleIntelWiFi/Black80211-Catalina)
+- [ErrorErrorError](https://github.com/ErrorErrorError) for UserClient bug fixes
+- [Intel](https://intel.com) for [Wireless Adapter Firmwares](https://www.intel.com/content/www/us/en/support/articles/000005511/network-and-io/wireless.html) and [iwlwifi](https://wireless.wiki.kernel.org/en/users/drivers/iwlwifi)
+- [Linux](https://www.kernel.org) for [iwlwifi](https://wireless.wiki.kernel.org/en/users/drivers/iwlwifi)
+- [mercurysquad](https://github.com/mercurysquad) for [Voodoo80211](https://github.com/mercurysquad/Voodoo80211)
+- [OpenBSD](https://openbsd.org) for [net80211, iwn, iwm, and iwx](https://github.com/openbsd/src)
+- [pigworlds](https://github.com/OpenIntelWireless/itlwm/commits?author=pigworlds) for DVM devices support, MIRA bug fixes, and Tx aggregation for MVM Gen 1 devices
+- [rpeshkov](https://github.com/rpeshkov) for [black80211](https://github.com/rpeshkov/black80211)
+- [usr-sse2](https://github.com/zxystd) for implementing the usage of Apple RSN Supplicant and bug fixes
+- [zxystd](https://github.com/zxystd) for developing [itlwm](https://github.com/OpenIntelWireless/zxystd)
 
-## Acknowledge
+## Acknowledgements
 
 - [@penghubingzhou](https://github.com/startpenghubingzhou)
 - [@Bat.bat](https://github.com/williambj1)
