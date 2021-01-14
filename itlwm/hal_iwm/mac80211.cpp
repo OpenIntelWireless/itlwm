@@ -3769,7 +3769,7 @@ iwm_attach(struct iwm_softc *sc, struct pci_attach_args *pa)
     /* Allocate "Keep Warm" page, used internally by the card. */
     err = iwm_dma_contig_alloc(sc->sc_dmat, &sc->kw_dma, 4096, 4096);
     if (err) {
-        printf("%s: could not allocate keep warm page\n", DEVNAME(sc));
+        XYLog("%s: could not allocate keep warm page\n", DEVNAME(sc));
         goto fail1;
     }
 

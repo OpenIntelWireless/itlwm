@@ -489,13 +489,13 @@ iwx_init_fw_sec(struct iwx_softc *sc, const struct iwx_fw_sects *fws,
     
     dram->fw = (struct iwx_dma_info *)kcalloc(dram->umac_cnt + dram->lmac_cnt, sizeof(*dram->fw));
     if (!dram->fw) {
-        printf("%s: could not allocate memory for firmware sections\n",
+        XYLog("%s: could not allocate memory for firmware sections\n",
         DEVNAME(sc));
         return ENOMEM;
     }
     dram->paging = (struct iwx_dma_info *)kcalloc(dram->paging_cnt, sizeof(*dram->paging));
     if (!dram->paging) {
-        printf("%s: could not allocate memory for firmware paging\n",
+        XYLog("%s: could not allocate memory for firmware paging\n",
         DEVNAME(sc));
         return ENOMEM;
     }
@@ -2922,7 +2922,7 @@ iwx_nvm_get(struct iwx_softc *sc)
 
    iwx_set_mac_addr_from_csr(sc, nvm);
    if (!iwx_is_valid_mac_addr(nvm->hw_addr)) {
-       printf("%s: no valid mac address was found\n", DEVNAME(sc));
+       XYLog("%s: no valid mac address was found\n", DEVNAME(sc));
        err = EINVAL;
        goto out;
    }
@@ -3106,7 +3106,7 @@ iwx_run_init_mvm_ucode(struct iwx_softc *sc, int readnvm)
     int err;
 
     if ((sc->sc_flags & IWX_FLAG_RFKILL) && !readnvm) {
-        printf("%s: radio is disabled by hardware switch\n",
+        XYLog("%s: radio is disabled by hardware switch\n",
             DEVNAME(sc));
         return EPERM;
     }
@@ -3114,7 +3114,7 @@ iwx_run_init_mvm_ucode(struct iwx_softc *sc, int readnvm)
     sc->sc_init_complete = 0;
     err = iwx_load_ucode_wait_alive(sc);
     if (err) {
-        printf("%s: failed to load init firmware\n", DEVNAME(sc));
+        XYLog("%s: failed to load init firmware\n", DEVNAME(sc));
         return err;
     }
 
@@ -3147,7 +3147,7 @@ iwx_run_init_mvm_ucode(struct iwx_softc *sc, int readnvm)
     if (readnvm) {
         err = iwx_nvm_get(sc);
         if (err) {
-            printf("%s: failed to read nvm\n", DEVNAME(sc));
+            XYLog("%s: failed to read nvm\n", DEVNAME(sc));
             return err;
         }
         if (IEEE80211_ADDR_EQ(etheranyaddr, sc->sc_ic.ic_myaddr))
@@ -4951,9 +4951,6 @@ iwx_umac_scan(struct iwx_softc *sc, int bgscan)
         req->v7.adwell_default_n_aps =
         IWX_SCAN_ADWELL_DEFAULT_LB_N_APS;
         
-        if (isset(sc->sc_ucode_api, IWX_UCODE_TLV_API_ADWELL_HB_DEF_N_AP)) {
-            req->v9.adwell_default_hb_n_aps = IWX_SCAN_ADWELL_DEFAULT_LB_N_APS;
-        }
         if (ic->ic_des_esslen != 0)
             req->v7.adwell_max_budget =
             htole16(IWX_SCAN_ADWELL_MAX_BUDGET_DIRECTED_SCAN);
