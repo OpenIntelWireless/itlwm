@@ -1889,6 +1889,11 @@ struct iwm_agn_scd_bc_tbl {
 #define IWM_DQA_MIN_DATA_QUEUE        10
 #define IWM_DQA_MAX_DATA_QUEUE        31
 
+/* Reserve 8 DQA Tx queues, from 10 up to 17, for A-MPDU aggregation. */
+#define IWM_MAX_TID_COUNT      8
+#define IWM_FIRST_AGG_TX_QUEUE IWM_DQA_MIN_DATA_QUEUE
+#define IWM_LAST_AGG_TX_QUEUE  (IWM_FIRST_AGG_TX_QUEUE + IWM_MAX_TID_COUNT - 1)
+
 /* legacy non-DQA queues; the legacy command queue uses a different number! */
 #define IWM_OFFCHANNEL_QUEUE    8
 #define IWM_CMD_QUEUE        9
@@ -1933,6 +1938,11 @@ struct iwm_agn_scd_bc_tbl {
 
 /* scheduler config */
 #define IWM_SCD_QUEUE_CFG    0x1d
+
+/* Available options for the SCD_QUEUE_CFG HCMD */
+#define IWM_SCD_CFG_DISABLE_QUEUE   0
+#define IWM_SCD_CFG_ENABLE_QUEUE    1
+#define IWM_SCD_CFG_UPDATE_QUEUE_TID    2
 
 /* global key */
 #define IWM_WEP_KEY    0x20
@@ -4641,7 +4651,8 @@ struct iwm_lq_cmd {
 /*
  * TID for non QoS frames - to be written in tid_tspec
  */
-#define IWM_TID_NON_QOS    IWM_MAX_TID_COUNT
+#define IWM_TID_NON_QOS    0
+#define IWM_TID_MGMT   15
 
 /*
  * Limits on the retransmissions - to be written in {data,rts}_retry_limit
@@ -4652,13 +4663,38 @@ struct iwm_lq_cmd {
 #define IWM_BAR_DFAULT_RETRY_LIMIT        60
 #define IWM_LOW_RETRY_LIMIT            7
 
+/**
+ * %iwl_tx_cmd offload_assist values
+ * @TX_CMD_OFFLD_IP_HDR: offset to start of IP header (in words)
+ *    from mac header end. For normal case it is 4 words for SNAP.
+ *    note: tx_cmd, mac header and pad are not counted in the offset.
+ *    This is used to help the offload in case there is tunneling such as
+ *    IPv6 in IPv4, in such case the ip header offset should point to the
+ *    inner ip header and IPv4 checksum of the external header should be
+ *    calculated by driver.
+ * @TX_CMD_OFFLD_L4_EN: enable TCP/UDP checksum
+ * @TX_CMD_OFFLD_L3_EN: enable IP header checksum
+ * @TX_CMD_OFFLD_MH_SIZE: size of the mac header in words. Includes the IV
+ *    field. Doesn't include the pad.
+ * @TX_CMD_OFFLD_PAD: mark 2-byte pad was inserted after the mac header for
+ *    alignment
+ * @TX_CMD_OFFLD_AMSDU: mark TX command is A-MSDU
+ */
+#define IWM_TX_CMD_OFFLD_IP_HDR(x)    ((x) << 0)
+#define IWM_TX_CMD_OFFLD_L4_EN        (1 << 6)
+#define IWM_TX_CMD_OFFLD_L3_EN        (1 << 7)
+#define IWM_TX_CMD_OFFLD_MH_SIZE(x)    ((x) << 8)
+#define IWM_TX_CMD_OFFLD_PAD        (1 << 13)
+#define IWM_TX_CMD_OFFLD_AMSDU        (1 << 14)
+#define IWM_TX_CMD_OFFLD_MH_MASK    0x1f
+#define IWM_TX_CMD_OFFLD_IP_HDR_MASK    0x3f
+
 /* TODO: complete documentation for try_cnt and btkill_cnt */
 /**
  * struct iwm_tx_cmd - TX command struct to FW
  * ( IWM_TX_CMD = 0x1c )
  * @len: in bytes of the payload, see below for details
- * @next_frame_len: same as len, but for next frame (0 if not applicable)
- *    Used for fragmentation and bursting, but not in 11n aggregation.
+ * @offload_assist: TX offload configuration
  * @tx_flags: combination of IWM_TX_CMD_FLG_*
  * @rate_n_flags: rate for *all* Tx attempts, if IWM_TX_CMD_FLG_STA_RATE_MSK is
  *    cleared. Combination of IWM_RATE_MCS_*
@@ -4694,7 +4730,7 @@ struct iwm_lq_cmd {
  */
 struct iwm_tx_cmd {
     uint16_t len;
-    uint16_t next_frame_len;
+    uint16_t offload_assist;
     uint32_t tx_flags;
     struct {
         uint8_t try_cnt;
@@ -4720,6 +4756,9 @@ struct iwm_tx_cmd {
     uint8_t payload[0];
     struct ieee80211_frame hdr[0];
 } __packed; /* IWM_TX_CMD_API_S_VER_3 */
+
+/* For aggregation queues, index must be aligned to frame sequence number. */
+#define IWM_AGG_SSN_TO_TXQ_IDX(x)    ((x) & (IWM_TX_RING_COUNT - 1))
 
 /*
  * TX response related data
@@ -4782,7 +4821,7 @@ struct iwm_tx_cmd {
 #define IWM_AGG_TX_STATE_BT_PRIO        0x0002
 #define IWM_AGG_TX_STATE_FEW_BYTES        0x0004
 #define IWM_AGG_TX_STATE_ABORT            0x0008
-#define IWM_AGG_TX_STATE_LAST_SENT_TTL        0x0010
+#define IWM_AGG_TX_STATE_TX_ON_AIR_DROP        0x0010
 #define IWM_AGG_TX_STATE_LAST_SENT_TRY_CNT    0x0020
 #define IWM_AGG_TX_STATE_LAST_SENT_BT_KILL    0x0040
 #define IWM_AGG_TX_STATE_SCD_QUERY        0x0080
@@ -4912,21 +4951,23 @@ struct iwm_tx_resp {
 /**
  * struct iwm_ba_notif - notifies about reception of BA
  * ( IWM_BA_NOTIF = 0xc5 )
- * @sta_addr_lo32: lower 32 bits of the MAC address
- * @sta_addr_hi16: upper 16 bits of the MAC address
+ * @sta_addr: MAC address
  * @sta_id: Index of recipient (BA-sending) station in fw's station table
  * @tid: tid of the session
- * @seq_ctl: sequence control field from IEEE80211 frame header (it is unclear
- *  which frame this relates to; info or reverse engineering welcome)
+ * @seq_ctl: sequence control field from IEEE80211 frame header (the first
+ * bit in @bitmap corresponds to the sequence number stored here)
  * @bitmap: the bitmap of the BA notification as seen in the air
  * @scd_flow: the tx queue this BA relates to
  * @scd_ssn: the index of the last contiguously sent packet
  * @txed: number of Txed frames in this batch
  * @txed_2_done: number of Acked frames in this batch
+ * @reduced_txp: power reduced according to TPC. This is the actual value and
+ *     not a copy from the LQ command. Thus, if not the first rate was used
+ *     for Tx-ing then this value will be set to 0 by FW.
+ * @reserved1: reserved
  */
 struct iwm_ba_notif {
-    uint32_t sta_addr_lo32;
-    uint16_t sta_addr_hi16;
+    uint8_t sta_addr[ETHER_ADDR_LEN];
     uint16_t reserved;
 
     uint8_t sta_id;
@@ -4937,7 +4978,8 @@ struct iwm_ba_notif {
     uint16_t scd_ssn;
     uint8_t txed;
     uint8_t txed_2_done;
-    uint16_t reserved1;
+    uint8_t reduced_txp;
+    uint8_t reserved1;
 } __packed;
 
 /*
@@ -5040,6 +5082,25 @@ struct iwm_scd_txq_cfg_rsp {
     uint8_t scd_queue;
 } __packed; /* SCD_QUEUE_CFG_RSP_API_S_VER_1 */
 
+struct iwm_txq_scd_cfg {
+    uint8_t fifo;
+    uint8_t sta_id;
+    uint8_t tid;
+    bool aggregate;
+    int frame_limit;
+};
+
+const uint8_t tid_to_mac80211_ac[] = {
+    EDCA_AC_BE,
+    EDCA_AC_BK,
+    EDCA_AC_BK,
+    EDCA_AC_BE,
+    EDCA_AC_VI,
+    EDCA_AC_VI,
+    EDCA_AC_VO,
+    EDCA_AC_VO,
+    EDCA_AC_VO, /* We treat MGMT as TID 8, which is set as AC_VO */
+};
 
 /* Scan Commands, Responses, Notifications */
 

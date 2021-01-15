@@ -184,6 +184,10 @@ iwm_alloc_tx_ring(iwm_softc *sc, struct iwm_tx_ring *ring, int qid)
     ring->cur = 0;
     ring->tail = 0;
     
+    /* We are using 10:17 for DQA tx agg */
+    if (qid > IWM_LAST_AGG_TX_QUEUE)
+        return 0;
+    
     /* Allocate TX descriptors (256-byte aligned). */
     size = IWM_TX_RING_COUNT * sizeof (struct iwm_tfd);
     err = iwm_dma_contig_alloc(sc->sc_dmat, &ring->desc_dma, size, 256);
@@ -193,28 +197,6 @@ iwm_alloc_tx_ring(iwm_softc *sc, struct iwm_tx_ring *ring, int qid)
         goto fail;
     }
     ring->desc = (struct iwm_tfd *)ring->desc_dma.vaddr;
-    
-    /*
-     * There is no need to allocate DMA buffers for unused rings.
-     * 7k/8k/9k hardware supports up to 31 Tx rings which is more
-     * than we currently need.
-     *
-     * In DQA mode we use 1 command queue + 4 DQA mgmt/data queues.
-     * The command is queue 0 (sc->txq[0]), and 4 mgmt/data frame queues
-     * are sc->tqx[IWM_DQA_MIN_MGMT_QUEUE + ac], i.e. sc->txq[5:8],
-     * in order to provide one queue per EDCA category.
-     *
-     * In non-DQA mode, we use rings 0 through 9 (0-3 are EDCA, 9 is cmd).
-     *
-     * Tx aggregation will require additional queues (one queue per TID
-     * for which aggregation is enabled) but we do not implement this yet.
-     *
-     * Unfortunately, we cannot tell if DQA will be used until the
-     * firmware gets loaded later, so just allocate sufficient rings
-     * in order to satisfy both cases.
-     */
-    if (qid > IWM_CMD_QUEUE)
-        return 0;
     
     size = IWM_TX_RING_COUNT * sizeof(struct iwm_device_cmd);
     err = iwm_dma_contig_alloc(sc->sc_dmat, &ring->cmd_dma, size, 4);
@@ -301,30 +283,97 @@ iwm_enable_ac_txq(struct iwm_softc *sc, int qid, int fifo)
 }
 
 int ItlIwm::
-iwm_enable_txq(struct iwm_softc *sc, int sta_id, int qid, int fifo)
+iwm_enable_txq(struct iwm_softc *sc, int sta_id, int qid, int fifo, int ssn, int tid, int agg)
 {
-    XYLog("%s\n", __FUNCTION__);
+    XYLog("%s qid=%d tid=%d agg=%d\n", __FUNCTION__, qid, tid, agg);
     struct iwm_scd_txq_cfg_cmd cmd;
-    int err;
+    int err = 0;
+    uint16_t idx;
+    struct iwm_tx_ring *ring = &sc->txq[qid];
+    bool scd_bug = false;
     
     iwm_nic_assert_locked(sc);
     
-    IWM_WRITE(sc, IWM_HBUS_TARG_WRPTR, qid << 8 | 0);
-    
     memset(&cmd, 0, sizeof(cmd));
     cmd.scd_queue = qid;
-    cmd.enable = 1;
-    cmd.sta_id = sta_id;
-    cmd.tx_fifo = fifo;
-    cmd.aggregate = 0;
+    cmd.enable = IWM_SCD_CFG_ENABLE_QUEUE;
     cmd.window = IWM_FRAME_LIMIT;
+    cmd.sta_id = sta_id;
+    cmd.ssn = ssn;
+    cmd.tx_fifo = fifo;
+    cmd.aggregate = agg;
+    cmd.tid = tid;
+
+    iwm_nic_assert_locked(sc);
     
+    /*
+     * If we need to move the SCD write pointer by steps of
+     * 0x40, 0x80 or 0xc0, it gets stuck. Avoids this and let
+     * the op_mode know by returning true later.
+     * Do this only in case cfg is NULL since this trick can
+     * be done only if we have DQA enabled which is true for mvm
+     * only. And mvm never sets a cfg pointer.
+     * This is really ugly, but this is the easiest way out for
+     * this sad hardware issue.
+     * This bug has been fixed on devices 9000 and up.
+     */
+    scd_bug = !sc->sc_mqrx_supported &&
+    !((ssn - ring->cur) & 0x3f) &&
+    (ssn != ring->cur);
+    if (scd_bug) {
+        ssn = (ssn + 1) & 0xfff;
+    }
+    
+    idx = IWM_AGG_SSN_TO_TXQ_IDX(ssn);
+    ring->cur = ring->read = idx;
+    IWM_WRITE(sc, IWM_HBUS_TARG_WRPTR, (qid << 8) | idx);
+
+    iwm_write_prph(sc, IWM_SCD_QUEUE_RDPTR(qid), ssn);
+
+    iwm_write_mem32(sc,
+                    sc->sched_base + IWM_SCD_CONTEXT_QUEUE_OFFSET(qid), 0);
+
+    /* Set scheduler window size and frame limit. */
+    iwm_write_mem32(sc,
+                    sc->sched_base + IWM_SCD_CONTEXT_QUEUE_OFFSET(qid) +
+                    sizeof(uint32_t),
+                    ((IWM_FRAME_LIMIT << IWM_SCD_QUEUE_CTX_REG2_WIN_SIZE_POS) &
+                     IWM_SCD_QUEUE_CTX_REG2_WIN_SIZE_MSK) |
+                    ((IWM_FRAME_LIMIT
+                      << IWM_SCD_QUEUE_CTX_REG2_FRAME_LIMIT_POS) &
+                     IWM_SCD_QUEUE_CTX_REG2_FRAME_LIMIT_MSK));
+
+    iwm_write_prph(sc, IWM_SCD_QUEUE_STATUS_BITS(qid),
+                   (1 << IWM_SCD_QUEUE_STTS_REG_POS_ACTIVE) |
+                   (fifo << IWM_SCD_QUEUE_STTS_REG_POS_TXF) |
+                   (1 << IWM_SCD_QUEUE_STTS_REG_POS_WSL) |
+                   IWM_SCD_QUEUE_STTS_REG_MSK);
+
+    if (qid == sc->cmdqid)
+        iwm_write_prph(sc, IWM_SCD_EN_CTRL,
+                       iwm_read_prph(sc, IWM_SCD_EN_CTRL) | (1 << qid));
+
     err = iwm_send_cmd_pdu(sc, IWM_SCD_QUEUE_CFG, 0,
                            sizeof(cmd), &cmd);
     if (err)
-        return err;
+        XYLog("%s failed error=%d\n", __FUNCTION__, err);
     
-    return 0;
+    return err;
+}
+
+int ItlIwm::
+iwm_disable_txq(struct iwm_softc *sc, uint8_t qid, uint8_t tid, uint8_t flags)
+{
+    int err;
+    struct iwm_scd_txq_cfg_cmd cmd = {
+        .scd_queue = qid,
+        .enable = IWM_SCD_CFG_DISABLE_QUEUE,
+        .sta_id = IWM_STATION_ID,
+    };
+    
+    err = iwm_send_cmd_pdu(sc, IWM_SCD_QUEUE_CFG, flags,
+                               sizeof(struct iwm_scd_txq_cfg_cmd), &cmd);
+    return err;
 }
 
 int ItlIwm::
