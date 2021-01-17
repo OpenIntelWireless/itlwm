@@ -6835,9 +6835,14 @@ _iwx_start_task(OSObject *target, void *arg0, void *arg1, void *arg2, void *arg3
             goto sendit;
         }
         
-        if (ic->ic_state != IEEE80211_S_RUN ||
-            (ic->ic_xflags & IEEE80211_F_TX_MGMT_ONLY))
+        if (
+#ifndef AIRPORT
+            ic->ic_state != IEEE80211_S_RUN ||
+#endif
+            (ic->ic_xflags & IEEE80211_F_TX_MGMT_ONLY)) {
+            ifp->if_snd->lockFlush();
             break;
+        }
         
         //        IFQ_DEQUEUE(&ifp->if_snd, m);
         m = ifp->if_snd->lockDequeue();
