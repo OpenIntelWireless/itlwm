@@ -919,6 +919,10 @@ iwm_ampdu_tx_done(struct iwm_softc *sc, struct iwm_cmd_header *cmd_hdr,
             if (trycnt > 1)
                 txdata->retries++;
             
+            if (status != IWM_TX_STATUS_SUCCESS && txdata->data_type == IEEE80211_FC0_TYPE_MGT) {
+                iwm_toggle_tx_ant(sc, &sc->sc_mgmt_last_antenna_idx);
+            }
+            
             /*
              * Assign a common ID to all subframes of this A-MPDU.
              * This ID will be used during Tx rate control to
@@ -973,8 +977,10 @@ iwm_ampdu_tx_done(struct iwm_softc *sc, struct iwm_cmd_header *cmd_hdr,
         iwm_mira_choose(sc, ni);
     }
     
-    if (txfail)
+    if (txfail) {
         ieee80211_tx_compressed_bar(ic, ni, tid, ssn);
+        XYLog("%s sending bar ssn=%d tid=%d\n", __FUNCTION__, ssn, tid);
+    }
     else if (!SEQ_LT(ssn, ba->ba_winstart)) {
         /*
          * Move window forward if SSN lies beyond end of window,
@@ -1235,30 +1241,26 @@ iwm_tx_fill_cmd(struct iwm_softc *sc, struct iwm_node *in,
     struct ieee80211_node *ni = &in->in_ni;
     const struct iwm_rate *rinfo;
     int type = wh->i_fc[0] & IEEE80211_FC0_TYPE_MASK;
+    int subtype = wh->i_fc[0] & IEEE80211_FC0_SUBTYPE_MASK;
     int min_ridx = iwm_rval2ridx(ieee80211_min_basic_rate(ic));
     int ridx, rate_flags;
 
     tx->rts_retry_limit = IWM_RTS_DFAULT_RETRY_LIMIT;
-    tx->data_retry_limit = IWM_LOW_RETRY_LIMIT;
-
-    if (IEEE80211_IS_MULTICAST(wh->i_addr1) ||
-        type != IEEE80211_FC0_TYPE_DATA) {
-        /* for non-data, use the lowest supported rate */
-        ridx = min_ridx;
-        tx->data_retry_limit = IWM_MGMT_DFAULT_RETRY_LIMIT;
-    } else if (ic->ic_fixed_mcs != -1) {
-        ridx = sc->sc_fixed_ridx;
-    } else if (ic->ic_fixed_rate != -1) {
-        ridx = sc->sc_fixed_ridx;
-    } else if ((ni->ni_flags & IEEE80211_NODE_HT) &&
-        ieee80211_mira_is_probing(&in->in_mn)) {
-        /* Keep Tx rate constant while mira is probing. */
-        ridx = iwm_mcs2ridx[ni->ni_txmcs];
-     } else {
+    
+    if (type == IEEE80211_FC0_TYPE_CTL && subtype == IEEE80211_FC0_SUBTYPE_BAR) {
+        tx->data_retry_limit = IWM_BAR_DFAULT_RETRY_LIMIT;
+    } else {
+        tx->data_retry_limit = IWM_DEFAULT_TX_RETRY;
+    }
+    
+    /*
+    * for data packets, rate info comes from the table inside the fw. This
+    * table is controlled by LINK_QUALITY commands
+    */
+    if (!IEEE80211_IS_MULTICAST(wh->i_addr1) && type == IEEE80211_FC0_TYPE_DATA) {
         int i;
-        /* Use firmware rateset retry table. */
         tx->initial_rate_index = 0;
-        tx->tx_flags |= htole32(IWM_TX_CMD_FLG_STA_RATE);
+        tx->tx_flags |= cpu_to_le32(IWM_TX_CMD_FLG_STA_RATE);
         if (ni->ni_flags & IEEE80211_NODE_HT) {
             ridx = iwm_mcs2ridx[ni->ni_txmcs];
             return &iwm_rates[ridx];
@@ -1273,13 +1275,82 @@ iwm_tx_fill_cmd(struct iwm_softc *sc, struct iwm_node *in,
             }
         }
         return &iwm_rates[ridx];
+    } else if (type == IEEE80211_FC0_TYPE_CTL && subtype == IEEE80211_FC0_SUBTYPE_BAR) {
+        tx->tx_flags |= htole32(IWM_TX_CMD_FLG_ACK | IWM_TX_CMD_FLG_BAR);
     }
+    
+    ridx = min_ridx;
+    if (ic->ic_fixed_mcs != -1) {
+        ridx = sc->sc_fixed_ridx;
+    } else if ((ni->ni_flags & IEEE80211_NODE_HT) &&
+               ieee80211_mira_is_probing(&in->in_mn)) {
+        /* Keep Tx rate constant while mira is probing. */
+        ridx = iwm_mcs2ridx[ni->ni_txmcs];
+    }
+    
+//    if (IEEE80211_IS_CHAN_5GHZ(ni->ni_chan)) {
+//        ridx += IWM_FIRST_OFDM_RATE;
+//    }
+//
+//
+//    if (ridx >= ARRAY_SIZE(iwm_rates)) {
+//        XYLog("%s rate idx out of bound %d\n", __FUNCTION__, ridx);
+//        ridx = (IEEE80211_IS_CHAN_5GHZ(ni->ni_chan)) ? IWM_RIDX_OFDM : IWM_RIDX_CCK;
+//        for (int i = 0; i < ni->ni_rates.rs_nrates; i++) {
+//            if (iwm_rates[i].rate == (ni->ni_txrate & IEEE80211_RATE_VAL)) {
+//                ridx = i;
+//                break;
+//            }
+//        }
+//    }
+//
+//    if (IEEE80211_IS_MULTICAST(wh->i_addr1) ||
+//        type != IEEE80211_FC0_TYPE_DATA) {
+//        /* for non-data, use the lowest supported rate */
+//        ridx = min_ridx;
+//        tx->data_retry_limit = IWM_MGMT_DFAULT_RETRY_LIMIT;
+//    } else if (ic->ic_fixed_mcs != -1) {
+//        ridx = sc->sc_fixed_ridx;
+//    } else if (ic->ic_fixed_rate != -1) {
+//        ridx = sc->sc_fixed_ridx;
+//    } else if ((ni->ni_flags & IEEE80211_NODE_HT) &&
+//        ieee80211_mira_is_probing(&in->in_mn)) {
+//        /* Keep Tx rate constant while mira is probing. */
+//        ridx = iwm_mcs2ridx[ni->ni_txmcs];
+//     } else {
+//        int i;
+//        /* Use firmware rateset retry table. */
+//        tx->initial_rate_index = 0;
+//        tx->tx_flags |= htole32(IWM_TX_CMD_FLG_STA_RATE);
+//        if (ni->ni_flags & IEEE80211_NODE_HT) {
+//            ridx = iwm_mcs2ridx[ni->ni_txmcs];
+//            return &iwm_rates[ridx];
+//        }
+//        ridx = (IEEE80211_IS_CHAN_5GHZ(ni->ni_chan)) ?
+//            IWM_RIDX_OFDM : IWM_RIDX_CCK;
+//        for (i = 0; i < ni->ni_rates.rs_nrates; i++) {
+//            if (iwm_rates[i].rate == (ni->ni_txrate &
+//                IEEE80211_RATE_VAL)) {
+//                ridx = i;
+//                break;
+//            }
+//        }
+//        return &iwm_rates[ridx];
+//    }
 
+    XYLog("%s ridx=%d\n", __FUNCTION__, ridx);
     rinfo = &iwm_rates[ridx];
-    if (iwm_is_mimo_ht_plcp(rinfo->ht_plcp))
-        rate_flags = IWM_RATE_MCS_ANT_AB_MSK;
-    else
-        rate_flags = IWM_RATE_MCS_ANT_A_MSK;
+    if ((IEEE80211_IS_CHAN_2GHZ(ni->ni_chan)) && (type != IEEE80211_FC0_TYPE_DATA || IEEE80211_IS_MULTICAST(wh->i_addr1))) {
+        if (sc->sc_device_family <= IWM_DEVICE_FAMILY_8000) {
+            rate_flags = (IWM_ANT_A << IWM_RATE_MCS_ANT_POS);
+        } else {
+            rate_flags = (IWM_ANT_B << IWM_RATE_MCS_ANT_POS);
+        }
+        
+    } else {
+        rate_flags = ((1 << sc->sc_mgmt_last_antenna_idx) << IWM_RATE_MCS_ANT_POS);
+        XYLog("%s antenna=%d\n", __FUNCTION__, sc->sc_mgmt_last_antenna_idx);
+    }
     if (IWM_RIDX_IS_CCK(ridx))
         rate_flags |= IWM_RATE_MCS_CCK_MSK;
     if ((ni->ni_flags & IEEE80211_NODE_HT) &&
@@ -1326,7 +1397,11 @@ iwm_tx(struct iwm_softc *sc, mbuf_t m, struct ieee80211_node *ni, int ac)
     type = wh->i_fc[0] & IEEE80211_FC0_TYPE_MASK;
     subtype = wh->i_fc[0] & IEEE80211_FC0_SUBTYPE_MASK;
     
-    hdrlen = ieee80211_get_hdrlen(wh);
+    if (type == IEEE80211_FC0_TYPE_CTL) {
+        hdrlen = sizeof(struct ieee80211_frame_min);
+    } else {
+        hdrlen = ieee80211_get_hdrlen(wh);
+    }
     
     if ((hasqos = ieee80211_has_qos(wh))) {
         /* Select EDCA Access Category and TX ring for this frame. */
@@ -1537,6 +1612,7 @@ iwm_tx(struct iwm_softc *sc, mbuf_t m, struct ieee80211_node *ni, int ac)
     data->txrate = ni->ni_txrate;
     data->totlen = totlen;
     data->ampdu_txmcs = ni->ni_txmcs;
+    data->data_type = type;
     
     DPRINTFN(3, ("sending data: 嘤嘤嘤 amsdu=%d qid=%d idx=%d len=%d nsegs=%d txflags=0x%08x rate_n_flags=0x%08x rateidx=%u txmcs=%d ni_txrate=%d\n",
                  amsdu, ring->qid, ring->cur, totlen, nsegs, le32toh(tx->tx_flags),
@@ -2179,6 +2255,8 @@ iwm_run(struct iwm_softc *sc)
     
     timeout_add_msec(&sc->sc_calib_to, 500);
     iwm_led_enable(sc);
+    
+    iwm_toggle_tx_ant(sc, &sc->sc_mgmt_last_antenna_idx);
     
     return 0;
 }

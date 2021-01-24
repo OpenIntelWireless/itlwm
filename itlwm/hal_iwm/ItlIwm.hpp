@@ -84,6 +84,7 @@ public:
     //fw
     uint8_t iwm_fw_valid_tx_ant(struct iwm_softc *sc);
     uint8_t iwm_fw_valid_rx_ant(struct iwm_softc *sc);
+    void    iwm_toggle_tx_ant(struct iwm_softc *sc, uint8_t *ant);
     
     //scan
     uint8_t iwm_umac_scan_fill_channels(struct iwm_softc *sc,

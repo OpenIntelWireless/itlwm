@@ -285,6 +285,7 @@ struct iwm_tx_data {
     int totlen;
     int retries;
     int txfail;
+    int data_type;
     
     /* A-MPDU subframes */
     int ampdu_id;
@@ -445,6 +446,8 @@ struct iwm_softc {
 	struct iwm_rx_ring rxq;
 	int qfullmsk;
     int cmdqid;
+    
+    uint8_t sc_mgmt_last_antenna_idx;
 
 	int sc_sf_state;
 
