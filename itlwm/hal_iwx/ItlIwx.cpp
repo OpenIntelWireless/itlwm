@@ -3550,7 +3550,7 @@ iwx_rx_mpdu_mq(struct iwx_softc *sc, mbuf_t m, void *pktdata,
 
 void ItlIwx::
 iwx_rx_tx_cmd_single(struct iwx_softc *sc, struct iwx_rx_packet *pkt,
-                     struct iwx_node *in)
+                     struct iwx_tx_data *txd)
 {
     struct ieee80211com *ic = &sc->sc_ic;
     struct _ifnet *ifp = IC2IFP(ic);
@@ -3566,6 +3566,12 @@ iwx_rx_tx_cmd_single(struct iwx_softc *sc, struct iwx_rx_packet *pkt,
     if (txfail) {
         XYLog("%s %d OUTPUT_ERROR status=%d\n", __FUNCTION__, __LINE__, status);
         ifp->netStat->outputErrors++;
+        if (txd->type == IEEE80211_FC0_TYPE_MGT) {
+            iwx_toggle_tx_ant(sc, &sc->sc_mgmt_last_antenna_idx);
+        }
+        if (ic->ic_state < IEEE80211_S_RUN) {
+            iwx_toggle_tx_ant(sc, &sc->sc_tx_ant);
+        }
     }
 }
 
@@ -3606,7 +3612,7 @@ iwx_rx_tx_cmd(struct iwx_softc *sc, struct iwx_rx_packet *pkt,
     if (txd->m == NULL)
         return;
     
-    iwx_rx_tx_cmd_single(sc, pkt, txd->in);
+    iwx_rx_tx_cmd_single(sc, pkt, txd);
     iwx_txd_done(sc, txd);
     iwx_tx_update_byte_tbl(ring, idx, 0, 0);
     
@@ -4068,6 +4074,34 @@ iwx_cmd_done(struct iwx_softc *sc, int qid, int idx, int code)
         ring->queued--;
 }
 
+uint32_t ItlIwx::
+iwx_get_tx_ant(struct iwx_softc *sc, struct ieee80211_node *ni,
+                               const struct iwx_rate *rinfo, int type, struct ieee80211_frame *wh) {
+    if ((IEEE80211_IS_CHAN_2GHZ(ni->ni_chan))) {
+        return IWX_RATE_MCS_ANT_B_MSK;
+    }
+    if (!IEEE80211_IS_MULTICAST(wh->i_addr1) && type == IEEE80211_FC0_TYPE_DATA) {
+        return ((1 << sc->sc_tx_ant) << IWX_RATE_MCS_ANT_POS);
+    }
+    return ((1 << sc->sc_mgmt_last_antenna_idx) << IWX_RATE_MCS_ANT_POS);
+}
+
+void ItlIwx::
+iwx_toggle_tx_ant(struct iwx_softc *sc, uint8_t *ant)
+{
+    uint8_t valid = iwx_fw_valid_tx_ant(sc);
+    int i;
+    uint8_t ind = *ant; 
+    
+    for (i = 0; i < IWX_RATE_MCS_ANT_NUM; i++) {
+        ind = (ind + 1) % IWX_RATE_MCS_ANT_NUM;
+        if (valid & (1 << ind)) {
+            *ant = ind;
+            break;
+        }
+    }
+}
+
 /*
  * Fill in various bit for management frames, and leave them
  * unfilled for data frames (firmware takes care of that).
@@ -4099,24 +4133,22 @@ iwx_tx_fill_cmd(struct iwx_softc *sc, struct iwx_node *in,
         flags |= IWX_TX_FLAGS_CMD_RATE;
     } else if (ni->ni_flags & IEEE80211_NODE_HT) {
         ridx = iwx_mcs2ridx[ni->ni_txmcs];
+        return &iwx_rates[ridx];
     } else {
         uint8_t rval;
         rval = (rs->rs_rates[ni->ni_txrate] & IEEE80211_RATE_VAL);
         ridx = iwx_rval2ridx(rval);
         if (ridx < min_ridx)
             ridx = min_ridx;
+        return &iwx_rates[ridx];
     }
     
-    if ((ic->ic_flags & IEEE80211_F_RSNON) &&
-        ni->ni_rsn_supp_state == RSNA_SUPP_PTKNEGOTIATING)
-        flags |= IWX_TX_FLAGS_HIGH_PRI;
     tx->flags = htole32(flags);
     
     rinfo = &iwx_rates[ridx];
-    if (iwx_is_mimo_ht_plcp(rinfo->ht_plcp))
-        rate_flags = IWX_RATE_MCS_ANT_AB_MSK;
-    else
-        rate_flags = IWX_RATE_MCS_ANT_A_MSK;
+    
+    rate_flags = iwx_get_tx_ant(sc, ni, rinfo, type, wh);
+    
     if (IWX_RIDX_IS_CCK(ridx))
         rate_flags |= IWX_RATE_MCS_CCK_MSK;
     if ((ni->ni_flags & IEEE80211_NODE_HT) &&
@@ -4280,6 +4312,7 @@ iwx_tx(struct iwx_softc *sc, mbuf_t m, struct ieee80211_node *ni, int ac)
     }
     data->m = m;
     data->in = in;
+    data->type = type;
     
 //    XYLog("sending data: 嘤嘤嘤 qid=%d idx=%d len=%d nsegs=%d flags=0x%08x rate_n_flags=0x%08x offload_assist=%u txmcs=%d ni_txrate=%d\n",
 //          ring->qid, ring->cur, totlen, nsegs, le32toh(tx->flags),
@@ -4332,7 +4365,7 @@ iwx_tx(struct iwx_softc *sc, mbuf_t m, struct ieee80211_node *ni, int ac)
     
     /* Mark TX ring as full if we reach a certain threshold. */
     if (++ring->queued > IWX_TX_RING_HIMARK) {
-        XYLog("%s sc->qfullmsk is FULL ring->cur=%d ring->queued=%d\n", __FUNCTION__, ring->cur, ring->queued);
+//        XYLog("%s sc->qfullmsk is FULL ring->cur=%d ring->queued=%d\n", __FUNCTION__, ring->cur, ring->queued);
         sc->qfullmsk |= 1 << ring->qid;
     }
     
@@ -4550,6 +4583,10 @@ iwx_add_sta_cmd(struct iwx_softc *sc, struct iwx_node *in, int update)
             default:
                 break;
         }
+    }
+    
+    if (!update) {
+        iwx_toggle_tx_ant(sc, &sc->sc_tx_ant);
     }
     
     status = IWX_ADD_STA_SUCCESS;
@@ -6629,6 +6666,8 @@ iwx_init_hw(struct iwx_softc *sc)
                DEVNAME(sc), err);
         goto err;
     }
+    
+    iwx_toggle_tx_ant(sc, &sc->sc_mgmt_last_antenna_idx);
     
     if (sc->sc_tx_with_siso_diversity) {
         err = iwx_send_phy_cfg_cmd(sc);

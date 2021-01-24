@@ -669,7 +669,7 @@ IOReturn AirportItlwm::outputStart(IONetworkInterface *interface, IOOptionBits o
             return kIOReturnNoResources;
         }
     }
-    return kIOReturnNoResources;
+    return kIOReturnSuccess;
 }
 #endif
 

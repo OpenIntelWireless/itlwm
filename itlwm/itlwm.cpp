@@ -590,7 +590,7 @@ IOReturn itlwm::outputStart(IONetworkInterface *interface, IOOptionBits options)
             return kIOReturnNoResources;
         }
     }
-    return kIOReturnNoResources;
+    return kIOReturnSuccess;
 }
 #endif
 

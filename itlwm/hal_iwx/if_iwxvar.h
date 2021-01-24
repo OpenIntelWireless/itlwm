@@ -257,6 +257,7 @@ struct iwx_tx_data {
 	bus_addr_t	cmd_paddr;
 	mbuf_t m;
 	struct iwx_node *in;
+    uint8_t type;
 };
 
 struct iwx_tx_ring {
@@ -500,6 +501,9 @@ struct iwx_softc {
 	int sc_scan_last_antenna;
 
 	int sc_fixed_ridx;
+    
+    uint8_t sc_tx_ant; /* for fixed mcs/rate using */
+    uint8_t sc_mgmt_last_antenna_idx; /* for MGMT frames using*/
 
 	int sc_staid;
 	int sc_nodecolor;
