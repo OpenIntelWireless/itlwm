@@ -569,6 +569,7 @@ void
 ieee80211_ht_negotiate(struct ieee80211com *ic, struct ieee80211_node *ni)
 {
 	int i;
+    int ht_param;
 
 	ni->ni_flags &= ~(IEEE80211_NODE_HT | IEEE80211_NODE_HT_SGI20 |
 	    IEEE80211_NODE_HT_SGI40);
@@ -597,7 +598,6 @@ ieee80211_ht_negotiate(struct ieee80211com *ic, struct ieee80211_node *ni)
 			if (isset(ni->ni_basic_mcs, i) &&
 			    !isset(ic->ic_sup_mcs, i)) {
 				ic->ic_stats.is_ht_nego_no_basic_mcs++;
-                XYLog("%s line=%d\n", __FUNCTION__, __LINE__);
 				return;
 			}
 		}
@@ -618,11 +618,25 @@ ieee80211_ht_negotiate(struct ieee80211com *ic, struct ieee80211_node *ni)
 		return;
 	}
 
-    XYLog("%s line=%d\n", __FUNCTION__, __LINE__);
-
 	ni->ni_flags |= IEEE80211_NODE_HT;
-
-	/* Flags IEEE8021_NODE_HT_SGI20/40 are set by drivers if supported. */
+    
+    if (ieee80211_node_supports_ht_sgi20(ni)) {
+        ni->ni_flags |= IEEE80211_NODE_HT_SGI20;
+    }
+    
+    if (ieee80211_node_supports_ht_sgi40(ni) && (ic->ic_htcaps & IEEE80211_HTCAP_CBW20_40)) {
+        ni->ni_flags |= IEEE80211_NODE_HT_SGI40;
+    }
+    
+    ni->ni_chw = 20;
+    if (ieee80211_node_supports_ht_sgi40(ni) && IEEE80211_IS_CHAN_HT40(ni->ni_chan)) {
+        ht_param = ni->ni_htop0 & IEEE80211_HTOP0_SCO_MASK;
+        if ((ht_param == IEEE80211_HTOP0_SCO_SCA && IEEE80211_IS_CHAN_HT40U(ni->ni_chan)) ||
+            (ht_param == IEEE80211_HTOP0_SCO_SCB && IEEE80211_IS_CHAN_HT40D(ni->ni_chan)))  {
+            ni->ni_chw = 40;
+        }
+    }
+    XYLog("%s %d chan_width=%d\n", __FUNCTION__, __LINE__, ni->ni_chw);
 }
 
 void

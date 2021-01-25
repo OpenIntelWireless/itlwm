@@ -326,8 +326,9 @@ iwm_add_sta_cmd(struct iwm_softc *sc, struct iwm_node *in, int update)
         |= htole32(IWM_STA_FLG_MAX_AGG_SIZE_64K);
         add_sta_cmd.station_flags
         |= htole32(IWM_STA_FLG_FAT_EN_20MHZ);
-        add_sta_cmd.station_flags
-        |= htole32(IWM_STA_FLG_FAT_EN_40MHZ);
+        if (in->in_ni.ni_chw == 40) {
+            add_sta_cmd.station_flags |= htole32(IWM_STA_FLG_FAT_EN_40MHZ);
+        }
         switch (ic->ic_ampdu_params & IEEE80211_AMPDU_PARAM_SS) {
             case IEEE80211_AMPDU_PARAM_SS_2:
                 add_sta_cmd.station_flags

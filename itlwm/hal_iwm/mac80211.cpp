@@ -1914,16 +1914,8 @@ iwm_setrates(struct iwm_node *in, int async)
     
     if (ic->ic_flags & IEEE80211_F_USEPROT)
         lqcmd.flags |= IWM_LQ_FLAG_USE_RTS_MSK;
-    
-    if ((ni->ni_flags & IEEE80211_NODE_HT) &&
-        ieee80211_node_supports_ht_sgi20(ni)) {
-        ni->ni_flags |= IEEE80211_NODE_HT_SGI20;
-        sgi_ok = 1;
-    }
 
-    if ((ni->ni_flags & IEEE80211_NODE_HT) &&
-        ieee80211_node_supports_ht_sgi40(ni)) {
-        ni->ni_flags |= IEEE80211_NODE_HT_SGI40;
+    if (ieee80211_node_supports_ht_sgi20(ni) || ieee80211_node_supports_ht_sgi40(ni)) {
         sgi_ok = 1;
     }
     

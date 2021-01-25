@@ -2709,10 +2709,6 @@ ieee80211_recv_assoc_resp(struct ieee80211com *ic, mbuf_t m,
     if (htop)
         ieee80211_setup_htop(ni, htop + 2, htop[1], 0);
     ieee80211_ht_negotiate(ic, ni);
-
-    ni->ni_chw = ((ni->ni_htcaps & IEEE80211_HTCAP_SGI40) && (ni->ni_htcaps & IEEE80211_HTCAP_CBW20_40) && IEEE80211_IS_CHAN_HT40(ni->ni_chan)) ? 40 : 20;
-//    ni->ni_chw = 20;
-    XYLog("%s %d chan_width=%d\n", __FUNCTION__, __LINE__, ni->ni_chw);
     
     /* Hop into 11n mode after associating to an HT AP in a non-11n mode. */
     if (ni->ni_flags & IEEE80211_NODE_HT)
