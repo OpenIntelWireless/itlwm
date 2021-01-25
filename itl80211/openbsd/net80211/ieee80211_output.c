@@ -902,6 +902,8 @@ ieee80211_add_qos_capability(u_int8_t *frm, struct ieee80211com *ic)
     return frm;
 }
 
+#define    WME_OUI_BYTES        0x00, 0x50, 0xf2
+
 /*
  * Add a Wifi-Alliance WME (aka WMM) info element to a frame.
  * WME is a requirement for Wifi-Alliance compliance and some
@@ -910,15 +912,17 @@ ieee80211_add_qos_capability(u_int8_t *frm, struct ieee80211com *ic)
 uint8_t *
 ieee80211_add_wme_info(uint8_t *frm, struct ieee80211com *ic)
 {
-	*frm++ = IEEE80211_ELEMID_VENDOR;
-    *frm++ = 7;
-    memcpy(frm, MICROSOFT_OUI, 3); frm += 3;
-    *frm++ = 2; /* OUI type */
-    *frm++ = 0; /* OUI subtype */
-    *frm++ = 1; /* version */
-    *frm++ = 0; /* info */
-
-    return frm;
+	static const struct ieee80211_wme_info info = {
+        .wme_id        = IEEE80211_ELEMID_VENDOR,
+        .wme_len    = sizeof(struct ieee80211_wme_info) - 2,
+        .wme_oui    = { WME_OUI_BYTES },
+        .wme_type    = WME_OUI_TYPE,
+        .wme_subtype    = WME_INFO_OUI_SUBTYPE,
+        .wme_version    = WME_VERSION,
+        .wme_info    = 0,
+    };
+    memcpy(frm, &info, sizeof(info));
+    return frm + sizeof(info);
 }
 
 #ifndef IEEE80211_STA_ONLY
@@ -1125,13 +1129,62 @@ ieee80211_add_xrates(u_int8_t *frm, const struct ieee80211_rateset *rs)
 {
 	int nrates;
 
-	_KASSERT(rs->rs_nrates > IEEE80211_RATE_SIZE);
+    _KASSERT(rs->rs_nrates > IEEE80211_RATE_SIZE);
 
-	*frm++ = IEEE80211_ELEMID_XRATES;
+    *frm++ = IEEE80211_ELEMID_XRATES;
     nrates = rs->rs_nrates - IEEE80211_RATE_SIZE;
     *frm++ = nrates;
     memcpy(frm, rs->rs_rates + IEEE80211_RATE_SIZE, nrates);
     return frm + nrates;
+}
+
+uint8_t *
+ieee80211_add_ht_ie(uint8_t *frm, struct ieee80211com *ic, struct ieee80211_node *ni)
+{
+    *frm++ = IEEE80211_ELEMID_HTCAPS;
+    *frm++ = 26;
+    uint16_t cap = ni->ni_htcaps;;
+    cap |= ic->ic_htcaps;
+    switch (ni->ni_htop0 & IEEE80211_HTOP0_SCO_MASK) {
+            XYLog("%s line=%d\n", __FUNCTION__, __LINE__);
+        case IEEE80211_HTOP0_SCO_SCA:
+            XYLog("%s line=%d\n", __FUNCTION__, __LINE__);
+            if (ni->ni_chan != NULL) {
+                XYLog("%s line=%d\n", __FUNCTION__, __LINE__);
+                if ((ni->ni_chan->ic_flags & IEEE80211_CHAN_HT40U) == 0) {
+                    XYLog("%s line=%d\n", __FUNCTION__, __LINE__);
+                    cap &= ~IEEE80211_HTCAP_CBW20_40;
+                    cap &= ~IEEE80211_HTCAP_SGI40;
+                }
+            }
+            break;
+        case IEEE80211_HTOP0_SCO_SCB:
+            XYLog("%s line=%d\n", __FUNCTION__, __LINE__);
+            if (ni->ni_chan != NULL) {
+                XYLog("%s line=%d\n", __FUNCTION__, __LINE__);
+                if ((ni->ni_chan->ic_flags & IEEE80211_CHAN_HT40D) == 0) {
+                    XYLog("%s line=%d\n", __FUNCTION__, __LINE__);
+                    cap &= ~IEEE80211_HTCAP_CBW20_40;
+                    cap &= ~IEEE80211_HTCAP_SGI40;
+                }
+            }
+            break;
+
+        default:
+            break;
+    }
+    LE_WRITE_2(frm, cap); frm += 2;
+    *frm++ = ic->ic_ampdu_params;
+    memcpy(frm, ic->ic_sup_mcs, 10); frm += 10;// rx_mask
+    LE_WRITE_2(frm, (ic->ic_max_rxrate & IEEE80211_MCS_RX_RATE_HIGH)); frm += 2;// rx_highest
+    *frm++ = ic->ic_tx_mcs_set;// tx_params
+    *frm++ = 0; /* reserved */
+    *frm++ = 0; /* reserved */
+    *frm++ = 0; /* reserved */
+    LE_WRITE_2(frm, ic->ic_htxcaps); frm += 2;
+    LE_WRITE_4(frm, ic->ic_txbfcaps); frm += 4;
+    *frm++ = ic->ic_aselcaps;
+    return frm;
 }
 
 /*

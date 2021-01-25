@@ -181,6 +181,8 @@ const uint8_t iwm_nvm_channels_8000[] = {
 };
 
 #define IWM_NUM_2GHZ_CHANNELS    14
+#define IWM_FIRST_2GHZ_HT_MINUS        5
+#define IWM_LAST_2GHZ_HT_PLUS        9
 
 const struct iwm_rate {
     uint16_t rate;

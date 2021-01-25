@@ -866,6 +866,21 @@ enum ieee80211_edca_ac {
 #define IEEE80211_AUTH_ALG_LEAP			0x0080
 
 /*
+ * 802.11n HT Capability IE
+ * NB: these reflect D1.10
+ */
+struct ieee80211_ie_htcap {
+    uint8_t        hc_id;            /* element ID */
+    uint8_t        hc_len;            /* length in bytes */
+    uint16_t    hc_cap;            /* HT caps (see below) */
+    uint8_t        hc_param;        /* HT params (see below) */
+    uint8_t     hc_mcsset[16];         /* supported MCS set */
+    uint16_t    hc_extcap;        /* extended HT capabilities */
+    uint32_t    hc_txbf;        /* txbf capabilities */
+    uint8_t        hc_antenna;        /* antenna capabilities */
+} __packed;
+
+/*
  * Authentication Transaction Sequence Number field (see 7.3.1.2).
  */
 enum {
@@ -992,6 +1007,17 @@ enum {
 	(sizeof(struct ieee80211_frame_ack) + IEEE80211_CRC_LEN)
 #define	IEEE80211_MIN_LEN \
 	(sizeof(struct ieee80211_frame_min) + IEEE80211_CRC_LEN)
+
+/* Maximal size of an A-MSDU that can be transported in a HT BA session */
+#define IEEE80211_MAX_MPDU_LEN_HT_BA        4095
+
+/* Maximal size of an A-MSDU */
+#define IEEE80211_MAX_MPDU_LEN_HT_3839        3839
+#define IEEE80211_MAX_MPDU_LEN_HT_7935        7935
+
+#define IEEE80211_MAX_MPDU_LEN_VHT_3895        3895
+#define IEEE80211_MAX_MPDU_LEN_VHT_7991        7991
+#define IEEE80211_MAX_MPDU_LEN_VHT_11454    11454
 
 /*
  * The 802.11 spec says at most 2007 stations may be
@@ -1399,6 +1425,71 @@ struct ieee80211_csa_ie {
  */
 #define    IEEE80211_CSA_COUNT_MIN    2
 #define    IEEE80211_CSA_COUNT_MAX    255
+
+#define    IEEE80211_IS_CHAN_HT(_c) \
+    (((_c)->ic_flags & IEEE80211_CHAN_HT) != 0)
+#define    IEEE80211_IS_CHAN_HT20(_c) \
+    (((_c)->ic_flags & IEEE80211_CHAN_HT20) != 0)
+#define    IEEE80211_IS_CHAN_HT40(_c) \
+    (((_c)->ic_flags & IEEE80211_CHAN_HT40) != 0)
+#define    IEEE80211_IS_CHAN_HT40U(_c) \
+    (((_c)->ic_flags & IEEE80211_CHAN_HT40U) != 0)
+#define    IEEE80211_IS_CHAN_HT40D(_c) \
+    (((_c)->ic_flags & IEEE80211_CHAN_HT40D) != 0)
+
+#define    IEEE80211_IS_CHAN_VHT(_c) \
+    (((_c)->ic_flags & IEEE80211_CHAN_VHT) != 0)
+#define    IEEE80211_IS_CHAN_VHT_2GHZ(_c) \
+    (IEEE80211_IS_CHAN_2GHZ(_c) && \
+     ((_c)->ic_flags & IEEE80211_CHAN_VHT) != 0)
+#define    IEEE80211_IS_CHAN_VHT_5GHZ(_c) \
+    (IEEE80211_IS_CHAN_5GHZ(_c) && \
+     ((_c)->ic_flags & IEEE80211_CHAN_VHT) != 0)
+#define    IEEE80211_IS_CHAN_VHT20(_c) \
+    (((_c)->ic_flags & IEEE80211_CHAN_VHT20) != 0)
+#define    IEEE80211_IS_CHAN_VHT40(_c) \
+    (((_c)->ic_flags & IEEE80211_CHAN_VHT40) != 0)
+#define    IEEE80211_IS_CHAN_VHT40U(_c) \
+    (((_c)->ic_flags & IEEE80211_CHAN_VHT40U) != 0)
+#define    IEEE80211_IS_CHAN_VHT40D(_c) \
+    (((_c)->ic_flags & IEEE80211_CHAN_VHT40D) != 0)
+#define    IEEE80211_IS_CHAN_VHTA(_c) \
+    (IEEE80211_IS_CHAN_5GHZ(_c) && \
+     ((_c)->ic_flags & IEEE80211_CHAN_VHT) != 0)
+#define    IEEE80211_IS_CHAN_VHTG(_c) \
+    (IEEE80211_IS_CHAN_2GHZ(_c) && \
+     ((_c)->ic_flags & IEEE80211_CHAN_VHT) != 0)
+#define    IEEE80211_IS_CHAN_VHT80(_c) \
+    (((_c)->ic_flags & IEEE80211_CHAN_VHT80) != 0)
+#define    IEEE80211_IS_CHAN_VHT80_80(_c) \
+    (((_c)->ic_flags & IEEE80211_CHAN_VHT80_80) != 0)
+#define    IEEE80211_IS_CHAN_VHT160(_c) \
+    (((_c)->ic_flags & IEEE80211_CHAN_VHT160) != 0)
+
+#define    WME_OUI            0xf25000
+#define    WME_OUI_TYPE        0x02
+#define    WME_INFO_OUI_SUBTYPE    0x00
+#define    WME_PARAM_OUI_SUBTYPE    0x01
+#define    WME_VERSION        1
+
+/* WME stream classes */
+#define    WME_AC_BE    0        /* best effort */
+#define    WME_AC_BK    1        /* background */
+#define    WME_AC_VI    2        /* video */
+#define    WME_AC_VO    3        /* voice */
+
+/*
+ * WME/802.11e information element.
+ */
+struct ieee80211_wme_info {
+    uint8_t        wme_id;        /* IEEE80211_ELEMID_VENDOR */
+    uint8_t        wme_len;    /* length in bytes */
+    uint8_t        wme_oui[3];    /* 0x00, 0x50, 0xf2 */
+    uint8_t        wme_type;    /* OUI type */
+    uint8_t        wme_subtype;    /* OUI subtype */
+    uint8_t        wme_version;    /* spec revision */
+    uint8_t        wme_info;    /* QoS info */
+} __packed;
 
 #endif /* _NET80211_IEEE80211_H_ */
 

@@ -1121,7 +1121,7 @@ ieee80211_setmode(struct ieee80211com *ic, enum ieee80211_phymode mode)
         if (mode == IEEE80211_MODE_AUTO) {
             if (c->ic_flags != 0)
                 setbit(ic->ic_chan_active, i);
-        } else if ((c->ic_flags & modeflags) == modeflags)
+        } else if ((c->ic_flags & modeflags) != 0)
             setbit(ic->ic_chan_active, i);
     }
     /*

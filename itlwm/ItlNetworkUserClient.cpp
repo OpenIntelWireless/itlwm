@@ -126,8 +126,7 @@ sSTA_INFO(OSObject* target, void* data, bool isSet)
     st->max_mcs = ic_bss->ni_txmcs;
     st->cur_mcs = ic_bss->ni_txmcs;
     st->channel = ieee80211_chan2ieee(ic, ic_bss->ni_chan);
-    //TODO only support 20mhz band width now
-    st->band_width = 20;
+    st->band_width = ic->ic_bss->ni_chw;
     st->rssi = -(0 - IWM_MIN_DBM - ic_bss->ni_rssi);
     st->noise = that->fDriverInfo->getBSSNoise();
     st->rate = ic_bss->ni_rates.rs_rates[ic_bss->ni_txrate];

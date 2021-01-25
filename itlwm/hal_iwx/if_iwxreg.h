@@ -4312,6 +4312,9 @@ enum {
 #define IWX_RATE_MCS_VHT_POS 26
 #define IWX_RATE_MCS_VHT_MSK (1 << IWX_RATE_MCS_VHT_POS)
 
+/* Bit 10 - OFDM HE */
+#define IWX_RATE_MCS_HE_POS        10
+#define IWX_RATE_MCS_HE_MSK        (1 << IWX_RATE_MCS_HE_POS)
 
 /*
  * High-throughput (HT) rate format for bits 7:0
@@ -4626,13 +4629,17 @@ struct iwx_tlc_update_notif {
 } __packed; /* TLC_MNG_UPDATE_NTFY_API_S_VER_2 */
 
 /* Antenna flags. */
+#define IWX_ANT_NONE    0x0
+#define IWX_ANT_INVALID    0xff
 #define IWX_ANT_A    (1 << 0)
 #define IWX_ANT_B    (1 << 1)
 #define IWX_ANT_C    (1 << 2)
 /* Shortcuts. */
 #define IWX_ANT_AB    (IWX_ANT_A | IWX_ANT_B)
+#define IWX_ANT_AC    (IWX_ANT_A | IWX_ANT_C)
 #define IWX_ANT_BC    (IWX_ANT_B | IWX_ANT_C)
 #define IWX_ANT_ABC    (IWX_ANT_A | IWX_ANT_B | IWX_ANT_C)
+#define IWX_MAX_ANT_NUM 3
 
 /**
  * bitmasks for tx_flags in TX command
