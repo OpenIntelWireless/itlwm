@@ -681,6 +681,21 @@ iwm_fw_valid_rx_ant(struct iwm_softc *sc)
     return rx_ant;
 }
 
+void ItlIwm::
+iwm_toggle_tx_ant(struct iwm_softc *sc, uint8_t *ant)
+{
+    int i;
+    uint8_t ind = *ant;
+    uint8_t valid = iwm_fw_valid_tx_ant(sc);
+    for (i = 0; i < IWM_RATE_MCS_ANT_NUM; i++) {
+        ind = (ind + 1) % IWM_RATE_MCS_ANT_NUM;
+        if (valid & (1 << ind))
+            break;
+    }
+    
+    *ant = ind;
+}
+
 int ItlIwm::
 iwm_firmware_load_sect(struct iwm_softc *sc, uint32_t dst_addr,
                        const uint8_t *section, uint32_t byte_cnt)

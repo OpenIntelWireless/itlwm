@@ -126,6 +126,7 @@ struct ieee80211_htframe_addr4 {	/* 11n */
 #define	IEEE80211_FC0_TYPE_MGT			0x00
 #define	IEEE80211_FC0_TYPE_CTL			0x04
 #define	IEEE80211_FC0_TYPE_DATA			0x08
+#define IEEE80211_FC0_TYPE_ORDER        0x8000
 
 #define	IEEE80211_FC0_SUBTYPE_MASK		0xf0
 #define	IEEE80211_FC0_SUBTYPE_SHIFT		4
@@ -299,6 +300,41 @@ ieee80211_get_qos(const struct ieee80211_frame *wh)
 
 	return letoh16(*(const u_int16_t *)frm);
 }
+
+static __inline int
+ieee80211_is_ctl(const struct ieee80211_frame *wh)
+{
+    return (wh->i_fc[0] & IEEE80211_FC0_TYPE_MASK) ==
+           IEEE80211_FC0_TYPE_CTL;
+}
+
+static __inline int
+ieee80211_is_data(const struct ieee80211_frame *wh)
+{
+    return (wh->i_fc[0] & IEEE80211_FC0_TYPE_MASK) ==
+           IEEE80211_FC0_TYPE_DATA;
+}
+
+static __inline int
+ieee80211_is_mgmt(const struct ieee80211_frame *wh)
+{
+    return (wh->i_fc[0] & IEEE80211_FC0_TYPE_MASK) ==
+           IEEE80211_FC0_TYPE_MGT;
+}
+
+static __inline int
+ieee80211_is_qos_nullfunc(const struct ieee80211_frame *wh)
+{
+    return (wh->i_fc[0] & (IEEE80211_FC0_TYPE_MASK | IEEE80211_FC0_SUBTYPE_MASK)) ==
+           (IEEE80211_FC0_TYPE_DATA | IEEE80211_FC0_SUBTYPE_CTS);
+}
+
+static __inline int
+ieee80211_has_order(const struct ieee80211_frame *wh)
+{
+    return (wh->i_fc[0] & IEEE80211_FC0_TYPE_ORDER) != 0;
+}
+
 #endif	/* _KERNEL */
 
 /*
