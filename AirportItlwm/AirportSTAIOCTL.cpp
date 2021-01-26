@@ -428,11 +428,25 @@ IOReturn AirportItlwm::
 getRATE(OSObject *object, struct apple80211_rate_data *rd)
 {
     struct ieee80211com *ic = fHalService->get80211Controller();
+    int sgi = ieee80211_node_supports_ht_sgi20(ic->ic_bss) || ieee80211_node_supports_ht_sgi40(ic->ic_bss);
+    int is_40mhz = ic->ic_bss->ni_chw == 40;
+    int index = 0;
     if (ic->ic_state == IEEE80211_S_RUN) {
         memset(rd, 0, sizeof(*rd));
         rd->version = APPLE80211_VERSION;
         rd->num_radios = 1;
-        rd->rate[0] = ic->ic_bss->ni_rates.rs_rates[ic->ic_bss->ni_txrate];
+        if (ic->ic_curmode >= IEEE80211_MODE_11N) {
+            if (sgi) {
+                index += 1;
+            }
+            if (is_40mhz) {
+                index += (IEEE80211_HT_RATESET_MIMO4_SGI + 1);
+            }
+            index += (ic->ic_bss->ni_txmcs / 16);
+            rd->rate[0] = ieee80211_std_ratesets_11n[index].rates[ic->ic_bss->ni_txmcs % 8];
+        } else {
+            rd->rate[0] = ic->ic_bss->ni_rates.rs_rates[ic->ic_bss->ni_txrate];
+        }
         return kIOReturnSuccess;
     }
     return kIOReturnError;

@@ -109,6 +109,9 @@ sSTA_INFO(OSObject* target, void* data, bool isSet)
     struct ioctl_sta_info *st = (struct ioctl_sta_info *)data;
     struct ieee80211com *ic = that->fDriver->fHalService->get80211Controller();
     struct ieee80211_node *ic_bss = ic->ic_bss;
+    int sgi = ieee80211_node_supports_ht_sgi20(ic_bss) || ieee80211_node_supports_ht_sgi40(ic_bss);
+    int is_40mhz = ic_bss->ni_chw == 40;
+    int index = 0;
     if (isSet) {
         return kIOReturnError;
     }
@@ -122,14 +125,25 @@ sSTA_INFO(OSObject* target, void* data, bool isSet)
         return kIOReturnError;
     }
     st->version = IOCTL_VERSION;
-    st->op_mode = ITL80211_MODE_11N;
+    st->op_mode = ic->ic_curmode > 0 ? (enum itl_phy_mode)(ic->ic_curmode - 1) : ITL80211_MODE_11A;
     st->max_mcs = ic_bss->ni_txmcs;
     st->cur_mcs = ic_bss->ni_txmcs;
     st->channel = ieee80211_chan2ieee(ic, ic_bss->ni_chan);
     st->band_width = ic->ic_bss->ni_chw;
     st->rssi = -(0 - IWM_MIN_DBM - ic_bss->ni_rssi);
     st->noise = that->fDriverInfo->getBSSNoise();
-    st->rate = ic_bss->ni_rates.rs_rates[ic_bss->ni_txrate];
+    if (ic->ic_curmode >= IEEE80211_MODE_11N) {
+        if (sgi) {
+            index += 1;
+        }
+        if (is_40mhz) {
+            index += (IEEE80211_HT_RATESET_MIMO4_SGI + 1);
+        }
+        index += (ic_bss->ni_txmcs / 16);
+        st->rate = ieee80211_std_ratesets_11n[index].rates[ic_bss->ni_txmcs % 8];
+    } else {
+        st->rate = ic_bss->ni_rates.rs_rates[ic_bss->ni_txrate];
+    }
     memset(st->ssid, 0, sizeof(st->ssid));
     bcopy(ic->ic_des_essid, st->ssid, ic->ic_des_esslen);
     memset(st->bssid, 0, sizeof(st->bssid));
