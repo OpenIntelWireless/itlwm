@@ -4235,22 +4235,32 @@ iwx_get_channel_width(struct ieee80211com *ic, struct ieee80211_channel *c)
     if (ic->ic_bss == NULL) {
         return IWX_PHY_VHT_CHANNEL_MODE20;
     }
-    if (!(ic->ic_bss->ni_flags & IEEE80211_NODE_HT)) {
-        return IWX_PHY_VHT_CHANNEL_MODE20;
-    }
     switch (ic->ic_bss->ni_chw) {
-    case 0:
-    case 20:
-        return IWX_PHY_VHT_CHANNEL_MODE20;
-    case 40:
-        return IWX_PHY_VHT_CHANNEL_MODE40;
-    case 80:
-        return IWX_PHY_VHT_CHANNEL_MODE80;
-    case 160:
-        return IWX_PHY_VHT_CHANNEL_MODE160;
-    default:
-        return IWX_PHY_VHT_CHANNEL_MODE20;
+        case 0:
+        case 20:
+            return IWX_PHY_VHT_CHANNEL_MODE20;
+        case 40:
+            return IWX_PHY_VHT_CHANNEL_MODE40;
+        case 80:
+            return IWX_PHY_VHT_CHANNEL_MODE80;
+        case 160:
+            return IWX_PHY_VHT_CHANNEL_MODE160;
+        default:
+            XYLog("Invalid channel width=%u\n", ic->ic_bss->ni_chw);
+            return IWX_PHY_VHT_CHANNEL_MODE20;
     }
+}
+
+static uint8_t
+iwx_get_ctrl_pos(struct ieee80211com *ic, struct ieee80211_channel *c) {
+    if (ic->ic_bss->ni_chw == 40) {
+        if ((ic->ic_bss->ni_htop0 & IEEE80211_HTOP0_SCO_MASK) == IEEE80211_HTOP0_SCO_SCA) {
+            return IWX_PHY_VHT_CTRL_POS_1_BELOW;
+        } else {
+            return IWX_PHY_VHT_CTRL_POS_1_ABOVE;
+        }
+    }
+    return IWX_PHY_VHT_CTRL_POS_1_BELOW;
 }
 
 int ItlIwx::
@@ -4272,7 +4282,7 @@ iwx_phy_ctxt_cmd_uhb(struct iwx_softc *sc, struct iwx_phy_ctxt *ctxt,
     IWX_PHY_BAND_24 : IWX_PHY_BAND_5;
     cmd.ci.channel = htole32(ieee80211_chan2ieee(ic, chan));
     cmd.ci.width = iwx_get_channel_width(ic, chan);
-    cmd.ci.ctrl_pos = IWX_PHY_VHT_CTRL_POS_1_BELOW;
+    cmd.ci.ctrl_pos = iwx_get_ctrl_pos(ic, chan);
 
     XYLog("%s: 2ghz=%d, channel=%d, channel_width=%d pos=%d chains static=0x%x, dynamic=0x%x, "
           "rx_ant=0x%x, tx_ant=0x%x\n",
@@ -4329,8 +4339,8 @@ iwx_phy_ctxt_cmd(struct iwx_softc *sc, struct iwx_phy_ctxt *ctxt,
     cmd.ci.band = IEEE80211_IS_CHAN_2GHZ(chan) ?
     IWX_PHY_BAND_24 : IWX_PHY_BAND_5;
     cmd.ci.channel = ieee80211_chan2ieee(ic, chan);
-    cmd.ci.width = IWX_PHY_VHT_CHANNEL_MODE20;
-    cmd.ci.ctrl_pos = IWX_PHY_VHT_CTRL_POS_1_BELOW;
+    cmd.ci.width = iwx_get_channel_width(ic, chan);
+    cmd.ci.ctrl_pos = iwx_get_ctrl_pos(ic, chan);
     
     idle_cnt = chains_static;
     active_cnt = chains_dynamic;
