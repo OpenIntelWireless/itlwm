@@ -699,18 +699,18 @@ iwm_rx_frame(struct iwm_softc *sc, mbuf_t m, int chanidx,
      */
     if (ni == ic->ic_bss && IEEE80211_ADDR_EQ(saved_bssid, ni->ni_macaddr)) {
         ni->ni_chan = bss_chan;
-        switch (rate_n_flags & IWM_RATE_MCS_CHAN_WIDTH_MSK) {
-            case IWM_RATE_MCS_CHAN_WIDTH_20:
-                XYLog("%s rate_n_flags bw=20 chan=%d\n", __FUNCTION__, ieee80211_chan2ieee(ic, ni->ni_chan));
-                break;
-            case IWM_RATE_MCS_CHAN_WIDTH_40:
-                XYLog("%s rate_n_flags bw=40 chan=%d\n", __FUNCTION__, ieee80211_chan2ieee(ic, ni->ni_chan));
-                break;
-                
-            default:
-                XYLog("%s rate_n_flags default %d\n", __FUNCTION__, (rate_n_flags & IWM_RATE_MCS_CHAN_WIDTH_MSK));
-                break;
-        }
+//        switch (rate_n_flags & IWM_RATE_MCS_CHAN_WIDTH_MSK) {
+//            case IWM_RATE_MCS_CHAN_WIDTH_20:
+//                XYLog("%s rate_n_flags bw=20 chan=%d\n", __FUNCTION__, ieee80211_chan2ieee(ic, ni->ni_chan));
+//                break;
+//            case IWM_RATE_MCS_CHAN_WIDTH_40:
+//                XYLog("%s rate_n_flags bw=40 chan=%d\n", __FUNCTION__, ieee80211_chan2ieee(ic, ni->ni_chan));
+//                break;
+//
+//            default:
+//                XYLog("%s rate_n_flags default %d\n", __FUNCTION__, (rate_n_flags & IWM_RATE_MCS_CHAN_WIDTH_MSK));
+//                break;
+//        }
     }
     ieee80211_release_node(ic, ni);
 }
@@ -3327,7 +3327,6 @@ _iwm_start_task(OSObject *target, void *arg0, void *arg1, void *arg2, void *arg3
         /* need to send management frames even if we're not RUNning */
         m = mq_dequeue(&ic->ic_mgtq);
         if (m) {
-            XYLog("%s mq_dequeue(&ic->ic_mgtq), len=%zu\n", __FUNCTION__, mbuf_len(m));
             ni = (struct ieee80211_node *)mbuf_pkthdr_rcvif(m);
             goto sendit;
         }

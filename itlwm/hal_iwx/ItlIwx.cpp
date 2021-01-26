@@ -486,7 +486,7 @@ static int iwx_rs_pretty_print_rate(char *buf, int bufsz, const uint32_t rate)
         !(rate & IWX_RATE_MCS_HE_MSK)) {
         int index = iwx_hwrate_to_plcp_idx(rate);
 
-        return scnprintf(buf, bufsz, "Legacy | ANT: %s Rate: %s Mbps\n",
+        return snprintf(buf, bufsz, "Legacy | ANT: %s Rate: %s Mbps\n",
                  iwx_rs_pretty_ant(ant),
                  index == IWX_RATE_INVALID ? "BAD" :
                  iwx_rate_mcs[index].mbps);
@@ -528,7 +528,7 @@ static int iwx_rs_pretty_print_rate(char *buf, int bufsz, const uint32_t rate)
         bw = "BAD BW";
     }
 
-    return scnprintf(buf, bufsz,
+    return snprintf(buf, bufsz,
              "0x%x: %s | ANT: %s BW: %s MCS: %d NSS: %d %s%s%s%s\n",
              rate, type, iwx_rs_pretty_ant(ant), bw, mcs, nss,
              (rate & IWX_RATE_MCS_SGI_MSK) ? "SGI " : "NGI ",
