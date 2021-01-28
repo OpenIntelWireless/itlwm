@@ -1319,7 +1319,18 @@ iwm_tx_fill_cmd(struct iwm_softc *sc, struct iwm_node *in,
         tx->tx_flags |= htole32(IWM_TX_CMD_FLG_ACK | IWM_TX_CMD_FLG_BAR);
     }
     
-    ridx = min_ridx;
+    ridx = (IEEE80211_IS_CHAN_5GHZ(ni->ni_chan)) ?
+    IWM_RIDX_OFDM : IWM_RIDX_CCK;
+    for (int i = 0; i < ni->ni_rates.rs_nrates; i++) {
+        if (iwm_rates[i].rate == (ni->ni_txrate &
+                                  IEEE80211_RATE_VAL)) {
+            ridx = i;
+            break;
+        }
+    }
+    if (ni->ni_flags & IEEE80211_NODE_HT) {
+        ridx = iwm_mcs2ridx[ni->ni_txmcs];
+    }
     if (ic->ic_fixed_mcs != -1) {
         ridx = sc->sc_fixed_ridx;
     } else if ((ni->ni_flags & IEEE80211_NODE_HT) &&
@@ -1327,56 +1338,6 @@ iwm_tx_fill_cmd(struct iwm_softc *sc, struct iwm_node *in,
         /* Keep Tx rate constant while mira is probing. */
         ridx = iwm_mcs2ridx[ni->ni_txmcs];
     }
-    
-//    if (IEEE80211_IS_CHAN_5GHZ(ni->ni_chan)) {
-//        ridx += IWM_FIRST_OFDM_RATE;
-//    }
-//
-//
-//    if (ridx >= ARRAY_SIZE(iwm_rates)) {
-//        XYLog("%s rate idx out of bound %d\n", __FUNCTION__, ridx);
-//        ridx = (IEEE80211_IS_CHAN_5GHZ(ni->ni_chan)) ? IWM_RIDX_OFDM : IWM_RIDX_CCK;
-//        for (int i = 0; i < ni->ni_rates.rs_nrates; i++) {
-//            if (iwm_rates[i].rate == (ni->ni_txrate & IEEE80211_RATE_VAL)) {
-//                ridx = i;
-//                break;
-//            }
-//        }
-//    }
-//
-//    if (IEEE80211_IS_MULTICAST(wh->i_addr1) ||
-//        type != IEEE80211_FC0_TYPE_DATA) {
-//        /* for non-data, use the lowest supported rate */
-//        ridx = min_ridx;
-//        tx->data_retry_limit = IWM_MGMT_DFAULT_RETRY_LIMIT;
-//    } else if (ic->ic_fixed_mcs != -1) {
-//        ridx = sc->sc_fixed_ridx;
-//    } else if (ic->ic_fixed_rate != -1) {
-//        ridx = sc->sc_fixed_ridx;
-//    } else if ((ni->ni_flags & IEEE80211_NODE_HT) &&
-//        ieee80211_mira_is_probing(&in->in_mn)) {
-//        /* Keep Tx rate constant while mira is probing. */
-//        ridx = iwm_mcs2ridx[ni->ni_txmcs];
-//     } else {
-//        int i;
-//        /* Use firmware rateset retry table. */
-//        tx->initial_rate_index = 0;
-//        tx->tx_flags |= htole32(IWM_TX_CMD_FLG_STA_RATE);
-//        if (ni->ni_flags & IEEE80211_NODE_HT) {
-//            ridx = iwm_mcs2ridx[ni->ni_txmcs];
-//            return &iwm_rates[ridx];
-//        }
-//        ridx = (IEEE80211_IS_CHAN_5GHZ(ni->ni_chan)) ?
-//            IWM_RIDX_OFDM : IWM_RIDX_CCK;
-//        for (i = 0; i < ni->ni_rates.rs_nrates; i++) {
-//            if (iwm_rates[i].rate == (ni->ni_txrate &
-//                IEEE80211_RATE_VAL)) {
-//                ridx = i;
-//                break;
-//            }
-//        }
-//        return &iwm_rates[ridx];
-//    }
 
     XYLog("%s ridx=%d\n", __FUNCTION__, ridx);
     rinfo = &iwm_rates[ridx];
@@ -1393,14 +1354,7 @@ iwm_tx_fill_cmd(struct iwm_softc *sc, struct iwm_node *in,
     }
     if (IWM_RIDX_IS_CCK(ridx))
         rate_flags |= IWM_RATE_MCS_CCK_MSK;
-    if ((ni->ni_flags & IEEE80211_NODE_HT) &&
-        rinfo->ht_plcp != IWM_RATE_HT_SISO_MCS_INV_PLCP) {
-        rate_flags |= IWM_RATE_MCS_HT_MSK;
-        if (ieee80211_node_supports_ht_sgi20(ni) || ieee80211_node_supports_ht_sgi40(ni))
-            rate_flags |= IWM_RATE_MCS_SGI_MSK;
-        tx->rate_n_flags = htole32(rate_flags | rinfo->ht_plcp);
-    } else
-        tx->rate_n_flags = htole32(rate_flags | rinfo->plcp);
+    tx->rate_n_flags = htole32(rate_flags | rinfo->plcp);
 
     return rinfo;
 }
