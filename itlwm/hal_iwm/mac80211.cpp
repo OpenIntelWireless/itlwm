@@ -2458,7 +2458,7 @@ iwm_setrates(struct iwm_node *in, int async)
     struct iwm_softc *sc = (struct iwm_softc *)IC2IFP(ic)->if_softc;
     struct iwm_lq_cmd lqcmd;
     struct ieee80211_rateset *rs = &ni->ni_rates;
-    int i, ridx, ridx_min, ridx_max, j, sgi_ok = 0, mimo, tab = 0;
+    int i, ridx, ridx_min, ridx_max, j, sgi_ok = 0, mimo, tab = 0, is_40mhz = 0;
     struct iwm_host_cmd cmd = {
         .id = IWM_LQ_CMD,
         .len = { sizeof(lqcmd), },
@@ -2474,6 +2474,10 @@ iwm_setrates(struct iwm_node *in, int async)
 
     if (ieee80211_node_supports_ht_sgi20(ni) || ieee80211_node_supports_ht_sgi40(ni)) {
         sgi_ok = 1;
+    }
+    
+    if (ni->ni_chw == 40) {
+        is_40mhz = 1;
     }
     
     /*
@@ -2511,6 +2515,9 @@ iwm_setrates(struct iwm_node *in, int async)
                     tab |= IWM_RATE_MCS_HT_MSK;
                     if (sgi_ok)
                         tab |= IWM_RATE_MCS_SGI_MSK;
+                    if (is_40mhz) {
+                        tab |= IWM_RATE_MCS_CHAN_WIDTH_40;
+                    }
                     break;
                 }
             }
