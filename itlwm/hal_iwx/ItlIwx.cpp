@@ -671,7 +671,7 @@ iwx_init_fw_sec(struct iwx_softc *sc, const struct iwx_fw_sects *fws,
             return ret;
         ctxt_dram->lmac_img[i] =
             htole64(dram->fw[fw_cnt].paddr);
-        DPRINTF(("%s: firmware LMAC section %d at 0x%llx size %lld\n", __func__, i,
+        DPRINTFN(3, ("%s: firmware LMAC section %d at 0x%llx size %lld\n", __func__, i,
             (unsigned long long)dram->fw[fw_cnt].paddr,
             (unsigned long long)dram->fw[fw_cnt].size));
         fw_cnt++;
@@ -686,7 +686,7 @@ iwx_init_fw_sec(struct iwx_softc *sc, const struct iwx_fw_sects *fws,
             return ret;
         ctxt_dram->umac_img[i] =
             htole64(dram->fw[fw_cnt].paddr);
-        DPRINTF(("%s: firmware UMAC section %d at 0x%llx size %lld\n", __func__, i,
+        DPRINTFN(3, ("%s: firmware UMAC section %d at 0x%llx size %lld\n", __func__, i,
             (unsigned long long)dram->fw[fw_cnt].paddr,
             (unsigned long long)dram->fw[fw_cnt].size));
         fw_cnt++;
@@ -712,7 +712,7 @@ iwx_init_fw_sec(struct iwx_softc *sc, const struct iwx_fw_sects *fws,
             return ret;
 
         ctxt_dram->virtual_img[i] = htole64(dram->paging[i].paddr);
-        DPRINTF(("%s: firmware paging section %d at 0x%llx size %lld\n", __func__, i,
+        DPRINTFN(3, ("%s: firmware paging section %d at 0x%llx size %lld\n", __func__, i,
             (unsigned long long)dram->paging[i].paddr,
             (unsigned long long)dram->paging[i].size));
     }
@@ -984,7 +984,7 @@ iwx_firmware_store_section(struct iwx_softc *sc, enum iwx_ucode_type type,
         return EINVAL;
     
     fws = &sc->sc_fw.fw_sects[type];
-    DPRINTF(("%s: ucode type %d section %d\n", DEVNAME(sc), type, fws->fw_count));
+    DPRINTFN(3, ("%s: ucode type %d section %d\n", DEVNAME(sc), type, fws->fw_count));
     if (fws->fw_count >= IWX_UCODE_SECT_MAX)
         return EINVAL;
     
@@ -4765,9 +4765,13 @@ iwx_tx(struct iwx_softc *sc, mbuf_t m, struct ieee80211_node *ni, int ac)
     uint16_t qos;
 
     wh = mtod(m, struct ieee80211_frame *);
-    hdrlen = ieee80211_get_hdrlen(wh);
     type = wh->i_fc[0] & IEEE80211_FC0_TYPE_MASK;
     subtype = wh->i_fc[0] & IEEE80211_FC0_SUBTYPE_MASK;
+    if (type == IEEE80211_FC0_TYPE_CTL) {
+        hdrlen = sizeof(struct ieee80211_frame_min);
+    } else {
+        hdrlen = ieee80211_get_hdrlen(wh);
+    }
 
     tid = IWX_MGMT_TID;
     if ((hasqos = ieee80211_has_qos(wh)) && !ieee80211_is_qos_nullfunc(wh)) {
@@ -5690,7 +5694,7 @@ iwx_mcc_update(struct iwx_softc *sc, struct iwx_mcc_chub_notif *notif)
     sc->sc_fw_mcc_int = notif->mcc;
 
     if (ifp->if_flags & IFF_DEBUG) {
-        DPRINTF(("%s: firmware has detected regulatory domain '%s' "
+        DPRINTFN(3, ("%s: firmware has detected regulatory domain '%s' "
                "(0x%x)\n", DEVNAME(sc), sc->sc_fw_mcc, le16toh(notif->mcc)));
     }
 
@@ -9637,8 +9641,6 @@ iwx_init_task(void *arg1)
         that->iwx_stop(ifp);
     else
         sc->sc_flags &= ~IWX_FLAG_HW_ERR;
-    
-    XYLog("%s fatal=%d ifp->if_flags=%d\n", __FUNCTION__, fatal, ifp->if_flags);
     
     if (!fatal && (ifp->if_flags & (IFF_UP | IFF_RUNNING)) == IFF_UP)
         that->iwx_init(ifp);

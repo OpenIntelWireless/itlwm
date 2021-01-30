@@ -1743,7 +1743,7 @@ ieee80211_setup_node(struct ieee80211com *ic,
 {
     int i, s;
     
-    XYLog("%s %s\n", __FUNCTION__, ether_sprintf((u_int8_t *)macaddr));
+    DPRINTF(("%s %s\n", __FUNCTION__, ether_sprintf((u_int8_t *)macaddr)));
     IEEE80211_ADDR_COPY(ni->ni_macaddr, macaddr);
     ieee80211_node_newstate(ni, IEEE80211_STA_CACHE);
     
@@ -2078,7 +2078,7 @@ void ieee80211_ba_free(struct ieee80211_node *ni)
 void
 ieee80211_free_node(struct ieee80211com *ic, struct ieee80211_node *ni)
 {
-    XYLog("%s\n", __FUNCTION__);
+    DPRINTF(("%s %s %s\n", __FUNCTION__, ni->ni_essid, ether_sprintf(ni->ni_bssid)));
     if (ni == ic->ic_bss)
         panic("freeing bss node");
     

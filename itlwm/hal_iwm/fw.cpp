@@ -469,8 +469,8 @@ iwm_read_firmware(struct iwm_softc *sc, enum iwm_ucode_type ucode_type)
                 }
                 paging_mem_size = le32toh(*(const uint32_t *)tlv_data);
                 
-                XYLog("%s: Paging: paging enabled (size = %u bytes)\n",
-                      DEVNAME(sc), paging_mem_size);
+                DPRINTF(("%s: Paging: paging enabled (size = %u bytes)\n",
+                      DEVNAME(sc), paging_mem_size));
                 if (paging_mem_size > IWM_MAX_PAGING_IMAGE_SIZE) {
                     XYLog("%s: Driver only supports up to %u"
                           " bytes for paging image (%u requested)\n",
