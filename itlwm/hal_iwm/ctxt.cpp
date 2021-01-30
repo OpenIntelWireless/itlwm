@@ -136,8 +136,9 @@ iwm_phy_ctxt_cmd_hdr(struct iwm_softc *sc, struct iwm_phy_ctxt *ctxt,
 static uint8_t
 iwm_get_channel_width(struct ieee80211com *ic, struct ieee80211_channel *c)
 {
-    if (ic->ic_bss == NULL) {
-        return IWM_PHY_VHT_CHANNEL_MODE20;
+    uint8_t ret = IWM_PHY_VHT_CHANNEL_MODE20;
+    if (ic->ic_bss == NULL || ic->ic_state < IEEE80211_S_ASSOC) {
+        return ret;
     }
     switch (ic->ic_bss->ni_chw) {
     case 0:
@@ -150,12 +151,16 @@ iwm_get_channel_width(struct ieee80211com *ic, struct ieee80211_channel *c)
     case 160:
         return IWM_PHY_VHT_CHANNEL_MODE160;
     default:
-        return IWM_PHY_VHT_CHANNEL_MODE20;
+        return ret;
     }
 }
 
 static uint8_t
 iwm_get_ctrl_pos(struct ieee80211com *ic, struct ieee80211_channel *c) {
+    uint8_t ret = IWM_PHY_VHT_CTRL_POS_1_BELOW;
+    if (ic->ic_bss == NULL || ic->ic_state < IEEE80211_S_ASSOC) {
+        return ret;
+    }
     if (ic->ic_bss->ni_chw == 40) {
         if ((ic->ic_bss->ni_htop0 & IEEE80211_HTOP0_SCO_MASK) == IEEE80211_HTOP0_SCO_SCA) {
             return IWM_PHY_VHT_CTRL_POS_1_BELOW;
@@ -163,7 +168,7 @@ iwm_get_ctrl_pos(struct ieee80211com *ic, struct ieee80211_channel *c) {
             return IWM_PHY_VHT_CTRL_POS_1_ABOVE;
         }
     }
-    return IWM_PHY_VHT_CTRL_POS_1_BELOW;
+    return ret;
 }
 
 void ItlIwm::
