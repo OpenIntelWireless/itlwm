@@ -635,16 +635,16 @@ ieee80211_ht_negotiate(struct ieee80211com *ic, struct ieee80211_node *ni)
         ni->ni_flags |= IEEE80211_NODE_HT_SGI20;
     }
     
-    if (ieee80211_node_supports_ht_sgi40(ni) && (ic->ic_htcaps & IEEE80211_HTCAP_CBW20_40)) {
-        ni->ni_flags |= IEEE80211_NODE_HT_SGI40;
-    }
-    
     ni->ni_chw = 20;
-    if (IEEE80211_IS_CHAN_HT40(ni->ni_chan)) {
+    if (IEEE80211_IS_CHAN_HT40(ni->ni_chan) && (ic->ic_htcaps & IEEE80211_HTCAP_CBW20_40)) {
         ht_param = ni->ni_htop0 & IEEE80211_HTOP0_SCO_MASK;
         if ((ht_param == IEEE80211_HTOP0_SCO_SCA && IEEE80211_IS_CHAN_HT40U(ni->ni_chan)) ||
             (ht_param == IEEE80211_HTOP0_SCO_SCB && IEEE80211_IS_CHAN_HT40D(ni->ni_chan)))  {
             ni->ni_chw = 40;
+            
+            if (ieee80211_node_supports_ht_sgi40(ni)) {
+                ni->ni_flags |= IEEE80211_NODE_HT_SGI40;
+            }
         }
     }
     XYLog("%s %d chan_width=%d\n", __FUNCTION__, __LINE__, ni->ni_chw);
