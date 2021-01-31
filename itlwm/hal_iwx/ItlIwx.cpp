@@ -3087,24 +3087,12 @@ iwx_update_chw(struct ieee80211com *ic)
               __FUNCTION__);
         return;
     }
-//    err = that->iwx_mac_ctxt_cmd(sc, in, IWX_FW_CTXT_ACTION_MODIFY, 1);
-//    if (err) {
-//        XYLog("%s: failed to update MAC\n", __FUNCTION__);
-//        return;
-//    }
-//    err = that->iwx_add_sta_cmd(sc, in, 1);
-//    if (err) {
-//        XYLog("%s: could not update sta (error %d)\n",
-//              __FUNCTION__, err);
-//        return;
-//    }
-//
-//    err = that->iwx_rs_init(sc, in, true);
-//    if (err) {
-//        XYLog("%s: could not update rate scaling (error %d)\n",
-//              __FUNCTION__, err);
-//        return;
-//    }
+    err = that->iwx_rs_init(sc, in, true);
+    if (err) {
+        XYLog("%s: could not update rate scaling (error %d)\n",
+              __FUNCTION__, err);
+        return;
+    }
 }
 
 /*
@@ -9614,6 +9602,7 @@ iwx_attach(struct iwx_softc *sc, struct pci_attach_args *pa)
     ic->ic_ampdu_rx_stop = iwx_ampdu_rx_stop;
     ic->ic_ampdu_tx_start = iwx_ampdu_tx_start;
     ic->ic_ampdu_tx_stop = iwx_ampdu_tx_stop;
+    ic->ic_update_chw = iwx_update_chw;
     /*
      * We cannot read the MAC address without loading the
      * firmware from disk. Postpone until mountroot is done.

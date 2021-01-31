@@ -203,13 +203,6 @@ sASSOCIATE(OSObject* target, void* data, bool isSet)
     ItlNetworkUserClient *that = OSDynamicCast(ItlNetworkUserClient, target);
     struct ioctl_associate *as = (struct ioctl_associate *)data;
     that->fDriver->associateSSID(as->nwid.nwid, as->wpa_key.key);
-//    struct ieee80211com *ic = that->fDriver->fHalService->get80211Controller();
-//    if (ic->ic_bss->ni_chw == 20) {
-//        ic->ic_bss->ni_chw = 40;
-//    } else {
-//        ic->ic_bss->ni_chw = 20;
-//    }
-//    (*ic->ic_update_chw)(ic);
     return kIOReturnSuccess;
 }
 
