@@ -2472,12 +2472,17 @@ iwm_setrates(struct iwm_node *in, int async)
     if (ic->ic_flags & IEEE80211_F_USEPROT)
         lqcmd.flags |= IWM_LQ_FLAG_USE_RTS_MSK;
 
-    if (ieee80211_node_supports_ht_sgi20(ni) || ieee80211_node_supports_ht_sgi40(ni)) {
+    if (ieee80211_node_supports_ht_sgi20(ni)) {
         sgi_ok = 1;
     }
     
     if (ni->ni_chw == 40) {
         is_40mhz = 1;
+        if (ieee80211_node_supports_ht_sgi40(ni)) {
+            sgi_ok = 1;
+        } else {
+            sgi_ok = 0;
+        }
     }
     
     /*

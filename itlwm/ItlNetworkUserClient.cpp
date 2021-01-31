@@ -109,8 +109,8 @@ sSTA_INFO(OSObject* target, void* data, bool isSet)
     struct ioctl_sta_info *st = (struct ioctl_sta_info *)data;
     struct ieee80211com *ic = that->fDriver->fHalService->get80211Controller();
     struct ieee80211_node *ic_bss = ic->ic_bss;
-    int sgi = ieee80211_node_supports_ht_sgi20(ic_bss) || ieee80211_node_supports_ht_sgi40(ic_bss);
     int is_40mhz = ic_bss->ni_chw == 40;
+    int sgi = ((!is_40mhz && ieee80211_node_supports_ht_sgi20(ic_bss)) || (is_40mhz && ieee80211_node_supports_ht_sgi40(ic_bss)));
     int index = 0;
     if (isSet) {
         return kIOReturnError;
