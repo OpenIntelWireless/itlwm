@@ -152,7 +152,7 @@ extern	u_int8_t *ieee80211_add_xrates(u_int8_t *,
 extern	u_int8_t *ieee80211_add_htcaps(u_int8_t *, struct ieee80211com *);
 extern	u_int8_t *ieee80211_add_htop(u_int8_t *, struct ieee80211com *);
 extern	u_int8_t *ieee80211_add_tie(u_int8_t *, u_int8_t, u_int32_t);
-
+extern  u_int8_t *ieee80211_add_vhtcaps(u_int8_t *, struct ieee80211com *);
 extern	int ieee80211_parse_rsn(struct ieee80211com *, const u_int8_t *,
 		struct ieee80211_rsnparams *);
 extern	int ieee80211_parse_wpa(struct ieee80211com *, const u_int8_t *,

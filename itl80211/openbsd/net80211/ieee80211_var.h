@@ -548,6 +548,7 @@ struct ieee80211com {
 
 	u_int32_t		ic_txbfcaps;
 	u_int16_t		ic_htcaps;
+    uint32_t        ic_vhtcaps;
 	u_int8_t		ic_ampdu_params;
 	u_int8_t		ic_sup_mcs[howmany(80, NBBY)];
 	u_int16_t		ic_max_rxrate;	/* in Mb/s, 0 <= rate <= 1023 */

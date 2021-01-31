@@ -1210,6 +1210,19 @@ ieee80211_add_htcaps(u_int8_t *frm, struct ieee80211com *ic)
     return frm;
 }
 
+u_int8_t *
+ieee80211_add_vhtcaps(u_int8_t *frm, struct ieee80211com *ic)
+{
+    *frm++ = IEEE80211_ELEMID_VHT_CAP;
+    *frm++ = sizeof(struct ieee80211_ie_vhtcap) - 2;
+    /* 32-bit VHT capability */
+    LE_WRITE_4(frm, ic->ic_vhtcaps); frm += 4;
+    /* suppmcs */
+    memcpy(frm, ic->ic_sup_mcs, sizeof(struct ieee80211_vht_mcs_info));
+    frm += sizeof(struct ieee80211_vht_mcs_info);
+    return frm;
+}
+
 #ifndef IEEE80211_STA_ONLY
 /*
  * Add an HT Operation element to a frame (see 7.3.2.58).
@@ -1470,7 +1483,8 @@ ieee80211_get_assoc_req(struct ieee80211com *ic, struct ieee80211_node *ni,
 	    (((ic->ic_flags & IEEE80211_F_RSNON) &&
 	      (ni->ni_rsnprotos & IEEE80211_PROTO_WPA)) ?
 		2 + IEEE80211_WPAIE_MAXLEN : 0) +
-	    ((ic->ic_flags & IEEE80211_F_HTON) ? 28 + 9 : 0));
+	    ((ic->ic_flags & IEEE80211_F_HTON) ? 28 + 9 : 0) +
+        ((ic->ic_flags & IEEE80211_F_VHTON) ? 2 + sizeof(struct ieee80211_ie_vhtcap) : 0));
 	if (m == NULL)
 		return NULL;
 
@@ -1521,6 +1535,10 @@ ieee80211_get_assoc_req(struct ieee80211com *ic, struct ieee80211_node *ni,
 		frm = ieee80211_add_htcaps(frm, ic);
 		frm = ieee80211_add_wme_info(frm, ic);
 	}
+    
+    if (ic->ic_flags & IEEE80211_F_VHTON) {
+        frm = ieee80211_add_vhtcaps(frm, ic);
+    }
 
     size_t l = frm - mtod(m, u_int8_t *);
     mbuf_pkthdr_setlen(m, l);
