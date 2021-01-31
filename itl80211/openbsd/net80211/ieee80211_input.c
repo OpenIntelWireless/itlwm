@@ -1580,7 +1580,7 @@ ieee80211_ht_updateparams_final(struct ieee80211com *ic, struct ieee80211_node *
         return ret;
     }
     
-    if (IEEE80211_IS_CHAN_HT40(ni->ni_chan)) {
+    if (IEEE80211_IS_CHAN_HT40(ni->ni_chan) && (ic->ic_htcaps & IEEE80211_HTCAP_CBW20_40)) {
         ht_param = ni->ni_htop0 & IEEE80211_HTOP0_SCO_MASK;
 
         if ((ht_param == IEEE80211_HTOP0_SCO_SCA && IEEE80211_IS_CHAN_HT40U(ni->ni_chan)) ||
