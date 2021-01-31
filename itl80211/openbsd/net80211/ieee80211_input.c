@@ -1569,84 +1569,44 @@ ieee80211_vht_updateparams(struct ieee80211com *ic, struct ieee80211_node *ni,
     return 0;
 }
 
-/*
-* Final part of updating the HT parameters.
-*
-* This is called from the STA management path and
-* the ieee80211_node_join() path.  It will take into
-* account the IEs discovered during scanning and
-* adjust things accordingly.
-*
-* This is done after a call to ieee80211_ht_updateparams()
-* because it (and the upcoming VHT version of updateparams)
-* needs to ensure everything is parsed before htinfo_update_chw()
-* is called - which will change the channel config for the
-* node for us.
-*/
 int
 ieee80211_ht_updateparams_final(struct ieee80211com *ic, struct ieee80211_node *ni,
     const uint8_t *htcapie, const uint8_t *htinfoie)
 {
-    const struct ieee80211_ie_htinfo *htinfo;
-    int htflags, vhtflags;
     int ret = 0;
+    int ht_param;
+    
+    if (ni == NULL || ni->ni_chan == NULL) {
+        return ret;
+    }
+    
+    if (IEEE80211_IS_CHAN_HT40(ni->ni_chan)) {
+        ht_param = ni->ni_htop0 & IEEE80211_HTOP0_SCO_MASK;
+
+        if ((ht_param == IEEE80211_HTOP0_SCO_SCA && IEEE80211_IS_CHAN_HT40U(ni->ni_chan)) ||
+            (ht_param == IEEE80211_HTOP0_SCO_SCB && IEEE80211_IS_CHAN_HT40D(ni->ni_chan)))  {
+            if (ni->ni_chw != 40) {
+                ni->ni_chw = 40;
+                ret = 1;
+            }
+        } else {
+            if (ni->ni_chw == 40) {
+                ni->ni_chw = 20;
+                ret = 1;
+            }
+        }
+    }
     
     return (ret);
-}
-
-/*
- * Setup the current channel.  The request channel may be
- * promoted if other vap's are operating with HT20/HT40.
- */
-void
-ieee80211_setupcurchan(struct ieee80211com *ic, struct ieee80211_channel *c)
-{
-//    if (ic->ic_htcaps & IEEE80211_HTC_HT) {
-//        int flags = gethtadjustflags(ic);
-//        /*
-//         * Check for channel promotion required to support the
-//         * set of running vap's.  This assumes we are called
-//         * after ni_chan is setup for each vap.
-//         */
-//        /* XXX VHT? */
-//        /* NB: this assumes IEEE80211_FHT_USEHT40 > IEEE80211_FHT_HT */
-//        if (flags > ieee80211_htchanflags(c))
-//            c = ieee80211_ht_adjust_channel(ic, c, flags);
-//    }
-//
-//    /*
-//     * VHT promotion - this will at least promote to VHT20/40
-//     * based on what HT has done; it may further promote the
-//     * channel to VHT80 or above.
-//     */
-//    if (ic->ic_vhtcaps != 0) {
-//        int flags = getvhtadjustflags(ic);
-//        if (flags > ieee80211_vhtchanflags(c))
-//            c = ieee80211_vht_adjust_channel(ic, c, flags);
-//    }
-//
-//    ic->ic_bsschan = ic->ic_curchan = c;
-//    ic->ic_curmode = ieee80211_chan2mode(ic->ic_curchan);
-//    ic->ic_rt = ieee80211_get_ratetable(ic->ic_curchan);
-}
-
-
-/*
- * Change the current channel.  The channel change is guaranteed to have
- * happened before the next state change.
- */
-void
-ieee80211_setcurchan(struct ieee80211com *ic, struct ieee80211_channel *c)
-{
-    ieee80211_setupcurchan(ic, c);
-//    ieee80211_runtask(ic, &ic->ic_chan_task);
 }
 
 void
 ieee80211_update_chw(struct ieee80211com *ic)
 {
-//    ieee80211_setupcurchan(ic, ic->ic_curchan);
-//    ieee80211_runtask(ic, &ic->ic_chw_task);
+    XYLog("%s chan width change to %d\n", __FUNCTION__, ic->ic_bss->ni_chw);
+    if (ic->ic_update_chw) {
+        (*ic->ic_update_chw)(ic);
+    }
 }
 
 /*-

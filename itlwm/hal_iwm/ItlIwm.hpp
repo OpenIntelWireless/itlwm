@@ -191,6 +191,7 @@ public:
                               uint8_t);
     static void    iwm_ampdu_tx_stop(struct ieee80211com *, struct ieee80211_node *,
                               uint8_t);
+    static void     iwm_update_chw(struct ieee80211com *);
     int iwm_sta_tx_agg(struct iwm_softc *, struct ieee80211_node *,
                         uint8_t, uint8_t, uint16_t, int);
     static void    iwm_ba_task(void *);

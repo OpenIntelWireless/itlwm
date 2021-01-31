@@ -274,6 +274,7 @@ public:
             uint8_t);
     static void    iwx_ampdu_rx_stop(struct ieee80211com *, struct ieee80211_node *,
             uint8_t);
+    static void    iwx_update_chw(struct ieee80211com *);
     void    iwx_sta_rx_agg(struct iwx_softc *, struct ieee80211_node *, uint8_t,
             uint16_t, uint16_t, int);
     static int    iwx_ampdu_tx_start(struct ieee80211com *, struct ieee80211_node *,

@@ -2691,6 +2691,23 @@ iwm_ampdu_tx_stop(struct ieee80211com *ic, struct ieee80211_node *ni, uint8_t ti
     that->iwm_add_task(sc, systq, &sc->ba_task);
 }
 
+void ItlIwm::
+iwm_update_chw(struct ieee80211com *ic)
+{
+    struct iwm_softc *sc = (struct iwm_softc *)ic->ic_softc;
+    ItlIwm *that = container_of(sc, ItlIwm, com);
+    int err = 0;
+    
+    int chains = that->iwm_mimo_enabled(sc) ? 2 : 1;
+    err = that->iwm_phy_ctxt_cmd(sc, &sc->sc_phyctxt[0],
+                                 chains, chains, IWM_FW_CTXT_ACTION_MODIFY, 0);
+    if (err) {
+        XYLog("%s: failed to update PHY\n",
+              __FUNCTION__);
+        return;
+    }
+}
+
 /*
  * This function is called by upper layer when HT protection settings in
  * beacons have changed.
@@ -4549,6 +4566,7 @@ iwm_attach(struct iwm_softc *sc, struct pci_attach_args *pa)
     ic->ic_ampdu_rx_stop = iwm_ampdu_rx_stop;
     ic->ic_ampdu_tx_start = iwm_ampdu_tx_start;
     ic->ic_ampdu_tx_stop = iwm_ampdu_tx_stop;
+    ic->ic_update_chw = iwm_update_chw;
     /*
      * We cannot read the MAC address without loading the
      * firmware from disk. Postpone until mountroot is done.

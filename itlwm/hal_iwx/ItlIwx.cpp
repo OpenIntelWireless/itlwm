@@ -3072,6 +3072,41 @@ iwx_htprot_task(void *arg)
     splx(s);
 }
 
+void ItlIwx::
+iwx_update_chw(struct ieee80211com *ic)
+{
+    struct iwx_softc *sc = (struct iwx_softc *)ic->ic_softc;
+    ItlIwx *that = container_of(sc, ItlIwx, com);
+    struct iwx_node *in = (struct iwx_node *)ic->ic_bss;
+    int err = 0;
+    
+    err = that->iwx_phy_ctxt_cmd(sc, &sc->sc_phyctxt[0],
+                                 2, 2, IWX_FW_CTXT_ACTION_MODIFY, 0);
+    if (err) {
+        XYLog("%s: failed to update PHY\n",
+              __FUNCTION__);
+        return;
+    }
+//    err = that->iwx_mac_ctxt_cmd(sc, in, IWX_FW_CTXT_ACTION_MODIFY, 1);
+//    if (err) {
+//        XYLog("%s: failed to update MAC\n", __FUNCTION__);
+//        return;
+//    }
+//    err = that->iwx_add_sta_cmd(sc, in, 1);
+//    if (err) {
+//        XYLog("%s: could not update sta (error %d)\n",
+//              __FUNCTION__, err);
+//        return;
+//    }
+//
+//    err = that->iwx_rs_init(sc, in, true);
+//    if (err) {
+//        XYLog("%s: could not update rate scaling (error %d)\n",
+//              __FUNCTION__, err);
+//        return;
+//    }
+}
+
 /*
  * This function is called by upper layer when HT protection settings in
  * beacons have changed.
