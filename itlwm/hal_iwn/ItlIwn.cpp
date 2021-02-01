@@ -490,22 +490,19 @@ iwn_attach(struct iwn_softc *sc, struct pci_attach_args *pa)
     if (sc->sc_flags & IWN_FLAG_HAS_11N) {
         ic->ic_caps |= (IEEE80211_C_QOS | IEEE80211_C_TX_AMPDU | IEEE80211_C_AMSDU_IN_AMPDU);
         /* Set HT capabilities. */
-        ic->ic_htcaps = IEEE80211_HTCAP_SGI20;
-        ic->ic_htcaps |= (IEEE80211_HTCAP_SMPS_DIS << IEEE80211_HTCAP_SMPS_SHIFT);
-#ifdef notyet
-        ic->ic_htcaps |=
+        ic->ic_htcaps = IEEE80211_HTCAP_SGI20 |
+                        IEEE80211_HTCAP_CBW20_40 |
+                        IEEE80211_HTCAP_SGI40;
 #if IWN_RBUF_SIZE == 8192
-            IEEE80211_HTCAP_AMSDU7935 |
+        ic->ic_htcaps |=
+            IEEE80211_HTCAP_AMSDU7935;
 #endif
-            IEEE80211_HTCAP_CBW20_40 |
-            IEEE80211_HTCAP_SGI40;
         if (sc->hw_type != IWN_HW_REV_TYPE_4965)
             ic->ic_htcaps |= IEEE80211_HTCAP_GF;
         if (sc->hw_type == IWN_HW_REV_TYPE_6050)
-            ic->ic_htcaps |= IEEE80211_HTCAP_SMPS_DYN;
+            ic->ic_htcaps |= IEEE80211_HTCAP_SMPS_DYN << IEEE80211_HTCAP_SMPS_SHIFT;
         else
-            ic->ic_htcaps |= IEEE80211_HTCAP_SMPS_DIS;
-#endif    /* notyet */
+            ic->ic_htcaps |= IEEE80211_HTCAP_SMPS_DIS << IEEE80211_HTCAP_SMPS_SHIFT;
     }
 
     /* Set supported legacy rates. */
@@ -563,6 +560,7 @@ iwn_attach(struct iwn_softc *sc, struct pci_attach_args *pa)
     ic->ic_ampdu_rx_stop = iwn_ampdu_rx_stop;
     ic->ic_ampdu_tx_start = iwn_ampdu_tx_start;
     ic->ic_ampdu_tx_stop = iwn_ampdu_tx_stop;
+    ic->ic_update_chw = iwn_update_chw;
 
     /* Override 802.11 state transition machine. */
     sc->sc_newstate = ic->ic_newstate;
@@ -3656,6 +3654,12 @@ iwn_tx(struct iwn_softc *sc, mbuf_t m, struct ieee80211_node *ni)
         tx->rflags = IWN_RFLAG_MCS;
         if (ni->ni_htcaps & IEEE80211_HTCAP_SGI20)
             tx->rflags |= IWN_RFLAG_SGI;
+        if (ni->ni_htcaps & IEEE80211_HTCAP_SGI40)
+            tx->rflags |= IWN_RFLAG_SGI | IWN_RFLAG_HT40;
+        if (ni->ni_htcaps & IEEE80211_HTCAP_CBW20_40)
+            tx->rflags |= IWN_RFLAG_HT40;
+        if (ni->ni_htcaps & IEEE80211_HTCAP_GF)
+            tx->rflags |= IWN_RFLAG_GREENFIELD;
         if (iwn_is_mimo_ht_plcp(rinfo->ht_plcp))
             tx->rflags |= IWN_RFLAG_ANT(sc->txchainmask);
         else
@@ -3772,7 +3776,7 @@ iwn_tx(struct iwn_softc *sc, mbuf_t m, struct ieee80211_node *ni)
 
     /* Mark TX ring as full if we reach a certain threshold. */
     if (++ring->queued > IWN_TX_RING_HIMARK) {
-//        XYLog("%s sc->qfullmsk is FULL ring->cur=%d ring->queued=%d\n", __FUNCTION__, ring->cur, ring->queued);
+//        XYLog("%s sc->qfullmsk is FULL qid=%d ring->cur=%d ring->queued=%d\n", __FUNCTION__, ring->qid, ring->cur, ring->queued);
         sc->qfullmsk |= 1 << ring->qid;
     }
 
@@ -4068,7 +4072,7 @@ iwn_set_link_quality(struct iwn_softc *sc, struct ieee80211_node *ni)
     struct iwn_cmd_link_quality linkq;
     struct ieee80211_rateset *rs = &ni->ni_rates;
     uint8_t txant;
-    int i, ridx, ridx_min, ridx_max, j, sgi_ok = 0, mimo, tab = 0, rflags = 0;
+    int i, ridx, ridx_min, ridx_max, j, sgi_ok = 0, is_40mhz = 0, gf = 0, mimo, tab = 0, rflags = 0;
 
     /* Use the first valid TX antenna. */
     txant = IWN_LSB(sc->txchainmask);
@@ -4084,11 +4088,23 @@ iwn_set_link_quality(struct iwn_softc *sc, struct ieee80211_node *ni)
     if (ic->ic_flags & IEEE80211_F_USEPROT)
         if (sc->hw_type != IWN_HW_REV_TYPE_4965)
             linkq.flags |= IWN_LINK_QUAL_FLAGS_SET_STA_TLC_RTS;
+
+    if (ieee80211_node_supports_ht_sgi20(ni)) {
+        sgi_ok = 1;
+    }
+    
+    if (ni->ni_chw == 40) {
+        is_40mhz = 1;
+        if (ieee80211_node_supports_ht_sgi40(ni)) {
+            sgi_ok = 1;
+        } else {
+            sgi_ok = 0;
+        }
+    }
     
     if ((ni->ni_flags & IEEE80211_NODE_HT) &&
-        ieee80211_node_supports_ht_sgi20(ni)) {
-        ni->ni_flags |= IEEE80211_NODE_HT_SGI20;
-        sgi_ok = 1;
+        ni->ni_htcaps & IEEE80211_HTCAP_GF) {
+        gf = 1;
     }
     
     /*
@@ -4127,6 +4143,10 @@ iwn_set_link_quality(struct iwn_softc *sc, struct ieee80211_node *ni)
                     rflags |= IWN_RFLAG_MCS;
                     if (sgi_ok)
                         rflags |= IWN_RFLAG_SGI;
+                    if (is_40mhz)
+                        rflags |= IWN_RFLAG_HT40;
+                    if (gf)
+                        rflags |= IWN_RFLAG_GREENFIELD;
                     break;
                 }
             }
@@ -5143,6 +5163,37 @@ iwn5000_runtime_calib(struct iwn_softc *sc)
     return iwn_cmd(sc, IWN5000_CMD_CALIB_CONFIG, &cmd, sizeof(cmd), 0);
 }
 
+static uint32_t
+iwn_get_rxon_ht_flags(struct ieee80211com *ic)
+{
+    uint32_t htflags = 0;
+    if (ic->ic_bss == NULL) {
+        return htflags;
+    }
+    
+    enum ieee80211_htprot htprot =
+        (enum ieee80211_htprot)(ic->ic_bss->ni_htop1 & IEEE80211_HTOP1_PROT_MASK);
+
+    if (ic->ic_bss->ni_chw == 40) {
+        switch (htprot) {
+        case IEEE80211_HTPROT_20MHZ:
+            htflags |= IWN_RXON_HT_CHANMODE_PURE40;
+            break;
+        default:
+            htflags |= IWN_RXON_HT_CHANMODE_MIXED2040;
+            break;
+        }
+    }
+    
+    if (ic->ic_bss->ni_chw == 40) {
+        if ((ic->ic_bss->ni_htop0 & IEEE80211_HTOP0_SCO_MASK) == IEEE80211_HTOP0_SCO_SCB) {
+            htflags |= IWN_RXON_HT_HT40MINUS;
+        }
+    }
+
+    return htflags;
+}
+
 int ItlIwn::
 iwn_config(struct iwn_softc *sc)
 {
@@ -5254,6 +5305,7 @@ iwn_config(struct iwn_softc *sc)
             rxchain |= (IWN_RXCHAIN_DRIVER_FORCE | IWN_RXCHAIN_MIMO_FORCE);
     }
     sc->rxon.rxchain = htole16(rxchain);
+    sc->rxon.flags |= htole32(iwn_get_rxon_ht_flags(ic));
     DPRINTF(("setting configuration\n"));
     DPRINTF(("%s: rxon chan %d flags %x cck %x ofdm %x rxchain %x\n",
         __func__, sc->rxon.chan, le32toh(sc->rxon.flags), sc->rxon.cck_mask,
@@ -5655,6 +5707,7 @@ iwn_auth(struct iwn_softc *sc, int arg)
         sc->rxon.cck_mask  = 0x0f;
         sc->rxon.ofdm_mask = 0x15;
     }
+    sc->rxon.flags |= htole32(iwn_get_rxon_ht_flags(ic));
     DPRINTF(("%s: rxon chan %d flags %x cck %x ofdm %x\n", __func__,
         sc->rxon.chan, le32toh(sc->rxon.flags), sc->rxon.cck_mask,
         sc->rxon.ofdm_mask));
@@ -5740,6 +5793,7 @@ iwn_run(struct iwn_softc *sc)
         sc->rxon.flags |= htole32(IWN_RXON_HT_PROTMODE(htprot));
     } else
         sc->rxon.flags &= ~htole32(IWN_RXON_HT_PROTMODE(3));
+    sc->rxon.flags |= htole32(iwn_get_rxon_ht_flags(ic));
 
     if (IEEE80211_IS_CHAN_5GHZ(ni->ni_chan)) {
         /* 11a or 11n 5GHz */
@@ -5887,6 +5941,12 @@ iwn_delete_key(struct ieee80211com *ic, struct ieee80211_node *ni,
     node.kid = 0xff;
     DPRINTF(("delete keys for node %d\n", node.id));
     (void)ops->add_node(sc, &node, 1);
+}
+
+void ItlIwn::
+iwn_update_chw(struct ieee80211com *ic)
+{
+    XYLog("%s placeholder\n", __FUNCTION__);
 }
 
 /*
