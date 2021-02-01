@@ -277,7 +277,8 @@ ieee80211_mira_ht_txtime(uint32_t len, int mcs, int is2ghz, int sgi, bool is_40m
     const uint32_t t_ltstf = 4; /* usec HT long training field */
     const uint32_t t_htsig = 8; /* usec HT signal field */
     const uint32_t t_sym = 4; /* usec symbol interval */
-    const uint32_t t_syms = 3; /* usec symbol interval; XXX actually 3.6 */
+    const uint32_t t_syms_n = 36; /* usec symbol interval for sgi numerator */
+    const uint32_t t_syms_d = 10; /* usec symbol interval for sgi denominator */
     uint32_t n_sym, n_dbps;
     uint32_t t_plcp;
     uint32_t t_data;
@@ -294,7 +295,7 @@ ieee80211_mira_ht_txtime(uint32_t len, int mcs, int is2ghz, int sgi, bool is_40m
     n_dbps = rs->rates[mcs - rs->min_mcs] * 2;
     n_sym = ((8 * len + 16 + 6) / n_dbps); /* "Equation (20-32)" */
     if (sgi)
-        t_data = (t_syms * n_sym) / t_sym;
+        t_data = (t_syms_n * n_sym) / t_syms_d;
     else
         t_data = t_sym * n_sym;
     
@@ -358,7 +359,7 @@ ieee80211_mira_toverhead(struct ieee80211_mira_node *mn,
     uint64_t toverhead;
     int rate, rts;
     enum ieee80211_htprot htprot;
-    int sgi = (ni->ni_flags & IEEE80211_NODE_HT_SGI20) ? 1 : 0;
+    int sgi = (ni->ni_flags & (IEEE80211_NODE_HT_SGI20 | IEEE80211_NODE_HT_SGI40)) ? 1 : 0;
     
     overhead = ieee80211_mira_ht_txtime(0, ni->ni_txmcs,
                                         IEEE80211_IS_CHAN_2GHZ(ni->ni_chan), sgi, ni->ni_chw == 40);
@@ -418,7 +419,7 @@ ieee80211_mira_update_stats(struct ieee80211_mira_node *mn,
     uint64_t sfer, delta, toverhead;
     uint64_t agglen = mn->agglen;
     uint64_t ampdu_size = mn->ampdu_size * 8; /* convert to bits */
-    int sgi = (ni->ni_flags & IEEE80211_NODE_HT_SGI20) ? 1 : 0;
+    int sgi = (ni->ni_flags & (IEEE80211_NODE_HT_SGI20 | IEEE80211_NODE_HT_SGI40)) ? 1 : 0;
     uint64_t rate = ieee80211_mira_get_txrate(ni->ni_txmcs, sgi, ni->ni_chw == 40);
     struct ieee80211_mira_goodput_stats *g = &mn->g[ni->ni_txmcs];
     
@@ -549,7 +550,7 @@ ieee80211_mira_next_lower_intra_rate(struct ieee80211_mira_node *mn,
 {
     const struct ieee80211_ht_rateset *rs;
     int i, next;
-    int sgi = (ni->ni_flags & IEEE80211_NODE_HT_SGI20) ? 1 : 0;
+    int sgi = (ni->ni_flags & (IEEE80211_NODE_HT_SGI20 | IEEE80211_NODE_HT_SGI40)) ? 1 : 0;
     
     rs = ieee80211_mira_get_rateset(ni->ni_txmcs, sgi, ni->ni_chw == 40);
     if (ni->ni_txmcs == rs->min_mcs)
@@ -574,7 +575,7 @@ ieee80211_mira_next_intra_rate(struct ieee80211_mira_node *mn,
 {
     const struct ieee80211_ht_rateset *rs;
     int i, next;
-    int sgi = (ni->ni_flags & IEEE80211_NODE_HT_SGI20) ? 1 : 0;
+    int sgi = (ni->ni_flags & (IEEE80211_NODE_HT_SGI20 | IEEE80211_NODE_HT_SGI40)) ? 1 : 0;
     
     rs = ieee80211_mira_get_rateset(ni->ni_txmcs, sgi, ni->ni_chw == 40);
     if (ni->ni_txmcs == rs->max_mcs)
@@ -600,7 +601,7 @@ ieee80211_mira_next_rateset(struct ieee80211_mira_node *mn,
     const struct ieee80211_ht_rateset *rs, *rsnext;
     int next;
     int mcs = ni->ni_txmcs;
-    int sgi = (ni->ni_flags & IEEE80211_NODE_HT_SGI20) ? 1 : 0;
+    int sgi = (ni->ni_flags & (IEEE80211_NODE_HT_SGI20 | IEEE80211_NODE_HT_SGI40)) ? 1 : 0;
     
     rs = ieee80211_mira_get_rateset(mcs, sgi, ni->ni_chw == 40);
     if (mn->probing & IEEE80211_MIRA_PROBING_UP) {
@@ -665,7 +666,7 @@ ieee80211_mira_probe_next_rateset(struct ieee80211_mira_node *mn,
     const struct ieee80211_ht_rateset *rs;
     struct ieee80211_mira_goodput_stats *g;
     int best_mcs, i;
-    int sgi = (ni->ni_flags & IEEE80211_NODE_HT_SGI20) ? 1 : 0;
+    int sgi = (ni->ni_flags & (IEEE80211_NODE_HT_SGI20 | IEEE80211_NODE_HT_SGI40)) ? 1 : 0;
     
     /* Find most recently measured best MCS from the current rateset. */
     rs = ieee80211_mira_get_rateset(ni->ni_txmcs, sgi, ni->ni_chw == 40);
@@ -792,7 +793,7 @@ ieee80211_mira_intra_mode_ra_finished(struct ieee80211_mira_node *mn,
     struct ieee80211_mira_goodput_stats *g = &mn->g[ni->ni_txmcs];
     int next_mcs, best_mcs, probed_rates;
     uint64_t next_rate;
-    int sgi = (ni->ni_flags & IEEE80211_NODE_HT_SGI20) ? 1 : 0;
+    int sgi = (ni->ni_flags & (IEEE80211_NODE_HT_SGI20 | IEEE80211_NODE_HT_SGI40)) ? 1 : 0;
     bool is_40mhz = (ni->ni_chw == 40);
     
     if (!ieee80211_mira_probe_valid(mn, ni))
@@ -1144,7 +1145,7 @@ ieee80211_mira_get_rts_threshold(struct ieee80211_mira_node *mn,
     /* Use RTS only if potential gains outweigh overhead. */
     txtime = ieee80211_mira_ht_txtime(framelen, ni->ni_txmcs,
                                       IEEE80211_IS_CHAN_2GHZ(ni->ni_chan),
-                                      (ni->ni_flags & IEEE80211_NODE_HT_SGI20) ? 1 : 0, 
+                                      (ni->ni_flags & (IEEE80211_NODE_HT_SGI20 | IEEE80211_NODE_HT_SGI40)) ? 1 : 0, 
                                       ni->ni_chw == 40);
     rtsoverhead = ieee80211_mira_legacy_txtime(MIRA_RTSLEN, rtsrate, ic);
     rtsoverhead += ieee80211_mira_legacy_txtime(MIRA_CTSLEN, rtsrate, ic);
@@ -1171,7 +1172,7 @@ ieee80211_mira_choose(struct ieee80211_mira_node *mn, struct ieee80211com *ic,
 {
     struct ieee80211_mira_goodput_stats *g = &mn->g[ni->ni_txmcs];
     int s;
-    int sgi = (ni->ni_flags & IEEE80211_NODE_HT_SGI20) ? 1 : 0;
+    int sgi = (ni->ni_flags & (IEEE80211_NODE_HT_SGI20 | IEEE80211_NODE_HT_SGI40)) ? 1 : 0;
     const struct ieee80211_ht_rateset *rs;
     
     s = splnet();
