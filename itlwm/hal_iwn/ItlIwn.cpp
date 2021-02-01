@@ -3652,12 +3652,14 @@ iwn_tx(struct iwn_softc *sc, mbuf_t m, struct ieee80211_node *ni)
         rinfo->ht_plcp != IWN_RATE_HT_SISO_MCS_INV_PLCP) {
         tx->plcp = rinfo->ht_plcp;
         tx->rflags = IWN_RFLAG_MCS;
-        if (ni->ni_htcaps & IEEE80211_HTCAP_SGI20)
+        if (ieee80211_node_supports_ht_sgi20(ni))
             tx->rflags |= IWN_RFLAG_SGI;
-        if (ni->ni_htcaps & IEEE80211_HTCAP_SGI40)
-            tx->rflags |= IWN_RFLAG_SGI | IWN_RFLAG_HT40;
-        if (ni->ni_htcaps & IEEE80211_HTCAP_CBW20_40)
+        if (ni->ni_chw == 40) {
             tx->rflags |= IWN_RFLAG_HT40;
+            if (ieee80211_node_supports_ht_sgi40(ni)) {
+                tx->rflags |= IWN_RFLAG_SGI;
+            }
+        }
         if (ni->ni_htcaps & IEEE80211_HTCAP_GF)
             tx->rflags |= IWN_RFLAG_GREENFIELD;
         if (iwn_is_mimo_ht_plcp(rinfo->ht_plcp))
