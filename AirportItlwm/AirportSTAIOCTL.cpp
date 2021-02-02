@@ -562,14 +562,7 @@ getSTATE(OSObject *object,
 {
     memset(sd, 0, sizeof(*sd));
     sd->version = APPLE80211_VERSION;
-    IO80211Interface *inf = OSDynamicCast(IO80211Interface, object);
-    if (inf && inf->linkState() == kIO80211NetworkLinkUp) {
-        sd->state = APPLE80211_S_RUN;
-    }
-    IO80211VirtualInterface *vif = OSDynamicCast(IO80211VirtualInterface, object);
-    if (vif && vif->linkState() == kIO80211NetworkLinkUp) {
-        sd->state = APPLE80211_S_RUN;
-    }
+    sd->state = fHalService->get80211Controller()->ic_state;
     return kIOReturnSuccess;
 }
 
