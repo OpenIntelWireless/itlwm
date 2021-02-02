@@ -272,6 +272,7 @@ public:
                 struct ieee80211_node *, uint8_t, uint16_t);
     static void        iwn5000_ampdu_tx_stop(struct iwn_softc *,
                 uint8_t, uint16_t);
+    static void        iwn_update_chw(struct ieee80211com *);
     static int        iwn5000_query_calibration(struct iwn_softc *);
     static int        iwn5000_send_calibration(struct iwn_softc *);
     static int        iwn5000_send_wimax_coex(struct iwn_softc *);
