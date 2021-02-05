@@ -584,6 +584,7 @@ ieee80211_ht_negotiate(struct ieee80211com *ic, struct ieee80211_node *ni)
 
 	ni->ni_flags &= ~(IEEE80211_NODE_HT | IEEE80211_NODE_HT_SGI20 |
 	    IEEE80211_NODE_HT_SGI40);
+    ni->ni_chw = 20;
 
 	/* Check if we support HT. */
 	if ((ic->ic_modecaps & (1 << IEEE80211_MODE_11N)) == 0)
@@ -635,7 +636,6 @@ ieee80211_ht_negotiate(struct ieee80211com *ic, struct ieee80211_node *ni)
         ni->ni_flags |= IEEE80211_NODE_HT_SGI20;
     }
     
-    ni->ni_chw = 20;
     if (IEEE80211_IS_CHAN_HT40(ni->ni_chan) && (ic->ic_htcaps & IEEE80211_HTCAP_CBW20_40)) {
         ht_param = ni->ni_htop0 & IEEE80211_HTOP0_SCO_MASK;
         if ((ht_param == IEEE80211_HTOP0_SCO_SCA && IEEE80211_IS_CHAN_HT40U(ni->ni_chan)) ||

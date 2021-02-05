@@ -2147,6 +2147,7 @@ iwm_run(struct iwm_softc *sc)
     struct ieee80211com *ic = &sc->sc_ic;
     struct iwm_node *in = (struct iwm_node *)ic->ic_bss;
     int err;
+    int chains;
     
     splassert(IPL_NET);
     
@@ -2157,17 +2158,20 @@ iwm_run(struct iwm_softc *sc)
             return err;
     }
     
+    chains = 1;
     /* Configure Rx chains for MIMO. */
     if ((ic->ic_opmode == IEEE80211_M_MONITOR ||
          (in->in_ni.ni_flags & IEEE80211_NODE_HT)) &&
         iwm_mimo_enabled(sc)) {
-        err = iwm_phy_ctxt_cmd(sc, &sc->sc_phyctxt[0],
-                               2, 2, IWM_FW_CTXT_ACTION_MODIFY, 0);
-        if (err) {
-            XYLog("%s: failed to update PHY\n",
-                  DEVNAME(sc));
-            return err;
-        }
+        chains = 2;
+    }
+    
+    err = iwm_phy_ctxt_cmd(sc, &sc->sc_phyctxt[0],
+                           chains, chains, IWM_FW_CTXT_ACTION_MODIFY, 0);
+    if (err) {
+        XYLog("%s: failed to update PHY\n",
+              DEVNAME(sc));
+        return err;
     }
     
     /* Update STA again, for HT-related settings such as MIMO. */
