@@ -4054,8 +4054,8 @@ iwn_set_link_quality(struct iwn_softc *sc, struct ieee80211_node *ni)
      * in descending order, i.e. with the node's current TX rate first.
      * In cases where throughput of an HT rate corresponds to a legacy
      * rate it makes no sense to add both. We rely on the fact that
-     * iwm_rates is laid out such that equivalent HT/legacy rates share
-     * the same IWM_RATE_*_INDEX value. Also, rates not applicable to
+     * iwn_rates is laid out such that equivalent HT/legacy rates share
+     * the same IWN_RATE_*_INDEX value. Also, rates not applicable to
      * legacy/HT are assumed to be marked with an 'invalid' PLCP value.
      */
     j = 0;
