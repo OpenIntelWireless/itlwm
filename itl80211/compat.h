@@ -160,9 +160,14 @@ typedef struct bus_dmamap* bus_dmamap_t;
 #define IWM_TX_RING_HIMARK    224
 
 struct pci_matchid {
-    int        pm_vid;
-    int    pm_pid;
+    int     pm_vid;
+    int     pm_pid;
+    int     pm_sub_dev;
+    int     pm_sub_vid;
+    void    *drv_data;
 };
+
+#define PCI_ANY_ID 0xffff
 
 static inline int
 pci_matchbyid(int vid, int pid, const struct pci_matchid *ids, int nent)
@@ -175,6 +180,29 @@ pci_matchbyid(int vid, int pid, const struct pci_matchid *ids, int nent)
             pid == pm->pm_pid)
             return (1);
     return (0);
+}
+
+static inline int
+pci_match(int vid, int pid, int sub_vid, int sub_dev, const struct pci_matchid *ids, int nent, void **drv_data)
+{
+    const struct pci_matchid *pm;
+    int i;
+
+    for (i = 0, pm = ids; i < nent; i++, pm++) {
+        if (vid == pm->pm_vid && pid == pm->pm_pid) {
+            if (pm->pm_sub_dev != PCI_ANY_ID && sub_dev != pm->pm_sub_dev) {
+                return 0;
+            }
+            if (pm->pm_sub_vid != PCI_ANY_ID && sub_vid != pm->pm_sub_vid) {
+                return 0;
+            }
+            if (drv_data) {
+                *drv_data = pm->drv_data;
+            }
+            return 1;
+        }
+    }
+    return 0;
 }
 
 /*

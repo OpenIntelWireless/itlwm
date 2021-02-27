@@ -387,14 +387,20 @@ struct iwx_tid_data {
 #define DELAY IODelay
 #endif
 
+struct iwl_cfg_trans_params {
+    int integrated;
+    int device_family;
+    int low_latency_xtal;
+    int ltr_delay;
+    int xtal_latency;
+    int bisr_workaround;
+};
+
 struct iwl_cfg {
+    struct iwl_cfg_trans_params trans;
+    const char *name;
     const char *fwname;
     int device_family;
-    uint32_t fwdmasegsz;
-    int integrated;
-    int ltr_delay;
-    int low_latency_xtal;
-    int xtal_latency;
     int tx_with_siso_diversity;
     int uhb_supported;
 };
@@ -456,12 +462,11 @@ struct iwx_softc {
 #define IWX_SILICON_D_STEP	3
     int sc_hw_rf_id;
 	int sc_hw_id;
+    const struct iwl_cfg_trans_params *sc_cfg_params;
     const struct iwl_cfg *sc_cfg;
 	int sc_device_family;
 #define IWX_DEVICE_FAMILY_22000	1
 #define IWX_DEVICE_FAMILY_22560	2
-
-	struct iwx_dma_info fw_dma;
 
 	struct iwx_dma_info ctxt_info_dma;
 	struct iwx_self_init_dram init_dram;
@@ -500,7 +505,6 @@ struct iwx_softc {
 	int sc_cap_off; /* PCIe caps */
 
 	const char *sc_fwname;
-	bus_size_t sc_fwdmasegsz;
 	struct iwx_fw_info sc_fw;
 	struct iwx_dma_info fw_mon;
 	int sc_fw_phy_config;
