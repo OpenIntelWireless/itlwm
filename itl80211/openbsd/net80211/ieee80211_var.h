@@ -558,12 +558,10 @@ struct ieee80211com {
 	u_int8_t		ic_dialog_token;
 	int			ic_fixed_mcs;
     uint64_t        ic_last_cache_scan_ts;
-    
-    ///add
-    uint32_t        ic_flags_vht;    /* VHT state flags */
-    uint32_t        ic_flags_ht;    /* HT state flags */
-    ///end add
-    
+    uint16_t        ic_vht_tx_mcs_map;
+    uint16_t        ic_vht_rx_mcs_map;
+    uint16_t        ic_vht_tx_highest;
+    uint16_t        ic_vht_rx_highest;
     
 	TAILQ_HEAD(, ieee80211_ess)	 ic_ess;
 };

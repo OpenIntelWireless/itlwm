@@ -547,11 +547,8 @@ IFM_MAKEWORD(IFM_IEEE80211, (_s), (_o), 0), 0, NULL)
                 ADD(ic, IFM_IEEE80211_VHT_MCS0 + i,
                     mopt | IFM_IEEE80211_MONITOR);
         }
-#if 0
         ic->ic_flags |= IEEE80211_F_VHTON; /* enable 11ac by default */
-        if (ic->ic_caps & IEEE80211_C_QOS)
-            ic->ic_flags |= IEEE80211_F_QOS;
-#endif
+        ieee80211_configure_ampdu_tx(ic, 1);
     }
     
     ieee80211_media_status(ifp, &imr);
@@ -1128,7 +1125,7 @@ ieee80211_setmode(struct ieee80211com *ic, enum ieee80211_phymode mode)
         if (mode == IEEE80211_MODE_AUTO) {
             if (c->ic_flags != 0)
                 break;
-        } else if ((c->ic_flags & modeflags) == modeflags)
+        } else if ((c->ic_flags & modeflags) != 0)
             break;
     }
     if (i > IEEE80211_CHAN_MAX) {

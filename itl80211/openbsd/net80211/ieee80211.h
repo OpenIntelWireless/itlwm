@@ -1196,6 +1196,13 @@ struct ieee80211_vht_mcs_info {
     uint16_t tx_highest;
 } __packed;
 
+/* for rx_highest */
+#define IEEE80211_VHT_MAX_NSTS_TOTAL_SHIFT    13
+#define IEEE80211_VHT_MAX_NSTS_TOTAL_MASK    (7 << IEEE80211_VHT_MAX_NSTS_TOTAL_SHIFT)
+
+/* for tx_highest */
+#define IEEE80211_VHT_EXT_NSS_BW_CAPABLE    (1 << 13)
+
 /* VHT capabilities element: 802.11ac-2013 8.4.2.160 */
 struct ieee80211_ie_vhtcap {
     uint8_t ie;

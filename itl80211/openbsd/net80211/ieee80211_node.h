@@ -372,7 +372,7 @@ struct ieee80211_node {
     uint8_t            ni_chw;        /* negotiated channel width */
     
     /* VHT state */
-    uint32_t        ni_vhtcap;
+    uint32_t        ni_vhtcaps;
     uint16_t        ni_vht_basicmcs;
     uint16_t        ni_vht_pad2;
     struct ieee80211_vht_mcs_info    ni_vht_mcsinfo;
@@ -436,6 +436,9 @@ struct ieee80211_node {
 #define IEEE80211_NODE_HT_SGI40		0x8000	/* SGI on 40 MHz negotiated */ 
 #define IEEE80211_NODE_VHT		0x10000	/* VHT negotiated */
 #define IEEE80211_NODE_HTCAP		0x20000	/* claims to support HT */
+#define IEEE80211_NODE_VHTCAP       0x40000 /* claims to support VHT */
+#define IEEE80211_NODE_VHT_SGI80    0x80000    /* SGI on 20 MHz negotiated */ 
+#define IEEE80211_NODE_VHT_SGI160   0x100000    /* SGI on 40 MHz negotiated */
 
 	/* If not NULL, this function gets called when ni_refcnt hits zero. */
 	void			(*ni_unref_cb)(struct ieee80211com *,
@@ -498,6 +501,13 @@ ieee80211_node_supports_ht(struct ieee80211_node *ni)
 	    ni->ni_rxmcs[0] & 0xff);
 }
 
+static inline int
+ieee80211_node_supports_vht(struct ieee80211_node *ni)
+{
+    return ((ni->ni_flags & IEEE80211_NODE_VHTCAP) &&
+        ni->ni_vht_mcsinfo.rx_mcs_map & 0xff);
+}
+
 /* Check if the peer supports HT short guard interval (SGI) on 20 MHz. */
 static inline int
 ieee80211_node_supports_ht_sgi20(struct ieee80211_node *ni)
@@ -512,6 +522,20 @@ ieee80211_node_supports_ht_sgi40(struct ieee80211_node *ni)
 {
 	return ieee80211_node_supports_ht(ni) &&
 	    (ni->ni_htcaps & IEEE80211_HTCAP_SGI40);
+}
+
+static inline int
+ieee80211_node_supports_vht_sgi80(struct ieee80211_node *ni)
+{
+    return ieee80211_node_supports_vht(ni) &&
+        (ni->ni_vhtcaps & IEEE80211_VHTCAP_SHORT_GI_80);
+}
+
+static inline int
+ieee80211_node_supports_vht_sgi160(struct ieee80211_node *ni)
+{
+    return ieee80211_node_supports_vht(ni) &&
+        (ni->ni_vhtcaps & IEEE80211_VHTCAP_SHORT_GI_160);
 }
 
 struct ieee80211com;

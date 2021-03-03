@@ -651,6 +651,74 @@ ieee80211_ht_negotiate(struct ieee80211com *ic, struct ieee80211_node *ni)
 }
 
 void
+ieee80211_vht_negotiate(struct ieee80211com *ic, struct ieee80211_node *ni)
+{
+    uint8_t chw = 0;
+    ni->ni_flags &= ~(IEEE80211_NODE_VHT | IEEE80211_NODE_VHT_SGI80 |
+                      IEEE80211_NODE_VHT_SGI160);
+    /* Check if we support VHT. */
+    if ((ic->ic_modecaps & (1 << IEEE80211_MODE_11AC)) == 0)
+        return;
+
+    /* Check if VHT support has been explicitly disabled. */
+    if ((ic->ic_flags & IEEE80211_F_VHTON) == 0)
+        return;
+    
+    if (!ieee80211_node_supports_vht(ni)) {
+        ic->ic_stats.is_vht_nego_no_mandatory_mcs++;
+        return;
+    }
+    
+    /*
+     * Don't allow group cipher (includes WEP) or TKIP
+     * for pairwise encryption (see 802.11-2012 11.1.6).
+     */
+    if (ic->ic_flags & IEEE80211_F_WEPON) {
+        ic->ic_stats.is_vht_nego_bad_crypto++;
+        return;
+    }
+    if ((ic->ic_flags & IEEE80211_F_RSNON) &&
+        (ni->ni_rsnciphers & IEEE80211_CIPHER_USEGROUP ||
+        ni->ni_rsnciphers & IEEE80211_CIPHER_TKIP)) {
+        ic->ic_stats.is_vht_nego_bad_crypto++;
+        return;
+    }
+    
+    switch (ni->ni_vht_chanwidth) {
+        case IEEE80211_VHT_CHANWIDTH_80P80MHZ:
+            if (IEEE80211_IS_CHAN_VHT80_80(ni->ni_chan)) {
+                chw = 160;
+            }
+            /* fall through */
+        case IEEE80211_VHT_CHANWIDTH_160MHZ:
+            if (!IEEE80211_IS_CHAN_VHT160(ni->ni_chan)) {
+                chw = 80;
+            } else {
+                chw = 160;
+            }
+            break;
+        case IEEE80211_VHT_CHANWIDTH_80MHZ:
+            chw = 80;
+            break;
+        default:
+            return;
+    }
+    
+    ni->ni_chw = chw;
+    
+    ni->ni_flags |= IEEE80211_NODE_VHT;
+    
+    if (ieee80211_node_supports_vht_sgi80(ni)) {
+        ni->ni_flags |= IEEE80211_NODE_VHT_SGI80;
+    }
+    if (ieee80211_node_supports_vht_sgi160(ni)) {
+        ni->ni_flags |= IEEE80211_NODE_VHT_SGI160;
+    }
+    
+    XYLog("%s %d chan_width=%d\n", __FUNCTION__, __LINE__, ni->ni_chw);
+}
+
+void
 ieee80211_tx_ba_timeout(void *arg)
 {
 	struct ieee80211_tx_ba *ba = (struct ieee80211_tx_ba *)arg;

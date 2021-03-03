@@ -1529,10 +1529,11 @@ void
 ieee80211_parse_vhtopmode(struct ieee80211_node *ni, const uint8_t *ie)
 {
     /* vht operation */
-    ni->ni_vht_chanwidth = ie[2];
-    ni->ni_vht_chan1 = ie[3];
-    ni->ni_vht_chan2 = ie[4];
-    ni->ni_vht_basicmcs = le16dec(ie + 5);
+    struct ieee80211_ie_vht_operation *op = (struct ieee80211_ie_vht_operation *)ie;
+    ni->ni_vht_chanwidth = op->chan_width;
+    ni->ni_vht_chan1 = op->center_freq_seg1_idx;
+    ni->ni_vht_chan2 = op->center_freq_seg2_idx;
+    ni->ni_vht_basicmcs = op->basic_mcs_set;
 
     DPRINTF(("%s: chan1=%d, chan2=%d, chanwidth=%d, basicmcs=0x%04x\n",
         __func__,
@@ -1548,15 +1549,16 @@ ieee80211_parse_vhtopmode(struct ieee80211_node *ni, const uint8_t *ie)
 void
 ieee80211_parse_vhtcap(struct ieee80211_node *ni, const uint8_t *ie)
 {
-
     /* vht capability */
-    ni->ni_vhtcap = le32dec(ie + 2);
+    ni->ni_vhtcaps = le32dec(ie + 2);
 
     /* suppmcs */
     ni->ni_vht_mcsinfo.rx_mcs_map = le16dec(ie + 6);
     ni->ni_vht_mcsinfo.rx_highest = le16dec(ie + 8);
     ni->ni_vht_mcsinfo.tx_mcs_map = le16dec(ie + 10);
     ni->ni_vht_mcsinfo.tx_highest = le16dec(ie + 12);
+    
+    ni->ni_flags |= IEEE80211_NODE_VHTCAP;
 }
 
 int
@@ -2580,6 +2582,8 @@ ieee80211_recv_assoc_resp(struct ieee80211com *ic, mbuf_t m,
     const struct ieee80211_frame *wh;
     const u_int8_t *frm, *efrm;
     const u_int8_t *rates, *xrates, *edcaie, *wmmie, *htcaps, *htop;
+    const uint8_t *vhtcap;
+    const uint8_t *vhtopmode;
     u_int16_t capinfo, status, associd;
     u_int8_t rate;
     
@@ -2621,7 +2625,7 @@ ieee80211_recv_assoc_resp(struct ieee80211com *ic, mbuf_t m,
     }
     associd = LE_READ_2(frm); frm += 2;
     
-    rates = xrates = edcaie = wmmie = htcaps = htop = NULL;
+    rates = xrates = edcaie = wmmie = htcaps = htop = vhtcap = vhtopmode = NULL;
     while (frm + 2 <= efrm) {
         if (frm + 2 + frm[1] > efrm) {
             ic->ic_stats.is_rx_elem_toosmall++;
@@ -2642,6 +2646,12 @@ ieee80211_recv_assoc_resp(struct ieee80211com *ic, mbuf_t m,
                 break;
             case IEEE80211_ELEMID_HTOP:
                 htop = frm;
+                break;
+            case IEEE80211_ELEMID_VHT_CAP:
+                vhtcap = frm;
+                break;
+            case IEEE80211_ELEMID_VHT_OPMODE:
+                vhtopmode = frm;
                 break;
             case IEEE80211_ELEMID_VENDOR:
                 if (frm[1] < 4) {
@@ -2688,10 +2698,16 @@ ieee80211_recv_assoc_resp(struct ieee80211com *ic, mbuf_t m,
         ieee80211_setup_htcaps(ni, htcaps + 2, htcaps[1]);
     if (htop)
         ieee80211_setup_htop(ni, htop + 2, htop[1], 0);
+    if (vhtcap != NULL && vhtopmode != NULL)
+        ieee80211_vht_updateparams(ic, ni, vhtcap, vhtopmode);
+
     ieee80211_ht_negotiate(ic, ni);
+    ieee80211_vht_negotiate(ic, ni);
     
-    /* Hop into 11n mode after associating to an HT AP in a non-11n mode. */
-    if (ni->ni_flags & IEEE80211_NODE_HT)
+    /* Hop into 11n/11ac mode after associating to an HT AP in a legacy mode. */
+    if (ni->ni_flags & IEEE80211_NODE_VHT)
+        ieee80211_setmode(ic, IEEE80211_MODE_11AC);
+    else if (ni->ni_flags & IEEE80211_NODE_HT)
         ieee80211_setmode(ic, IEEE80211_MODE_11N);
     else
         ieee80211_setmode(ic, ieee80211_chan2mode(ic, ni->ni_chan));
