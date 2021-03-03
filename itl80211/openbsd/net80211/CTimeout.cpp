@@ -111,7 +111,7 @@ IOReturn CTimeout::timeout_pending(OSObject *target, void *arg0, void *arg1, voi
     CTimeout **cto = (CTimeout **)arg0;
     CTimeout *tm;
     if (cto == NULL) {
-        return kIOReturnSuccess;
+        return kIOReturnError;
     }
     tm = *cto;
     if (tm != NULL && tm->isPending) {
