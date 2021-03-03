@@ -226,6 +226,9 @@ iwm_init_channel_map(struct iwm_softc *sc, const uint16_t * const nvm_ch_flags,
         if (!(ch_flags & IWM_NVM_CHANNEL_VALID))
             continue;
         
+        if (ch_flags & IWM_NVM_CHANNEL_160MHZ)
+            data->vht160_supported = true;
+        
         hw_value = nvm_channels[ch_idx];
         channel = &ic->ic_channels[hw_value];
         
@@ -264,11 +267,13 @@ iwm_init_channel_map(struct iwm_softc *sc, const uint16_t * const nvm_ch_flags,
             }
         }
 
-        if (ch_flags & IWM_NVM_CHANNEL_80MHZ) {
-            channel->ic_flags |= IEEE80211_CHAN_VHT80;
-        }
-        if (ch_flags & IWM_NVM_CHANNEL_160MHZ) {
-            channel->ic_flags |= IEEE80211_CHAN_VHT160;
+        if (data->sku_cap_11ac_enable) {
+            if (ch_flags & IWM_NVM_CHANNEL_80MHZ) {
+                channel->ic_flags |= IEEE80211_CHAN_VHT80;
+            }
+            if (ch_flags & IWM_NVM_CHANNEL_160MHZ) {
+                channel->ic_flags |= IEEE80211_CHAN_VHT160;
+            }
         }
 
         if (ch_flags & IWM_NVM_CHANNEL_DFS) {
@@ -298,6 +303,58 @@ iwm_setup_ht_rates(struct iwm_softc *sc)
     if ((rx_ant & IWM_ANT_AB) == IWM_ANT_AB ||
         (rx_ant & IWM_ANT_BC) == IWM_ANT_BC)
         ic->ic_sup_mcs[1] = 0xff;    /* MCS 8-15 */
+}
+
+void ItlIwm::
+iwm_setup_vht_rates(struct iwm_softc *sc)
+{
+    struct ieee80211com *ic = &sc->sc_ic;
+    uint8_t rx_ant, tx_ant;
+    unsigned int max_ampdu_exponent = IEEE80211_VHTCAP_MAX_AMPDU_1024K;
+    
+    rx_ant = iwm_fw_valid_rx_ant(sc);
+    tx_ant = iwm_fw_valid_tx_ant(sc);
+    
+    ic->ic_vhtcaps = IEEE80211_VHTCAP_SHORT_GI_80 |
+    IEEE80211_VHTCAP_RXSTBC_1 |
+    IEEE80211_VHTCAP_SU_BEAMFORMEE_CAPABLE |
+    3 << IEEE80211_VHTCAP_BEAMFORMEE_STS_SHIFT |
+    max_ampdu_exponent <<
+    IEEE80211_VHTCAP_MAX_A_MPDU_LENGTH_EXPONENT_SHIFT |
+    IEEE80211_VHTCAP_MU_BEAMFORMEE_CAPABLE;
+    
+    if (sc->sc_nvm.vht160_supported)
+    ic->ic_vhtcaps |= IEEE80211_VHTCAP_SUPP_CHAN_WIDTH_160MHZ |
+            IEEE80211_VHTCAP_SHORT_GI_160;
+    
+    //    ic->ic_vhtcaps |= IEEE80211_VHTCAP_RXLDPC;
+    if (!iwm_mimo_enabled(sc)) {
+        rx_ant = 1;
+        tx_ant = 1;
+    }
+    
+    if (tx_ant > 1)
+        ic->ic_vhtcaps |= IEEE80211_VHTCAP_TXSTBC;
+    else
+        ic->ic_vhtcaps |= IEEE80211_VHTCAP_TX_ANTENNA_PATTERN;
+    
+    ic->ic_vht_rx_mcs_map =
+    htole16(IEEE80211_VHT_MCS_SUPPORT_0_9 << 0 |
+            IEEE80211_VHT_MCS_SUPPORT_0_9 << 2 |
+            IEEE80211_VHT_MCS_NOT_SUPPORTED << 4 |
+            IEEE80211_VHT_MCS_NOT_SUPPORTED << 6 |
+            IEEE80211_VHT_MCS_NOT_SUPPORTED << 8 |
+            IEEE80211_VHT_MCS_NOT_SUPPORTED << 10 |
+            IEEE80211_VHT_MCS_NOT_SUPPORTED << 12 |
+            IEEE80211_VHT_MCS_NOT_SUPPORTED << 14);
+    if (rx_ant == 1) {
+        ic->ic_vhtcaps |= IEEE80211_VHTCAP_RX_ANTENNA_PATTERN;
+        /* this works because NOT_SUPPORTED == 3 */
+        ic->ic_vht_rx_mcs_map |=
+            htole16(IEEE80211_VHT_MCS_NOT_SUPPORTED << 2);
+    }
+    ic->ic_vht_tx_mcs_map = ic->ic_vht_rx_mcs_map;
+    ic->ic_vht_tx_highest = ic->ic_vht_rx_highest = 0;
 }
 
 #define IWM_MAX_RX_BA_SESSIONS 16
@@ -3255,6 +3312,9 @@ iwm_init(struct _ifnet *ifp)
     if (sc->sc_nvm.sku_cap_11n_enable)
         iwm_setup_ht_rates(sc);
     
+    if (sc->sc_nvm.sku_cap_11ac_enable)
+        iwm_setup_vht_rates(sc);
+    
     ifq_clr_oactive(&ifp->if_snd);
     ifp->if_snd->flush();
     ifp->if_flags |= IFF_RUNNING;
@@ -4150,6 +4210,10 @@ iwm_preinit(struct iwm_softc *sc)
     
     if (sc->sc_nvm.sku_cap_11n_enable)
         iwm_setup_ht_rates(sc);
+    
+    if (sc->sc_nvm.sku_cap_11ac_enable) {
+        iwm_setup_vht_rates(sc);
+    }
     
     /* not all hardware can do 5GHz band */
     if (!sc->sc_nvm.sku_cap_band_52GHz_enable)

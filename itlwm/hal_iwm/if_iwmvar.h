@@ -215,6 +215,7 @@ struct iwm_nvm_data {
     int sku_cap_band_24GHz_enable;
     int sku_cap_band_52GHz_enable;
     int sku_cap_11n_enable;
+    int sku_cap_11ac_enable;
     int sku_cap_amt_enable;
     int sku_cap_ipan_enable;
     int sku_cap_mimo_disable;
@@ -224,6 +225,7 @@ struct iwm_nvm_data {
     uint8_t radio_cfg_dash;
     uint8_t radio_cfg_pnum;
     uint8_t valid_tx_ant, valid_rx_ant;
+    bool vht160_supported;
 
     uint16_t nvm_version;
     uint8_t max_tx_pwr_half_dbm;

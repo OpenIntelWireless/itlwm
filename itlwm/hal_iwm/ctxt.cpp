@@ -141,17 +141,18 @@ iwm_get_channel_width(struct ieee80211com *ic, struct ieee80211_channel *c)
         return ret;
     }
     switch (ic->ic_bss->ni_chw) {
-    case 0:
-    case 20:
-        return IWM_PHY_VHT_CHANNEL_MODE20;
-    case 40:
-        return IWM_PHY_VHT_CHANNEL_MODE40;
-    case 80:
-        return IWM_PHY_VHT_CHANNEL_MODE80;
-    case 160:
-        return IWM_PHY_VHT_CHANNEL_MODE160;
-    default:
-        return ret;
+        case 0:
+        case 20:
+            return IWM_PHY_VHT_CHANNEL_MODE20;
+        case 40:
+            return IWM_PHY_VHT_CHANNEL_MODE40;
+        case 80:
+            return IWM_PHY_VHT_CHANNEL_MODE80;
+        case 160:
+            return IWM_PHY_VHT_CHANNEL_MODE160;
+        default:
+            XYLog("Invalid channel width=%u\n", ic->ic_bss->ni_chw);
+            return ret;
     }
 }
 
@@ -167,6 +168,42 @@ iwm_get_ctrl_pos(struct ieee80211com *ic, struct ieee80211_channel *c) {
         } else {
             return IWM_PHY_VHT_CTRL_POS_1_ABOVE;
         }
+    } else if (ic->ic_bss->ni_chw == 80 || ic->ic_bss->ni_chw == 160) {
+        signed int offset = ieee80211_chan2ieee(ic, ic->ic_bss->ni_chan) - ic->ic_bss->ni_vht_chan1;
+        switch (offset) {
+            case -2:
+                ret = IWM_PHY_VHT_CTRL_POS_1_BELOW;
+                break;
+            case -6:
+                ret = IWM_PHY_VHT_CTRL_POS_2_BELOW;
+                break;
+            case -10:
+                ret = IWM_PHY_VHT_CTRL_POS_3_BELOW;
+                break;
+            case -14:
+                ret = IWM_PHY_VHT_CTRL_POS_4_BELOW;
+                break;
+            case 0:
+                ret = IWM_PHY_VHT_CTRL_POS_1_BELOW;
+                break;
+            case 2:
+                ret = IWM_PHY_VHT_CTRL_POS_1_ABOVE;
+                break;
+            case 6:
+                ret = IWM_PHY_VHT_CTRL_POS_2_ABOVE;
+                break;
+            case 10:
+                ret = IWM_PHY_VHT_CTRL_POS_3_ABOVE;
+                break;
+            case 14:
+                ret = IWM_PHY_VHT_CTRL_POS_4_ABOVE;
+                break;
+                
+            default:
+                XYLog("Invalid channel definition %d\n", offset);
+                break;
+        }
+        return ret;
     }
     return ret;
 }
