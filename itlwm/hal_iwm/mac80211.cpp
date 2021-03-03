@@ -2516,7 +2516,7 @@ iwm_setrates(struct iwm_node *in, int async)
     struct iwm_softc *sc = (struct iwm_softc *)IC2IFP(ic)->if_softc;
     struct iwm_lq_cmd lqcmd;
     struct ieee80211_rateset *rs = &ni->ni_rates;
-    int i, ridx, ridx_min, ridx_max, j, sgi_ok = 0, mimo, tab = 0, is_40mhz = 0;
+    int i, ridx, ridx_min, ridx_max, j, sgi_ok = 0, mimo, tab = 0, is_40mhz = 0, is_80mhz = 0, is_160mhz = 0;
     struct iwm_host_cmd cmd = {
         .id = IWM_LQ_CMD,
         .len = { sizeof(lqcmd), },
@@ -2534,7 +2534,21 @@ iwm_setrates(struct iwm_node *in, int async)
         sgi_ok = 1;
     }
     
-    if (ni->ni_chw == 40) {
+    if (ni->ni_chw == 160) {
+        is_160mhz = 1;
+        if (ieee80211_node_supports_vht_sgi160(ni)) {
+            sgi_ok = 1;
+        } else {
+            sgi_ok = 0;
+        }
+    } else if (ni->ni_chw == 80) {
+        is_80mhz = 1;
+        if (ieee80211_node_supports_vht_sgi80(ni)) {
+            sgi_ok = 1;
+        } else {
+            sgi_ok = 0;
+        }
+    } else if (ni->ni_chw == 40) {
         is_40mhz = 1;
         if (ieee80211_node_supports_ht_sgi40(ni)) {
             sgi_ok = 1;
@@ -2563,7 +2577,32 @@ iwm_setrates(struct iwm_node *in, int async)
         if (j >= nitems(lqcmd.rs_table))
             break;
         tab = 0;
-        if (ni->ni_flags & IEEE80211_NODE_HT) {
+        if (ni->ni_flags & IEEE80211_NODE_VHT) {
+            if (ht_plcp == IWM_RATE_HT_SISO_MCS_INV_PLCP)
+                continue;
+            /* Do not mix SISO and MIMO HT rates. */
+            if ((mimo && !iwm_is_mimo_ht_plcp(ht_plcp)) ||
+                (!mimo && iwm_is_mimo_ht_plcp(ht_plcp)))
+                continue;
+            for (i = in->chosen_txmcs; i >= 0; i--) {
+                if (isclr(ni->ni_rxmcs, i))
+                    continue;
+                if (i >= 9) {
+                    break;
+                }
+                if (ridx == iwm_mcs2ridx[i]) {
+                    tab = ht_plcp;
+                    tab |= IWM_RATE_MCS_VHT_MSK;
+                    if (is_80mhz) {
+                        tab |= IWM_RATE_MCS_CHAN_WIDTH_80;
+                    }
+                    if (is_160mhz) {
+                        tab |= IWM_RATE_MCS_CHAN_WIDTH_80;
+                    }
+                    break;
+                }
+            }
+        } else if (ni->ni_flags & IEEE80211_NODE_HT) {
             if (ht_plcp == IWM_RATE_HT_SISO_MCS_INV_PLCP)
                 continue;
             /* Do not mix SISO and MIMO HT rates. */
