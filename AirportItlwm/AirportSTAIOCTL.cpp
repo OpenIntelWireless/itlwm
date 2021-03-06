@@ -933,6 +933,7 @@ eventHandler(struct ieee80211com *ic, int msgCode, void *data)
         default:
             break;
     }
+#undef INTERFACE_POST_MESSAGE
 }
 
 IOReturn AirportItlwm::
