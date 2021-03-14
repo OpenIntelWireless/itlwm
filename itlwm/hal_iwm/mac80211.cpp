@@ -1147,6 +1147,10 @@ iwm_txd_done(struct iwm_softc *sc, struct iwm_tx_data *txd)
     txd->in = NULL;
     txd->totlen = 0;
     txd->ampdu_txmcs = 0;
+    txd->txmcs = 0;
+    txd->txrate = 0;
+    txd->data_type = 0;
+    txd->ampdu_nframes = 0;
 }
 
 void ItlIwm::
