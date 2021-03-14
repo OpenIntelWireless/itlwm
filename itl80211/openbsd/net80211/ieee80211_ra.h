@@ -30,6 +30,9 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#ifndef _NET80211_IEEE80211_RA_H_
+#define _NET80211_IEEE80211_RA_H_
+
 /*
  * Goodput statistics struct. Measures the effective data rate of an MCS.
  * All uint64_t numbers in this struct use fixed-point arithmetic.
@@ -90,3 +93,4 @@ void    ieee80211_ra_choose(struct ieee80211_ra_node *,
 /* Get the HT rateset for a particular HT MCS with SGI on/off. */
 const struct ieee80211_ht_rateset * ieee80211_ra_get_ht_rateset(int mcs,
         int chw, int sgi);
+#endif /* _NET80211_IEEE80211_RA_H_ */
