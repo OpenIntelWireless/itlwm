@@ -82,7 +82,6 @@ uint32_t ieee80211_ra_valid_rates(struct ieee80211com *,
 #define RA_FP_DIV(a, b) \
     (b == 0 ? (uint64_t)-1 : (((a) << RA_FP_SHIFT) / (b)))
 
-#define RA_DEBUG
 #ifdef RA_DEBUG
 #define DPRINTF(x)    do { if (ra_debug > 0) printf x; } while (0)
 #define DPRINTFN(n, x)    do { if (ra_debug >= (n)) printf x; } while (0)
@@ -243,7 +242,7 @@ ieee80211_ra_next_rateset(struct ieee80211_ra_node *rn,
     if (rn->probing & IEEE80211_RA_PROBING_UP) {
         if (rs->max_mcs == 31)
             return NULL;
-        next = ((rs->max_mcs + 1) / 8) * 2;
+        next = ((rs->max_mcs + 1) >> 2); /* ((rs->max_mcs + 1) / 8) * 2 */
         if (sgi) {
             next += 1;
         }
@@ -253,7 +252,7 @@ ieee80211_ra_next_rateset(struct ieee80211_ra_node *rn,
     } else if (rn->probing & IEEE80211_RA_PROBING_DOWN) {
         if (rs->min_mcs == 0)
             return NULL;
-        next = ((rs->min_mcs - 1) / 8) * 2;
+        next = ((rs->min_mcs - 1) >> 2); /* ((rs->min_mcs - 1) / 8) * 2 */
         if (sgi) {
             next += 1;
         }
