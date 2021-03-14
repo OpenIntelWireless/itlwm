@@ -32,7 +32,7 @@
 
 #include <net80211/ieee80211_var.h>
 #include <net80211/ieee80211_amrr.h>
-#include <net80211/ieee80211_mira.h>
+#include <net80211/ieee80211_ra.h>
 #include <net80211/ieee80211_radiotap.h>
 #include <net80211/ieee80211_priv.h>
 
@@ -87,16 +87,10 @@ struct iwn_tx_data {
     mbuf_t        m;
     struct ieee80211_node    *ni;
     int totlen;
-    int retries;
-    int txfail;
-    int txmcs;
-    int txrate;
 
     /* A-MPDU subframes */
-    int ampdu_id;
     int ampdu_txmcs;
     int ampdu_nframes;
-    int ampdu_size;
 };
 
 struct iwn_tx_ring {
@@ -130,11 +124,12 @@ struct iwn_rx_ring {
 struct iwn_node {
     struct    ieee80211_node        ni;    /* must be the first */
     struct    ieee80211_amrr_node    amn;
-    struct    ieee80211_mira_node    mn;
+    struct    ieee80211_ra_node    rn;
     uint16_t            disable_tid;
     uint8_t                id;
     uint8_t                ridx[IEEE80211_RATE_MAXSIZE];
     uint32_t            next_ampdu_id;
+    int                lq_rate_mismatch;
 };
 
 struct iwn_calib_state {

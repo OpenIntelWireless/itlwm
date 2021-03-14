@@ -166,9 +166,11 @@ public:
                 struct iwn_rx_data *);
     void        iwn_rx_done(struct iwn_softc *, struct iwn_rx_desc *,
                 struct iwn_rx_data *, struct mbuf_list *);
-    void        iwn_mira_choose(struct iwn_softc *, struct ieee80211_node *);
+    void        iwn_ra_choose(struct iwn_softc *, struct ieee80211_node *);
     void        iwn_ampdu_rate_control(struct iwn_softc *, struct ieee80211_node *,
-                struct iwn_tx_ring *, int, uint16_t, uint16_t);
+                struct iwn_tx_ring *, uint16_t, uint16_t);
+    void        iwn_ht_single_rate_control(struct iwn_softc *,
+                struct ieee80211_node *, uint8_t, uint8_t, uint8_t, int);
     void        iwn_rx_compressed_ba(struct iwn_softc *, struct iwn_rx_desc *,
                 struct iwn_rx_data *);
     void        iwn5000_rx_calib_results(struct iwn_softc *,
@@ -188,7 +190,7 @@ public:
                 struct iwn_tx_data *);
     void        iwn_clear_oactive(struct iwn_softc *, struct iwn_tx_ring *);
     void        iwn_tx_done(struct iwn_softc *, struct iwn_rx_desc *,
-                uint8_t, uint8_t, int, int, uint16_t);
+                uint8_t, uint8_t, uint8_t, int, int, uint16_t);
     void        iwn_cmd_done(struct iwn_softc *, struct iwn_rx_desc *);
     void        iwn_notif_intr(struct iwn_softc *);
     void        iwn_wakeup_intr(struct iwn_softc *);
