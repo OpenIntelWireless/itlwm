@@ -239,7 +239,9 @@ public:
     void    iwm_rx_tx_ba_notif(struct iwm_softc *, struct iwm_rx_packet *, struct iwm_rx_data *);
     void    iwm_rx_tx_cmd(struct iwm_softc *, struct iwm_rx_packet *,
                           struct iwm_rx_data *);
-    void    iwm_ampdu_rate_control(struct iwm_softc *, struct ieee80211_node *, struct iwm_tx_ring *, int, uint16_t, uint16_t);
+    void    iwm_ampdu_rate_control(struct iwm_softc *, struct ieee80211_node *, struct iwm_tx_ring *, uint16_t, uint16_t);
+    void    iwm_ht_single_rate_control(struct iwm_softc *, struct ieee80211_node *,
+                                       uint8_t, uint8_t, uint8_t, int);
     void iwm_rx_mpdu_mq(struct iwm_softc *sc, mbuf_t m, void *pktdata,
                    size_t maxlen, struct mbuf_list *ml);
     void    iwm_rx_bmiss(struct iwm_softc *, struct iwm_rx_packet *,
@@ -267,7 +269,7 @@ public:
     void iwm_txd_done(struct iwm_softc *, struct iwm_tx_data *);
     void iwm_ampdu_txq_advance(struct iwm_softc *, struct iwm_tx_ring *, int);
     void iwm_clear_oactive(struct iwm_softc *, struct iwm_tx_ring *);
-    void iwm_mira_choose(struct iwm_softc *, struct ieee80211_node *);
+    void iwm_ra_choose(struct iwm_softc *, struct ieee80211_node *);
     int    iwm_tx(struct iwm_softc *, mbuf_t, struct ieee80211_node *, int);
     int    iwm_flush_tx_path(struct iwm_softc *, int);
     void    iwm_led_enable(struct iwm_softc *);

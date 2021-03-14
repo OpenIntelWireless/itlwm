@@ -118,7 +118,7 @@
 
 #include <net80211/ieee80211_var.h>
 #include <net80211/ieee80211_amrr.h>
-#include <net80211/ieee80211_mira.h>
+#include <net80211/ieee80211_ra.h>
 #include <net80211/ieee80211_radiotap.h>
 
 #include <IOKit/network/IOMbufMemoryCursor.h>
@@ -283,15 +283,11 @@ struct iwm_tx_data {
     int txmcs;
     int txrate;
     int totlen;
-    int retries;
-    int txfail;
     int data_type;
     
     /* A-MPDU subframes */
-    int ampdu_id;
     int ampdu_txmcs;
     int ampdu_nframes;
-    int ampdu_size;
 };
 
 struct iwm_tx_ring {
@@ -595,9 +591,8 @@ struct iwm_node {
     uint16_t in_color;
 
     struct ieee80211_amrr_node in_amn;
-    int chosen_txrate;
-    struct ieee80211_mira_node in_mn;
-    int chosen_txmcs;
+    struct ieee80211_ra_node in_rn;
+    int lq_rate_mismatch;
     uint32_t next_ampdu_id;
 };
 #define IWM_STATION_ID 0
