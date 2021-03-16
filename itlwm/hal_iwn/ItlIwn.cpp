@@ -4102,7 +4102,7 @@ iwn_set_link_quality(struct iwn_softc *sc, struct ieee80211_node *ni)
             }
         }
         
-        if (tab == 0)
+        if (tab == 0 && rflags == 0)
             continue;
         
         if (iwn_is_mimo_ht_plcp(ht_plcp))
@@ -4113,6 +4113,7 @@ iwn_set_link_quality(struct iwn_softc *sc, struct ieee80211_node *ni)
         if (IWN_RIDX_IS_CCK(ridx))
             rflags |= IWN_RFLAG_CCK;
 
+        XYLog("lq.retry[%d].plcp = 0x%x, lq.retry[i].rflags = 0x%x\n", j, tab, rflags);
         linkq.retry[j].plcp = tab;
         linkq.retry[j].rflags = rflags;
         j++;
@@ -4127,6 +4128,7 @@ iwn_set_link_quality(struct iwn_softc *sc, struct ieee80211_node *ni)
         if (IWN_RIDX_IS_CCK(ridx_min))
             rflags |= IWN_RFLAG_CCK;
         rflags |= IWN_RFLAG_ANT(txant);
+        XYLog("lq.retry[%d].plcp = 0x%x, lq.retry[i].rflags = 0x%x\n", j, tab, rflags);
         linkq.retry[j].plcp = tab;
         linkq.retry[j].rflags = rflags;
         j++;
