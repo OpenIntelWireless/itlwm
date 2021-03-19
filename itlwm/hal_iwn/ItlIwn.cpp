@@ -4054,8 +4054,8 @@ iwn_set_link_quality(struct iwn_softc *sc, struct ieee80211_node *ni)
      * in descending order, i.e. with the node's current TX rate first.
      * In cases where throughput of an HT rate corresponds to a legacy
      * rate it makes no sense to add both. We rely on the fact that
-     * iwm_rates is laid out such that equivalent HT/legacy rates share
-     * the same IWM_RATE_*_INDEX value. Also, rates not applicable to
+     * iwn_rates is laid out such that equivalent HT/legacy rates share
+     * the same IWN_RATE_*_INDEX value. Also, rates not applicable to
      * legacy/HT are assumed to be marked with an 'invalid' PLCP value.
      */
     j = 0;
@@ -4102,7 +4102,7 @@ iwn_set_link_quality(struct iwn_softc *sc, struct ieee80211_node *ni)
             }
         }
         
-        if (tab == 0)
+        if (tab == 0 && rflags == 0)
             continue;
         
         if (iwn_is_mimo_ht_plcp(ht_plcp))
@@ -4113,6 +4113,7 @@ iwn_set_link_quality(struct iwn_softc *sc, struct ieee80211_node *ni)
         if (IWN_RIDX_IS_CCK(ridx))
             rflags |= IWN_RFLAG_CCK;
 
+        XYLog("lq.retry[%d].plcp = 0x%x, lq.retry[i].rflags = 0x%x\n", j, tab, rflags);
         linkq.retry[j].plcp = tab;
         linkq.retry[j].rflags = rflags;
         j++;
@@ -4127,6 +4128,7 @@ iwn_set_link_quality(struct iwn_softc *sc, struct ieee80211_node *ni)
         if (IWN_RIDX_IS_CCK(ridx_min))
             rflags |= IWN_RFLAG_CCK;
         rflags |= IWN_RFLAG_ANT(txant);
+        XYLog("lq.retry[%d].plcp = 0x%x, lq.retry[i].rflags = 0x%x\n", j, tab, rflags);
         linkq.retry[j].plcp = tab;
         linkq.retry[j].rflags = rflags;
         j++;
@@ -5106,17 +5108,17 @@ iwn5000_runtime_calib(struct iwn_softc *sc)
 }
 
 static uint32_t
-iwn_get_rxon_ht_flags(struct ieee80211com *ic)
+iwn_get_rxon_ht_flags(struct ieee80211com *ic, struct ieee80211_node *ni)
 {
     uint32_t htflags = 0;
-    if (ic->ic_bss == NULL) {
+    if (ni == NULL) {
         return htflags;
     }
     
     enum ieee80211_htprot htprot =
-        (enum ieee80211_htprot)(ic->ic_bss->ni_htop1 & IEEE80211_HTOP1_PROT_MASK);
+        (enum ieee80211_htprot)(ni->ni_htop1 & IEEE80211_HTOP1_PROT_MASK);
 
-    if (ic->ic_bss->ni_chw == 40) {
+    if (ni->ni_chw == 40) {
         switch (htprot) {
         case IEEE80211_HTPROT_20MHZ:
             htflags |= IWN_RXON_HT_CHANMODE_PURE40;
@@ -5127,8 +5129,8 @@ iwn_get_rxon_ht_flags(struct ieee80211com *ic)
         }
     }
     
-    if (ic->ic_bss->ni_chw == 40) {
-        if ((ic->ic_bss->ni_htop0 & IEEE80211_HTOP0_SCO_MASK) == IEEE80211_HTOP0_SCO_SCB) {
+    if (ni->ni_chw == 40) {
+        if ((ni->ni_htop0 & IEEE80211_HTOP0_SCO_MASK) == IEEE80211_HTOP0_SCO_SCB) {
             htflags |= IWN_RXON_HT_HT40MINUS;
         }
     }
@@ -5247,7 +5249,7 @@ iwn_config(struct iwn_softc *sc)
             rxchain |= (IWN_RXCHAIN_DRIVER_FORCE | IWN_RXCHAIN_MIMO_FORCE);
     }
     sc->rxon.rxchain = htole16(rxchain);
-    sc->rxon.flags |= htole32(iwn_get_rxon_ht_flags(ic));
+    sc->rxon.flags |= htole32(iwn_get_rxon_ht_flags(ic, ic->ic_bss));
     DPRINTF(("setting configuration\n"));
     DPRINTF(("%s: rxon chan %d flags %x cck %x ofdm %x rxchain %x\n",
         __func__, sc->rxon.chan, le32toh(sc->rxon.flags), sc->rxon.cck_mask,
@@ -5649,7 +5651,7 @@ iwn_auth(struct iwn_softc *sc, int arg)
         sc->rxon.cck_mask  = 0x0f;
         sc->rxon.ofdm_mask = 0x15;
     }
-    sc->rxon.flags |= htole32(iwn_get_rxon_ht_flags(ic));
+    sc->rxon.flags |= htole32(iwn_get_rxon_ht_flags(ic, ni));
     DPRINTF(("%s: rxon chan %d flags %x cck %x ofdm %x\n", __func__,
         sc->rxon.chan, le32toh(sc->rxon.flags), sc->rxon.cck_mask,
         sc->rxon.ofdm_mask));
@@ -5735,7 +5737,7 @@ iwn_run(struct iwn_softc *sc)
         sc->rxon.flags |= htole32(IWN_RXON_HT_PROTMODE(htprot));
     } else
         sc->rxon.flags &= ~htole32(IWN_RXON_HT_PROTMODE(3));
-    sc->rxon.flags |= htole32(iwn_get_rxon_ht_flags(ic));
+    sc->rxon.flags |= htole32(iwn_get_rxon_ht_flags(ic, ni));
 
     if (IEEE80211_IS_CHAN_5GHZ(ni->ni_chan)) {
         /* 11a or 11n 5GHz */
