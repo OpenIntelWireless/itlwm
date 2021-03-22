@@ -335,20 +335,20 @@ const struct iwx_rate {
     {  12,    IWX_RATE_6M_PLCP,    IWX_RATE_HT_SISO_MCS_0_PLCP },
     {  18,    IWX_RATE_9M_PLCP,    IWX_RATE_HT_SISO_MCS_INV_PLCP  },
     {  24,    IWX_RATE_12M_PLCP,    IWX_RATE_HT_SISO_MCS_1_PLCP },
-    {  26,    IWX_RATE_INVM_PLCP,    IWX_RATE_HT_MIMO2_MCS_8_PLCP },
+    {  26,    IWX_RATE_12M_PLCP,    IWX_RATE_HT_MIMO2_MCS_8_PLCP },
     {  36,    IWX_RATE_18M_PLCP,    IWX_RATE_HT_SISO_MCS_2_PLCP },
     {  48,    IWX_RATE_24M_PLCP,    IWX_RATE_HT_SISO_MCS_3_PLCP },
-    {  52,    IWX_RATE_INVM_PLCP,    IWX_RATE_HT_MIMO2_MCS_9_PLCP },
+    {  52,    IWX_RATE_24M_PLCP,    IWX_RATE_HT_MIMO2_MCS_9_PLCP },
     {  72,    IWX_RATE_36M_PLCP,    IWX_RATE_HT_SISO_MCS_4_PLCP },
-    {  78,    IWX_RATE_INVM_PLCP,    IWX_RATE_HT_MIMO2_MCS_10_PLCP },
+    {  78,    IWX_RATE_36M_PLCP,    IWX_RATE_HT_MIMO2_MCS_10_PLCP },
     {  96,    IWX_RATE_48M_PLCP,    IWX_RATE_HT_SISO_MCS_5_PLCP },
-    { 104,    IWX_RATE_INVM_PLCP,    IWX_RATE_HT_MIMO2_MCS_11_PLCP },
+    { 104,    IWX_RATE_48M_PLCP,    IWX_RATE_HT_MIMO2_MCS_11_PLCP },
     { 108,    IWX_RATE_54M_PLCP,    IWX_RATE_HT_SISO_MCS_6_PLCP },
-    { 128,    IWX_RATE_INVM_PLCP,    IWX_RATE_HT_SISO_MCS_7_PLCP },
-    { 156,    IWX_RATE_INVM_PLCP,    IWX_RATE_HT_MIMO2_MCS_12_PLCP },
-    { 208,    IWX_RATE_INVM_PLCP,    IWX_RATE_HT_MIMO2_MCS_13_PLCP },
-    { 234,    IWX_RATE_INVM_PLCP,    IWX_RATE_HT_MIMO2_MCS_14_PLCP },
-    { 260,    IWX_RATE_INVM_PLCP,    IWX_RATE_HT_MIMO2_MCS_15_PLCP },
+    { 128,    IWX_RATE_54M_PLCP,    IWX_RATE_HT_SISO_MCS_7_PLCP },
+    { 156,    IWX_RATE_54M_PLCP,    IWX_RATE_HT_MIMO2_MCS_12_PLCP },
+    { 208,    IWX_RATE_54M_PLCP,    IWX_RATE_HT_MIMO2_MCS_13_PLCP },
+    { 234,    IWX_RATE_54M_PLCP,    IWX_RATE_HT_MIMO2_MCS_14_PLCP },
+    { 260,    IWX_RATE_54M_PLCP,    IWX_RATE_HT_MIMO2_MCS_15_PLCP },
 };
 #define IWX_RIDX_CCK    0
 #define IWX_RIDX_OFDM    4
@@ -4821,22 +4821,7 @@ iwx_tx_fill_cmd(struct iwx_softc *sc, struct iwx_node *in,
     
     if (IWX_RIDX_IS_CCK(ridx))
         rate_flags |= IWX_RATE_MCS_CCK_MSK;
-    if ((ni->ni_flags & IEEE80211_NODE_HT) &&
-        rinfo->ht_plcp != IWX_RATE_HT_SISO_MCS_INV_PLCP) {
-        rate_flags |= IWX_RATE_MCS_HT_MSK;
-        if (ni->ni_chw == 40) {
-            rate_flags |= IWX_RATE_MCS_CHAN_WIDTH_40;
-            if (ieee80211_node_supports_ht_sgi40(ni)) {
-                rate_flags |= IWX_RATE_MCS_SGI_MSK;
-            }
-        } else {
-            if (ieee80211_node_supports_ht_sgi20(ni)) {
-                rate_flags |= IWX_RATE_MCS_SGI_MSK;
-            }
-        }
-        tx->rate_n_flags = htole32(rate_flags | rinfo->ht_plcp);
-    } else
-        tx->rate_n_flags = htole32(rate_flags | rinfo->plcp);
+    tx->rate_n_flags = htole32(rate_flags | rinfo->plcp);
     
     return rinfo;
 }
@@ -4889,7 +4874,7 @@ iwx_tx(struct iwx_softc *sc, mbuf_t m, struct ieee80211_node *ni, int ac)
 
     uint16_t num_tbs;
     uint8_t tid, type, subtype;
-    int i, totlen, hasqos;
+    int i, totlen, hasqos = 0;
     int qid = IWX_INVALID_QUEUE;
     uint16_t qos;
 
@@ -4903,19 +4888,20 @@ iwx_tx(struct iwx_softc *sc, mbuf_t m, struct ieee80211_node *ni, int ac)
     }
 
     tid = IWX_MGMT_TID;
-    if ((hasqos = ieee80211_has_qos(wh)) && !ieee80211_is_qos_nullfunc(wh)) {
+    if (!IEEE80211_IS_MULTICAST(wh->i_addr1) && (hasqos = ieee80211_has_qos(wh)) && !ieee80211_is_qos_nullfunc(wh)) {
         /* Select EDCA Access Category and TX ring for this frame. */
         qos = ieee80211_get_qos(wh);
-        tid = qos & IEEE80211_QOS_TID;
-        if (!IEEE80211_IS_MULTICAST(wh->i_addr1) && ni->ni_tx_ba[tid].ba_state == IEEE80211_BA_AGREED) {
+        int q_tid = qos & IEEE80211_QOS_TID;
+        if (ni->ni_tx_ba[q_tid].ba_state == IEEE80211_BA_AGREED) {
+            tid = q_tid;
             qid = sc->sc_tid_data[tid].qid;
         } else {
-            DPRINTFN(1, ("%s qid=%d is multicast\n", __FUNCTION__, qid));
+            DPRINTFN(1, ("%s qid=%d is not BA negotiated state=%d\n", __FUNCTION__, qid, ni->ni_tx_ba[q_tid].ba_state));
         }
     }
 
     if (tid == IWX_MGMT_TID) {
-        DPRINTFN(1, ("%s type=%d subtype=%d qid=%d using mgmt tid\n", __FUNCTION__, type, subtype, qid));
+        DPRINTFN(1, ("%s type=%d qos=%d multicast=%d len=%zu subtype=%d qid=%d using mgmt tid\n", __FUNCTION__, type, hasqos, IEEE80211_IS_MULTICAST(wh->i_addr1), mbuf_len(m), subtype, qid));
         qid = IWX_QID_MGMT;
     }
 
@@ -6416,12 +6402,6 @@ static uint8_t iwx_rs_fw_bw_from_sta_bw(uint8_t bw)
 
 static uint16_t iwx_rs_fw_get_max_amsdu_len(struct ieee80211_node *ni)
 {
-    if (ni->ni_flags & IEEE80211_NODE_VHT) {
-        return IEEE80211_MAX_MPDU_LEN_VHT_11454;
-    }
-    if (ni->ni_flags & IEEE80211_NODE_HT) {
-        return IEEE80211_MAX_MPDU_LEN_HT_BA;
-    }
     return 0;
 }
 
@@ -6470,9 +6450,6 @@ rs_fw_vht_set_enabled_rates(struct iwx_softc *sc,
     struct ieee80211com *ic = &sc->sc_ic;
 
     for (i = 0; i < 2; i++) {
-        if (i == 2)
-            break;
-
         highest_mcs = rs_fw_vht_highest_rx_mcs_index(sc, i + 1);
         if (!highest_mcs)
             continue;

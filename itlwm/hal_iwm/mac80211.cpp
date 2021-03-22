@@ -2584,7 +2584,7 @@ iwm_setrates(struct iwm_node *in, int async)
             if ((mimo && !iwm_is_mimo_ht_plcp(ht_plcp)) ||
                 (!mimo && iwm_is_mimo_ht_plcp(ht_plcp)))
                 continue;
-            for (i = in->chosen_txmcs; i >= 0; i--) {
+            for (i = ni->ni_txmcs; i >= 0; i--) {
                 if (isclr(ni->ni_rxmcs, i))
                     continue;
                 if (i >= 9) {
@@ -2597,7 +2597,7 @@ iwm_setrates(struct iwm_node *in, int async)
                         tab |= IWM_RATE_MCS_CHAN_WIDTH_80;
                     }
                     if (is_160mhz) {
-                        tab |= IWM_RATE_MCS_CHAN_WIDTH_80;
+                        tab |= IWM_RATE_MCS_CHAN_WIDTH_160;
                     }
                     break;
                 }
