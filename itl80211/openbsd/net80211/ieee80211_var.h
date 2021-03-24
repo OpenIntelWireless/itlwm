@@ -261,8 +261,9 @@ enum ieee80211_phymode {
 	IEEE80211_MODE_11G	= 3,	/* 2GHz, OFDM */
 	IEEE80211_MODE_11N	= 4,	/* 2GHz/5GHz, OFDM/HT */
 	IEEE80211_MODE_11AC	= 5,	/* 5GHz, OFDM/VHT */
+    IEEE80211_MODE_11AX = 6,    /* 5GHz, 6GHz, HE */
 };
-#define	IEEE80211_MODE_MAX	(IEEE80211_MODE_11AC+1)
+#define	IEEE80211_MODE_MAX	(IEEE80211_MODE_11AX+1)
 
 enum ieee80211_opmode {
 	IEEE80211_M_STA		= 1,	/* infrastructure station */
@@ -621,6 +622,7 @@ struct ieee80211_ess {
 #define IEEE80211_F_AUTO_JOIN	0x10000000	/* CONF: auto-join active */
 #define	IEEE80211_F_VHTON	0x20000000	/* CONF: VHT enabled */
 #define IEEE80211_F_DISABLE_BG_AUTO_CONNECT 0x40000000  /* CONF: disable auto connect to wifi when doing backgound scan */
+#define IEEE80211_F_HEON    0x80000000  /* CONF: HE enabled */
 
 /* ic_xflags */
 #define	IEEE80211_F_TX_MGMT_ONLY 0x00000001	/* leave data frames on ifq */

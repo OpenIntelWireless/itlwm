@@ -443,6 +443,7 @@ struct ieee80211_node {
 #define IEEE80211_NODE_VHTCAP       0x40000 /* claims to support VHT */
 #define IEEE80211_NODE_VHT_SGI80    0x80000    /* SGI on 20 MHz negotiated */ 
 #define IEEE80211_NODE_VHT_SGI160   0x100000    /* SGI on 40 MHz negotiated */
+#define IEEE80211_NODE_HE       0x200000    /* HE negotiated */
 
 	/* If not NULL, this function gets called when ni_refcnt hits zero. */
 	void			(*ni_unref_cb)(struct ieee80211com *,

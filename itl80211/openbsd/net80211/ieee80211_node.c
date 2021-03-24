@@ -1494,8 +1494,10 @@ ieee80211_end_scan(struct _ifnet *ifp)
               * may not carry HT information.
               */
              ni = ic->ic_bss;
-             if (ni->ni_flags & IEEE80211_NODE_VHT)
-                 ieee80211_setmode(ic, IEEE80211_MODE_11AC);
+             if (ni->ni_flags & IEEE80211_NODE_HE)
+                 ieee80211_setmode(ic, IEEE80211_MODE_11AX);
+             else if (ni->ni_flags & IEEE80211_NODE_VHT)
+                ieee80211_setmode(ic, IEEE80211_MODE_11AC);
              else if (ni->ni_flags & IEEE80211_NODE_HT)
                  ieee80211_setmode(ic, IEEE80211_MODE_11N);
              else

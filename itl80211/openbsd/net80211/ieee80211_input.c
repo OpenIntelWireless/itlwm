@@ -2704,8 +2704,10 @@ ieee80211_recv_assoc_resp(struct ieee80211com *ic, mbuf_t m,
     ieee80211_ht_negotiate(ic, ni);
     ieee80211_vht_negotiate(ic, ni);
     
-    /* Hop into 11n/11ac mode after associating to an HT AP in a legacy mode. */
-    if (ni->ni_flags & IEEE80211_NODE_VHT)
+    /* Hop into 11n/11ac/11ax mode after associating to an HT AP in a legacy mode. */
+    if (ni->ni_flags & IEEE80211_NODE_HE)
+        ieee80211_setmode(ic, IEEE80211_MODE_11AX);
+    else if (ni->ni_flags & IEEE80211_NODE_VHT)
         ieee80211_setmode(ic, IEEE80211_MODE_11AC);
     else if (ni->ni_flags & IEEE80211_NODE_HT)
         ieee80211_setmode(ic, IEEE80211_MODE_11N);

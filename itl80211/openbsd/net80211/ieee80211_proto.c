@@ -89,6 +89,7 @@ const char * const ieee80211_phymode_name[] = {
 	"11g",		/* IEEE80211_MODE_11G */
 	"11n",		/* IEEE80211_MODE_11N */
     "11ac",     /* IEEE80211_MODE_11AC */
+    "11ax",     /* IEEE80211_MODE_11AX */
 };
 
 void ieee80211_set_beacon_miss_threshold(struct ieee80211com *);

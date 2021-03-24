@@ -354,6 +354,7 @@ static inline void ifmedia_init(struct ifmedia *ifm, uint64_t dontcare_mask)
 #define IFM_IEEE80211_FH    0x0000000400000000ULL    /* 2GHz, GFSK mode */
 #define IFM_IEEE80211_11N    0x0000000800000000ULL    /* 11n/HT 2GHz/5GHz */
 #define IFM_IEEE80211_11AC    0x0000001000000000ULL    /* 11ac/VHT 5GHz */
+#define IFM_IEEE80211_11AX    0x0000002000000000ULL    /* 11ax/HE 5GHz/6GHz */
 
 /*
  * Digitally multiplexed "Carrier" Serial Interfaces
