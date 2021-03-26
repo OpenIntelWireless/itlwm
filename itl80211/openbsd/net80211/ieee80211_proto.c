@@ -651,254 +651,6 @@ ieee80211_ht_negotiate(struct ieee80211com *ic, struct ieee80211_node *ni)
     XYLog("%s %d chan_width=%s\n", __FUNCTION__, __LINE__, ieee80211_chan_width_name[ni->ni_chw]);
 }
 
-uint32_t
-ieee80211_bsscap2stacap(struct ieee80211com *ic, struct ieee80211_node *ni)
-{
-#define    MS(_v, _f)    (((_v) & _f) >> _f##_S)
-#define    SM(_v, _f)    (((_v) << _f##_S) & _f)
-    uint32_t vhtcap = ic->ic_vhtcaps;
-    uint32_t val, val1, val2;
-    uint32_t new_vhtcap = 0;
-    
-    val1 = MS(vhtcap, IEEE80211_VHTCAP_MAX_MPDU_MASK);
-    val2 = MS(ni->ni_vhtcaps, IEEE80211_VHTCAP_MAX_MPDU_MASK);
-    val = MIN(val1, val2);
-    new_vhtcap |= SM(val, IEEE80211_VHTCAP_MAX_MPDU_MASK);
-    
-    /* Supported Channel Width */
-    val1 = MS(vhtcap,
-              IEEE80211_VHTCAP_SUPP_CHAN_WIDTH_MASK);
-    val2 = MS(ni->ni_vhtcaps,
-              IEEE80211_VHTCAP_SUPP_CHAN_WIDTH_MASK);
-    if ((val2 == 2) &&
-        ((vhtcap & IEEE80211_VHTCAP_SUPP_CHAN_WIDTH_160_80P80MHZ) == 0))
-        val2 = 1;
-    if ((val2 == 1) &&
-        ((vhtcap & IEEE80211_VHTCAP_SUPP_CHAN_WIDTH_160MHZ) == 0))
-        val2 = 0;
-    val = MIN(val1, val2);
-    new_vhtcap |= SM(val, IEEE80211_VHTCAP_SUPP_CHAN_WIDTH_MASK);
-    
-    /* RX LDPC */
-    val1 = MS(vhtcap, IEEE80211_VHTCAP_RXLDPC);
-    val2 = MS(ni->ni_vhtcaps, IEEE80211_VHTCAP_RXLDPC);
-    val = MIN(val1, val2);
-    new_vhtcap |= SM(val, IEEE80211_VHTCAP_RXLDPC);
-    
-    /* Short-GI 80 */
-    val1 = MS(vhtcap, IEEE80211_VHTCAP_SHORT_GI_80);
-    val2 = MS(ni->ni_vhtcaps, IEEE80211_VHTCAP_SHORT_GI_80);
-    val = MIN(val1, val2);
-    new_vhtcap |= SM(val, IEEE80211_VHTCAP_SHORT_GI_80);
-    
-    /* Short-GI 160 */
-    val2 = val1 = MS(vhtcap, IEEE80211_VHTCAP_SHORT_GI_160);
-    val2 = MS(ni->ni_vhtcaps, IEEE80211_VHTCAP_SHORT_GI_160);
-    val = MIN(val1, val2);
-    new_vhtcap |= SM(val, IEEE80211_VHTCAP_SHORT_GI_160);
-    
-    /*
-     * STBC is slightly more complicated.
-     *
-     * In non-STA mode, we just announce our capabilities and that
-     * is that.
-     *
-     * In STA mode, we should calculate our capabilities based on
-     * local capabilities /and/ what the remote says. So:
-     *
-     * + Only TX STBC if we support it and the remote supports RX STBC;
-     * + Only announce RX STBC if we support it and the remote supports
-     *   TX STBC;
-     * + RX STBC should be the minimum of local and remote RX STBC;
-     */
-    
-    /* TX STBC */
-    val1 = MS(vhtcap, IEEE80211_VHTCAP_TXSTBC);
-    /* STA mode - enable it only if node RXSTBC is non-zero */
-    val2 = !! MS(ni->ni_vhtcaps, IEEE80211_VHTCAP_RXSTBC_MASK);
-    val = MIN(val1, val2);
-    /* XXX For now, use the 11n config flag */
-    if ((ic->ic_htcaps & IEEE80211_HTCAP_TXSTBC) == 0)
-        val = 0;
-    new_vhtcap |= SM(val, IEEE80211_VHTCAP_TXSTBC);
-    
-    /* RX STBC1..4 */
-    val1 = MS(vhtcap, IEEE80211_VHTCAP_RXSTBC_MASK);
-    /* STA mode - enable it only if node TXSTBC is non-zero */
-    val2 = MS(ni->ni_vhtcaps, IEEE80211_VHTCAP_TXSTBC);
-    val = MIN(val1, val2);
-    /* XXX For now, use the 11n config flag */
-    if ((ic->ic_htcaps & IEEE80211_HTCAP_RXSTBC_MASK) == 0)
-        val = 0;
-    new_vhtcap |= SM(val, IEEE80211_VHTCAP_RXSTBC_MASK);
-    
-    /*
-     * Finally - if RXSTBC is 0, then don't enable TXSTBC.
-     * Strictly speaking a device can TXSTBC and not RXSTBC, but
-     * it would be silly.
-     */
-    if (val == 0)
-        new_vhtcap &= ~IEEE80211_VHTCAP_TXSTBC;
-    
-    /*
-     * Some of these fields require other fields to exist.
-     * So before using it, the parent field needs to be checked
-     * otherwise the overridden value may be wrong.
-     *
-     * For example, if SU beamformee is set to 0, then BF STS
-     * needs to be 0.
-     */
-    
-    /* SU Beamformer capable */
-    val1 = MS(vhtcap,
-              IEEE80211_VHTCAP_SU_BEAMFORMER_CAPABLE);
-    val2 = MS(ni->ni_vhtcaps,
-              IEEE80211_VHTCAP_SU_BEAMFORMER_CAPABLE);
-    val = MIN(val1, val2);
-    new_vhtcap |= SM(val, IEEE80211_VHTCAP_SU_BEAMFORMER_CAPABLE);
-    
-    /* SU Beamformee capable */
-    val1 = MS(vhtcap,
-              IEEE80211_VHTCAP_SU_BEAMFORMEE_CAPABLE);
-    val2 = MS(ni->ni_vhtcaps,
-              IEEE80211_VHTCAP_SU_BEAMFORMEE_CAPABLE);
-    val = MIN(val1, val2);
-    new_vhtcap |= SM(val, IEEE80211_VHTCAP_SU_BEAMFORMEE_CAPABLE);
-    
-    /* Beamformee STS capability - only if SU beamformee capable */
-    val1 = MS(vhtcap, IEEE80211_VHTCAP_BEAMFORMEE_STS_MASK);
-    val2 = MS(ni->ni_vhtcaps, IEEE80211_VHTCAP_BEAMFORMEE_STS_MASK);
-    val = MIN(val1, val2);
-    if ((new_vhtcap & IEEE80211_VHTCAP_SU_BEAMFORMEE_CAPABLE) == 0)
-        val = 0;
-    new_vhtcap |= SM(val, IEEE80211_VHTCAP_BEAMFORMEE_STS_MASK);
-    
-    /* Sounding dimensions - only if SU beamformer capable */
-    val1 = MS(vhtcap,
-              IEEE80211_VHTCAP_SOUNDING_DIMENSIONS_MASK);
-    val2 = MS(ni->ni_vhtcaps,
-              IEEE80211_VHTCAP_SOUNDING_DIMENSIONS_MASK);
-    val = MIN(val1, val2);
-    if ((new_vhtcap & IEEE80211_VHTCAP_SU_BEAMFORMER_CAPABLE) == 0)
-        val = 0;
-    new_vhtcap |= SM(val, IEEE80211_VHTCAP_SOUNDING_DIMENSIONS_MASK);
-    
-    /*
-     * MU Beamformer capable - only if SU BFF capable, MU BFF capable
-     * and STA (not AP)
-     */
-    val1 = MS(vhtcap,
-              IEEE80211_VHTCAP_MU_BEAMFORMER_CAPABLE);
-    val2 = MS(ni->ni_vhtcaps,
-              IEEE80211_VHTCAP_MU_BEAMFORMER_CAPABLE);
-    val = MIN(val1, val2);
-    if ((new_vhtcap & IEEE80211_VHTCAP_SU_BEAMFORMER_CAPABLE) == 0)
-        val = 0;
-    /* Only enable for STA mode */
-    new_vhtcap |= SM(val, IEEE80211_VHTCAP_SU_BEAMFORMER_CAPABLE);
-    
-    /*
-     * MU Beamformee capable - only if SU BFE capable, MU BFE capable
-     * and AP (not STA)
-     */
-    /* Only enable for AP mode */
-    val = 0;
-    new_vhtcap |= SM(val, IEEE80211_VHTCAP_SU_BEAMFORMEE_CAPABLE);
-    
-    /* VHT TXOP PS */
-    val1 = MS(vhtcap, IEEE80211_VHTCAP_VHT_TXOP_PS);
-    val2 = MS(ni->ni_vhtcaps, IEEE80211_VHTCAP_VHT_TXOP_PS);
-    val = MIN(val1, val2);
-    new_vhtcap |= SM(val, IEEE80211_VHTCAP_VHT_TXOP_PS);
-    
-    /* HTC_VHT */
-    val1 = MS(vhtcap, IEEE80211_VHTCAP_HTC_VHT);
-    val2 = MS(ni->ni_vhtcaps, IEEE80211_VHTCAP_HTC_VHT);
-    val = MIN(val1, val2);
-    new_vhtcap |= SM(val, IEEE80211_VHTCAP_HTC_VHT);
-    
-    /* A-MPDU length max */
-    val1 = MS(vhtcap,
-              IEEE80211_VHTCAP_MAX_A_MPDU_LENGTH_EXPONENT_MASK);
-    val2 = MS(ni->ni_vhtcaps,
-              IEEE80211_VHTCAP_MAX_A_MPDU_LENGTH_EXPONENT_MASK);
-    val = MIN(val1, val2);
-    new_vhtcap |= SM(val, IEEE80211_VHTCAP_MAX_A_MPDU_LENGTH_EXPONENT_MASK);
-    
-    /*
-     * Link adaptation is only valid if HTC-VHT capable is 1.
-     * Otherwise, always set it to 0.
-     */
-    val1 = MS(vhtcap,
-              IEEE80211_VHTCAP_VHT_LINK_ADAPTATION_VHT_MASK);
-    val2 = MS(ni->ni_vhtcaps,
-              IEEE80211_VHTCAP_VHT_LINK_ADAPTATION_VHT_MASK);
-    val = MIN(val1, val2);
-    if ((new_vhtcap & IEEE80211_VHTCAP_HTC_VHT) == 0)
-        val = 0;
-    new_vhtcap |= SM(val, IEEE80211_VHTCAP_VHT_LINK_ADAPTATION_VHT_MASK);
-    
-    /*
-     * The following two options are 0 if the pattern may change, 1 if it
-     * does not change.  So, downgrade to the higher value.
-     */
-    
-    /* RX antenna pattern */
-    val1 = MS(vhtcap, IEEE80211_VHTCAP_RX_ANTENNA_PATTERN);
-    val2 = MS(ni->ni_vhtcaps, IEEE80211_VHTCAP_RX_ANTENNA_PATTERN);
-    val = MAX(val1, val2);
-    new_vhtcap |= SM(val, IEEE80211_VHTCAP_RX_ANTENNA_PATTERN);
-    
-    /* TX antenna pattern */
-    val1 = MS(vhtcap, IEEE80211_VHTCAP_TX_ANTENNA_PATTERN);
-    val2 = MS(ni->ni_vhtcaps, IEEE80211_VHTCAP_TX_ANTENNA_PATTERN);
-    val = MAX(val1, val2);
-    new_vhtcap |= SM(val, IEEE80211_VHTCAP_TX_ANTENNA_PATTERN);
-#undef SM
-#undef MS
-    return new_vhtcap;
-}
-
-void
-ieee80211_bssmcs2stamcs(struct ieee80211com *ic, struct ieee80211_node *ni, struct ieee80211_vht_mcs_info *bss_mcs)
-{
-    uint16_t rx_mcs_map = ic->ic_vht_rx_mcs_map;
-    uint16_t rx_highest = ic->ic_vht_rx_highest;
-    uint16_t tx_mcs_map = ic->ic_vht_tx_mcs_map;
-    uint16_t tx_highest = ic->ic_vht_tx_highest;
-    uint32_t val, val1, val2;
-    int i;
-    
-    /*
-     * MCS set - again, we announce what we want to use
-     * based on configuration, device capabilities and
-     * already-learnt vhtcap/vhtinfo IE information.
-     */
-
-    /* MCS set - start with whatever the device supports */
-    for (i = 0; i < 8; i++) {
-        val1 = (tx_mcs_map >> (i*2)) & 0x3;
-        val2 = (ni->ni_vht_mcsinfo.tx_mcs_map >> (i*2)) & 0x3;
-        val = MIN(val1, val2);
-        if (val1 == 3 || val2 == 3)
-            val = 3;
-        tx_mcs_map &= ~(0x3 << (i*2));
-        tx_mcs_map |= (val << (i*2));
-        
-        val1 = (rx_mcs_map >> (i*2)) & 0x3;
-        val2 = (ni->ni_vht_mcsinfo.rx_mcs_map >> (i*2)) & 0x3;
-        val = MIN(val1, val2);
-        if (val1 == 3 || val2 == 3)
-            val = 3;
-        rx_mcs_map &= ~(0x3 << (i*2));
-        rx_mcs_map |= (val << (i*2));
-    }
-    bss_mcs->rx_mcs_map = rx_mcs_map;
-    bss_mcs->rx_highest = rx_highest;
-    bss_mcs->tx_mcs_map = tx_mcs_map;
-    bss_mcs->tx_highest = tx_highest;
-}
-
 void
 ieee80211_vht_negotiate(struct ieee80211com *ic, struct ieee80211_node *ni)
 {
@@ -908,7 +660,7 @@ ieee80211_vht_negotiate(struct ieee80211com *ic, struct ieee80211_node *ni)
     int ccf0, ccf1;
     bool support_80_80 = false;
     bool support_160 = false;
-    uint32_t vhtcap;
+    uint32_t vhtcap = ni->ni_vhtcaps;
     
     ni->ni_flags &= ~(IEEE80211_NODE_VHT | IEEE80211_NODE_VHT_SGI80 |
                       IEEE80211_NODE_VHT_SGI160);
@@ -939,10 +691,6 @@ ieee80211_vht_negotiate(struct ieee80211com *ic, struct ieee80211_node *ni)
         ic->ic_stats.is_vht_nego_bad_crypto++;
         return;
     }
-    
-    vhtcap = ieee80211_bsscap2stacap(ic, ni);
-    
-    ieee80211_bssmcs2stamcs(ic, ni, &ni->ni_vht_mcsinfo);
     
     support_160 = (vhtcap & (IEEE80211_VHTCAP_SUPP_CHAN_WIDTH_MASK |
                   IEEE80211_VHTCAP_EXT_NSS_BW_MASK));
@@ -1033,7 +781,6 @@ ieee80211_vht_negotiate(struct ieee80211com *ic, struct ieee80211_node *ni)
                     ni->ni_chan->ic_center_freq2 = cf1;
                 }
             }
-            XYLog("%s ccf0=%d ccf1=%d\n", __FUNCTION__, ccf0, ccf1);
             break;
         case IEEE80211_VHT_CHANWIDTH_USE_HT:
         default:

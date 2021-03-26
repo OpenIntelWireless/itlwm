@@ -6546,7 +6546,7 @@ static
 int rs_fw_vht_highest_rx_mcs_index(struct iwx_softc *sc,
                    int nss)
 {
-    uint16_t rx_mcs = le16toh(sc->sc_ic.ic_vht_rx_mcs_map) &
+    uint16_t rx_mcs = le16toh(sc->sc_ic.ic_bss->ni_vht_mcsinfo.rx_mcs_map) &
         (0x3 << (2 * (nss - 1)));
     rx_mcs >>= (2 * (nss - 1));
 
