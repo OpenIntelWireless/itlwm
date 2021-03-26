@@ -664,7 +664,6 @@ getMCS_VHT(OSObject *object, struct apple80211_mcs_vht_data *data)
             data->bw = 20;
             break;
     }
-    data->bw = ic->ic_bss->ni_chw;
     return kIOReturnSuccess;
 }
 
