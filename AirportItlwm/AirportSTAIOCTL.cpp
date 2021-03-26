@@ -316,13 +316,18 @@ static int ieeeChanFlag2apple(int flags, int bw)
         }
     } else {
         switch (bw) {
-            case 80:
+            case IEEE80211_CHAN_WIDTH_80P80:
+            case IEEE80211_CHAN_WIDTH_160:
+                /* Airport didn't support 160mhz */
                 ret |= APPLE80211_C_FLAG_80MHZ;
                 break;
-            case 40:
+            case IEEE80211_CHAN_WIDTH_80:
+                ret |= APPLE80211_C_FLAG_80MHZ;
+                break;
+            case IEEE80211_CHAN_WIDTH_40:
                 ret |= APPLE80211_C_FLAG_40MHZ;
                 break;
-            case 20:
+            case IEEE80211_CHAN_WIDTH_20:
                 ret |= APPLE80211_C_FLAG_20MHZ;
                 break;
             default:
@@ -444,25 +449,26 @@ getRATE(OSObject *object, struct apple80211_rate_data *rd)
         memset(rd, 0, sizeof(*rd));
         rd->version = APPLE80211_VERSION;
         rd->num_radios = 1;
-        if (ic->ic_curmode >= IEEE80211_MODE_11AC) {
+        if (ic->ic_curmode == IEEE80211_MODE_11AC) {
             sgi = (ieee80211_node_supports_vht_sgi80(ic->ic_bss) || ieee80211_node_supports_vht_sgi160(ic->ic_bss));
             if (sgi) {
                 index += 1;
             }
             nss = fHalService->getDriverInfo()->getTxNSS();
             switch (ic->ic_bss->ni_chw) {
-                case 40:
+                case IEEE80211_CHAN_WIDTH_40:
                     index += 4;
                     break;
-                case 80:
+                case IEEE80211_CHAN_WIDTH_80:
                     index += 8;
                     break;
-                case 160:
+                case IEEE80211_CHAN_WIDTH_80P80:
+                case IEEE80211_CHAN_WIDTH_160:
                     index += 12;
                     break;
 
-                case 0:
-                case 20:    
+                case IEEE80211_CHAN_WIDTH_20_NOHT:
+                case IEEE80211_CHAN_WIDTH_20:    
                 default:
                     break;
             }
@@ -470,7 +476,7 @@ getRATE(OSObject *object, struct apple80211_rate_data *rd)
             const struct ieee80211_vht_rateset *rs = &ieee80211_std_ratesets_11ac[index];
             rd->rate[0] = rs->rates[ic->ic_bss->ni_txmcs % rs->nrates] / 2;
         } else if (ic->ic_curmode == IEEE80211_MODE_11N) {
-            int is_40mhz = ic->ic_bss->ni_chw == 40;
+            int is_40mhz = ic->ic_bss->ni_chw == IEEE80211_CHAN_WIDTH_40;
             sgi = ((!is_40mhz && ieee80211_node_supports_ht_sgi20(ic->ic_bss)) || (is_40mhz && ieee80211_node_supports_ht_sgi40(ic->ic_bss)));
             if (sgi) {
                 index += 1;
@@ -642,6 +648,22 @@ getMCS_VHT(OSObject *object, struct apple80211_mcs_vht_data *data)
     data->guard_interval = (ieee80211_node_supports_vht_sgi80(ic->ic_bss) || ieee80211_node_supports_vht_sgi160(ic->ic_bss)) ? 400 : 800;
     data->index = ic->ic_bss->ni_txmcs;
     data->nss = fHalService->getDriverInfo()->getTxNSS();
+    switch (ic->ic_bss->ni_chw) {
+        case IEEE80211_CHAN_WIDTH_40:
+            data->bw = 40;
+            break;
+        case IEEE80211_CHAN_WIDTH_80:
+            data->bw = 80;
+            break;
+        case IEEE80211_CHAN_WIDTH_80P80:
+        case IEEE80211_CHAN_WIDTH_160:
+            data->bw = 160;
+            break;
+            
+        default:
+            data->bw = 20;
+            break;
+    }
     data->bw = ic->ic_bss->ni_chw;
     return kIOReturnSuccess;
 }
@@ -683,7 +705,7 @@ getPHY_MODE(OSObject *object,
     | APPLE80211_MODE_11G
     | APPLE80211_MODE_11N;
     if (fHalService->getDriverInfo()->is5GBandSupport()) {
-        pd->phy_mode |= APPLE80211_MODE_11AC;
+        pd->phy_mode |= (APPLE80211_MODE_11AC | APPLE80211_MODE_11AX);
     }
     
     switch (fHalService->get80211Controller()->ic_curmode) {
@@ -704,6 +726,9 @@ getPHY_MODE(OSObject *object,
             break;
         case IEEE80211_MODE_11AC:
             pd->active_phy_mode = APPLE80211_MODE_11AC;
+            break;
+        case IEEE80211_MODE_11AX:
+            pd->active_phy_mode = APPLE80211_MODE_11AX;
             break;
             
         default:

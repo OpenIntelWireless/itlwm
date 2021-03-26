@@ -327,7 +327,7 @@ iwm_setup_vht_rates(struct iwm_softc *sc)
     ic->ic_vhtcaps |= IEEE80211_VHTCAP_SUPP_CHAN_WIDTH_160MHZ |
             IEEE80211_VHTCAP_SHORT_GI_160;
     
-    //    ic->ic_vhtcaps |= IEEE80211_VHTCAP_RXLDPC;
+    ic->ic_vhtcaps |= IEEE80211_VHTCAP_RXLDPC;
     if (!iwm_mimo_enabled(sc)) {
         rx_ant = 1;
         tx_ant = 1;
@@ -2534,21 +2534,21 @@ iwm_setrates(struct iwm_node *in, int async)
         sgi_ok = 1;
     }
     
-    if (ni->ni_chw == 160) {
+    if (ni->ni_chw == IEEE80211_CHAN_WIDTH_80P80 || ni->ni_chw == IEEE80211_CHAN_WIDTH_160) {
         is_160mhz = 1;
         if (ieee80211_node_supports_vht_sgi160(ni)) {
             sgi_ok = 1;
         } else {
             sgi_ok = 0;
         }
-    } else if (ni->ni_chw == 80) {
+    } else if (ni->ni_chw == IEEE80211_CHAN_WIDTH_80) {
         is_80mhz = 1;
         if (ieee80211_node_supports_vht_sgi80(ni)) {
             sgi_ok = 1;
         } else {
             sgi_ok = 0;
         }
-    } else if (ni->ni_chw == 40) {
+    } else if (ni->ni_chw == IEEE80211_CHAN_WIDTH_40) {
         is_40mhz = 1;
         if (ieee80211_node_supports_ht_sgi40(ni)) {
             sgi_ok = 1;

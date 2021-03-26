@@ -268,6 +268,7 @@ public:
     void    iwx_init_channel_map(struct iwx_softc *, uint16_t *, uint32_t *, int);
     void    iwx_setup_ht_rates(struct iwx_softc *);
     void    iwx_setup_vht_rates(struct iwx_softc *);
+    void    iwx_setup_he_rates(struct iwx_softc *);
     int    iwx_mimo_enabled(struct iwx_softc *);
     static void    iwx_htprot_task(void *);
     static void    iwx_update_htprot(struct ieee80211com *, struct ieee80211_node *);

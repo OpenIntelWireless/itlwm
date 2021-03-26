@@ -208,7 +208,7 @@ ieee80211_channel_init(struct _ifnet *ifp)
             if (IEEE80211_IS_CHAN_N(c))
                 ic->ic_modecaps |= 1<<IEEE80211_MODE_11N;
             if (IEEE80211_IS_CHAN_AC(c))
-                ic->ic_modecaps |= 1<<IEEE80211_MODE_11AC;
+                ic->ic_modecaps |= 1<<IEEE80211_MODE_11AC | 1<<IEEE80211_MODE_11AX;
         }
     }
     /* validate ic->ic_curmode */
@@ -572,7 +572,7 @@ IFM_MAKEWORD(IFM_IEEE80211, (_s), (_o), 0), 0, NULL)
                 ADD(ic, IFM_IEEE80211_VHT_MCS0 + i,
                     mopt | IFM_IEEE80211_MONITOR);
         }
-        ic->ic_flags |= IEEE80211_F_HEON; /* enable 11ac by default */
+//        ic->ic_flags |= IEEE80211_F_HEON; /* enable 11ax by default */
         ieee80211_configure_ampdu_tx(ic, 1);
     }
     

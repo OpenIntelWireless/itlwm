@@ -290,6 +290,8 @@ enum ieee80211_protmode {
 struct ieee80211_channel {
 	u_int16_t	ic_freq;	/* setting in MHz */
 	u_int32_t	ic_flags;	/* see below */
+    u_int16_t   ic_center_freq1;
+    u_int16_t   ic_center_freq2;
 };
 
 /*
@@ -550,6 +552,7 @@ struct ieee80211com {
 	u_int32_t		ic_txbfcaps;
 	u_int16_t		ic_htcaps;
     uint32_t        ic_vhtcaps;
+    uint32_t        ic_hecaps;
 	u_int8_t		ic_ampdu_params;
 	u_int8_t		ic_sup_mcs[howmany(80, NBBY)];
 	u_int16_t		ic_max_rxrate;	/* in Mb/s, 0 <= rate <= 1023 */
@@ -563,6 +566,11 @@ struct ieee80211com {
     uint16_t        ic_vht_rx_mcs_map;
     uint16_t        ic_vht_tx_highest;
     uint16_t        ic_vht_rx_highest;
+    
+    /* HE state */
+    struct ieee80211_he_cap_elem ic_he_cap_elem;   /* Fixed portion of the HE capabilities element. */
+    struct ieee80211_he_mcs_nss_supp ic_he_mcs_nss_supp;   /* The supported NSS/MCS combinations. */
+    uint8_t ic_ppe_thres[IEEE80211_HE_PPE_THRES_MAX_LEN]; /* Holds the PPE Thresholds data. */
     
 	TAILQ_HEAD(, ieee80211_ess)	 ic_ess;
 };

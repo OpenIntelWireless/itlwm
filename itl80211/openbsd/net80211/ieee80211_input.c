@@ -1587,13 +1587,13 @@ ieee80211_ht_updateparams_final(struct ieee80211com *ic, struct ieee80211_node *
 
         if ((ht_param == IEEE80211_HTOP0_SCO_SCA && IEEE80211_IS_CHAN_HT40U(ni->ni_chan)) ||
             (ht_param == IEEE80211_HTOP0_SCO_SCB && IEEE80211_IS_CHAN_HT40D(ni->ni_chan)))  {
-            if (ni->ni_chw != 40) {
-                ni->ni_chw = 40;
+            if (ni->ni_chw != IEEE80211_CHAN_WIDTH_40) {
+                ni->ni_chw = IEEE80211_CHAN_WIDTH_40;
                 ret = 1;
             }
         } else {
-            if (ni->ni_chw == 40) {
-                ni->ni_chw = 20;
+            if (ni->ni_chw == IEEE80211_CHAN_WIDTH_40) {
+                ni->ni_chw = IEEE80211_CHAN_WIDTH_20;
                 ret = 1;
             }
         }
@@ -2584,6 +2584,8 @@ ieee80211_recv_assoc_resp(struct ieee80211com *ic, mbuf_t m,
     const u_int8_t *rates, *xrates, *edcaie, *wmmie, *htcaps, *htop;
     const uint8_t *vhtcap;
     const uint8_t *vhtopmode;
+    const uint8_t *hecap;
+    const uint8_t *heopmode;
     u_int16_t capinfo, status, associd;
     u_int8_t rate;
     
@@ -2625,7 +2627,7 @@ ieee80211_recv_assoc_resp(struct ieee80211com *ic, mbuf_t m,
     }
     associd = LE_READ_2(frm); frm += 2;
     
-    rates = xrates = edcaie = wmmie = htcaps = htop = vhtcap = vhtopmode = NULL;
+    rates = xrates = edcaie = wmmie = htcaps = htop = vhtcap = vhtopmode = hecap = heopmode = NULL;
     while (frm + 2 <= efrm) {
         if (frm + 2 + frm[1] > efrm) {
             ic->ic_stats.is_rx_elem_toosmall++;
@@ -2661,6 +2663,28 @@ ieee80211_recv_assoc_resp(struct ieee80211com *ic, mbuf_t m,
                 if (memcmp(frm + 2, MICROSOFT_OUI, 3) == 0) {
                     if (frm[1] >= 5 && frm[5] == 2 && frm[6] == 1)
                         wmmie = frm;
+                }
+                break;
+            case IEEE80211_ELEMID_EXTENSION:
+                switch (frm[0]) {
+                    case IEEE80211_ELEMID_EXT_HE_MU_EDCA:
+                        break;
+                    case IEEE80211_ELEMID_EXT_HE_CAPABILITY:
+                        hecap = frm;
+                        break;
+                    case IEEE80211_ELEMID_EXT_HE_OPERATION:
+                        heopmode = frm;
+                        break;
+                    case IEEE80211_ELEMID_EXT_UORA:
+                        break;
+                    case IEEE80211_ELEMID_EXT_MAX_CHANNEL_SWITCH_TIME:
+                        break;
+                    case IEEE80211_ELEMID_EXT_MULTIPLE_BSSID_CONFIGURATION:
+                        break;
+                    case IEEE80211_ELEMID_EXT_HE_SPR:
+                        break;
+                    case IEEE80211_ELEMID_EXT_HE_6GHZ_CAPA:
+                        break;
                 }
                 break;
         }
@@ -2700,9 +2724,14 @@ ieee80211_recv_assoc_resp(struct ieee80211com *ic, mbuf_t m,
         ieee80211_setup_htop(ni, htop + 2, htop[1], 0);
     if (vhtcap != NULL && vhtopmode != NULL)
         ieee80211_vht_updateparams(ic, ni, vhtcap, vhtopmode);
+    if (hecap != NULL && heopmode != NULL) {
+        ieee80211_setup_hecaps(ni, hecap + 2, hecap[1] - 1);
+        ieee80211_setup_heop(ni, heopmode + 2, heopmode[1] - 1);
+    }
 
     ieee80211_ht_negotiate(ic, ni);
     ieee80211_vht_negotiate(ic, ni);
+    ieee80211_he_negotiate(ic, ni);
     
     /* Hop into 11n/11ac/11ax mode after associating to an HT AP in a legacy mode. */
     if (ni->ni_flags & IEEE80211_NODE_HE)

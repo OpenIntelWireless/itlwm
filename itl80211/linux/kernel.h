@@ -266,4 +266,6 @@ static inline int atomic_inc_and_test(volatile SInt32 * addr)
 #define atomic_inc(v) OSIncrementAtomic(v)
 #define atomic_dec(v) OSDecrementAtomic(v)
 
+#define abs(N) ((N<0)?(-N):(N))
+
 #endif /* kernel_h */

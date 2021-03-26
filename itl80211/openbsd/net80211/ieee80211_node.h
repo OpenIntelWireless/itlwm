@@ -385,7 +385,12 @@ struct ieee80211_node {
     uint8_t            ni_vht_chanwidth;    /* IEEE80211_VHT_CHANWIDTH_ */
     uint8_t            ni_vht_pad1;
     uint32_t        ni_vht_spare[8];
-
+    
+    /* HE state */
+    struct ieee80211_he_cap_elem ni_he_cap_elem;   /* Fixed portion of the HE capabilities element. */
+    struct ieee80211_he_mcs_nss_supp ni_he_mcs_nss_supp;   /* The supported NSS/MCS combinations. */
+    uint8_t ni_ppe_thres[IEEE80211_HE_PPE_THRES_MAX_LEN]; /* Holds the PPE Thresholds data. */
+    
 	/* Timeout handlers which trigger Tx Block Ack negotiation. */
 	CTimeout*		ni_addba_req_to[IEEE80211_NUM_TID];
 	int			ni_addba_req_intval[IEEE80211_NUM_TID];
@@ -584,6 +589,10 @@ void ieee80211_setup_htcaps(struct ieee80211_node *, const uint8_t *,
 void ieee80211_clear_htcaps(struct ieee80211_node *);
 int ieee80211_setup_htop(struct ieee80211_node *, const uint8_t *,
     uint8_t, int);
+void ieee80211_setup_hecaps(struct ieee80211_node *, const uint8_t *,
+                           uint8_t);
+int ieee80211_setup_heop(struct ieee80211_node *, const uint8_t *,
+    uint8_t);
 int ieee80211_setup_rates(struct ieee80211com *,
 	    struct ieee80211_node *, const u_int8_t *, const u_int8_t *, int);
 void ieee80211_node_trigger_addba_req(struct ieee80211_node *, int);

@@ -3602,7 +3602,7 @@ iwn_tx(struct iwn_softc *sc, mbuf_t m, struct ieee80211_node *ni)
         tx->rflags = IWN_RFLAG_MCS;
         if (ieee80211_node_supports_ht_sgi20(ni))
             tx->rflags |= IWN_RFLAG_SGI;
-        if (ni->ni_chw == 40) {
+        if (ni->ni_chw == IEEE80211_CHAN_WIDTH_40) {
             tx->rflags |= IWN_RFLAG_HT40;
             if (ieee80211_node_supports_ht_sgi40(ni)) {
                 tx->rflags |= IWN_RFLAG_SGI;
@@ -4035,7 +4035,7 @@ iwn_set_link_quality(struct iwn_softc *sc, struct ieee80211_node *ni)
         sgi_ok = 1;
     }
     
-    if (ni->ni_chw == 40) {
+    if (ni->ni_chw == IEEE80211_CHAN_WIDTH_40) {
         is_40mhz = 1;
         if (ieee80211_node_supports_ht_sgi40(ni)) {
             sgi_ok = 1;
@@ -5118,7 +5118,7 @@ iwn_get_rxon_ht_flags(struct ieee80211com *ic, struct ieee80211_node *ni)
     enum ieee80211_htprot htprot =
         (enum ieee80211_htprot)(ni->ni_htop1 & IEEE80211_HTOP1_PROT_MASK);
 
-    if (ni->ni_chw == 40) {
+    if (ni->ni_chw == IEEE80211_CHAN_WIDTH_40) {
         switch (htprot) {
         case IEEE80211_HTPROT_20MHZ:
             htflags |= IWN_RXON_HT_CHANMODE_PURE40;
@@ -5129,7 +5129,7 @@ iwn_get_rxon_ht_flags(struct ieee80211com *ic, struct ieee80211_node *ni)
         }
     }
     
-    if (ni->ni_chw == 40) {
+    if (ni->ni_chw == IEEE80211_CHAN_WIDTH_40) {
         if ((ni->ni_htop0 & IEEE80211_HTOP0_SCO_MASK) == IEEE80211_HTOP0_SCO_SCB) {
             htflags |= IWN_RXON_HT_HT40MINUS;
         }

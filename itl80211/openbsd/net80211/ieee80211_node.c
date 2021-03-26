@@ -2438,6 +2438,46 @@ ieee80211_setup_htop(struct ieee80211_node *ni, const uint8_t *data,
     return 1;
 }
 
+void
+ieee80211_setup_hecaps(struct ieee80211_node *ni, const uint8_t *data,
+                       uint8_t len)
+{
+    struct ieee80211_he_cap_elem *he_cap_ie_elem = (struct ieee80211_he_cap_elem *)data;
+    uint8_t mcs_nss_size, he_ppe_size, he_total_size;
+    
+    mcs_nss_size = ieee80211_he_mcs_nss_size(he_cap_ie_elem);
+    he_ppe_size =
+        ieee80211_he_ppe_size(data[sizeof(ni->ni_he_cap_elem) +
+                        mcs_nss_size],
+                      he_cap_ie_elem->phy_cap_info);
+    he_total_size = sizeof(ni->ni_he_cap_elem) + mcs_nss_size +
+            he_ppe_size;
+    
+    if (len < he_total_size)
+        return;
+    
+    memcpy(&ni->ni_he_cap_elem, data, sizeof(ni->ni_he_cap_elem));
+    
+    /* HE Tx/Rx HE MCS NSS Support Field */
+    memcpy(&ni->ni_he_mcs_nss_supp,
+           &data[sizeof(ni->ni_he_cap_elem)], mcs_nss_size);
+    
+    /* Check if there are (optional) PPE Thresholds */
+    if (ni->ni_he_cap_elem.phy_cap_info[6] &
+        IEEE80211_HE_PHY_CAP6_PPE_THRESHOLD_PRESENT)
+        memcpy(ni->ni_ppe_thres,
+               &data[sizeof(ni->ni_he_cap_elem) + mcs_nss_size],
+               he_ppe_size);
+}
+
+int
+ieee80211_setup_heop(struct ieee80211_node *ni, const uint8_t *data,
+                     uint8_t len)
+{
+    
+    return 1;
+}
+
 /*
  * Install received rate set information in the node's state block.
  */

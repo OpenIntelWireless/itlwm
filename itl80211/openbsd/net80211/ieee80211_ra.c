@@ -132,8 +132,8 @@ ieee80211_ra_get_ht_rateset(int mcs, int chw, int sgi)
 {
     const struct ieee80211_ht_rateset *rs;
     int i;
-    int start = (chw == 40 ? IEEE80211_HT_RATESET_CBW40_SISO : IEEE80211_HT_RATESET_SISO);
-    int end = (chw == 40 ? IEEE80211_HT_NUM_RATESETS : IEEE80211_HT_RATESET_CBW40_SISO);
+    int start = (chw == IEEE80211_CHAN_WIDTH_40 ? IEEE80211_HT_RATESET_CBW40_SISO : IEEE80211_HT_RATESET_SISO);
+    int end = (chw == IEEE80211_CHAN_WIDTH_40 ? IEEE80211_HT_NUM_RATESETS : IEEE80211_HT_RATESET_CBW40_SISO);
 
     for (i = start; i < end; i++) {
         rs = &ieee80211_std_ratesets_11n[i];
@@ -246,7 +246,7 @@ ieee80211_ra_next_rateset(struct ieee80211_ra_node *rn,
         if (sgi) {
             next += 1;
         }
-        if (chw == 40) {
+        if (chw == IEEE80211_CHAN_WIDTH_40) {
             next += IEEE80211_HT_RATESET_MIMO4_SGI + 1;
         }
     } else if (rn->probing & IEEE80211_RA_PROBING_DOWN) {
@@ -256,7 +256,7 @@ ieee80211_ra_next_rateset(struct ieee80211_ra_node *rn,
         if (sgi) {
             next += 1;
         }
-        if (chw == 40) {
+        if (chw == IEEE80211_CHAN_WIDTH_40) {
             next += IEEE80211_HT_RATESET_MIMO4_SGI + 1;
         }
     } else

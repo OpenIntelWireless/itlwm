@@ -118,6 +118,59 @@ struct ieee80211_htframe_addr4 {	/* 11n */
 	u_int8_t	i_ht[4];
 } __packed;
 
+/**
+ * enum ieee80211_chan_width - channel width definitions
+ *
+ * @IEEE80211_CHAN_WIDTH_20_NOHT: 20 MHz, non-HT channel
+ * @IEEE80211_CHAN_WIDTH_20: 20 MHz HT channel
+ * @IEEE80211_CHAN_WIDTH_40: 40 MHz channel, the %NL80211_ATTR_CENTER_FREQ1
+ *    attribute must be provided as well
+ * @IEEE80211_CHAN_WIDTH_80: 80 MHz channel, the %NL80211_ATTR_CENTER_FREQ1
+ *    attribute must be provided as well
+ * @IEEE80211_CHAN_WIDTH_80P80: 80+80 MHz channel, the %NL80211_ATTR_CENTER_FREQ1
+ *    and %NL80211_ATTR_CENTER_FREQ2 attributes must be provided as well
+ * @IEEE80211_CHAN_WIDTH_160: 160 MHz channel, the %NL80211_ATTR_CENTER_FREQ1
+ *    attribute must be provided as well
+ * @IEEE80211_CHAN_WIDTH_5: 5 MHz OFDM channel
+ * @IEEE80211_CHAN_WIDTH_10: 10 MHz OFDM channel
+ * @IEEE80211_CHAN_WIDTH_1: 1 MHz OFDM channel
+ * @IEEE80211_CHAN_WIDTH_2: 2 MHz OFDM channel
+ * @IEEE80211_CHAN_WIDTH_4: 4 MHz OFDM channel
+ * @IEEE80211_CHAN_WIDTH_8: 8 MHz OFDM channel
+ * @IEEE80211_CHAN_WIDTH_16: 16 MHz OFDM channel
+ */
+enum ieee80211_chan_width {
+    IEEE80211_CHAN_WIDTH_20_NOHT,
+    IEEE80211_CHAN_WIDTH_20,
+    IEEE80211_CHAN_WIDTH_40,
+    IEEE80211_CHAN_WIDTH_80,
+    IEEE80211_CHAN_WIDTH_80P80,
+    IEEE80211_CHAN_WIDTH_160,
+    IEEE80211_CHAN_WIDTH_5,
+    IEEE80211_CHAN_WIDTH_10,
+    IEEE80211_CHAN_WIDTH_1,
+    IEEE80211_CHAN_WIDTH_2,
+    IEEE80211_CHAN_WIDTH_4,
+    IEEE80211_CHAN_WIDTH_8,
+    IEEE80211_CHAN_WIDTH_16,
+};
+
+const char * const ieee80211_chan_width_name[] = {
+    "20",
+    "20",
+    "40",
+    "80",
+    "80P80",
+    "160",
+    "5",
+    "10",
+    "1",
+    "2",
+    "4",
+    "8",
+    "16",
+};
+
 #define	IEEE80211_FC0_VERSION_MASK		0x03
 #define	IEEE80211_FC0_VERSION_SHIFT		0
 #define	IEEE80211_FC0_VERSION_0			0x00
@@ -556,6 +609,39 @@ enum {
     IEEE80211_ELEMID_EXTENSION      = 255,
 };
 
+/* Element ID Extensions for Element ID 255 */
+enum ieee80211_eid_ext {
+    IEEE80211_ELEMID_EXT_ASSOC_DELAY_INFO = 1,
+    IEEE80211_ELEMID_EXT_FILS_REQ_PARAMS = 2,
+    IEEE80211_ELEMID_EXT_FILS_KEY_CONFIRM = 3,
+    IEEE80211_ELEMID_EXT_FILS_SESSION = 4,
+    IEEE80211_ELEMID_EXT_FILS_HLP_CONTAINER = 5,
+    IEEE80211_ELEMID_EXT_FILS_IP_ADDR_ASSIGN = 6,
+    IEEE80211_ELEMID_EXT_KEY_DELIVERY = 7,
+    IEEE80211_ELEMID_EXT_FILS_WRAPPED_DATA = 8,
+    IEEE80211_ELEMID_EXT_FILS_PUBLIC_KEY = 12,
+    IEEE80211_ELEMID_EXT_FILS_NONCE = 13,
+    IEEE80211_ELEMID_EXT_FUTURE_CHAN_GUIDANCE = 14,
+    IEEE80211_ELEMID_EXT_HE_CAPABILITY = 35,
+    IEEE80211_ELEMID_EXT_HE_OPERATION = 36,
+    IEEE80211_ELEMID_EXT_UORA = 37,
+    IEEE80211_ELEMID_EXT_HE_MU_EDCA = 38,
+    IEEE80211_ELEMID_EXT_HE_SPR = 39,
+    IEEE80211_ELEMID_EXT_NDP_FEEDBACK_REPORT_PARAMSET = 41,
+    IEEE80211_ELEMID_EXT_BSS_COLOR_CHG_ANN = 42,
+    IEEE80211_ELEMID_EXT_QUIET_TIME_PERIOD_SETUP = 43,
+    IEEE80211_ELEMID_EXT_ESS_REPORT = 45,
+    IEEE80211_ELEMID_EXT_OPS = 46,
+    IEEE80211_ELEMID_EXT_HE_BSS_LOAD = 47,
+    IEEE80211_ELEMID_EXT_MAX_CHANNEL_SWITCH_TIME = 52,
+    IEEE80211_ELEMID_EXT_MULTIPLE_BSSID_CONFIGURATION = 55,
+    IEEE80211_ELEMID_EXT_NON_INHERITANCE = 56,
+    IEEE80211_ELEMID_EXT_KNOWN_BSSID = 57,
+    IEEE80211_ELEMID_EXT_SHORT_SSID_LIST = 58,
+    IEEE80211_ELEMID_EXT_HE_6GHZ_CAPA = 59,
+    IEEE80211_ELEMID_EXT_UL_MU_POWER_CAPA = 60,
+};
+
 /*
  * Action field category values (see 802.11-2012 8.4.1.11 Table 8-38).
  */
@@ -811,6 +897,8 @@ enum {
 /* Bit 3 is reserved. */
 #define IEEE80211_HTOP1_OBSS_NONHT_STA	0x0010
 /* Bits 5-15 are reserved. */
+#define IEEE80211_HT_OP_MODE_CCFS2_SHIFT        5
+#define IEEE80211_HT_OP_MODE_CCFS2_MASK            0x1fe0
 /* Bytes 4-5. */
 /* Bits 0-5 are reserved. */
 #define IEEE80211_HTOP2_DUALBEACON	0x0040
@@ -1237,9 +1325,8 @@ struct ieee80211_ie_vht_operation {
 #define    IEEE80211_VHTCAP_SUPP_CHAN_WIDTH_MASK    0x0000000C
 #define    IEEE80211_VHTCAP_SUPP_CHAN_WIDTH_MASK_S    2
 #define    IEEE80211_VHTCAP_SUPP_CHAN_WIDTH_NONE        0
-#define    IEEE80211_VHTCAP_SUPP_CHAN_WIDTH_160MHZ        1
-#define    IEEE80211_VHTCAP_SUPP_CHAN_WIDTH_160_80P80MHZ    2
-#define    IEEE80211_VHTCAP_SUPP_CHAN_WIDTH_RESERVED    3
+#define    IEEE80211_VHTCAP_SUPP_CHAN_WIDTH_160MHZ        4
+#define    IEEE80211_VHTCAP_SUPP_CHAN_WIDTH_160_80P80MHZ    8
 
 #define    IEEE80211_VHTCAP_RXLDPC        0x00000010
 #define    IEEE80211_VHTCAP_RXLDPC_S    4
@@ -1299,6 +1386,9 @@ struct ieee80211_ie_vht_operation {
 #define    IEEE80211_VHTCAP_RX_ANTENNA_PATTERN_S    28
 #define    IEEE80211_VHTCAP_TX_ANTENNA_PATTERN    0x20000000
 #define    IEEE80211_VHTCAP_TX_ANTENNA_PATTERN_S    29
+
+#define IEEE80211_VHTCAP_EXT_NSS_BW_SHIFT            30
+#define IEEE80211_VHTCAP_EXT_NSS_BW_MASK            0xc0000000
 
 /*
  * XXX TODO: add the rest of the bits
@@ -1424,6 +1514,8 @@ struct ieee80211_csa_ie {
     uint8_t        csa_newchan;        /* New Channel Number */
     uint8_t        csa_count;        /* Channel Switch Count */
 } __packed;
+
+#define IEEE80211_HE_PPE_THRES_MAX_LEN        25
 
 /**
  * struct ieee80211_he_cap_elem - HE capabilities element
@@ -1834,6 +1926,34 @@ ieee80211_he_mcs_nss_size(const struct ieee80211_he_cap_elem *he_cap)
 #define IEEE80211_HE_OPERATION_PARTIAL_BSS_COLOR        0x40000000
 #define IEEE80211_HE_OPERATION_BSS_COLOR_DISABLED        0x80000000
 
+/*
+ * Calculate 802.11ax HE capabilities IE PPE field size
+ * Input: Header byte of ppe_thres (first byte), and HE capa IE's PHY cap u8*
+ */
+static inline uint8_t
+ieee80211_he_ppe_size(uint8_t ppe_thres_hdr, const uint8_t *phy_cap_info)
+{
+    uint8_t n;
+
+    if ((phy_cap_info[6] &
+         IEEE80211_HE_PHY_CAP6_PPE_THRESHOLD_PRESENT) == 0)
+        return 0;
+
+    n = hweight8(ppe_thres_hdr &
+             IEEE80211_PPE_THRES_RU_INDEX_BITMASK_MASK);
+    n *= (1 + ((ppe_thres_hdr & IEEE80211_PPE_THRES_NSS_MASK) >>
+           IEEE80211_PPE_THRES_NSS_POS));
+
+    /*
+     * Each pair is 6 bits, and we need to add the 7 "header" bits to the
+     * total size.
+     */
+    n = (n * IEEE80211_PPE_THRES_INFO_PPET_SIZE * 2) + 7;
+    n = DIV_ROUND_UP(n, 8);
+
+    return n;
+}
+
 /**
  * ieee80211_he_6ghz_oper - HE 6 GHz operation Information field
  * @primary: primary channel
@@ -1855,6 +1975,107 @@ struct ieee80211_he_6ghz_oper {
     uint8_t ccfs1;
     uint8_t minrate;
 } __packed;
+
+/*
+ * ieee80211_he_oper_size - calculate 802.11ax HE Operations IE size
+ * @he_oper_ie: byte data of the He Operations IE, stating from the byte
+ *    after the ext ID byte. It is assumed that he_oper_ie has at least
+ *    sizeof(struct ieee80211_he_operation) bytes, the caller must have
+ *    validated this.
+ * @return the actual size of the IE data (not including header), or 0 on error
+ */
+static inline uint8_t
+ieee80211_he_oper_size(const uint8_t *he_oper_ie)
+{
+    struct ieee80211_he_operation *he_oper = (struct ieee80211_he_operation *)he_oper_ie;
+    uint8_t oper_len = sizeof(struct ieee80211_he_operation);
+    uint32_t he_oper_params;
+
+    /* Make sure the input is not NULL */
+    if (!he_oper_ie)
+        return 0;
+
+    /* Calc required length */
+    he_oper_params = le32toh(he_oper->he_oper_params);
+    if (he_oper_params & IEEE80211_HE_OPERATION_VHT_OPER_INFO)
+        oper_len += 3;
+    if (he_oper_params & IEEE80211_HE_OPERATION_CO_HOSTED_BSS)
+        oper_len++;
+    if (he_oper_params & IEEE80211_HE_OPERATION_6GHZ_OP_INFO)
+        oper_len += sizeof(struct ieee80211_he_6ghz_oper);
+
+    /* Add the first byte (extension ID) to the total length */
+    oper_len++;
+
+    return oper_len;
+}
+
+/**
+ * ieee80211_he_6ghz_oper - obtain 6 GHz operation field
+ * @he_oper: HE operation element (must be pre-validated for size)
+ *    but may be %NULL
+ *
+ * Return: a pointer to the 6 GHz operation field, or %NULL
+ */
+static inline const struct ieee80211_he_6ghz_oper *
+ieee80211_he_6ghz_oper(const struct ieee80211_he_operation *he_oper)
+{
+    const uint8_t *ret = (const uint8_t *)&he_oper->optional;
+    uint32_t he_oper_params;
+
+    if (!he_oper)
+        return NULL;
+
+    he_oper_params = le32toh(he_oper->he_oper_params);
+
+    if (!(he_oper_params & IEEE80211_HE_OPERATION_6GHZ_OP_INFO))
+        return NULL;
+    if (he_oper_params & IEEE80211_HE_OPERATION_VHT_OPER_INFO)
+        ret += 3;
+    if (he_oper_params & IEEE80211_HE_OPERATION_CO_HOSTED_BSS)
+        ret++;
+
+    return (struct ieee80211_he_6ghz_oper *)ret;
+}
+
+/* HE Spatial Reuse defines */
+#define IEEE80211_HE_SPR_PSR_DISALLOWED                (1 << 0)
+#define IEEE80211_HE_SPR_NON_SRG_OBSS_PD_SR_DISALLOWED        (1 << 1)
+#define IEEE80211_HE_SPR_NON_SRG_OFFSET_PRESENT            (1 << 2)
+#define IEEE80211_HE_SPR_SRG_INFORMATION_PRESENT        (1 << 3)
+#define IEEE80211_HE_SPR_HESIGA_SR_VAL15_ALLOWED        (1 << 4)
+
+/*
+ * ieee80211_he_spr_size - calculate 802.11ax HE Spatial Reuse IE size
+ * @he_spr_ie: byte data of the He Spatial Reuse IE, stating from the byte
+ *    after the ext ID byte. It is assumed that he_spr_ie has at least
+ *    sizeof(struct ieee80211_he_spr) bytes, the caller must have validated
+ *    this
+ * @return the actual size of the IE data (not including header), or 0 on error
+ */
+static inline uint8_t
+ieee80211_he_spr_size(const uint8_t *he_spr_ie)
+{
+    struct ieee80211_he_spr *he_spr = (struct ieee80211_he_spr *)he_spr_ie;
+    uint8_t spr_len = sizeof(struct ieee80211_he_spr);
+    uint8_t he_spr_params;
+
+    /* Make sure the input is not NULL */
+    if (!he_spr_ie)
+        return 0;
+
+    /* Calc required length */
+    he_spr_params = he_spr->he_sr_control;
+    if (he_spr_params & IEEE80211_HE_SPR_NON_SRG_OFFSET_PRESENT)
+        spr_len++;
+    if (he_spr_params & IEEE80211_HE_SPR_SRG_INFORMATION_PRESENT)
+        spr_len += 18;
+
+    /* Add the first byte (extension ID) to the total length */
+    spr_len++;
+
+    return spr_len;
+}
 
 /*
  * Note the min acceptable CSA count is used to guard against

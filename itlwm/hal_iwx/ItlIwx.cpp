@@ -3033,11 +3033,13 @@ iwx_setup_vht_rates(struct iwx_softc *sc)
         tx_ant = 1;
     }
     
-//    ic->ic_vhtcaps |= IEEE80211_VHTCAP_RXLDPC;
+    ic->ic_vhtcaps |= IEEE80211_VHTCAP_RXLDPC;
     if (tx_ant > 1)
         ic->ic_vhtcaps |= IEEE80211_VHTCAP_TXSTBC;
     else
         ic->ic_vhtcaps |= IEEE80211_VHTCAP_TX_ANTENNA_PATTERN;
+    
+    ic->ic_vhtcaps |= IEEE80211_VHTCAP_EXT_NSS_BW_MASK;
     
     ic->ic_vht_rx_mcs_map =
         htole16(IEEE80211_VHT_MCS_SUPPORT_0_9 << 0 |
@@ -3059,6 +3061,95 @@ iwx_setup_vht_rates(struct iwx_softc *sc)
     ic->ic_vht_tx_highest |=
         htole16(IEEE80211_VHT_EXT_NSS_BW_CAPABLE);
     ic->ic_vht_rx_highest = 0;
+}
+
+void ItlIwx::
+iwx_setup_he_rates(struct iwx_softc *sc)
+{
+    struct ieee80211com *ic = &sc->sc_ic;
+    
+    ic->ic_he_cap_elem = {
+        .mac_cap_info[0] =
+            IEEE80211_HE_MAC_CAP0_HTC_HE |
+            IEEE80211_HE_MAC_CAP0_TWT_REQ,
+        .mac_cap_info[1] =
+            IEEE80211_HE_MAC_CAP1_TF_MAC_PAD_DUR_16US |
+            IEEE80211_HE_MAC_CAP1_MULTI_TID_AGG_RX_QOS_8,
+        .mac_cap_info[2] =
+            IEEE80211_HE_MAC_CAP2_32BIT_BA_BITMAP,
+        .mac_cap_info[3] =
+            IEEE80211_HE_MAC_CAP3_OMI_CONTROL |
+            IEEE80211_HE_MAC_CAP3_MAX_AMPDU_LEN_EXP_VHT_2,
+        .mac_cap_info[4] =
+            IEEE80211_HE_MAC_CAP4_AMDSU_IN_AMPDU |
+            IEEE80211_HE_MAC_CAP4_MULTI_TID_AGG_TX_QOS_B39,
+        .mac_cap_info[5] =
+            IEEE80211_HE_MAC_CAP5_MULTI_TID_AGG_TX_QOS_B40 |
+            IEEE80211_HE_MAC_CAP5_MULTI_TID_AGG_TX_QOS_B41 |
+            IEEE80211_HE_MAC_CAP5_UL_2x996_TONE_RU |
+            IEEE80211_HE_MAC_CAP5_HE_DYNAMIC_SM_PS |
+            IEEE80211_HE_MAC_CAP5_HT_VHT_TRIG_FRAME_RX,
+        .phy_cap_info[0] =
+            IEEE80211_HE_PHY_CAP0_CHANNEL_WIDTH_SET_40MHZ_IN_2G |
+            IEEE80211_HE_PHY_CAP0_CHANNEL_WIDTH_SET_40MHZ_80MHZ_IN_5G |
+            IEEE80211_HE_PHY_CAP0_CHANNEL_WIDTH_SET_160MHZ_IN_5G,
+        .phy_cap_info[1] =
+            IEEE80211_HE_PHY_CAP1_PREAMBLE_PUNC_RX_MASK |
+            IEEE80211_HE_PHY_CAP1_DEVICE_CLASS_A |
+            IEEE80211_HE_PHY_CAP1_LDPC_CODING_IN_PAYLOAD,
+        .phy_cap_info[2] =
+            IEEE80211_HE_PHY_CAP2_NDP_4x_LTF_AND_3_2US,
+        .phy_cap_info[3] =
+            IEEE80211_HE_PHY_CAP3_DCM_MAX_CONST_TX_NO_DCM |
+            IEEE80211_HE_PHY_CAP3_DCM_MAX_TX_NSS_1 |
+            IEEE80211_HE_PHY_CAP3_DCM_MAX_CONST_RX_NO_DCM |
+            IEEE80211_HE_PHY_CAP3_DCM_MAX_RX_NSS_1,
+        .phy_cap_info[4] =
+            IEEE80211_HE_PHY_CAP4_SU_BEAMFORMEE |
+            IEEE80211_HE_PHY_CAP4_BEAMFORMEE_MAX_STS_ABOVE_80MHZ_8 |
+            IEEE80211_HE_PHY_CAP4_BEAMFORMEE_MAX_STS_UNDER_80MHZ_8,
+        .phy_cap_info[5] =
+            IEEE80211_HE_PHY_CAP5_BEAMFORMEE_NUM_SND_DIM_UNDER_80MHZ_2 |
+            IEEE80211_HE_PHY_CAP5_BEAMFORMEE_NUM_SND_DIM_ABOVE_80MHZ_2,
+        .phy_cap_info[6] =
+            IEEE80211_HE_PHY_CAP6_PPE_THRESHOLD_PRESENT,
+        .phy_cap_info[7] =
+            IEEE80211_HE_PHY_CAP7_POWER_BOOST_FACTOR_AR |
+            IEEE80211_HE_PHY_CAP7_HE_SU_MU_PPDU_4XLTF_AND_08_US_GI |
+            IEEE80211_HE_PHY_CAP7_MAX_NC_1,
+        .phy_cap_info[8] =
+            IEEE80211_HE_PHY_CAP8_HE_ER_SU_PPDU_4XLTF_AND_08_US_GI |
+            IEEE80211_HE_PHY_CAP8_20MHZ_IN_40MHZ_HE_PPDU_IN_2G |
+            IEEE80211_HE_PHY_CAP8_20MHZ_IN_160MHZ_HE_PPDU |
+            IEEE80211_HE_PHY_CAP8_80MHZ_IN_160MHZ_HE_PPDU |
+            IEEE80211_HE_PHY_CAP8_DCM_MAX_RU_2x996,
+        .phy_cap_info[9] =
+            IEEE80211_HE_PHY_CAP9_NON_TRIGGERED_CQI_FEEDBACK |
+            IEEE80211_HE_PHY_CAP9_RX_FULL_BW_SU_USING_MU_WITH_COMP_SIGB |
+            IEEE80211_HE_PHY_CAP9_RX_FULL_BW_SU_USING_MU_WITH_NON_COMP_SIGB |
+            IEEE80211_HE_PHY_CAP9_NOMIMAL_PKT_PADDING_RESERVED,
+    };
+    
+    /*
+     * Set default Tx/Rx HE MCS NSS Support field.
+     * Indicate support for up to 2 spatial streams and all
+     * MCS, without any special cases
+     */
+    ic->ic_he_mcs_nss_supp = {
+        .rx_mcs_80 = htole16(0xfffa),
+        .tx_mcs_80 = htole16(0xfffa),
+        .rx_mcs_160 = htole16(0xfffa),
+        .tx_mcs_160 = htole16(0xfffa),
+        .rx_mcs_80p80 = htole16(0xffff),
+        .tx_mcs_80p80 = htole16(0xffff),
+    };
+    
+    /*
+     * Set default PPE thresholds, with PPET16 set to 0,
+     * PPET8 set to 7
+     */
+    uint8_t ppe_thres[] = {0x61, 0x1c, 0xc7, 0x71};
+    memcpy(ic->ic_ppe_thres, ppe_thres, sizeof(ic->ic_ppe_thres));
 }
 
 #define IWX_MAX_RX_BA_SESSIONS 16
@@ -4325,14 +4416,15 @@ iwx_get_channel_width(struct ieee80211com *ic, struct ieee80211_channel *c)
         return ret;
     }
     switch (ic->ic_bss->ni_chw) {
-        case 0:
-        case 20:
+        case IEEE80211_CHAN_WIDTH_20_NOHT:
+        case IEEE80211_CHAN_WIDTH_20:
             return IWX_PHY_VHT_CHANNEL_MODE20;
-        case 40:
+        case IEEE80211_CHAN_WIDTH_40:
             return IWX_PHY_VHT_CHANNEL_MODE40;
-        case 80:
+        case IEEE80211_CHAN_WIDTH_80:
             return IWX_PHY_VHT_CHANNEL_MODE80;
-        case 160:
+        case IEEE80211_CHAN_WIDTH_80P80:
+        case IEEE80211_CHAN_WIDTH_160:
             return IWX_PHY_VHT_CHANNEL_MODE160;
         default:
             XYLog("Invalid channel width=%u\n", ic->ic_bss->ni_chw);
@@ -4346,46 +4438,41 @@ iwx_get_ctrl_pos(struct ieee80211com *ic, struct ieee80211_channel *c) {
     if (ic->ic_bss == NULL || ic->ic_state < IEEE80211_S_ASSOC) {
         return ret;
     }
-    if (ic->ic_bss->ni_chw == 40) {
+    if (ic->ic_bss->ni_chw == IEEE80211_CHAN_WIDTH_40) {
         if ((ic->ic_bss->ni_htop0 & IEEE80211_HTOP0_SCO_MASK) == IEEE80211_HTOP0_SCO_SCA) {
             return IWX_PHY_VHT_CTRL_POS_1_BELOW;
         } else {
             return IWX_PHY_VHT_CTRL_POS_1_ABOVE;
         }
-    } else if (ic->ic_bss->ni_chw == 80 || ic->ic_bss->ni_chw == 160) {
-        signed int offset = ieee80211_chan2ieee(ic, ic->ic_bss->ni_chan) - ic->ic_bss->ni_vht_chan1;
+    } else if (ic->ic_bss->ni_chw == IEEE80211_CHAN_WIDTH_80 || ic->ic_bss->ni_chw == IEEE80211_CHAN_WIDTH_80P80 || ic->ic_bss->ni_chw == IEEE80211_CHAN_WIDTH_160) {
+        signed int offset = ic->ic_bss->ni_chan->ic_freq - ic->ic_bss->ni_chan->ic_center_freq1;
         switch (offset) {
-            case -2:
-                ret = IWX_PHY_VHT_CTRL_POS_1_BELOW;
-                break;
-            case -6:
-                ret = IWX_PHY_VHT_CTRL_POS_2_BELOW;
-                break;
+            case -70:
+                return IWX_PHY_VHT_CTRL_POS_4_BELOW;
+            case -50:
+                return IWX_PHY_VHT_CTRL_POS_3_BELOW;
+            case -30:
+                return IWX_PHY_VHT_CTRL_POS_2_BELOW;
             case -10:
-                ret = IWX_PHY_VHT_CTRL_POS_3_BELOW;
-                break;
-            case -14:
-                ret = IWX_PHY_VHT_CTRL_POS_4_BELOW;
-                break;
-            case 0:
-                ret = IWX_PHY_VHT_CTRL_POS_1_BELOW;
-                break;
-            case 2:
-                ret = IWX_PHY_VHT_CTRL_POS_1_ABOVE;
-                break;
-            case 6:
-                ret = IWX_PHY_VHT_CTRL_POS_2_ABOVE;
-                break;
-            case 10:
-                ret = IWX_PHY_VHT_CTRL_POS_3_ABOVE;
-                break;
-            case 14:
-                ret = IWX_PHY_VHT_CTRL_POS_4_ABOVE;
-                break;
-                
+                return IWX_PHY_VHT_CTRL_POS_1_BELOW;
+            case  10:
+                return IWX_PHY_VHT_CTRL_POS_1_ABOVE;
+            case  30:
+                return IWX_PHY_VHT_CTRL_POS_2_ABOVE;
+            case  50:
+                return IWX_PHY_VHT_CTRL_POS_3_ABOVE;
+            case  70:
+                return IWX_PHY_VHT_CTRL_POS_4_ABOVE;
             default:
-                XYLog("Invalid channel definition %d\n", offset);
-                break;
+                XYLog("Invalid channel definition freq=%d %d\n", ic->ic_bss->ni_chan->ic_freq, offset);
+                /* fall through */
+            case 0:
+                /*
+                 * The FW is expected to check the control channel position only
+                 * when in HT/VHT and the channel width is not 20MHz. Return
+                 * this value as the default one.
+                 */
+                return IWX_PHY_VHT_CTRL_POS_1_BELOW;
         }
         return ret;
     }
@@ -5202,7 +5289,7 @@ iwx_add_sta_cmd(struct iwx_softc *sc, struct iwx_node *in, int update)
 {
     struct iwx_add_sta_cmd add_sta_cmd;
     int err;
-    uint32_t status;
+    uint32_t status, agg_size = 0;
     struct ieee80211com *ic = &sc->sc_ic;
     
     if (!update && (sc->sc_flags & IWX_FLAG_STA_ACTIVE))
@@ -5247,13 +5334,14 @@ iwx_add_sta_cmd(struct iwx_softc *sc, struct iwx_node *in, int update)
         |= htole32(IWX_STA_FLG_FAT_EN_20MHZ);
         if (ic->ic_state >= IEEE80211_S_ASSOC) {
             switch (in->in_ni.ni_chw) {
-                case 40:
+                case IEEE80211_CHAN_WIDTH_40:
                     add_sta_cmd.station_flags |= htole32(IWX_STA_FLG_FAT_EN_40MHZ);
                     break;
-                case 80:
+                case IEEE80211_CHAN_WIDTH_80:
                     add_sta_cmd.station_flags |= htole32(IWX_STA_FLG_FAT_EN_80MHZ);
                     break;
-                case 160:
+                case IEEE80211_CHAN_WIDTH_80P80:
+                case IEEE80211_CHAN_WIDTH_160:
                     add_sta_cmd.station_flags |= htole32(IWX_STA_FLG_FAT_EN_160MHZ);
                     break;
                     
@@ -5261,7 +5349,15 @@ iwx_add_sta_cmd(struct iwx_softc *sc, struct iwx_node *in, int update)
                     break;
             }
         }
-        if (in->in_ni.ni_flags & IEEE80211_NODE_VHT) {
+        if (in->in_ni.ni_flags & IEEE80211_NODE_HE) {
+            agg_size = ic->ic_vhtcaps &
+            IEEE80211_VHTCAP_MAX_A_MPDU_LENGTH_EXPONENT_MASK;
+            agg_size >>=
+                IEEE80211_VHTCAP_MAX_A_MPDU_LENGTH_EXPONENT_SHIFT;
+            agg_size += u8_get_bits(ic->ic_he_cap_elem.mac_cap_info[3],
+                                    IEEE80211_HE_MAC_CAP3_MAX_AMPDU_LEN_EXP_MASK);
+            add_sta_cmd.station_flags |= htole32(agg_size << IWX_STA_FLG_MAX_AGG_SIZE_SHIFT);
+        } else if (in->in_ni.ni_flags & IEEE80211_NODE_VHT) {
             add_sta_cmd.station_flags |= htole32(((ic->ic_vhtcaps & IEEE80211_VHTCAP_MAX_A_MPDU_LENGTH_EXPONENT_MASK) >> IEEE80211_VHTCAP_MAX_A_MPDU_LENGTH_EXPONENT_SHIFT) << IWX_STA_FLG_MAX_AGG_SIZE_SHIFT);
         } else if (in->in_ni.ni_flags & IEEE80211_NODE_HT) {
             add_sta_cmd.station_flags
@@ -5956,10 +6052,10 @@ iwx_ack_rates(struct iwx_softc *sc, struct iwx_node *in, int *cck_rates,
 static uint8_t iwx_mvm_mac80211_ac_to_ucode_ac(enum ieee80211_edca_ac ac)
 {
    static const uint8_t mac80211_ac_to_ucode_ac[] = {
-       IWX_AC_VO,
-       IWX_AC_VI,
        IWX_AC_BE,
-       IWX_AC_BK
+       IWX_AC_BK,
+       IWX_AC_VI,
+       IWX_AC_VO
    };
 
    return mac80211_ac_to_ucode_ac[ac];
@@ -6122,6 +6218,10 @@ iwx_mac_ctxt_cmd(struct iwx_softc *sc, struct iwx_node *in, uint32_t action,
         cmd.filter_flags |= htole32(IWX_MAC_FILTER_IN_BEACON);
     else
         iwx_mac_ctxt_cmd_fill_sta(sc, in, &cmd.sta, assoc);
+    
+    if (ni->ni_flags & IEEE80211_NODE_HE) {
+        cmd.filter_flags |= htole32(IWX_MAC_FILTER_IN_11AX);
+    }
     
     return iwx_send_cmd_pdu(sc, IWX_MAC_CONTEXT_CMD, 0, sizeof(cmd), &cmd);
 }
@@ -6381,16 +6481,17 @@ static uint8_t iwx_rs_fw_bw_from_sta_bw(uint8_t bw)
 {
     uint8_t fw_bw;
     switch (bw) {
-        case 20:
+        case IEEE80211_CHAN_WIDTH_20:
             fw_bw = IWX_TLC_MNG_CH_WIDTH_20MHZ;
             break;
-        case 40:
+        case IEEE80211_CHAN_WIDTH_40:
             fw_bw = IWX_TLC_MNG_CH_WIDTH_40MHZ;
             break;
-        case 80:
+        case IEEE80211_CHAN_WIDTH_80:
             fw_bw = IWX_TLC_MNG_CH_WIDTH_80MHZ;
             break;
-        case 160:
+        case IEEE80211_CHAN_WIDTH_80P80:
+        case IEEE80211_CHAN_WIDTH_160:
             fw_bw = IWX_TLC_MNG_CH_WIDTH_160MHZ;
             break;
         default:
@@ -6402,6 +6503,9 @@ static uint8_t iwx_rs_fw_bw_from_sta_bw(uint8_t bw)
 
 static uint16_t iwx_rs_fw_get_max_amsdu_len(struct ieee80211_node *ni)
 {
+    if (ni->ni_flags & IEEE80211_NODE_HE) {
+        return 0;
+    }
     return 0;
 }
 
@@ -6411,9 +6515,29 @@ uint16_t rs_fw_get_config_flags(struct iwx_softc *sc)
     struct ieee80211com *ic = &sc->sc_ic;
     struct ieee80211_node *ni = ic->ic_bss;
     uint16_t flags = 0;
-    if (ieee80211_node_supports_vht(ni) && (ic->ic_vhtcaps & IEEE80211_VHTCAP_RXLDPC)) {
-        flags |= IWX_TLC_MNG_CFG_FLAGS_LDPC_MSK;
+    
+    if (ni->ni_flags & IEEE80211_NODE_HE) {
+        if (ic->ic_he_cap_elem.phy_cap_info[2] &
+            IEEE80211_HE_PHY_CAP2_STBC_RX_UNDER_80MHZ)
+            flags |= IWX_TLC_MNG_CFG_FLAGS_STBC_MSK;
+
+        if (ic->ic_he_cap_elem.phy_cap_info[7] &
+            IEEE80211_HE_PHY_CAP7_STBC_RX_ABOVE_80MHZ)
+            flags |= IWX_TLC_MNG_CFG_FLAGS_HE_STBC_160MHZ_MSK;
+        
+        if (ic->ic_he_cap_elem.phy_cap_info[1] &
+            IEEE80211_HE_PHY_CAP1_LDPC_CODING_IN_PAYLOAD) {
+            flags |= IWX_TLC_MNG_CFG_FLAGS_LDPC_MSK;
+        }
+        
+        if (ic->ic_he_cap_elem.phy_cap_info[3] &
+            IEEE80211_HE_PHY_CAP3_DCM_MAX_CONST_RX_MASK)
+           flags |= IWX_TLC_MNG_CFG_FLAGS_HE_DCM_NSS_1_MSK;
     }
+    
+    if (!(ic->ic_he_cap_elem.phy_cap_info[1] &
+          IEEE80211_HE_PHY_CAP1_LDPC_CODING_IN_PAYLOAD))
+        flags &= ~IWX_TLC_MNG_CFG_FLAGS_LDPC_MSK;
     
     return flags;
 }
@@ -6422,7 +6546,7 @@ static
 int rs_fw_vht_highest_rx_mcs_index(struct iwx_softc *sc,
                    int nss)
 {
-    u16 rx_mcs = le16toh(sc->sc_ic.ic_vht_rx_mcs_map) &
+    uint16_t rx_mcs = le16toh(sc->sc_ic.ic_vht_rx_mcs_map) &
         (0x3 << (2 * (nss - 1)));
     rx_mcs >>= (2 * (nss - 1));
 
@@ -6445,7 +6569,7 @@ static void
 rs_fw_vht_set_enabled_rates(struct iwx_softc *sc,
                 struct iwx_tlc_config_cmd *cmd)
 {
-    u16 supp;
+    uint16_t supp;
     int i, highest_mcs;
     struct ieee80211com *ic = &sc->sc_ic;
 
@@ -6455,12 +6579,73 @@ rs_fw_vht_set_enabled_rates(struct iwx_softc *sc,
             continue;
 
         supp = BIT(highest_mcs + 1) - 1;
-        if (ic->ic_bss->ni_chw == 20)
+        if (ic->ic_bss->ni_chw == IEEE80211_CHAN_WIDTH_20)
             supp &= ~BIT(IWX_TLC_MNG_HT_RATE_MCS9);
 
         cmd->ht_rates[i][0] = htole16(supp);
-        if (ic->ic_bss->ni_chw == 160)
+        if (ic->ic_bss->ni_chw == IEEE80211_CHAN_WIDTH_80P80 || ic->ic_bss->ni_chw == IEEE80211_CHAN_WIDTH_160)
             cmd->ht_rates[i][1] = cmd->ht_rates[i][0];
+    }
+}
+
+static uint16_t rs_fw_he_ieee80211_mcs_to_rs_mcs(uint16_t mcs)
+{
+    switch (mcs) {
+    case IEEE80211_HE_MCS_SUPPORT_0_7:
+        return BIT(IWX_TLC_MNG_HT_RATE_MCS7 + 1) - 1;
+    case IEEE80211_HE_MCS_SUPPORT_0_9:
+        return BIT(IWX_TLC_MNG_HT_RATE_MCS9 + 1) - 1;
+    case IEEE80211_HE_MCS_SUPPORT_0_11:
+        return BIT(IWX_TLC_MNG_HT_RATE_MCS11 + 1) - 1;
+    case IEEE80211_HE_MCS_NOT_SUPPORTED:
+        return 0;
+    }
+
+    XYLog("invalid HE MCS %d\n", mcs);
+    return 0;
+}
+
+static void
+rs_fw_he_set_enabled_rates(struct iwx_softc *sc,
+                           struct iwx_tlc_config_cmd *cmd)
+{
+    struct ieee80211com *ic = &sc->sc_ic;
+    uint16_t mcs_160 = le16toh(ic->ic_he_mcs_nss_supp.rx_mcs_160);
+    uint16_t mcs_80 = le16toh(ic->ic_he_mcs_nss_supp.rx_mcs_80);
+    uint16_t tx_mcs_80 =
+    le16toh(ic->ic_he_mcs_nss_supp.tx_mcs_80);
+    uint16_t tx_mcs_160 =
+    le16toh(ic->ic_he_mcs_nss_supp.tx_mcs_160);
+    int i;
+    uint8_t nss = 2;
+
+    for (i = 0; i < nss && i < IWX_TLC_NSS_MAX; i++) {
+        uint16_t _mcs_160 = (mcs_160 >> (2 * i)) & 0x3;
+        uint16_t _mcs_80 = (mcs_80 >> (2 * i)) & 0x3;
+        uint16_t _tx_mcs_160 = (tx_mcs_160 >> (2 * i)) & 0x3;
+        uint16_t _tx_mcs_80 = (tx_mcs_80 >> (2 * i)) & 0x3;
+
+        /* If one side doesn't support - mark both as not supporting */
+        if (_mcs_80 == IEEE80211_HE_MCS_NOT_SUPPORTED ||
+            _tx_mcs_80 == IEEE80211_HE_MCS_NOT_SUPPORTED) {
+            _mcs_80 = IEEE80211_HE_MCS_NOT_SUPPORTED;
+            _tx_mcs_80 = IEEE80211_HE_MCS_NOT_SUPPORTED;
+        }
+        if (_mcs_80 > _tx_mcs_80)
+            _mcs_80 = _tx_mcs_80;
+        cmd->ht_rates[i][IWX_TLC_HT_BW_NONE_160] =
+            htole16(rs_fw_he_ieee80211_mcs_to_rs_mcs(_mcs_80));
+
+        /* If one side doesn't support - mark both as not supporting */
+        if (_mcs_160 == IEEE80211_HE_MCS_NOT_SUPPORTED ||
+            _tx_mcs_160 == IEEE80211_HE_MCS_NOT_SUPPORTED) {
+            _mcs_160 = IEEE80211_HE_MCS_NOT_SUPPORTED;
+            _tx_mcs_160 = IEEE80211_HE_MCS_NOT_SUPPORTED;
+        }
+        if (_mcs_160 > _tx_mcs_160)
+            _mcs_160 = _tx_mcs_160;
+        cmd->ht_rates[i][IWX_TLC_HT_BW_160] =
+        htole16(rs_fw_he_ieee80211_mcs_to_rs_mcs(_mcs_160));
     }
 }
 
@@ -6482,7 +6667,11 @@ iwx_rs_init(struct iwx_softc *sc, struct iwx_node *in, bool update)
             return EINVAL;
         cfg_cmd.non_ht_rates |= (1 << idx);
     }
-    if (ni->ni_flags & IEEE80211_NODE_VHT) {
+    if (ni->ni_flags & IEEE80211_NODE_HE) {
+        XYLog("%s line=%d\n", __FUNCTION__, __LINE__);
+        cfg_cmd.mode = IWX_TLC_MNG_MODE_HE;
+        rs_fw_he_set_enabled_rates(sc, &cfg_cmd);
+    } else if (ni->ni_flags & IEEE80211_NODE_VHT) {
         XYLog("%s line=%d\n", __FUNCTION__, __LINE__);
         cfg_cmd.mode = IWX_TLC_MNG_MODE_VHT;
         rs_fw_vht_set_enabled_rates(sc, &cfg_cmd);
@@ -6499,18 +6688,20 @@ iwx_rs_init(struct iwx_softc *sc, struct iwx_node *in, bool update)
     cfg_cmd.chains = IWX_TLC_MNG_CHAIN_A_MSK | IWX_TLC_MNG_CHAIN_B_MSK;
     cfg_cmd.max_mpdu_len = iwx_rs_fw_get_max_amsdu_len(ni);
     cfg_cmd.flags = rs_fw_get_config_flags(sc);
-    if (ieee80211_node_supports_ht_sgi20(ni))
-        cfg_cmd.sgi_ch_width_supp = (1 << IWX_TLC_MNG_CH_WIDTH_20MHZ);
+    if ((ni->ni_flags & IEEE80211_NODE_HE) == 0) {
+        if (ieee80211_node_supports_ht_sgi20(ni))
+            cfg_cmd.sgi_ch_width_supp = (1 << IWX_TLC_MNG_CH_WIDTH_20MHZ);
 
-    if (ieee80211_node_supports_ht_sgi40(ni))
-        cfg_cmd.sgi_ch_width_supp |= (1 << IWX_TLC_MNG_CH_WIDTH_40MHZ);
-    
-    if (ieee80211_node_supports_vht_sgi80(ni)) {
-        cfg_cmd.sgi_ch_width_supp |= (1 << IWX_TLC_MNG_CH_WIDTH_80MHZ);
-    }
-    
-    if (ieee80211_node_supports_vht_sgi160(ni)) {
-        cfg_cmd.sgi_ch_width_supp |= (1 << IWX_TLC_MNG_CH_WIDTH_160MHZ);
+        if (ieee80211_node_supports_ht_sgi40(ni))
+            cfg_cmd.sgi_ch_width_supp |= (1 << IWX_TLC_MNG_CH_WIDTH_40MHZ);
+        
+        if (ieee80211_node_supports_vht_sgi80(ni)) {
+            cfg_cmd.sgi_ch_width_supp |= (1 << IWX_TLC_MNG_CH_WIDTH_80MHZ);
+        }
+        
+        if (ieee80211_node_supports_vht_sgi160(ni)) {
+            cfg_cmd.sgi_ch_width_supp |= (1 << IWX_TLC_MNG_CH_WIDTH_160MHZ);
+        }
     }
 
     cmd_id = iwx_cmd_id(IWX_TLC_MNG_CONFIG_CMD, IWX_DATA_PATH_GROUP, 0);
@@ -7276,7 +7467,7 @@ iwx_fill_sf_command(struct iwx_softc *sc, struct iwx_sf_cfg_cmd *sf_cmd,
      * capabilities of the AP station, and choose the watermark accordingly.
      */
     if (ni) {
-        if (ni->ni_flags & IEEE80211_NODE_HT) {
+        if (ni->ni_flags & IEEE80211_NODE_HT || ni->ni_flags & IEEE80211_NODE_VHT || ni->ni_flags & IEEE80211_NODE_HE) {
             if (ni->ni_rxmcs[1] != 0)
                 watermark = IWX_SF_W_MARK_MIMO2;
             else
@@ -7655,6 +7846,9 @@ iwx_init(struct _ifnet *ifp)
     
     if (sc->sc_nvm.sku_cap_11ac_enable)
         iwx_setup_vht_rates(sc);
+    
+    if (sc->sc_nvm.sku_cap_11ax_enable)
+        iwx_setup_he_rates(sc);
     
     ifq_clr_oactive(&ifp->if_snd);
     ifp->if_snd->flush();
@@ -9466,6 +9660,9 @@ iwx_preinit(struct iwx_softc *sc)
     
     if (sc->sc_nvm.sku_cap_11ac_enable)
         iwx_setup_vht_rates(sc);
+    
+    if (sc->sc_nvm.sku_cap_11ax_enable)
+        iwx_setup_he_rates(sc);
     
     /* not all hardware can do 5GHz band */
     if (!sc->sc_nvm.sku_cap_band_52GHz_enable)
