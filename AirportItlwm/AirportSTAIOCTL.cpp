@@ -699,13 +699,20 @@ IOReturn AirportItlwm::
 getPHY_MODE(OSObject *object,
                             struct apple80211_phymode_data *pd)
 {
+    struct ieee80211com *ic = fHalService->get80211Controller();
+    
     pd->version = APPLE80211_VERSION;
     pd->phy_mode = APPLE80211_MODE_11A
     | APPLE80211_MODE_11B
     | APPLE80211_MODE_11G
     | APPLE80211_MODE_11N;
-    if (fHalService->getDriverInfo()->is5GBandSupport()) {
-        pd->phy_mode |= (APPLE80211_MODE_11AC | APPLE80211_MODE_11AX);
+    
+    if (ic->ic_flags & IEEE80211_F_VHTON) {
+        pd->phy_mode |= APPLE80211_MODE_11AC;
+    }
+    
+    if (ic->ic_flags & IEEE80211_F_HEON) {
+        pd->phy_mode |= APPLE80211_MODE_11AX;
     }
     
     switch (fHalService->get80211Controller()->ic_curmode) {

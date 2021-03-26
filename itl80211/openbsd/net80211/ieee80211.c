@@ -547,7 +547,6 @@ IFM_MAKEWORD(IFM_IEEE80211, (_s), (_o), 0), 0, NULL)
                 ADD(ic, IFM_IEEE80211_VHT_MCS0 + i,
                     mopt | IFM_IEEE80211_MONITOR);
         }
-        ic->ic_flags |= IEEE80211_F_VHTON; /* enable 11ac by default */
         ieee80211_configure_ampdu_tx(ic, 1);
     }
     if (ic->ic_modecaps & (1 << IEEE80211_MODE_11AX)) {
@@ -572,7 +571,6 @@ IFM_MAKEWORD(IFM_IEEE80211, (_s), (_o), 0), 0, NULL)
                 ADD(ic, IFM_IEEE80211_VHT_MCS0 + i,
                     mopt | IFM_IEEE80211_MONITOR);
         }
-//        ic->ic_flags |= IEEE80211_F_HEON; /* enable 11ax by default */
         ieee80211_configure_ampdu_tx(ic, 1);
     }
     

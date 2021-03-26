@@ -3014,6 +3014,9 @@ iwx_setup_vht_rates(struct iwx_softc *sc)
     uint8_t rx_ant, tx_ant;
     unsigned int max_ampdu_exponent = IEEE80211_VHTCAP_MAX_AMPDU_1024K;
     
+    /* enable 11ac support */
+    ic->ic_flags |= IEEE80211_F_VHTON;
+    
     rx_ant = iwx_fw_valid_rx_ant(sc);
     tx_ant = iwx_fw_valid_tx_ant(sc);
     
@@ -3067,6 +3070,9 @@ void ItlIwx::
 iwx_setup_he_rates(struct iwx_softc *sc)
 {
     struct ieee80211com *ic = &sc->sc_ic;
+    
+    /* enable 11ax support */
+    ic->ic_flags |= IEEE80211_F_HEON;
     
     ic->ic_he_cap_elem = {
         .mac_cap_info[0] =
