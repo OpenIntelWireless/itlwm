@@ -1560,6 +1560,11 @@ ieee80211_setup_vhtcaps(struct ieee80211com *ic, struct ieee80211_node *ni, cons
     uint32_t new_vhtcap = 0, peer_vhtcap;
     /* vht capability */
     peer_vhtcap = le32dec(ie + 2);
+    /* suppmcs */
+    rx_mcs_map = le16dec(ie + 6);
+    rx_highest = le16dec(ie + 8);
+    tx_mcs_map = le16dec(ie + 10);
+    tx_highest = le16dec(ie + 12);
     
 #define    MS(_v, _f)    (((_v) & _f) >> _f##_S)
 #define    SM(_v, _f)    (((_v) << _f##_S) & _f)
@@ -1758,15 +1763,17 @@ ieee80211_setup_vhtcaps(struct ieee80211com *ic, struct ieee80211_node *ni, cons
     val2 = MS(peer_vhtcap, IEEE80211_VHTCAP_TX_ANTENNA_PATTERN);
     val = MAX(val1, val2);
     new_vhtcap |= SM(val, IEEE80211_VHTCAP_TX_ANTENNA_PATTERN);
+    
+    /* copy EXT_NSS_BW Support value or remove the capability */
+    if (ic->ic_caps & IEEE80211_C_SUPPORTS_VHT_EXT_NSS_BW) {
+        new_vhtcap |= IEEE80211_VHTCAP_EXT_NSS_BW_MASK;
+    } else {
+        tx_highest &= ~htole16(IEEE80211_VHT_EXT_NSS_BW_CAPABLE);
+    }
+    
 #undef SM
 #undef MS
     ni->ni_vhtcaps = new_vhtcap;
-
-    /* suppmcs */
-    rx_mcs_map = le16dec(ie + 6);
-    rx_highest = le16dec(ie + 8);
-    tx_mcs_map = le16dec(ie + 10);
-    tx_highest = le16dec(ie + 12);
     
     /*
      * MCS set - again, we announce what we want to use

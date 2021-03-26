@@ -714,9 +714,9 @@ ieee80211_vht_negotiate(struct ieee80211com *ic, struct ieee80211_node *ni)
     
     ccf0 = ccfs0;
     
-//    /* if not supported, parse as though we didn't understand it */
-//    if (!ieee80211_hw_check(hw, SUPPORTS_VHT_EXT_NSS_BW))
-//        ext_nss_bw_supp = 0;
+    if ((ic->ic_caps & IEEE80211_C_SUPPORTS_VHT_EXT_NSS_BW) == 0) {
+        ext_nss_bw_supp = 0;
+    }
     
     /*
      * Cf. IEEE 802.11 Table 9-250
