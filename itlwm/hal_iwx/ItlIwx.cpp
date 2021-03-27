@@ -3070,7 +3070,7 @@ iwx_setup_he_rates(struct iwx_softc *sc)
     struct ieee80211com *ic = &sc->sc_ic;
     
     /* enable 11ax support */
-    ic->ic_flags |= IEEE80211_F_HEON;
+//    ic->ic_flags |= IEEE80211_F_HEON;
     
     ic->ic_he_cap_elem = {
         .mac_cap_info[0] =
@@ -6520,6 +6520,39 @@ uint16_t rs_fw_get_config_flags(struct iwx_softc *sc)
     struct ieee80211_node *ni = ic->ic_bss;
     uint16_t flags = 0;
     
+//    if (ic->ic_flags & IEEE80211_F_HEON) {
+//        if (ni->ni_he_cap_elem.phy_cap_info[2] &
+//            IEEE80211_HE_PHY_CAP2_STBC_RX_UNDER_80MHZ)
+//            flags |= IWX_TLC_MNG_CFG_FLAGS_STBC_MSK;
+//
+//        if (ni->ni_he_cap_elem.phy_cap_info[7] &
+//            IEEE80211_HE_PHY_CAP7_STBC_RX_ABOVE_80MHZ)
+//            flags |= IWX_TLC_MNG_CFG_FLAGS_HE_STBC_160MHZ_MSK;
+//    } else if ((ni->ni_htcaps & IEEE80211_HTCAP_RXSTBC_MASK) ||
+//               ((ic->ic_flags & IEEE80211_F_VHTON) &&
+//                (ni->ni_vhtcaps & IEEE80211_VHTCAP_RXSTBC_MASK)))
+//        flags |= IWX_TLC_MNG_CFG_FLAGS_STBC_MSK;
+//    
+//    if (((ni->ni_htcaps & IEEE80211_HTCAP_LDPC) ||
+//         ((ic->ic_flags & IEEE80211_F_VHTON) && (ni->ni_vhtcaps & IEEE80211_VHTCAP_RXLDPC))))
+//        flags |= IWX_TLC_MNG_CFG_FLAGS_LDPC_MSK;
+//    
+//    /* consider LDPC support in case of HE */
+//    if ((ic->ic_flags & IEEE80211_F_HEON) && 
+//        (ni->ni_he_cap_elem.phy_cap_info[1] &
+//        IEEE80211_HE_PHY_CAP1_LDPC_CODING_IN_PAYLOAD))
+//        flags |= IWX_TLC_MNG_CFG_FLAGS_LDPC_MSK;
+//    
+//    if ((ic->ic_flags & IEEE80211_F_HEON) &&
+//        !(ni->ni_he_cap_elem.phy_cap_info[1] &
+//         IEEE80211_HE_PHY_CAP1_LDPC_CODING_IN_PAYLOAD))
+//        flags &= ~IWX_TLC_MNG_CFG_FLAGS_LDPC_MSK;
+//
+//    if ((ic->ic_flags & IEEE80211_F_HEON) &&
+//        (ni->ni_he_cap_elem.phy_cap_info[3] &
+//         IEEE80211_HE_PHY_CAP3_DCM_MAX_CONST_RX_MASK))
+//        flags |= IWX_TLC_MNG_CFG_FLAGS_HE_DCM_NSS_1_MSK;
+    
     if (ni->ni_flags & IEEE80211_NODE_HE) {
         if (ic->ic_he_cap_elem.phy_cap_info[2] &
             IEEE80211_HE_PHY_CAP2_STBC_RX_UNDER_80MHZ)
@@ -6577,14 +6610,14 @@ rs_fw_vht_set_enabled_rates(struct iwx_softc *sc,
     int i, highest_mcs;
     struct ieee80211com *ic = &sc->sc_ic;
 
-    for (i = 0; i < 2; i++) {
+    for (i = 0; i < IWX_TLC_NSS_MAX; i++) {
         highest_mcs = rs_fw_vht_highest_rx_mcs_index(sc, i + 1);
         if (!highest_mcs)
             continue;
 
-        supp = BIT(highest_mcs + 1) - 1;
+        supp = (1 << (highest_mcs + 1)) - 1;
         if (ic->ic_bss->ni_chw == IEEE80211_CHAN_WIDTH_20)
-            supp &= ~BIT(IWX_TLC_MNG_HT_RATE_MCS9);
+            supp &= ~(1 << IWX_TLC_MNG_HT_RATE_MCS9);
 
         cmd->ht_rates[i][0] = htole16(supp);
         if (ic->ic_bss->ni_chw == IEEE80211_CHAN_WIDTH_80P80 || ic->ic_bss->ni_chw == IEEE80211_CHAN_WIDTH_160)

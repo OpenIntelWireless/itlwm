@@ -390,6 +390,8 @@ struct ieee80211_node {
     struct ieee80211_he_cap_elem ni_he_cap_elem;   /* Fixed portion of the HE capabilities element. */
     struct ieee80211_he_mcs_nss_supp ni_he_mcs_nss_supp;   /* The supported NSS/MCS combinations. */
     uint8_t ni_ppe_thres[IEEE80211_HE_PPE_THRES_MAX_LEN]; /* Holds the PPE Thresholds data. */
+    uint32_t        ni_he_oper_params;
+    uint16_t        ni_he_oper_nss_set;
     
 	/* Timeout handlers which trigger Tx Block Ack negotiation. */
 	CTimeout*		ni_addba_req_to[IEEE80211_NUM_TID];

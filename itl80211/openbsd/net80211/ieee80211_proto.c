@@ -804,6 +804,8 @@ ieee80211_vht_negotiate(struct ieee80211com *ic, struct ieee80211_node *ni)
 void
 ieee80211_he_negotiate(struct ieee80211com *ic, struct ieee80211_node *ni)
 {
+    uint8_t info;
+    uint8_t chw;
     ni->ni_flags &= ~IEEE80211_NODE_HE;
     
     /* Check if we support HE. */
@@ -814,6 +816,24 @@ ieee80211_he_negotiate(struct ieee80211com *ic, struct ieee80211_node *ni)
     if ((ic->ic_flags & IEEE80211_F_HEON) == 0)
         return;
     
+    chw = IEEE80211_CHAN_WIDTH_20;
+    
+    info = ni->ni_he_cap_elem.phy_cap_info[0];
+
+    if (IEEE80211_IS_CHAN_2GHZ(ni->ni_chan)) {
+        if (info & IEEE80211_HE_PHY_CAP0_CHANNEL_WIDTH_SET_40MHZ_IN_2G)
+            chw = IEEE80211_CHAN_WIDTH_40;
+        else
+            chw = IEEE80211_CHAN_WIDTH_20;
+    }
+
+    if (info & IEEE80211_HE_PHY_CAP0_CHANNEL_WIDTH_SET_160MHZ_IN_5G ||
+        info & IEEE80211_HE_PHY_CAP0_CHANNEL_WIDTH_SET_80PLUS80_MHZ_IN_5G)
+        chw = IEEE80211_CHAN_WIDTH_160;
+    else if (info & IEEE80211_HE_PHY_CAP0_CHANNEL_WIDTH_SET_40MHZ_80MHZ_IN_5G)
+        chw = IEEE80211_CHAN_WIDTH_80;
+    
+    ni->ni_chw = chw;
     ni->ni_flags |= IEEE80211_NODE_HE;
     
     XYLog("%s %d chan_width=%d\n", __FUNCTION__, __LINE__, ni->ni_chw);

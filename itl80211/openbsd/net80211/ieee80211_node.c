@@ -2474,7 +2474,10 @@ int
 ieee80211_setup_heop(struct ieee80211_node *ni, const uint8_t *data,
                      uint8_t len)
 {
+    struct ieee80211_he_operation *he_op_ie = (struct ieee80211_he_operation *)data;
     
+    ni->ni_he_oper_params = le32toh(he_op_ie->he_oper_params);
+    ni->ni_he_oper_nss_set = le16toh(he_op_ie->he_mcs_nss_set);
     return 1;
 }
 
