@@ -5935,7 +5935,7 @@ iwx_mac_ctxt_cmd_common(struct iwx_softc *sc, struct iwx_node *in,
                     htole32(IWX_MAC_PROT_FLG_SELF_CTS_EN);
                 break;
             case IEEE80211_HTPROT_20MHZ:
-                if (ic->ic_htcaps & IEEE80211_HTCAP_CBW20_40) {
+                if (ni->ni_chw > 20) {
                     /* XXX ... and if our channel is 40 MHz ... */
                     cmd->protection_flags |=
                     htole32(IWX_MAC_PROT_FLG_HT_PROT |
@@ -6328,8 +6328,8 @@ iwx_rs_init(struct iwx_softc *sc, struct iwx_node *in, bool update)
     if (ni->ni_flags & IEEE80211_NODE_HT) {
         XYLog("%s line=%d\n", __FUNCTION__, __LINE__);
         cfg_cmd.mode = IWX_TLC_MNG_MODE_HT;
-        cfg_cmd.ht_rates[IWX_TLC_NSS_1][IWX_TLC_HT_BW_NONE_160] = cpu_to_le16(sc->sc_ic.ic_sup_mcs[0]);
-        cfg_cmd.ht_rates[IWX_TLC_NSS_2][IWX_TLC_HT_BW_NONE_160] = cpu_to_le16(sc->sc_ic.ic_sup_mcs[1]);
+        cfg_cmd.ht_rates[IWX_TLC_NSS_1][IWX_TLC_HT_BW_NONE_160] = htole16(iwx_rs_ht_rates(sc, ni, ni->ni_chw == 40 ? IEEE80211_HT_RATESET_CBW40_SISO : IEEE80211_HT_RATESET_SISO));
+        cfg_cmd.ht_rates[IWX_TLC_NSS_2][IWX_TLC_HT_BW_NONE_160] = htole16(iwx_rs_ht_rates(sc, ni, ni->ni_chw == 40 ? IEEE80211_HT_RATESET_CBW40_MIMO2 : IEEE80211_HT_RATESET_MIMO2));
     } else
         cfg_cmd.mode = IWX_TLC_MNG_MODE_NON_HT;
 
