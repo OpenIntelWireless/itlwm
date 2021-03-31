@@ -300,11 +300,141 @@ iwm_setup_ht_rates(struct iwm_softc *sc)
         ic->ic_sup_mcs[1] = 0xff;    /* MCS 8-15 */
 }
 
+void ItlIwm::
+iwm_init_reorder_buffer(struct iwm_reorder_buffer *reorder_buf,
+                        uint16_t ssn, uint16_t buf_size)
+{
+    reorder_buf->head_sn = ssn;
+    reorder_buf->num_stored = 0;
+    reorder_buf->buf_size = buf_size;
+    reorder_buf->last_amsdu = 0;
+    reorder_buf->last_sub_index = 0;
+    reorder_buf->removed = 0;
+    reorder_buf->valid = 0;
+    reorder_buf->consec_oldsn_drops = 0;
+    reorder_buf->consec_oldsn_ampdu_gp2 = 0;
+    reorder_buf->consec_oldsn_prev_drop = 0;
+}
+
+void ItlIwm::
+iwm_clear_reorder_buffer(struct iwm_softc *sc, struct iwm_rxba_data *rxba)
+{
+    int i;
+    struct iwm_reorder_buffer *reorder_buf = &rxba->reorder_buf;
+    struct iwm_reorder_buf_entry *entry;
+    
+    for (i = 0; i < reorder_buf->buf_size; i++) {
+        entry = &rxba->entries[i];
+        ml_purge(&entry->frames);
+        timerclear(&entry->reorder_time);
+    }
+    
+    reorder_buf->removed = 1;
+    timeout_del(&reorder_buf->reorder_timer);
+    timeout_free(&reorder_buf->reorder_timer);
+    timerclear(&rxba->last_rx);
+    timeout_del(&rxba->session_timer);
+    timeout_free(&rxba->session_timer);
+    rxba->baid = IWM_RX_REORDER_DATA_INVALID_BAID;
+}
+
+void ItlIwm::
+iwm_rx_ba_session_expired(void *arg)
+{
+    struct iwm_rxba_data *rxba = (struct iwm_rxba_data *)arg;
+    struct iwm_softc *sc = rxba->sc;
+    struct ieee80211com *ic = &sc->sc_ic;
+    struct ieee80211_node *ni = ic->ic_bss;
+    struct timeval now, timeout, expiry;
+    int s;
+    
+    s = splnet();
+    if ((sc->sc_flags & IWM_FLAG_SHUTDOWN) == 0 &&
+        ic->ic_state == IEEE80211_S_RUN &&
+        rxba->baid != IWM_RX_REORDER_DATA_INVALID_BAID) {
+        getmicrouptime(&now);
+        USEC_TO_TIMEVAL(RX_REORDER_BUF_TIMEOUT_MQ_USEC, &timeout);
+        timeradd(&rxba->last_rx, &timeout, &expiry);
+        if (timercmp(&now, &expiry, <)) {
+            timeout_add_usec(&rxba->session_timer, rxba->timeout);
+        } else {
+            ic->ic_stats.is_ht_rx_ba_timeout++;
+            ieee80211_delba_request(ic, ni,
+                                    IEEE80211_REASON_TIMEOUT, 0, rxba->tid);
+        }
+    }
+    splx(s);
+}
+
+void ItlIwm::
+iwm_reorder_timer_expired(void *arg)
+{
+    struct mbuf_list ml = MBUF_LIST_INITIALIZER();
+    struct iwm_reorder_buffer *buf = (struct iwm_reorder_buffer *)arg;
+    struct iwm_rxba_data *rxba = iwm_rxba_data_from_reorder_buf(buf);
+    struct iwm_reorder_buf_entry *entries = &rxba->entries[0];
+    struct iwm_softc *sc = rxba->sc;
+    ItlIwm *that = container_of(sc, ItlIwm, com);
+    struct ieee80211com *ic = &sc->sc_ic;
+    struct ieee80211_node *ni = ic->ic_bss;
+    int i, s;
+    uint16_t sn = 0, index = 0;
+    int expired = 0;
+    int cont = 0;
+    struct timeval now, timeout, expiry;
+    
+    if (!buf->num_stored || buf->removed)
+        return;
+    
+    s = splnet();
+    getmicrouptime(&now);
+    USEC_TO_TIMEVAL(RX_REORDER_BUF_TIMEOUT_MQ_USEC, &timeout);
+    
+    for (i = 0; i < buf->buf_size ; i++) {
+        index = (buf->head_sn + i) % buf->buf_size;
+        
+        if (ml_empty(&entries[index].frames)) {
+            /*
+             * If there is a hole and the next frame didn't expire
+             * we want to break and not advance SN.
+             */
+            cont = 0;
+            continue;
+        }
+        timeradd(&entries[index].reorder_time, &timeout, &expiry);
+        if (!cont && timercmp(&now, &expiry, <))
+            break;
+        
+        expired = 1;
+        /* continue until next hole after this expired frame */
+        cont = 1;
+        sn = (buf->head_sn + (i + 1)) & 0xfff;
+    }
+    
+    if (expired) {
+        /* SN is set to the last expired frame + 1 */
+        that->iwm_release_frames(sc, ni, rxba, buf, sn, &ml);
+        if_input(&sc->sc_ic.ic_if, &ml);
+        ic->ic_stats.is_ht_rx_ba_window_gap_timeout++;
+    } else {
+        /*
+         * If no frame expired and there are stored frames, index is now
+         * pointing to the first unexpired frame - modify reorder
+         timeout
+         * accordingly.
+         */
+        timeout_add_usec(&buf->reorder_timer,
+                         RX_REORDER_BUF_TIMEOUT_MQ_USEC);
+    }
+    
+    splx(s);
+}
+
 #define IWM_MAX_RX_BA_SESSIONS 16
 
 void ItlIwm::
 iwm_sta_rx_agg(struct iwm_softc *sc, struct ieee80211_node *ni, uint8_t tid,
-               uint16_t ssn, uint16_t winsize, int start)
+               uint16_t ssn, uint16_t winsize, int timeout_val, int start)
 {
     struct ieee80211com *ic = &sc->sc_ic;
     struct iwm_add_sta_cmd cmd;
@@ -312,9 +442,14 @@ iwm_sta_rx_agg(struct iwm_softc *sc, struct ieee80211_node *ni, uint8_t tid,
     int err, s;
     uint32_t status;
     size_t cmdsize;
+    struct iwm_rxba_data *rxba = NULL;
+    uint8_t baid = 0;
+    
+    s = splnet();
     
     if (start && sc->sc_rx_ba_sessions >= IWM_MAX_RX_BA_SESSIONS) {
         ieee80211_addba_req_refuse(ic, ni, tid);
+        splx(s);
         return;
     }
     
@@ -343,15 +478,70 @@ iwm_sta_rx_agg(struct iwm_softc *sc, struct ieee80211_node *ni, uint8_t tid,
     err = iwm_send_cmd_pdu_status(sc, IWM_ADD_STA, cmdsize, &cmd,
                                   &status);
     
-    s = splnet();
-    if (!err && (status & IWM_ADD_STA_STATUS_MASK) == IWM_ADD_STA_SUCCESS) {
+    if (err || (status & IWM_ADD_STA_STATUS_MASK) != IWM_ADD_STA_SUCCESS) {
+        if (start)
+            ieee80211_addba_req_refuse(ic, ni, tid);
+        splx(s);
+        return;
+    }
+    
+    if (sc->sc_mqrx_supported) {
+        /* Deaggregation is done in hardware. */
         if (start) {
-            sc->sc_rx_ba_sessions++;
-            ieee80211_addba_req_accept(ic, ni, tid);
-        } else if (sc->sc_rx_ba_sessions > 0)
-            sc->sc_rx_ba_sessions--;
-    } else if (start)
-        ieee80211_addba_req_refuse(ic, ni, tid);
+            if (!(status & IWM_ADD_STA_BAID_VALID_MASK)) {
+                ieee80211_addba_req_refuse(ic, ni, tid);
+                splx(s);
+                return;
+            }
+            baid = (status & IWM_ADD_STA_BAID_MASK) >>
+            IWM_ADD_STA_BAID_SHIFT;
+            if (baid == IWM_RX_REORDER_DATA_INVALID_BAID ||
+                baid >= nitems(sc->sc_rxba_data)) {
+                ieee80211_addba_req_refuse(ic, ni, tid);
+                splx(s);
+                return;
+            }
+            rxba = &sc->sc_rxba_data[baid];
+            if (rxba->baid != IWM_RX_REORDER_DATA_INVALID_BAID) {
+                ieee80211_addba_req_refuse(ic, ni, tid);
+                splx(s);
+                return;
+            }
+            rxba->sta_id = IWM_STATION_ID;
+            rxba->tid = tid;
+            rxba->baid = baid;
+            rxba->timeout = timeout_val;
+            getmicrouptime(&rxba->last_rx);
+            iwm_init_reorder_buffer(&rxba->reorder_buf, ssn,
+                                    winsize);
+            if (timeout_val != 0) {
+                struct ieee80211_rx_ba *ba;
+                timeout_add_usec(&rxba->session_timer,
+                                 timeout_val);
+                /* XXX disable net80211's BA timeout handler */
+                ba = &ni->ni_rx_ba[tid];
+                ba->ba_timeout_val = 0;
+            }
+        } else {
+            int i;
+            for (i = 0; i < nitems(sc->sc_rxba_data); i++) {
+                rxba = &sc->sc_rxba_data[i];
+                if (rxba->baid ==
+                    IWM_RX_REORDER_DATA_INVALID_BAID)
+                    continue;
+                if (rxba->tid != tid)
+                    continue;
+                iwm_clear_reorder_buffer(sc, rxba);
+                break;
+            }
+        }
+    }
+    
+    if (start) {
+        sc->sc_rx_ba_sessions++;
+        ieee80211_addba_req_accept(ic, ni, tid);
+    } else if (sc->sc_rx_ba_sessions > 0)
+        sc->sc_rx_ba_sessions--;
     
     splx(s);
 }
@@ -537,7 +727,8 @@ iwm_get_noise(const struct iwm_statistics_rx_non_phy *stats)
 }
 
 int ItlIwm::
-iwm_ccmp_decap(struct iwm_softc *sc, mbuf_t m, struct ieee80211_node *ni)
+iwm_ccmp_decap(struct iwm_softc *sc, mbuf_t m, struct ieee80211_node *ni,
+               struct ieee80211_rxinfo *rxi)
 {
    struct ieee80211com *ic = &sc->sc_ic;
    struct ieee80211_key *k = &ni->ni_pairwise_key;
@@ -566,7 +757,12 @@ iwm_ccmp_decap(struct iwm_softc *sc, mbuf_t m, struct ieee80211_node *ni)
         (uint64_t)ivp[5] << 24 |
         (uint64_t)ivp[6] << 32 |
         (uint64_t)ivp[7] << 40;
-   if (pn <= *prsc) {
+    if (rxi->rxi_flags & IEEE80211_RXI_HWDEC_SAME_PN) {
+        if (pn < *prsc) {
+            ic->ic_stats.is_ccmp_replays++;
+            return 1;
+        }
+    } else if (pn <= *prsc) {
        ic->ic_stats.is_ccmp_replays++;
        return 1;
    }
@@ -581,6 +777,60 @@ iwm_ccmp_decap(struct iwm_softc *sc, mbuf_t m, struct ieee80211_node *ni)
     * The IV will be stripped by ieee80211_inputm().
     */
    return 0;
+}
+
+int ItlIwm::
+iwm_rx_hwdecrypt(struct iwm_softc *sc, mbuf_t m, uint32_t rx_pkt_status,
+                 struct ieee80211_rxinfo *rxi)
+{
+    struct ieee80211com *ic = &sc->sc_ic;
+    struct _ifnet *ifp = IC2IFP(ic);
+    struct ieee80211_frame *wh;
+    struct ieee80211_node *ni;
+    int ret = 0;
+    uint8_t type, subtype;
+    
+    wh = mtod(m, struct ieee80211_frame *);
+    
+    type = wh->i_fc[0] & IEEE80211_FC0_TYPE_MASK;
+    if (type == IEEE80211_FC0_TYPE_CTL)
+        return 0;
+    
+    subtype = wh->i_fc[0] & IEEE80211_FC0_SUBTYPE_MASK;
+    if (ieee80211_has_qos(wh) && (subtype & IEEE80211_FC0_SUBTYPE_NODATA))
+        return 0;
+    
+    if (IEEE80211_IS_MULTICAST(wh->i_addr1) ||
+        !(wh->i_fc[1] & IEEE80211_FC1_PROTECTED))
+        return 0;
+    
+    ni = ieee80211_find_rxnode(ic, wh);
+    /* Handle hardware decryption. */
+    if ((ni->ni_flags & IEEE80211_NODE_RXPROT) &&
+        ni->ni_pairwise_key.k_cipher == IEEE80211_CIPHER_CCMP) {
+        if ((rx_pkt_status & IWM_RX_MPDU_RES_STATUS_SEC_ENC_MSK) !=
+            IWM_RX_MPDU_RES_STATUS_SEC_CCM_ENC) {
+            ic->ic_stats.is_ccmp_dec_errs++;
+            ret = 1;
+            goto out;
+        }
+        /* Check whether decryption was successful or not. */
+        if ((rx_pkt_status &
+             (IWM_RX_MPDU_RES_STATUS_DEC_DONE |
+              IWM_RX_MPDU_RES_STATUS_MIC_OK)) !=
+            (IWM_RX_MPDU_RES_STATUS_DEC_DONE |
+             IWM_RX_MPDU_RES_STATUS_MIC_OK)) {
+            ic->ic_stats.is_ccmp_dec_errs++;
+            ret = 1;
+            goto out;
+        }
+        rxi->rxi_flags |= IEEE80211_RXI_HWDEC;
+    }
+out:
+    if (ret)
+        ifp->netStat->inputErrors++;
+    ieee80211_release_node(ic, ni);
+    return ret;
 }
 
 void ItlIwm::
@@ -611,36 +861,12 @@ iwm_rx_frame(struct iwm_softc *sc, mbuf_t m, int chanidx,
     }
     ni->ni_chan = &ic->ic_channels[chanidx];
     
-    /* Handle hardware decryption. */
-    if (((wh->i_fc[0] & IEEE80211_FC0_TYPE_MASK) != IEEE80211_FC0_TYPE_CTL)
-        && (wh->i_fc[1] & IEEE80211_FC1_PROTECTED) &&
-        !IEEE80211_IS_MULTICAST(wh->i_addr1) &&
-        (ni->ni_flags & IEEE80211_NODE_RXPROT) &&
-        ni->ni_pairwise_key.k_cipher == IEEE80211_CIPHER_CCMP) {
-        if ((rx_pkt_status & IWM_RX_MPDU_RES_STATUS_SEC_ENC_MSK) !=
-            IWM_RX_MPDU_RES_STATUS_SEC_CCM_ENC) {
-            ic->ic_stats.is_ccmp_dec_errs++;
-            ifp->netStat->inputErrors++;
-            mbuf_freem(m);
-            return;
-        }
-        /* Check whether decryption was successful or not. */
-        if ((rx_pkt_status &
-             (IWM_RX_MPDU_RES_STATUS_DEC_DONE |
-              IWM_RX_MPDU_RES_STATUS_MIC_OK)) !=
-            (IWM_RX_MPDU_RES_STATUS_DEC_DONE |
-             IWM_RX_MPDU_RES_STATUS_MIC_OK)) {
-            ic->ic_stats.is_ccmp_dec_errs++;
-            ifp->netStat->inputErrors++;
-            mbuf_freem(m);
-            return;
-        }
-        if (iwm_ccmp_decap(sc, m, ni) != 0) {
-            ifp->netStat->inputErrors++;
-            mbuf_freem(m);
-            return;
-        }
-        rxi->rxi_flags |= IEEE80211_RXI_HWDEC;
+    if ((rxi->rxi_flags & IEEE80211_RXI_HWDEC) &&
+        iwm_ccmp_decap(sc, m, ni, rxi) != 0) {
+        ifp->if_ierrors++;
+        mbuf_freem(m);
+        ieee80211_release_node(ic, ni);
+        return;
     }
     
 #if NBPFILTER > 0
@@ -1733,10 +1959,10 @@ iwm_flush_tx_path(struct iwm_softc *sc, int tfd_queue_msk)
 static uint8_t iwm_mvm_mac80211_ac_to_ucode_ac(enum ieee80211_edca_ac ac)
 {
    static const uint8_t mac80211_ac_to_ucode_ac[] = {
-       IWM_AC_VO,
-       IWM_AC_VI,
+       IWM_AC_BK,
        IWM_AC_BE,
-       IWM_AC_BK
+       IWM_AC_VI,
+       IWM_AC_VO,
    };
 
    return mac80211_ac_to_ucode_ac[ac];
@@ -2054,6 +2280,8 @@ iwm_deauth(struct iwm_softc *sc)
         }
         sc->sc_flags &= ~IWM_FLAG_STA_ACTIVE;
         sc->sc_rx_ba_sessions = 0;
+        sc->ba_start_tidmask = 0;
+        sc->ba_stop_tidmask = 0;
     }
     
     tfd_queue_msk = 0;
@@ -2134,6 +2362,8 @@ iwm_disassoc(struct iwm_softc *sc)
         }
         sc->sc_flags &= ~IWM_FLAG_STA_ACTIVE;
         sc->sc_rx_ba_sessions = 0;
+        sc->ba_start_tidmask = 0;
+        sc->ba_stop_tidmask = 0;
     }
     
     return 0;
@@ -2610,14 +2840,15 @@ iwm_ampdu_rx_start(struct ieee80211com *ic, struct ieee80211_node *ni,
     struct iwm_softc *sc = (struct iwm_softc *)IC2IFP(ic)->if_softc;
     ItlIwm *that = container_of(sc, ItlIwm, com);
     
-    if (sc->sc_rx_ba_sessions >= IWM_MAX_RX_BA_SESSIONS)
+    if (sc->sc_rx_ba_sessions >= IWM_MAX_RX_BA_SESSIONS ||
+        tid > IWM_MAX_TID_COUNT || (sc->ba_start_tidmask & (1 << tid)))
         return ENOSPC;
     
-    sc->ba_start = 1;
-    sc->ba_tid = tid;
     sc->ba_tx = 0;
-    sc->ba_ssn = htole16(ba->ba_winstart);
-    sc->ba_winsize = htole16(ba->ba_winsize);
+    sc->ba_start_tidmask |= (1 << tid);
+    sc->ba_ssn[tid] = ba->ba_winstart;
+    sc->ba_winsize[tid] = ba->ba_winsize;
+    sc->ba_timeout_val[tid] = ba->ba_timeout_val;
     that->iwm_add_task(sc, systq, &sc->ba_task);
     
     return EBUSY;
@@ -2634,9 +2865,11 @@ iwm_ampdu_rx_stop(struct ieee80211com *ic, struct ieee80211_node *ni,
     struct iwm_softc *sc = (struct iwm_softc *)IC2IFP(ic)->if_softc;
     ItlIwm *that = container_of(sc, ItlIwm, com);
     
-    sc->ba_start = 0;
-    sc->ba_tid = tid;
     sc->ba_tx = 0;
+    if (tid > IWM_MAX_TID_COUNT || sc->ba_stop_tidmask & (1 << tid))
+        return;
+    
+    sc->ba_stop_tidmask = (1 << tid);
     that->iwm_add_task(sc, systq, &sc->ba_task);
 }
 
@@ -2654,10 +2887,10 @@ iwm_ampdu_tx_start(struct ieee80211com *ic, struct ieee80211_node *ni, uint8_t t
         return ENOSPC;
     }
 
-    sc->ba_start = 1;
+    sc->ba_tx_start = 1;
     sc->ba_tx = 1;
-    sc->ba_ssn = ssn;
-    sc->ba_tid = tid;
+    sc->ba_tx_ssn = ssn;
+    sc->ba_tx_tid = tid;
     
     that->iwm_add_task(sc, systq, &sc->ba_task);
     return EBUSY;
@@ -2692,7 +2925,7 @@ iwm_ampdu_tx_stop(struct ieee80211com *ic, struct ieee80211_node *ni, uint8_t ti
     ba->ba_bitmap = 0;
 
     sc->ba_tx = 1;
-    sc->ba_start = 0;
+    sc->ba_tx_start = 0;
 
     that->iwm_add_task(sc, systq, &sc->ba_task);
 }
@@ -2876,6 +3109,7 @@ iwm_newstate(struct ieee80211com *ic, enum ieee80211_state nstate, int arg)
     struct iwm_softc *sc = (struct iwm_softc*)ifp->if_softc;
     ItlIwm *that = container_of(sc, ItlIwm, com);
     struct ieee80211_node *ni = ic->ic_bss;
+    int i;
     
     if (ic->ic_state == IEEE80211_S_RUN) {
         if (nstate == IEEE80211_S_SCAN) {
@@ -2889,6 +3123,10 @@ iwm_newstate(struct ieee80211com *ic, enum ieee80211_state nstate, int arg)
         timeout_del(&sc->sc_calib_to);
         that->iwm_del_task(sc, systq, &sc->ba_task);
         that->iwm_del_task(sc, systq, &sc->htprot_task);
+        for (i = 0; i < nitems(sc->sc_rxba_data); i++) {
+            struct iwm_rxba_data *rxba = &sc->sc_rxba_data[i];
+            that->iwm_clear_reorder_buffer(sc, rxba);
+        }
     }
     
     sc->ns_nstate = nstate;
@@ -3424,10 +3662,19 @@ iwm_stop(struct _ifnet *ifp)
     sc->sc_flags &= ~IWM_FLAG_SHUTDOWN;
 
     sc->sc_rx_ba_sessions = 0;
+    sc->ba_start_tidmask = 0;
+    sc->ba_stop_tidmask = 0;
+    memset(sc->ba_ssn, 0, sizeof(sc->ba_ssn));
+    memset(sc->ba_winsize, 0, sizeof(sc->ba_winsize));
+    memset(sc->ba_timeout_val, 0, sizeof(sc->ba_timeout_val));
     
     sc->sc_newstate(ic, IEEE80211_S_INIT, -1);
     
     timeout_del(&sc->sc_calib_to); /* XXX refcount? */
+    for (i = 0; i < nitems(sc->sc_rxba_data); i++) {
+        struct iwm_rxba_data *rxba = &sc->sc_rxba_data[i];
+        iwm_clear_reorder_buffer(sc, rxba);
+    }
     iwm_led_blink_stop(sc);
     ifp->if_timer = sc->sc_tx_timer = 0;
     
@@ -4198,7 +4445,7 @@ iwm_attach(struct iwm_softc *sc, struct pci_attach_args *pa)
     struct _ifnet *ifp = &ic->ic_if;
     const char *intrstr = {0};
     int err;
-    int txq_i, i;
+    int txq_i, i, j;
     
     sc->sc_pct = pa->pa_pc;
     sc->sc_pcitag = pa->pa_tag;
@@ -4514,7 +4761,7 @@ iwm_attach(struct iwm_softc *sc, struct pci_attach_args *pa)
     ic->ic_txbfcaps = 0;
     ic->ic_aselcaps = 0;
     ic->ic_ampdu_params = (IEEE80211_AMPDU_PARAM_SS_4 | 0x3 /* 64k */);
-    ic->ic_caps |= (IEEE80211_C_QOS | IEEE80211_C_TX_AMPDU);
+    ic->ic_caps |= (IEEE80211_C_QOS | IEEE80211_C_TX_AMPDU | IEEE80211_C_AMSDU_IN_AMPDU);
     
     ic->ic_sup_rates[IEEE80211_MODE_11A] = ieee80211_std_rateset_11a;
     ic->ic_sup_rates[IEEE80211_MODE_11B] = ieee80211_std_rateset_11b;
@@ -4550,6 +4797,17 @@ iwm_attach(struct iwm_softc *sc, struct pci_attach_args *pa)
 #endif
     timeout_set(&sc->sc_calib_to, iwm_calib_timeout, sc);
     timeout_set(&sc->sc_led_blink_to, iwm_led_blink_timeout, sc);
+    for (i = 0; i < nitems(sc->sc_rxba_data); i++) {
+        struct iwm_rxba_data *rxba = &sc->sc_rxba_data[i];
+        rxba->baid = IWM_RX_REORDER_DATA_INVALID_BAID;
+        rxba->sc = sc;
+        timeout_set(&rxba->session_timer, iwm_rx_ba_session_expired,
+                    rxba);
+        timeout_set(&rxba->reorder_buf.reorder_timer,
+                    iwm_reorder_timer_expired, &rxba->reorder_buf);
+        for (j = 0; j < nitems(rxba->entries); j++)
+            ml_init(&rxba->entries[j].frames);
+    }
     task_set(&sc->init_task, iwm_init_task, sc, "init_task");
     task_set(&sc->newstate_task, iwm_newstate_task, sc, "newstate_task");
     task_set(&sc->ba_task, iwm_ba_task, sc, "ba_task");
@@ -4676,60 +4934,62 @@ iwm_ba_task(void *arg)
     struct ieee80211com *ic = &sc->sc_ic;
     struct ieee80211_node *ni = ic->ic_bss;
     int s = splnet();
-    
-    if (sc->sc_flags & IWM_FLAG_SHUTDOWN) {
-        //        refcnt_rele_wake(&sc->task_refs);
-        splx(s);
-        return;
-    }
+    int tid;
 
     if (sc->ba_tx) {
-        if (sc->ba_start) {
-            uint8_t fifo = iwm_ac_to_tx_fifo[tid_to_mac80211_ac[sc->ba_tid]];
-            int qid = sc->first_agg_txq + sc->ba_tid;
-            struct ieee80211_tx_ba *ba = &ni->ni_tx_ba[sc->ba_tid];
+        if (sc->ba_tx_start) {
+            uint8_t fifo = iwm_ac_to_tx_fifo[tid_to_mac80211_ac[sc->ba_tx_tid]];
+            int qid = sc->first_agg_txq + sc->ba_tx_tid;
+            struct ieee80211_tx_ba *ba = &ni->ni_tx_ba[sc->ba_tx_tid];
             struct iwm_tx_ring *ring = &sc->txq[qid];
 
-            XYLog("%s start=%d ssn=%d, tid=%d scd_queue=%d\n", __FUNCTION__, sc->ba_start, sc->ba_ssn, sc->ba_tid, qid);
+            XYLog("%s start=%d ssn=%d, tid=%d scd_queue=%d\n", __FUNCTION__, sc->ba_tx_start, sc->ba_tx_ssn, sc->ba_tx_tid, qid);
 
             if (!that->iwm_nic_lock(sc))
                 goto out;
-            if (that->iwm_enable_txq(sc, IWM_STATION_ID, qid, fifo, sc->ba_ssn, sc->ba_tid, 1))
+            if (that->iwm_enable_txq(sc, IWM_STATION_ID, qid, fifo, sc->ba_tx_ssn, sc->ba_tx_tid, 1))
                 goto out;
             /*
              * If iwm_enable_txq() employed the SCD hardware bug
              * workaround we must skip the frame with seqnum SSN.
              */
             if (IWM_AGG_SSN_TO_TXQ_IDX(ring->cur) !=
-                IWM_AGG_SSN_TO_TXQ_IDX(sc->ba_ssn)) {
-                sc->ba_ssn = (sc->ba_ssn + 1) & 0xfff;
-                ieee80211_output_ba_move_window(ic, ni, sc->ba_tid, sc->ba_ssn);
-                ni->ni_qos_txseqs[sc->ba_tid] = sc->ba_ssn;
+                IWM_AGG_SSN_TO_TXQ_IDX(sc->ba_tx_ssn)) {
+                sc->ba_tx_ssn = (sc->ba_tx_ssn + 1) & 0xfff;
+                ieee80211_output_ba_move_window(ic, ni, sc->ba_tx_tid, sc->ba_tx_ssn);
+                ni->ni_qos_txseqs[sc->ba_tx_tid] = sc->ba_tx_ssn;
             }
             if (that->iwm_add_sta_cmd(sc, (struct iwm_node *)ni, 1, IWM_STA_MODIFY_QUEUES))
                 goto out;
 
-            sc->agg_tid_disable &= ~(1 << sc->ba_tid);
+            sc->agg_tid_disable &= ~(1 << sc->ba_tx_tid);
             sc->agg_queue_mask |= (1 << qid);
-            sc->sc_tx_ba[sc->ba_tid].wn = (iwm_node *)ni;
+            sc->sc_tx_ba[sc->ba_tx_tid].wn = (iwm_node *)ni;
             ba->ba_bitmap = 0;
-            if (!that->iwm_sta_tx_agg(sc, ni, sc->ba_tid, 0, sc->ba_ssn, 1)) {
-                ieee80211_addba_resp_accept(ic, ni, sc->ba_tid);
+            if (!that->iwm_sta_tx_agg(sc, ni, sc->ba_tx_tid, 0, sc->ba_tx_ssn, 1)) {
+                ieee80211_addba_resp_accept(ic, ni, sc->ba_tx_tid);
             } else {
             out:
-                ieee80211_addba_resp_refuse(ic, ni, sc->ba_tid,
+                ieee80211_addba_resp_refuse(ic, ni, sc->ba_tx_tid,
                                             IEEE80211_STATUS_UNSPECIFIED);
             }
             that->iwm_nic_unlock(sc);
         } else {
-            that->iwm_sta_tx_agg(sc, ni, sc->ba_tid, 0, 0, 0);
+            that->iwm_sta_tx_agg(sc, ni, sc->ba_tx_tid, 0, 0, 0);
         }
     } else {
-        if (sc->ba_start)
-            that->iwm_sta_rx_agg(sc, ni, sc->ba_tid, sc->ba_ssn,
-                                 sc->ba_winsize, 1);
-        else
-            that->iwm_sta_rx_agg(sc, ni, sc->ba_tid, 0, 0, 0);
+        for (tid = 0; tid < IWM_MAX_TID_COUNT; tid++) {
+            if (sc->sc_flags & IWM_FLAG_SHUTDOWN)
+                break;
+            if (sc->ba_start_tidmask & (1 << tid)) {
+                that->iwm_sta_rx_agg(sc, ni, tid, sc->ba_ssn[tid],
+                               sc->ba_winsize[tid], sc->ba_timeout_val[tid], 1);
+                sc->ba_start_tidmask &= ~(1 << tid);
+            } else if (sc->ba_stop_tidmask & (1 << tid)) {
+                that->iwm_sta_rx_agg(sc, ni, tid, 0, 0, 0, 0);
+                sc->ba_stop_tidmask &= ~(1 << tid);
+            }
+        }
     }
     
     //    refcnt_rele_wake(&sc->task_refs);

@@ -69,7 +69,8 @@
 #include <net80211/ieee80211_priv.h>
 
 mbuf_t ieee80211_input_hwdecrypt(struct ieee80211com *,
-                                          struct ieee80211_node *, mbuf_t);
+                                 struct ieee80211_node *, mbuf_t,
+                                 struct ieee80211_rxinfo *rxi);
 mbuf_t ieee80211_defrag(struct ieee80211com *, mbuf_t, int);
 void    ieee80211_defrag_timeout(void *);
 void    ieee80211_input_ba(struct ieee80211com *, mbuf_t,
@@ -164,7 +165,7 @@ ieee80211_get_hdrlen(const struct ieee80211_frame *wh)
 /* Post-processing for drivers which perform decryption in hardware. */
 mbuf_t
 ieee80211_input_hwdecrypt(struct ieee80211com *ic, struct ieee80211_node *ni,
-    mbuf_t m)
+    mbuf_t m, struct ieee80211_rxinfo *rxi)
 {
    struct ieee80211_key *k;
    struct ieee80211_frame *wh;
@@ -197,12 +198,17 @@ ieee80211_input_hwdecrypt(struct ieee80211com *ic, struct ieee80211_node *ni,
             */
            break;
        }
-       if (ieee80211_ccmp_get_pn(&pn, &prsc, m, k) != 0)
-           return NULL;
-       if (pn <= *prsc) {
-           ic->ic_stats.is_ccmp_replays++;
-           return NULL;
-       }
+           if (ieee80211_ccmp_get_pn(&pn, &prsc, m, k) != 0)
+               return NULL;
+           if (rxi->rxi_flags & IEEE80211_RXI_HWDEC_SAME_PN) {
+               if (pn < *prsc) {
+                   ic->ic_stats.is_ccmp_replays++;
+                   return NULL;
+               }
+           } else if (pn <= *prsc) {
+               ic->ic_stats.is_ccmp_replays++;
+               return NULL;
+           }
 
        /* Update last-seen packet number. */
        *prsc = pn;
@@ -225,7 +231,12 @@ ieee80211_input_hwdecrypt(struct ieee80211com *ic, struct ieee80211_node *ni,
        if (ieee80211_tkip_get_tsc(&pn, &prsc, m, k) != 0)
            return NULL;
 
-       if (pn <= *prsc) {
+       if (rxi->rxi_flags & IEEE80211_RXI_HWDEC_SAME_PN) {
+           if (pn < *prsc) {
+               ic->ic_stats.is_tkip_replays++;
+               return NULL;
+               }
+           } else if (pn <= *prsc) {
            ic->ic_stats.is_tkip_replays++;
            return NULL;
        }
@@ -392,8 +403,14 @@ ieee80211_inputm(struct _ifnet *ifp, mbuf_t m, struct ieee80211_node *ni,
             orxseq = &ni->ni_qos_rxseqs[tid];
         else
             orxseq = &ni->ni_rxseq;
-        if ((wh->i_fc[1] & IEEE80211_FC1_RETRY) &&
-            nrxseq == *orxseq) {
+        if (rxi->rxi_flags & IEEE80211_RXI_SAME_SEQ) {
+            if (nrxseq != *orxseq) {
+                /* duplicate, silently discarded */
+                ic->ic_stats.is_rx_dup++;
+                goto out;
+            }
+        } else if ((wh->i_fc[1] & IEEE80211_FC1_RETRY) &&
+                   nrxseq == *orxseq) {
             /* duplicate, silently discarded */
             ic->ic_stats.is_rx_dup++;
             goto out;
@@ -568,7 +585,7 @@ ieee80211_inputm(struct _ifnet *ifp, mbuf_t m, struct ieee80211_node *ni,
                         goto err;
                     }
                 } else {
-                    m = ieee80211_input_hwdecrypt(ic, ni, m);
+                    m = ieee80211_input_hwdecrypt(ic, ni, m, rxi);
                     if (m == NULL)
                         goto err;
                 }

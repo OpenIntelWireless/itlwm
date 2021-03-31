@@ -3160,6 +3160,9 @@ struct iwm_rx_mpdu_res_start {
 #define    IWM_RX_MPDU_MFLG2_PAD            0x20
 #define IWM_RX_MPDU_MFLG2_AMSDU            0x40
 
+#define IWM_RX_MPDU_AMSDU_SUBFRAME_IDX_MASK    0x7f
+#define IWM_RX_MPDU_AMSDU_LAST_SUBFRAME                0x80
+
 #define IWM_RX_MPDU_PHY_AMPDU            (1 << 5)
 #define IWM_RX_MPDU_PHY_AMPDU_TOGGLE        (1 << 6)
 #define IWM_RX_MPDU_PHY_SHORT_PREAMBLE        (1 << 7)
@@ -3189,6 +3192,15 @@ struct iwm_rx_mpdu_desc_v1 {
         };
     };
 } __packed;
+
+#define IWM_RX_REORDER_DATA_INVALID_BAID       0x7f
+
+#define IWM_RX_MPDU_REORDER_NSSN_MASK          0x00000fff
+#define IWM_RX_MPDU_REORDER_SN_MASK            0x00fff000
+#define IWM_RX_MPDU_REORDER_SN_SHIFT           12
+#define IWM_RX_MPDU_REORDER_BAID_MASK          0x7f000000
+#define IWM_RX_MPDU_REORDER_BAID_SHIFT         24
+#define IWM_RX_MPDU_REORDER_BA_OLD_SN          0x80000000
 
 struct iwm_rx_mpdu_desc {
     uint16_t mpdu_len;
@@ -4647,9 +4659,12 @@ struct iwm_lq_cmd {
 #define IWM_TX_CMD_LIFE_TIME_PROBE_RESP    40000 /* 40 ms */
 #define IWM_TX_CMD_LIFE_TIME_EXPIRED_FRAME    0
 
+#define RX_REORDER_BUF_TIMEOUT_MQ_USEC (100000ULL)
+
 /*
  * TID for non QoS frames - to be written in tid_tspec
  */
+#define IWM_MAX_TID_COUNT      8
 #define IWM_TID_NON_QOS    0
 #define IWM_TID_MGMT   15
 
