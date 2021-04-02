@@ -181,12 +181,17 @@ public:
     void    iwm_setup_ht_rates(struct iwm_softc *);
     static void    iwm_htprot_task(void *);
     static void    iwm_update_htprot(struct ieee80211com *, struct ieee80211_node *);
+    void   iwm_init_reorder_buffer(struct iwm_reorder_buffer *, uint16_t,
+                                   uint16_t);
+    void   iwm_clear_reorder_buffer(struct iwm_softc *, struct iwm_rxba_data *);
     static int    iwm_ampdu_rx_start(struct ieee80211com *, struct ieee80211_node *,
                                      uint8_t);
     static void    iwm_ampdu_rx_stop(struct ieee80211com *, struct ieee80211_node *,
                                      uint8_t);
+    static void   iwm_rx_ba_session_expired(void *);
+    static void   iwm_reorder_timer_expired(void *);
     void    iwm_sta_rx_agg(struct iwm_softc *, struct ieee80211_node *, uint8_t,
-                           uint16_t, uint16_t, int);
+                           uint16_t, uint16_t, int, int);
     static int    iwm_ampdu_tx_start(struct ieee80211com *, struct ieee80211_node *,
                               uint8_t);
     static void    iwm_ampdu_tx_stop(struct ieee80211com *, struct ieee80211_node *,
@@ -227,8 +232,10 @@ public:
     void    iwm_rx_rx_phy_cmd(struct iwm_softc *, struct iwm_rx_packet *,
                               struct iwm_rx_data *);
     int    iwm_get_noise(const struct iwm_statistics_rx_non_phy *);
+    int    iwm_rx_hwdecrypt(struct iwm_softc *, mbuf_t, uint32_t,
+               struct ieee80211_rxinfo *);
     int    iwm_ccmp_decap(struct iwm_softc *, mbuf_t,
-                          struct ieee80211_node *);
+                          struct ieee80211_node *, struct ieee80211_rxinfo *);
     void    iwm_rx_frame(struct iwm_softc *, mbuf_t, int, uint32_t, int, int,
                          uint32_t, struct ieee80211_rxinfo *, struct mbuf_list *);
     void    iwm_rx_tx_cmd_single(struct iwm_softc *, struct iwm_tx_resp *,
@@ -365,6 +372,18 @@ public:
 #endif
     void    iwm_rx_mpdu(struct iwm_softc *, mbuf_t, void *, size_t,
                         struct mbuf_list *);
+    void   iwm_flip_address(uint8_t *);
+    int    iwm_detect_duplicate(struct iwm_softc *, mbuf_t,
+               struct iwm_rx_mpdu_desc *, struct ieee80211_rxinfo *);
+    int    iwm_is_sn_less(uint16_t, uint16_t, uint16_t);
+    void   iwm_release_frames(struct iwm_softc *, struct ieee80211_node *,
+               struct iwm_rxba_data *, struct iwm_reorder_buffer *, uint16_t,
+               struct mbuf_list *);
+    int    iwm_oldsn_workaround(struct iwm_softc *, struct ieee80211_node *,
+               int, struct iwm_reorder_buffer *, uint32_t, uint32_t);
+    int    iwm_rx_reorder(struct iwm_softc *, mbuf_t, int,
+               struct iwm_rx_mpdu_desc *, int, int, uint32_t,
+               struct ieee80211_rxinfo *, struct mbuf_list *);
     int    iwm_rx_pkt_valid(struct iwm_rx_packet *);
     void    iwm_rx_pkt(struct iwm_softc *, struct iwm_rx_data *,
                        struct mbuf_list *);

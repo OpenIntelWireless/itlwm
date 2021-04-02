@@ -392,6 +392,100 @@ struct iwm_bf_data {
     int last_cqm_event;
 };
 
+/**
+ * struct iwm_reorder_buffer - per ra/tid/queue reorder buffer
+ * @head_sn: reorder window head sn
+ * @num_stored: number of mpdus stored in the buffer
+ * @buf_size: the reorder buffer size as set by the last addba request
+ * @queue: queue of this reorder buffer
+ * @last_amsdu: track last ASMDU SN for duplication detection
+ * @last_sub_index: track ASMDU sub frame index for duplication detection
+ * @reorder_timer: timer for frames are in the reorder buffer. For AMSDU
+ *     it is the time of last received sub-frame
+ * @removed: prevent timer re-arming
+ * @valid: reordering is valid for this queue
+ * @consec_oldsn_drops: consecutive drops due to old SN
+ * @consec_oldsn_ampdu_gp2: A-MPDU GP2 timestamp to track
+ *     when to apply old SN consecutive drop workaround
+ * @consec_oldsn_prev_drop: track whether or not an MPDU
+ *     that was single/part of the previous A-MPDU was
+ *     dropped due to old SN
+ */
+struct iwm_reorder_buffer {
+    uint16_t head_sn;
+    uint16_t num_stored;
+    uint16_t buf_size;
+    uint16_t last_amsdu;
+    uint8_t last_sub_index;
+    CTimeout *reorder_timer;
+    int removed;
+    int valid;
+    unsigned int consec_oldsn_drops;
+    uint32_t consec_oldsn_ampdu_gp2;
+    unsigned int consec_oldsn_prev_drop;
+#define IWM_AMPDU_CONSEC_DROPS_DELBA   10
+};
+
+/**
+ * struct iwm_reorder_buf_entry - reorder buffer entry per frame sequence
+ number
+ * @frames: list of mbufs stored (A-MSDU subframes share a sequence number)
+ * @reorder_time: time the packet was stored in the reorder buffer
+ */
+struct iwm_reorder_buf_entry {
+    struct mbuf_list frames;
+    struct timeval reorder_time;
+    uint32_t rx_pkt_status;
+    int chanidx;
+    int is_shortpre;
+    uint32_t rate_n_flags;
+    uint32_t device_timestamp;
+    struct ieee80211_rxinfo rxi;
+};
+
+/**
+ * struct iwm_rxba_data - BA session data
+ * @sta_id: station id
+ * @tid: tid of the session
+ * @baid: baid of the session
+ * @timeout: the timeout set in the addba request
+ * @entries_per_queue: # of buffers per queue
+ * @last_rx: last rx timestamp, updated only if timeout passed from last update
+ * @session_timer: timer to check if BA session expired, runs at 2 * timeout
+ * @sc: softc pointer, needed for timer context
+ * @reorder_buf: reorder buffer
+ * @reorder_buf_data: buffered frames, one entry per sequence number
+ */
+struct iwm_rxba_data {
+    uint8_t sta_id;
+    uint8_t tid;
+    uint8_t baid;
+    uint16_t timeout;
+    uint16_t entries_per_queue;
+    struct timeval last_rx;
+    CTimeout *session_timer;
+    struct iwm_softc *sc;
+    struct iwm_reorder_buffer reorder_buf;
+    struct iwm_reorder_buf_entry entries[IEEE80211_BA_MAX_WINSZ];
+};
+
+static inline struct iwm_rxba_data *
+iwm_rxba_data_from_reorder_buf(struct iwm_reorder_buffer *buf)
+{
+    return (struct iwm_rxba_data *)((uint8_t *)buf -
+                    offsetof(struct iwm_rxba_data, reorder_buf));
+}
+
+/**
+ * struct iwm_rxq_dup_data - per station per rx queue data
+ * @last_seq: last sequence per tid for duplicate packet detection
+ * @last_sub_frame: last subframe packet
+ */
+struct iwm_rxq_dup_data {
+    uint16_t last_seq[IWM_MAX_TID_COUNT + 1];
+    uint8_t last_sub_frame[IWM_MAX_TID_COUNT + 1];
+};
+
 struct iwm_tx_ba {
    struct iwm_node *    wn;
 };
@@ -415,11 +509,16 @@ struct iwm_softc {
 
 	/* Task for firmware BlockAck setup/teardown and its arguments. */
 	struct task		ba_task;
-	int			ba_start;
-	int			ba_tid;
-	uint16_t		ba_ssn;
-    uint16_t        ba_winsize;
+	int			ba_tx_start;
+	int			ba_tx_tid;
+	uint16_t		ba_tx_ssn;
+    uint16_t        ba_tx_winsize;
     int         ba_tx;
+    uint32_t                ba_start_tidmask;
+    uint32_t                ba_stop_tidmask;
+    uint16_t                ba_ssn[IWM_MAX_TID_COUNT];
+    uint16_t                ba_winsize[IWM_MAX_TID_COUNT];
+    int                     ba_timeout_val[IWM_MAX_TID_COUNT];
 
 	/* Task for HT protection updates. */
 	struct task		htprot_task;
@@ -535,6 +634,8 @@ struct iwm_softc {
 
 	struct iwm_rx_phy_info sc_last_phy_info;
 	int sc_ampdu_ref;
+#define IWM_MAX_BAID   32
+    struct iwm_rxba_data sc_rxba_data[IWM_MAX_BAID];
     
     int first_agg_txq;
     int agg_queue_mask;
@@ -594,6 +695,8 @@ struct iwm_node {
     struct ieee80211_ra_node in_rn;
     int lq_rate_mismatch;
     uint32_t next_ampdu_id;
+    
+    struct iwm_rxq_dup_data dup_data;
 };
 #define IWM_STATION_ID 0
 #define IWM_AUX_STA_ID 1

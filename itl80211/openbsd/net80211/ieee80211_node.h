@@ -205,6 +205,8 @@ struct ieee80211_rxinfo {
 };
 #define IEEE80211_RXI_HWDEC		0x00000001
 #define IEEE80211_RXI_AMPDU_DONE	0x00000002
+#define IEEE80211_RXI_HWDEC_SAME_PN    0x00000004
+#define IEEE80211_RXI_SAME_SEQ         0x00000008
 
 /* Block Acknowledgement Record */
 struct ieee80211_tx_ba {

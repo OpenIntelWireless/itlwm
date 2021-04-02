@@ -42,7 +42,41 @@
 #define BUS_DMA_COHERENT	0
 #define BUS_DMA_READ		0
 
-static __inline uint64_t
+static inline void
+USEC_TO_TIMEVAL(uint64_t us, struct timeval *tv)
+{
+    tv->tv_sec = us / 1000000;
+    tv->tv_usec = us % 1000000;
+}
+
+static inline void
+NSEC_TO_TIMEVAL(uint64_t ns, struct timeval *tv)
+{
+    tv->tv_sec = ns / 1000000000L;
+    tv->tv_usec = (ns % 1000000000L) / 1000;
+}
+
+static inline uint64_t
+TIMEVAL_TO_NSEC(const struct timeval *tv)
+{
+    uint64_t nsecs;
+
+    if (tv->tv_sec > UINT64_MAX / 1000000000ULL)
+        return UINT64_MAX;
+    nsecs = tv->tv_sec * 1000000000ULL;
+    if (tv->tv_usec * 1000ULL > UINT64_MAX - nsecs)
+        return UINT64_MAX;
+    return nsecs + tv->tv_usec * 1000ULL;
+}
+
+static inline void
+NSEC_TO_TIMESPEC(uint64_t ns, struct timespec *ts)
+{
+    ts->tv_sec = ns / 1000000000L;
+    ts->tv_nsec = ns % 1000000000L;
+}
+
+static inline uint64_t
 SEC_TO_NSEC(uint64_t seconds)
 {
     if (seconds > UINT64_MAX / 1000000000ULL)
@@ -50,12 +84,28 @@ SEC_TO_NSEC(uint64_t seconds)
     return seconds * 1000000000ULL;
 }
 
-static __inline uint64_t
+static inline uint64_t
 MSEC_TO_NSEC(uint64_t milliseconds)
 {
     if (milliseconds > UINT64_MAX / 1000000ULL)
         return UINT64_MAX;
     return milliseconds * 1000000ULL;
+}
+
+static inline uint64_t
+USEC_TO_NSEC(uint64_t microseconds)
+{
+    if (microseconds > UINT64_MAX / 1000ULL)
+        return UINT64_MAX;
+    return microseconds * 1000ULL;
+}
+
+static inline uint64_t
+TIMESPEC_TO_NSEC(const struct timespec *ts)
+{
+    if (ts->tv_sec > (UINT64_MAX - ts->tv_nsec) / 1000000000ULL)
+        return UINT64_MAX;
+    return ts->tv_sec * 1000000000ULL + ts->tv_nsec;
 }
 
 #define MHLEN mbuf_get_mhlen()

@@ -270,13 +270,18 @@ public:
     int    iwx_mimo_enabled(struct iwx_softc *);
     static void    iwx_htprot_task(void *);
     static void    iwx_update_htprot(struct ieee80211com *, struct ieee80211_node *);
+    void    iwx_init_reorder_buffer(struct iwx_reorder_buffer *, uint16_t,
+            uint16_t);
+    void    iwx_clear_reorder_buffer(struct iwx_softc *, struct iwx_rxba_data *);
     static int    iwx_ampdu_rx_start(struct ieee80211com *, struct ieee80211_node *,
             uint8_t);
     static void    iwx_ampdu_rx_stop(struct ieee80211com *, struct ieee80211_node *,
             uint8_t);
+    static void    iwx_rx_ba_session_expired(void *);
+    static void    iwx_reorder_timer_expired(void *);
     static void    iwx_update_chw(struct ieee80211com *);
     void    iwx_sta_rx_agg(struct iwx_softc *, struct ieee80211_node *, uint8_t,
-            uint16_t, uint16_t, int);
+                           uint16_t, uint16_t, int, int);
     static int    iwx_ampdu_tx_start(struct ieee80211com *, struct ieee80211_node *,
             uint8_t);
     static void    iwx_ampdu_tx_stop(struct ieee80211com *, struct ieee80211_node *,
@@ -300,8 +305,10 @@ public:
     void    iwx_rx_rx_phy_cmd(struct iwx_softc *, struct iwx_rx_packet *,
             struct iwx_rx_data *);
     int    iwx_get_noise(const struct iwx_statistics_rx_non_phy *);
+    int    iwx_rx_hwdecrypt(struct iwx_softc *, mbuf_t, uint32_t,
+            struct ieee80211_rxinfo *);
     int    iwx_ccmp_decap(struct iwx_softc *, mbuf_t,
-           struct ieee80211_node *);
+                          struct ieee80211_node *, struct ieee80211_rxinfo *);
     void    iwx_rx_frame(struct iwx_softc *, mbuf_t, int, uint32_t, int, int,
            uint32_t, struct ieee80211_rxinfo *, struct mbuf_list *);
     void iwx_rx_mpdu_mq(struct iwx_softc *sc, mbuf_t m, void *pktdata,
@@ -412,6 +419,18 @@ public:
     const char *iwx_desc_lookup(uint32_t);
     void    iwx_nic_error(struct iwx_softc *);
     void    iwx_nic_umac_error(struct iwx_softc *);
+    void    iwx_flip_address(uint8_t *);
+    int    iwx_detect_duplicate(struct iwx_softc *, mbuf_t,
+            struct iwx_rx_mpdu_desc *, struct ieee80211_rxinfo *);
+    int    iwx_is_sn_less(uint16_t, uint16_t, uint16_t);
+    void    iwx_release_frames(struct iwx_softc *, struct ieee80211_node *,
+            struct iwx_rxba_data *, struct iwx_reorder_buffer *, uint16_t,
+            struct mbuf_list *);
+    int    iwx_oldsn_workaround(struct iwx_softc *, struct ieee80211_node *,
+            int, struct iwx_reorder_buffer *, uint32_t, uint32_t);
+    int    iwx_rx_reorder(struct iwx_softc *, mbuf_t, int,
+            struct iwx_rx_mpdu_desc *, int, int, uint32_t,
+            struct ieee80211_rxinfo *, struct mbuf_list *);
     int    iwx_rx_pkt_valid(struct iwx_rx_packet *);
     void    iwx_rx_pkt(struct iwx_softc *, struct iwx_rx_data *,
             struct mbuf_list *);
