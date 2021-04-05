@@ -2319,9 +2319,8 @@ iwn_ht_single_rate_control(struct iwn_softc *sc, struct ieee80211_node *ni,
     struct ieee80211com *ic = &sc->sc_ic;
     struct iwn_node *wn = (struct iwn_node *)ni;
     int mcs = rate;
-    const struct ieee80211_ht_rateset *rs =
-    ieee80211_ra_get_ht_rateset(rate, ni->ni_chw,
-                                ieee80211_node_supports_ht_sgi20(ni) || ieee80211_node_supports_ht_sgi40(ni));
+    const struct ieee80211_ra_rate *rs =
+    ieee80211_ra_get_rateset(&wn->rn, ic, ni, rate);
     unsigned int retries = 0, i;
     
     /*
@@ -5818,7 +5817,7 @@ iwn_run(struct iwn_softc *sc)
     sc->calib_cnt = 0;
     timeout_add_msec(&sc->calib_to, 500);
 
-    ieee80211_ra_node_init(&wn->rn);
+    ieee80211_ra_node_init(ic, &wn->rn, &wn->ni);
 
     /* Link LED always on while associated. */
     iwn_set_led(sc, IWN_LED_LINK, 0, 1);

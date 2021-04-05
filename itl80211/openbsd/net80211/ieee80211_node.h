@@ -146,6 +146,29 @@ struct ieee80211_vht_rateset {
 
 extern const struct ieee80211_vht_rateset ieee80211_std_ratesets_11ac[];
 
+#define IEEE80211_HE_RATESET_SISO        0
+#define IEEE80211_HE_RATESET_MIMO2        1
+#define IEEE80211_HE_RATESET_SISO_40        2
+#define IEEE80211_HE_RATESET_MIMO2_40        3
+#define IEEE80211_HE_RATESET_SISO_80        4
+#define IEEE80211_HE_RATESET_MIMO2_80        5
+#define IEEE80211_HE_RATESET_SISO_160      6
+#define IEEE80211_HE_RATESET_MIMO2_160     7
+#define IEEE80211_HE_NUM_RATESETS        8
+
+/* Maximum number of rates in a HT rateset. */
+#define IEEE80211_HE_RATESET_MAX_NRATES    12
+
+struct ieee80211_he_rateset {
+    uint32_t nrates;
+    uint32_t rates[IEEE80211_HE_RATESET_MAX_NRATES]; /* 500 kbit/s units */
+
+    /* Number of spatial streams used by rates in this rateset. */
+    int num_ss;
+};
+
+extern const struct ieee80211_he_rateset ieee80211_std_ratesets_11ax[];
+
 enum ieee80211_node_state {
 	IEEE80211_STA_CACHE,	/* cached node */
 	IEEE80211_STA_BSS,	/* ic->ic_bss, the network we joined */
