@@ -6589,7 +6589,7 @@ iwx_mac_ctxt_cmd_common(struct iwx_softc *sc, struct iwx_node *in,
                     htole32(IWX_MAC_PROT_FLG_SELF_CTS_EN);
                 break;
             case IEEE80211_HTPROT_20MHZ:
-                if (ni->ni_chw > 20) {
+                if (ic->ic_htcaps & IEEE80211_HTCAP_CBW20_40) {
                     /* XXX ... and if our channel is 40 MHz ... */
                     cmd->protection_flags |=
                     htole32(IWX_MAC_PROT_FLG_HT_PROT |
