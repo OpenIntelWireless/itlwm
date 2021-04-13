@@ -1391,6 +1391,9 @@ iwm_clear_oactive(struct iwm_softc *sc, struct iwm_tx_ring *ring)
             ifq_clr_oactive(&ifp->if_snd);
             (*ifp->if_start)(ifp);
         }
+#ifdef __PRIVATE_SPI__
+        ifp->iface->signalOutputThread();
+#endif
     }
 }
 

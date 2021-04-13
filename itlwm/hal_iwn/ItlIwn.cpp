@@ -2826,6 +2826,9 @@ iwn_clear_oactive(struct iwn_softc *sc, struct iwn_tx_ring *ring)
             ifq_clr_oactive(&ifp->if_snd);
             (*ifp->if_start)(ifp);
         }
+#ifdef __PRIVATE_SPI__
+        ifp->iface->signalOutputThread();
+#endif
     }
 }
 

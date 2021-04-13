@@ -22,6 +22,7 @@
 #ifndef _ifq_h
 #define _ifq_h
 #include <net/if_var.h>
+#include <IOKit/network/IOPacketQueue.h>
 
 static int ifq_oactive;
 

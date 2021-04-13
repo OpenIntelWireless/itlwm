@@ -4698,20 +4698,21 @@ iwx_clear_oactive(struct iwx_softc *sc, struct iwx_tx_ring *ring)
             ifq_clr_oactive(&ifp->if_snd);
             (*ifp->if_start)(ifp);
         }
+#ifdef __PRIVATE_SPI__
+        ifp->iface->signalOutputThread();
+#endif
     }
 }
 
 void ItlIwx::
 iwx_rx_tx_ba_notif(struct iwx_softc *sc, struct iwx_rx_packet *pkt, struct iwx_rx_data *data)
 {
-    struct ieee80211_tx_ba *ba;
     struct ieee80211com *ic = &sc->sc_ic;
     struct iwx_compressed_ba_notif *ba_res = (struct iwx_compressed_ba_notif *)pkt->data;
     uint8_t tid;
     uint8_t qid;
     int i;
     struct iwx_tx_ring *ring;
-    struct ieee80211_node *ni = ic->ic_bss;
 
     sc->sc_tx_timer = 0;
 
@@ -4720,7 +4721,7 @@ iwx_rx_tx_ba_notif(struct iwx_softc *sc, struct iwx_rx_packet *pkt, struct iwx_r
               le32toh(ba_res->flags),
               le16toh(ba_res->txed),
               le16toh(ba_res->done),
-              le16_to_cpu(ba_res->tfd_cnt),
+                     le16toh(ba_res->tfd_cnt),
               ba_res->query_frame_cnt,
               ba_res->retry_cnt));
     }
@@ -4732,14 +4733,14 @@ iwx_rx_tx_ba_notif(struct iwx_softc *sc, struct iwx_rx_packet *pkt, struct iwx_r
         return;
 
     /* Free per TID */
-    for (i = 0; i < le16_to_cpu(ba_res->tfd_cnt); i++) {
+    for (i = 0; i < le16toh(ba_res->tfd_cnt); i++) {
         struct iwx_compressed_ba_tfd *ba_tfd = &ba_res->tfd[i];
 
         tid = ba_tfd->tid;
 
-        qid = le16_to_cpu(ba_tfd->q_num);
+        qid = le16toh(ba_tfd->q_num);
         ring = &sc->txq[qid];
-        iwx_ampdu_txq_advance(sc, ring, le16_to_cpu(ba_tfd->tfd_index));
+        iwx_ampdu_txq_advance(sc, ring, le16toh(ba_tfd->tfd_index));
         iwx_clear_oactive(sc, ring);
     }
 }
@@ -4785,7 +4786,6 @@ void ItlIwx::
 iwx_rx_tx_cmd(struct iwx_softc *sc, struct iwx_rx_packet *pkt,
               struct iwx_rx_data *data)
 {
-    struct ieee80211com *ic = &sc->sc_ic;
     uint32_t ssn;
     int idx;
     int tid;
