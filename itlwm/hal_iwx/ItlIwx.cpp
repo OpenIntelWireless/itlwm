@@ -4331,7 +4331,7 @@ iwx_rx_reorder(struct iwx_softc *sc, mbuf_t m, int chanidx,
         return 0;
 
     rxba = &sc->sc_rxba_data[baid];
-    if (rxba == NULL || tid != rxba->tid || rxba->sta_id != IWX_STATION_ID)
+    if (rxba->reorder_buf.buf_size == 0 || tid != rxba->tid || rxba->sta_id != IWX_STATION_ID)
         return 0;
 
     /* Bypass A-MPDU re-ordering in net80211. */
