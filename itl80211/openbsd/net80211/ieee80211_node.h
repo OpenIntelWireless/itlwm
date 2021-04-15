@@ -302,6 +302,9 @@ struct ieee80211_node {
 	u_int8_t		*ni_country;	/* country information XXX */
 	struct ieee80211_channel *ni_chan;
 	u_int8_t		ni_erp;		/* 11g only */
+#ifdef AIRPORT
+    u_int64_t       ni_age_ts;
+#endif
 
 	/* DTIM and contention free period (CFP) */
 	u_int8_t		ni_dtimcount;

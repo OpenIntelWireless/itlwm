@@ -896,6 +896,7 @@ getASSOCIATION_STATUS(OSObject *object, struct apple80211_assoc_status_data *hv)
 IOReturn AirportItlwm::
 setSCANCACHE_CLEAR(OSObject *object, struct apple80211req *req)
 {
+    XYLog("%s\n", __FUNCTION__);
     struct ieee80211com *ic = fHalService->get80211Controller();
     //if doing background or active scan, don't free nodes.
     if ((ic->ic_flags & IEEE80211_F_BGSCAN) || (ic->ic_flags & IEEE80211_F_ASCAN)) {
@@ -930,6 +931,11 @@ eventHandler(struct ieee80211com *ic, int msgCode, void *data)
         case IEEE80211_EVT_STA_DEAUTH:
             INTERFACE_POST_MESSAGE(APPLE80211_M_DEAUTH_RECEIVED)
             break;
+#if 0
+        case IEEE80211_EVT_SCAN_DONE:
+            INTERFACE_POST_MESSAGE(APPLE80211_M_SCAN_DONE)
+            break;
+#endif
         default:
             break;
     }
@@ -1023,6 +1029,18 @@ setSCAN_REQ(OSObject *object,
                             struct apple80211_scan_data *sd)
 {
     struct ieee80211com *ic = fHalService->get80211Controller();
+#if 0
+    XYLog("%s Type: %u BSS Type: %u PHY Mode: %u Dwell time: %u Rest time: %u Num channels: %u SSID: %s BSSID: %s\n",
+          __FUNCTION__,
+          sd->scan_type,
+          sd->bss_type,
+          sd->phy_mode,
+          sd->dwell_time,
+          sd->rest_time,
+          sd->num_channels,
+          sd->ssid,
+          ether_sprintf(sd->bssid.octet));
+#endif
     if (fScanResultWrapping) {
         return 22;
     }
@@ -1048,6 +1066,22 @@ IOReturn AirportItlwm::
 setSCAN_REQ_MULTIPLE(OSObject *object, struct apple80211_scan_multiple_data *sd)
 {
     struct ieee80211com *ic = fHalService->get80211Controller();
+#if 0
+    int i;
+    XYLog("%s Type: %u SSID Count: %u BSSID Count: %u PHY Mode: %u Dwell time: %u Rest time: %u Num channels: %u Unk: %u\n",
+          __FUNCTION__,
+          sd->scan_type,
+          sd->ssid_count,
+          sd->bssid_count,
+          sd->phy_mode,
+          sd->dwell_time,
+          sd->rest_time,
+          sd->num_channels,
+          sd->unk_2);
+    for (i = 0; i < sd->ssid_count; i++) {
+        XYLog("%s index=%d ssid=%s ssid_len=%d\n", __FUNCTION__, i, sd->ssids[i].ssid_bytes, sd->ssids[i].ssid_len);
+    }
+#endif
     if (fScanResultWrapping) {
         return 22;
     }
@@ -1093,6 +1127,7 @@ getSCAN_RESULT(OSObject *object, struct apple80211_scan_result **sr)
     for (int i = 0; i < result->asr_nrates; i++ )
         result->asr_rates[i] = fNextNodeToSend->ni_rates.rs_rates[i];
     result->asr_nrates = fNextNodeToSend->ni_rates.rs_nrates;
+    result->asr_age = (uint32_t)(airport_up_time() - fNextNodeToSend->ni_age_ts);
     result->asr_cap = fNextNodeToSend->ni_capinfo;
     result->asr_channel.version = APPLE80211_VERSION;
     result->asr_channel.channel = ieee80211_chan2ieee(ic, fNextNodeToSend->ni_chan);

@@ -1391,6 +1391,9 @@ ieee80211_end_scan(struct _ifnet *ifp)
                   ic->ic_opmode == IEEE80211_M_STA &&
                   ic->ic_state == IEEE80211_S_RUN);
     
+    if (ic->ic_event_handler)
+        (*ic->ic_event_handler)(ic, IEEE80211_EVT_SCAN_DONE, NULL);
+    
     if (ifp->if_flags & IFF_DEBUG)
         XYLog("%s: end %s scan\n", ifp->if_xname,
               bgscan ? "background" :

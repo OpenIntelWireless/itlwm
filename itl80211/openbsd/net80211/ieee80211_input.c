@@ -1894,6 +1894,9 @@ ieee80211_recv_probe_resp(struct ieee80211com *ic, mbuf_t m,
     
     ni->ni_dtimcount = dtim_count;
     ni->ni_dtimperiod = dtim_period;
+#ifdef AIRPORT
+    ni->ni_age_ts = airport_up_time();
+#endif
     
     /*
      * When operating in station mode, check for state updates
