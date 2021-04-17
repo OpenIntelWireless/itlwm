@@ -795,8 +795,12 @@ setASSOCIATE(OSObject *object,
     struct apple80211_authtype_data auth_type_data;
     struct ieee80211com *ic = fHalService->get80211Controller();
 
-    if (ic->ic_state <= IEEE80211_S_INIT) {
-        return kIOReturnError;
+    if (ic->ic_state < IEEE80211_S_SCAN) {
+        return kIOReturnSuccess;
+    }
+    
+    if (ic->ic_state == IEEE80211_S_ASSOC || ic->ic_state == IEEE80211_S_AUTH) {
+        return kIOReturnSuccess;
     }
 
     if (ad->ad_mode != 1) {
@@ -833,11 +837,16 @@ IOReturn AirportItlwm::setDISASSOCIATE(OSObject *object)
 {
     XYLog("%s\n", __FUNCTION__);
     struct ieee80211com *ic = fHalService->get80211Controller();
-    disassocIsVoluntary = true;
 
-    if (ic->ic_state <= IEEE80211_S_ASSOC) {
+    if (ic->ic_state < IEEE80211_S_SCAN) {
         return kIOReturnSuccess;
     }
+    
+    if (ic->ic_state == IEEE80211_S_ASSOC || ic->ic_state == IEEE80211_S_AUTH) {
+        return kIOReturnSuccess;
+    }
+    
+    disassocIsVoluntary = true;
 
     ieee80211_del_ess(ic, nullptr, 0, 1);
     ieee80211_deselect_ess(ic);
