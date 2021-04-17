@@ -1309,6 +1309,10 @@ justcleanup:
 				ieee80211_set_link_state(ic, LINK_STATE_UP);
 				ni->ni_assoc_fail = 0;
 			}
+            ni->ni_fails = 0;
+            ni = ieee80211_find_node(ic, ni->ni_macaddr);
+            if (ni)
+                ni->ni_fails = 0;
 			ic->ic_mgt_timer = 0;
 			ieee80211_set_beacon_miss_threshold(ic);
 			(*ifp->if_start)(ifp);

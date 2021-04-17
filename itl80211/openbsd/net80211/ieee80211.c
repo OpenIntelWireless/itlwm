@@ -897,12 +897,18 @@ ieee80211_watchdog(struct _ifnet *ifp)
             ni = ieee80211_find_node(ic, ic->ic_bss->ni_macaddr);
             if (ni)
                 ni->ni_fails++;
+            /* Try more times to join, some drivers will timeout when doing auth/assoc */
+            if (ni && ni->ni_fails < 3) {
+                ieee80211_node_join_bss(ic, ni);
+                goto done;
+            }
             if (ISSET(ic->ic_flags, IEEE80211_F_AUTO_JOIN))
                 ieee80211_deselect_ess(ic);
         }
         ieee80211_new_state(ic, IEEE80211_S_SCAN, -1);
     }
     
+done:
     if (ic->ic_mgt_timer != 0)
         ifp->if_timer = 1;
 }

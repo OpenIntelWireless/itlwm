@@ -3013,12 +3013,6 @@ iwm_newstate_task(void *psc)
         splx(s);
         return;
     }
-
-    if ((ostate == nstate) && (nstate == IEEE80211_S_AUTH || nstate == IEEE80211_S_ASSOC)) {
-        XYLog("%s duplicate state %d\n", __FUNCTION__, nstate);
-        splx(s);
-        return;
-    }
     
     if (ostate == IEEE80211_S_SCAN) {
         if (nstate == ostate) {
