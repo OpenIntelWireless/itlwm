@@ -257,7 +257,8 @@ enum apple80211_channel_flag
     APPLE80211_C_FLAG_EXT_ABV      = 0x200, // If 40 Mhz, extension channel above.
     // If this flag is not set, then the
     // extension channel is below.
-    APPLE80211_C_FLAG_80MHZ        = 0x400  // name made up - set if channelWidth == 80 && 5ghz && AC
+    APPLE80211_C_FLAG_80MHZ        = 0x400,  // name made up - set if channelWidth == 80 && 5ghz && AC
+    APPLE80211_C_FLAG_160MHZ       = 0x800,  // zxystd: Apple Broadcom not use it, but we can use!
 };
 
 enum apple80211_rate_flag

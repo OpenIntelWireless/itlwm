@@ -303,9 +303,11 @@ static int ieeeChanFlag2apple(int flags, int bw)
             ret |= APPLE80211_C_FLAG_80MHZ;
         } else if ((flags & IEEE80211_CHAN_HT40) && (flags & IEEE80211_CHAN_HT)) {
             ret |= APPLE80211_C_FLAG_40MHZ;
-        } else if (flags & IEEE80211_CHAN_OFDM) {
+            if (flags & IEEE80211_CHAN_HT40U)
+                ret |= APPLE80211_C_FLAG_EXT_ABV;
+        } else if (flags & IEEE80211_CHAN_HT20) {
             ret |= APPLE80211_C_FLAG_20MHZ;
-        } else if (flags & IEEE80211_CHAN_CCK) {
+        } else if ((flags & IEEE80211_CHAN_CCK) || (flags & IEEE80211_CHAN_OFDM)) {
             ret |= APPLE80211_C_FLAG_10MHZ;
         }
     } else {
@@ -315,14 +317,16 @@ static int ieeeChanFlag2apple(int flags, int bw)
                 break;
             case 40:
                 ret |= APPLE80211_C_FLAG_40MHZ;
+                if (flags & IEEE80211_CHAN_HT40U)
+                    ret |= APPLE80211_C_FLAG_EXT_ABV;
                 break;
             case 20:
                 ret |= APPLE80211_C_FLAG_20MHZ;
                 break;
             default:
-                if (flags & IEEE80211_CHAN_OFDM) {
+                if (flags & IEEE80211_CHAN_HT20) {
                     ret |= APPLE80211_C_FLAG_20MHZ;
-                } else if (flags & IEEE80211_CHAN_CCK) {
+                } else if ((flags & IEEE80211_CHAN_CCK) || (flags & IEEE80211_CHAN_OFDM)) {
                     ret |= APPLE80211_C_FLAG_10MHZ;
                 }
                 break;
@@ -1038,7 +1042,7 @@ setSCAN_REQ(OSObject *object,
                             struct apple80211_scan_data *sd)
 {
     struct ieee80211com *ic = fHalService->get80211Controller();
-#if 0
+#if 1
     XYLog("%s Type: %u BSS Type: %u PHY Mode: %u Dwell time: %u Rest time: %u Num channels: %u SSID: %s BSSID: %s\n",
           __FUNCTION__,
           sd->scan_type,
@@ -1075,7 +1079,7 @@ IOReturn AirportItlwm::
 setSCAN_REQ_MULTIPLE(OSObject *object, struct apple80211_scan_multiple_data *sd)
 {
     struct ieee80211com *ic = fHalService->get80211Controller();
-#if 0
+#if 1
     int i;
     XYLog("%s Type: %u SSID Count: %u BSSID Count: %u PHY Mode: %u Dwell time: %u Rest time: %u Num channels: %u Unk: %u\n",
           __FUNCTION__,
