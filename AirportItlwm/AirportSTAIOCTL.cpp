@@ -160,6 +160,9 @@ SInt32 AirportItlwm::apple80211Request(unsigned int request_type,
         case APPLE80211_IOC_NSS:
             IOCTL_GET(request_type, NSS, apple80211_nss_data);
             break;
+        case APPLE80211_IOC_ROAM:
+            IOCTL_SET(request_type, ROAM, apple80211_sta_roam_data);
+            break;
         case APPLE80211_IOC_ROAM_PROFILE:
             IOCTL(request_type, ROAM_PROFILE, apple80211_roam_profile_band_data);
             break;
@@ -397,7 +400,7 @@ getTXPOWER(OSObject *object,
     if (ic->ic_state == IEEE80211_S_RUN) {
         memset(txd, 0, sizeof(*txd));
         txd->version = APPLE80211_VERSION;
-        txd->txpower = 100;
+        txd->txpower = ic->ic_txpower;
         txd->txpower_unit = APPLE80211_UNIT_PERCENT;
         return kIOReturnSuccess;
     }
@@ -425,6 +428,13 @@ getNSS(OSObject *object, struct apple80211_nss_data *data)
 IOReturn AirportItlwm::
 setTX_NSS(OSObject *object, struct apple80211_tx_nss_data *data)
 {
+    return kIOReturnError;
+}
+
+IOReturn AirportItlwm::
+setROAM(OSObject *object, struct apple80211_sta_roam_data *data)
+{
+    XYLog("%s rcc_channels=%d unk=%d target_channel=%d target_bssid=%s\n", __FUNCTION__, data->rcc_channels, data->unk1, data->taget_channel, ether_sprintf(data->target_bssid));
     return kIOReturnError;
 }
 
@@ -1042,7 +1052,7 @@ setSCAN_REQ(OSObject *object,
                             struct apple80211_scan_data *sd)
 {
     struct ieee80211com *ic = fHalService->get80211Controller();
-#if 1
+#if 0
     XYLog("%s Type: %u BSS Type: %u PHY Mode: %u Dwell time: %u Rest time: %u Num channels: %u SSID: %s BSSID: %s\n",
           __FUNCTION__,
           sd->scan_type,
@@ -1079,7 +1089,7 @@ IOReturn AirportItlwm::
 setSCAN_REQ_MULTIPLE(OSObject *object, struct apple80211_scan_multiple_data *sd)
 {
     struct ieee80211com *ic = fHalService->get80211Controller();
-#if 1
+#if 0
     int i;
     XYLog("%s Type: %u SSID Count: %u BSSID Count: %u PHY Mode: %u Dwell time: %u Rest time: %u Num channels: %u Unk: %u\n",
           __FUNCTION__,

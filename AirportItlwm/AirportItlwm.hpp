@@ -176,6 +176,7 @@ public:
     FUNC_IOCTL_SET(SCANCACHE_CLEAR, apple80211req)
     FUNC_IOCTL(TX_NSS, apple80211_tx_nss_data)
     FUNC_IOCTL_GET(NSS, apple80211_nss_data)
+    FUNC_IOCTL_SET(ROAM, apple80211_sta_roam_data);
     
     //AirportVirtualIOCTL
     FUNC_IOCTL(AWDL_PEER_TRAFFIC_REGISTRATION, apple80211_awdl_peer_traffic_registration)

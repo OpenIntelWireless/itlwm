@@ -1069,5 +1069,13 @@ struct apple80211_p2p_go_conf_data {
     uint32_t    suppress_beacon;// 56 security:1,4
 } __attribute__((packed));
 
+struct apple80211_sta_roam_data {
+    uint32_t    version;
+    uint8_t     rcc_channels;
+    uint8_t     unk1;
+    uint8_t     taget_channel;
+    uint8_t     target_bssid[APPLE80211_ADDR_LEN];
+} __attribute__((packed));
+
 #endif // _APPLE80211_IOCTL_H_
 
