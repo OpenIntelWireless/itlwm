@@ -8706,7 +8706,6 @@ iwx_rx_pkt(struct iwx_softc *sc, struct iwx_rx_data *data, struct mbuf_list *ml)
     uint32_t offset = 0, nextoff = 0, nmpdu = 0, len;
     mbuf_t m0, m;
     const size_t minsz = sizeof(pkt->len_n_flags) + sizeof(pkt->hdr);
-    size_t remain = IWX_RBUF_SIZE;
     int qid, idx, code, handled = 1;
     
     //    bus_dmamap_sync(sc->sc_dmat, data->map, 0, IWX_RBUF_SIZE,
@@ -8745,7 +8744,7 @@ iwx_rx_pkt(struct iwx_softc *sc, struct iwx_rx_data *data, struct mbuf_list *ml)
                 break;
                 
             case IWX_REPLY_RX_MPDU_CMD: {
-                size_t maxlen = remain - minsz;
+                size_t maxlen = IWX_RBUF_SIZE - offset - minsz;
                 nextoff = offset +
                 roundup(len, IWX_FH_RSCSR_FRAME_ALIGN);
                 nextpkt = (struct iwx_rx_packet *)
@@ -8773,11 +8772,6 @@ iwx_rx_pkt(struct iwx_softc *sc, struct iwx_rx_data *data, struct mbuf_list *ml)
                     mbuf_adj(m, offset);
                     iwx_rx_mpdu_mq(sc, m, pkt->data, maxlen, ml);
                 }
-                
-                if (offset + minsz < remain)
-                    remain -= offset;
-                else
-                    remain = minsz;
                 break;
             }
             case IWX_BA_NOTIF:
