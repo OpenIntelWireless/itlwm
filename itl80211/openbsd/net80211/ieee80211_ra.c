@@ -867,4 +867,42 @@ ieee80211_ra_node_init(struct ieee80211com *ic, struct ieee80211_ra_node *rn, st
     rn->bw = ni->ni_chw;
     rn->sgi = support_sgi(ni);
     rn->nss = support_nss(ic);
+    switch (ni->ni_chw) {
+        case IEEE80211_CHAN_WIDTH_20:
+            if (is_he(ni)) {
+                rn->rs_index = IEEE80211_HE_RATESET_SISO;
+            } else if (is_vht(ni)) {
+                rn->rs_index = IEEE80211_VHT_RATESET_SISO;
+            } else if (is_ht(ni)) {
+                rn->rs_index = IEEE80211_HT_RATESET_SISO;
+            }
+            break;
+        case IEEE80211_CHAN_WIDTH_40:
+            if (is_he(ni)) {
+                rn->rs_index = IEEE80211_HE_RATESET_SISO_40;
+            } else if (is_vht(ni)) {
+                rn->rs_index = IEEE80211_VHT_RATESET_SISO_40;
+            } else if (is_ht(ni)) {
+                rn->rs_index = IEEE80211_HT_RATESET_CBW40_SISO;
+            }
+            break;
+        case IEEE80211_CHAN_WIDTH_80:
+            if (is_he(ni)) {
+                rn->rs_index = IEEE80211_HE_RATESET_SISO_80;
+            } else if (is_vht(ni)) {
+                rn->rs_index = IEEE80211_VHT_RATESET_SISO_80;
+            }
+            break;
+        case IEEE80211_CHAN_WIDTH_160:
+            if (is_he(ni)) {
+                rn->rs_index = IEEE80211_HE_RATESET_SISO_160;
+            } else if (is_vht(ni)) {
+                rn->rs_index = IEEE80211_VHT_RATESET_SISO_160;
+            }
+            break;
+            
+        default:
+            rn->rs_index = 0;
+            break;
+    }
 }
