@@ -2231,7 +2231,7 @@ ieee80211_recv_auth(struct ieee80211com *ic, mbuf_t m,
             /* XXX hack to workaround calling convention */
             IEEE80211_SEND_MGMT(ic, ni,
                                 IEEE80211_FC0_SUBTYPE_AUTH,
-                                IEEE80211_STATUS_ALG << 16 | ((seq + 1) & 0xffff));
+                                IEEE80211_STATUS_ALG << 16 | ((seq + 1) & 0xfff));
         }
 #endif
         return;
