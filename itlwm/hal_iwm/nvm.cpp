@@ -279,6 +279,7 @@ iwm_parse_nvm_data(struct iwm_softc *sc, const uint16_t *nvm_hw,
     data->sku_cap_band_24GHz_enable = sku & IWM_NVM_SKU_CAP_BAND_24GHZ;
     data->sku_cap_band_52GHz_enable = sku & IWM_NVM_SKU_CAP_BAND_52GHZ;
     data->sku_cap_11n_enable = sku & IWM_NVM_SKU_CAP_11N_ENABLE;
+    data->sku_cap_11ac_enable = sku & IWM_NVM_SKU_CAP_11AC_ENABLE;
     data->sku_cap_mimo_disable = sku & IWM_NVM_SKU_CAP_MIMO_DISABLE;
     
     if (sc->sc_device_family >= IWM_DEVICE_FAMILY_8000) {

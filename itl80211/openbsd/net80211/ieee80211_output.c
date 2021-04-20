@@ -1190,8 +1190,8 @@ ieee80211_add_ht_ie(uint8_t *frm, struct ieee80211com *ic, struct ieee80211_node
 /*
  * Add an HT Capabilities element to a frame (see 7.3.2.57).
  */
-u_int8_t *
-ieee80211_add_htcaps(u_int8_t *frm, struct ieee80211com *ic)
+uint8_t *
+ieee80211_add_htcaps(uint8_t *frm, struct ieee80211com *ic)
 {
 	*frm++ = IEEE80211_ELEMID_HTCAPS;
     *frm++ = 26;
@@ -1210,16 +1210,71 @@ ieee80211_add_htcaps(u_int8_t *frm, struct ieee80211com *ic)
     return frm;
 }
 
-u_int8_t *
-ieee80211_add_vhtcaps(u_int8_t *frm, struct ieee80211com *ic)
+uint8_t *
+ieee80211_add_vhtcaps(uint8_t *frm, struct ieee80211com *ic)
 {
     *frm++ = IEEE80211_ELEMID_VHT_CAP;
     *frm++ = sizeof(struct ieee80211_ie_vhtcap) - 2;
     /* 32-bit VHT capability */
     LE_WRITE_4(frm, ic->ic_vhtcaps); frm += 4;
     /* suppmcs */
-    memcpy(frm, ic->ic_sup_mcs, sizeof(struct ieee80211_vht_mcs_info));
-    frm += sizeof(struct ieee80211_vht_mcs_info);
+    LE_WRITE_2(frm, ic->ic_vht_rx_mcs_map); frm += 2;
+    LE_WRITE_2(frm, ic->ic_vht_rx_highest); frm += 2;
+    LE_WRITE_2(frm, ic->ic_vht_tx_mcs_map); frm += 2;
+    LE_WRITE_2(frm, ic->ic_vht_tx_highest); frm += 2;
+    return frm;
+}
+
+uint8_t *
+ieee80211_add_hecaps(uint8_t *frm, struct ieee80211com *ic)
+{
+    uint8_t nss_size, ie_len;
+    uint8_t *orig_pos = frm;
+    
+    nss_size = ieee80211_he_mcs_nss_size(&ic->ic_he_cap_elem);
+    ie_len = 2 + 1 +
+    sizeof(ic->ic_he_cap_elem) + nss_size +
+    ieee80211_he_ppe_size(ic->ic_ppe_thres[0],
+                  ic->ic_he_cap_elem.phy_cap_info);
+    
+    *frm++ = IEEE80211_ELEMID_EXTENSION;
+    frm++; /* We'll set the size later below */
+    *frm++ = IEEE80211_ELEMID_EXT_HE_CAPABILITY;
+    
+    /* Fixed data */
+    memcpy(frm, &ic->ic_he_cap_elem, sizeof(ic->ic_he_cap_elem));
+    frm += sizeof(ic->ic_he_cap_elem);
+    
+    memcpy(frm, &ic->ic_he_mcs_nss_supp, nss_size);
+    frm += nss_size;
+    
+    /* Check if PPE Threshold should be present */
+    if ((ic->ic_he_cap_elem.phy_cap_info[6] &
+         IEEE80211_HE_PHY_CAP6_PPE_THRESHOLD_PRESENT) == 0)
+        return frm;
+    
+    /*
+     * Calculate how many PPET16/PPET8 pairs are to come. Algorithm:
+     * (NSS_M1 + 1) x (num of 1 bits in RU_INDEX_BITMASK)
+     */
+    nss_size = hweight8(ic->ic_ppe_thres[0] &
+             IEEE80211_PPE_THRES_RU_INDEX_BITMASK_MASK);
+    
+    nss_size *= (1 + ((ic->ic_ppe_thres[0] & IEEE80211_PPE_THRES_NSS_MASK) >>
+           IEEE80211_PPE_THRES_NSS_POS));
+    
+    /*
+     * Each pair is 6 bits, and we need to add the 7 "header" bits to the
+     * total size.
+     */
+    nss_size = (nss_size * IEEE80211_PPE_THRES_INFO_PPET_SIZE * 2) + 7;
+    nss_size = DIV_ROUND_UP(nss_size, 8);
+    
+    /* Copy PPE Thresholds */
+    memcpy(frm, &ic->ic_ppe_thres, nss_size);
+    frm += nss_size;
+    
+    orig_pos[1] = (frm - orig_pos) - 2;
     return frm;
 }
 
@@ -1484,7 +1539,8 @@ ieee80211_get_assoc_req(struct ieee80211com *ic, struct ieee80211_node *ni,
 	      (ni->ni_rsnprotos & IEEE80211_PROTO_WPA)) ?
 		2 + IEEE80211_WPAIE_MAXLEN : 0) +
 	    ((ic->ic_flags & IEEE80211_F_HTON) ? 28 + 9 : 0) +
-        ((ic->ic_flags & IEEE80211_F_VHTON) ? 2 + sizeof(struct ieee80211_ie_vhtcap) : 0));
+        ((ic->ic_flags & IEEE80211_F_VHTON) ? sizeof(struct ieee80211_ie_vhtcap) + 2 : 0) +
+        ((ic->ic_flags & IEEE80211_F_HEON) ? (sizeof(struct ieee80211_he_cap_elem) + 2 + 1 + sizeof(struct ieee80211_he_mcs_nss_supp) + IEEE80211_HE_PPE_THRES_MAX_LEN) : 0));
 	if (m == NULL)
 		return NULL;
 
@@ -1538,6 +1594,10 @@ ieee80211_get_assoc_req(struct ieee80211com *ic, struct ieee80211_node *ni,
     
     if (ic->ic_flags & IEEE80211_F_VHTON) {
         frm = ieee80211_add_vhtcaps(frm, ic);
+    }
+    
+    if (ic->ic_flags & IEEE80211_F_HEON) {
+        frm = ieee80211_add_hecaps(frm, ic);
     }
 
     size_t l = frm - mtod(m, u_int8_t *);

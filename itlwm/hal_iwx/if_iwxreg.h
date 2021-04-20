@@ -3791,6 +3791,8 @@ struct iwx_mac_data_p2p_dev {
 #define IWX_MAC_FILTER_IN_CRC32            (1 << 11)
 #define IWX_MAC_FILTER_IN_PROBE_REQUEST        (1 << 12)
 
+#define IWX_MAC_FILTER_IN_11AX          (1 << 14)
+
 /**
  * QoS flags
  * @IWX_MAC_QOS_FLG_UPDATE_EDCA: ?
@@ -6068,6 +6070,8 @@ struct iwx_umac_scan_iter_complete_notif {
 #define IWX_STA_FLG_MAX_AGG_SIZE_512K    (6 << IWX_STA_FLG_MAX_AGG_SIZE_SHIFT)
 #define IWX_STA_FLG_MAX_AGG_SIZE_1024K    (7 << IWX_STA_FLG_MAX_AGG_SIZE_SHIFT)
 #define IWX_STA_FLG_MAX_AGG_SIZE_MSK    (7 << IWX_STA_FLG_MAX_AGG_SIZE_SHIFT)
+
+#define IWX_STA_FLG_MAX_AGG_SIZE_4M     (9 << IWX_STA_FLG_MAX_AGG_SIZE_SHIFT)
 
 #define IWX_STA_FLG_AGG_MPDU_DENS_SHIFT    23
 #define IWX_STA_FLG_AGG_MPDU_DENS_2US    (4 << IWX_STA_FLG_AGG_MPDU_DENS_SHIFT)

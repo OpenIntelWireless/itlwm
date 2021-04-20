@@ -46,6 +46,20 @@ struct ieee80211_ra_goodput_stats {
     uint32_t nprobe_fail;    /* Number of failed packets. */
 };
 
+#define IEEE80211_RATESET_MAX_NRATES    11
+#define IEEE80211_RATESET_MAX_RATE_SET    max(IEEE80211_HT_NUM_RATESETS, IEEE80211_VHT_NUM_RATESETS)
+
+struct ieee80211_ra_rate {
+    int min_mcs;
+    int max_mcs;
+    int band_width;
+    int sgi;
+    int nss;
+    int rs_index;
+    uint32_t nrates;
+    uint32_t rates[IEEE80211_RATESET_MAX_NRATES]; /* 500 kbit/s units */
+};
+
 /*
  * Rate adaptation state.
  *
@@ -71,10 +85,20 @@ struct ieee80211_ra_node {
 
     /* Goodput statistics for each MCS. */
     struct ieee80211_ra_goodput_stats g[IEEE80211_HT_RATESET_NUM_MCS];
+    
+    int bw;
+    int sgi;
+    int nss;
+    
+    int rs_index;
+    
+    uint32_t    active_rs_count;
+    enum ieee80211_phymode  rs_phymode;
+    struct ieee80211_ra_rate active_rs[IEEE80211_RATESET_MAX_RATE_SET];
 };
 
 /* Initialize rate adaptation state. */
-void    ieee80211_ra_node_init(struct ieee80211_ra_node *);
+void    ieee80211_ra_node_init(struct ieee80211com *, struct ieee80211_ra_node *, struct ieee80211_node *);
 
 /*
  * Drivers report information about 802.11n/HT Tx attempts here.
@@ -91,6 +115,6 @@ void    ieee80211_ra_choose(struct ieee80211_ra_node *,
         struct ieee80211com *, struct ieee80211_node *);
 
 /* Get the HT rateset for a particular HT MCS with SGI on/off. */
-const struct ieee80211_ht_rateset * ieee80211_ra_get_ht_rateset(int mcs,
-        int chw, int sgi);
+const struct ieee80211_ra_rate *ieee80211_ra_get_rateset(struct ieee80211_ra_node *, struct ieee80211com *,
+                                                         struct ieee80211_node *, int);
 #endif /* _NET80211_IEEE80211_RA_H_ */

@@ -42,28 +42,28 @@
 #include <net80211/ieee80211_var.h>
 #include <net80211/ieee80211_ra.h>
 
-int    ieee80211_ra_next_intra_rate(struct ieee80211_ra_node *,
+int    ieee80211_ra_next_intra_rate(struct ieee80211_ra_node *, struct ieee80211com *,
         struct ieee80211_node *);
-const struct ieee80211_ht_rateset * ieee80211_ra_next_rateset(
-            struct ieee80211_ra_node *, struct ieee80211_node *);
+const struct ieee80211_ra_rate * ieee80211_ra_next_rateset(
+            struct ieee80211_ra_node *, struct ieee80211com *, struct ieee80211_node *);
 int    ieee80211_ra_best_mcs_in_rateset(struct ieee80211_ra_node *,
-        const struct ieee80211_ht_rateset *);
-void    ieee80211_ra_probe_next_rateset(struct ieee80211_ra_node *,
-        struct ieee80211_node *, const struct ieee80211_ht_rateset *);
-int    ieee80211_ra_next_mcs(struct ieee80211_ra_node *,
+        const struct ieee80211_ra_rate *);
+void    ieee80211_ra_probe_next_rateset(struct ieee80211_ra_node *, struct ieee80211com *,
+        struct ieee80211_node *, const struct ieee80211_ra_rate *);
+int    ieee80211_ra_next_mcs(struct ieee80211_ra_node *, struct ieee80211com *,
         struct ieee80211_node *);
 int    ieee80211_ra_probe_valid(struct ieee80211_ra_node *,
         struct ieee80211_node *);
 void    ieee80211_ra_probe_done(struct ieee80211_ra_node *);
 int    ieee80211_ra_intra_mode_ra_finished(
-        struct ieee80211_ra_node *, struct ieee80211_node *);
-void    ieee80211_ra_trigger_next_rateset(struct ieee80211_ra_node *,
+        struct ieee80211_ra_node *, struct ieee80211com *, struct ieee80211_node *);
+void    ieee80211_ra_trigger_next_rateset(struct ieee80211_ra_node *, struct ieee80211com *,
         struct ieee80211_node *);
 int    ieee80211_ra_inter_mode_ra_finished(
         struct ieee80211_ra_node *, struct ieee80211_node *);
 int    ieee80211_ra_best_rate(struct ieee80211_ra_node *,
         struct ieee80211_node *);
-void    ieee80211_ra_probe_next_rate(struct ieee80211_ra_node *,
+void    ieee80211_ra_probe_next_rate(struct ieee80211_ra_node *, struct ieee80211com *,
         struct ieee80211_node *);
 int    ieee80211_ra_valid_tx_mcs(struct ieee80211com *, int);
 uint32_t ieee80211_ra_valid_rates(struct ieee80211com *,
@@ -122,28 +122,166 @@ ra_fp_sprintf(uint64_t fp)
 }
 #endif /* RA_DEBUG */
 
-int ht_support_sgi(struct ieee80211_node *ni)
+static bool is_ht(struct ieee80211_node *ni)
 {
-    return ((ni->ni_flags & IEEE80211_NODE_HT_SGI20) || (ni->ni_flags & IEEE80211_NODE_HT_SGI40)) ? 1 : 0;
+    return (ni->ni_flags & IEEE80211_NODE_HT) != 0;
 }
 
-const struct ieee80211_ht_rateset *
-ieee80211_ra_get_ht_rateset(int mcs, int chw, int sgi)
+static bool is_vht(struct ieee80211_node *ni)
 {
-    const struct ieee80211_ht_rateset *rs;
+    return (ni->ni_flags & IEEE80211_NODE_VHT) != 0;
+}
+
+static bool is_he(struct ieee80211_node *ni)
+{
+    return (ni->ni_flags & IEEE80211_NODE_HE) != 0;
+}
+
+static int support_sgi(struct ieee80211_node *ni)
+{
+    if (is_he(ni))
+        return false;
+    if (is_vht(ni))
+        return ieee80211_node_supports_vht_sgi80(ni) || ieee80211_node_supports_vht_sgi160(ni);
+    if (is_ht(ni))
+        return ieee80211_node_supports_ht_sgi20(ni) || ieee80211_node_supports_ht_sgi40(ni);
+    return false;
+}
+
+static int support_nss(struct ieee80211com *ic)
+{
+    uint32_t ntxstreams = 0;
     int i;
-    int start = (chw == 40 ? IEEE80211_HT_RATESET_CBW40_SISO : IEEE80211_HT_RATESET_SISO);
-    int end = (chw == 40 ? IEEE80211_HT_NUM_RATESETS : IEEE80211_HT_RATESET_CBW40_SISO);
-
-    for (i = start; i < end; i++) {
-        rs = &ieee80211_std_ratesets_11n[i];
-        if (sgi != rs->sgi)
-            continue;
-        if (mcs >= rs->min_mcs && mcs <= rs->max_mcs)
-            return rs;
+    if ((ic->ic_tx_mcs_set & IEEE80211_TX_RX_MCS_NOT_EQUAL) == 0) {
+        for (i = 0; i < 4; i++) {
+            if (ic->ic_sup_mcs[i] == 0) {
+                break;
+            }
+            ntxstreams++;
+        }
+        return ntxstreams;
     }
+    return 1 + ((ic->ic_tx_mcs_set & IEEE80211_TX_SPATIAL_STREAMS) >> 2);
+}
 
-    panic("MCS %d is not part of any rateset", mcs);
+static void build_rateset(struct ieee80211_ra_node *rn, enum ieee80211_phymode mode)
+{
+    int i;
+    struct ieee80211_ra_rate *ra_rate;
+    const struct ieee80211_ht_rateset *ht_rate;
+    const struct ieee80211_vht_rateset *vht_rate;
+    const struct ieee80211_he_rateset *he_rate;
+    rn->rs_phymode = mode;
+    switch (rn->rs_phymode) {
+        case IEEE80211_MODE_11N:
+            rn->active_rs_count = IEEE80211_HT_NUM_RATESETS;
+            for (i = 0; i < IEEE80211_HT_NUM_RATESETS; i++) {
+                ra_rate = &rn->active_rs[i];
+                ht_rate = &ieee80211_std_ratesets_11n[i];
+                ra_rate->band_width = (i >= IEEE80211_HT_RATESET_CBW40_SISO ? IEEE80211_CHAN_WIDTH_40 : IEEE80211_CHAN_WIDTH_20);
+                ra_rate->max_mcs = ht_rate->max_mcs;
+                ra_rate->min_mcs = ht_rate->min_mcs;
+                ra_rate->nrates = ht_rate->nrates;
+                ra_rate->sgi = ht_rate->sgi;
+                ra_rate->nss = (ht_rate->max_mcs + 1) / 8;
+                ra_rate->rs_index = i;
+                memcpy(ra_rate->rates, ht_rate->rates, sizeof(ht_rate->rates));
+            }
+            break;
+            
+        case IEEE80211_MODE_11AC:
+            rn->active_rs_count = IEEE80211_VHT_NUM_RATESETS;
+            for (i = 0; i < IEEE80211_HT_NUM_RATESETS; i++) {
+                ra_rate = &rn->active_rs[i];
+                vht_rate = &ieee80211_std_ratesets_11ac[i];
+                int bw = IEEE80211_CHAN_WIDTH_20;
+                switch (i / 4) {
+                    case 0:
+                        bw = IEEE80211_CHAN_WIDTH_20;
+                        break;
+                    case 1:
+                        bw = IEEE80211_CHAN_WIDTH_40;
+                        break;
+                    case 2:
+                        bw = IEEE80211_CHAN_WIDTH_80;
+                        break;
+                    case 3:
+                        bw = IEEE80211_CHAN_WIDTH_160;
+                        break;
+                    default:
+                        break;
+                }
+                ra_rate->band_width = bw;
+                ra_rate->max_mcs = vht_rate->nrates - 1;
+                ra_rate->min_mcs = 0;
+                ra_rate->nrates = vht_rate->nrates;
+                ra_rate->sgi = vht_rate->sgi;
+                ra_rate->nss = vht_rate->num_ss;
+                ra_rate->rs_index = i;
+                memcpy(ra_rate->rates, vht_rate->rates, sizeof(vht_rate->rates));
+            }
+            break;
+        
+        case IEEE80211_MODE_11AX:
+            rn->active_rs_count = IEEE80211_HT_NUM_RATESETS;
+            for (i = 0; i < IEEE80211_HT_NUM_RATESETS; i++) {
+                ra_rate = &rn->active_rs[i];
+                he_rate = &ieee80211_std_ratesets_11ax[i];
+                int bw = IEEE80211_CHAN_WIDTH_20;
+                switch (i / 2) {
+                    case 0:
+                        bw = IEEE80211_CHAN_WIDTH_20;
+                        break;
+                    case 1:
+                        bw = IEEE80211_CHAN_WIDTH_40;
+                        break;
+                    case 2:
+                        bw = IEEE80211_CHAN_WIDTH_80;
+                        break;
+                    case 3:
+                        bw = IEEE80211_CHAN_WIDTH_160;
+                        break;
+                    default:
+                        break;
+                }
+                ra_rate->band_width = bw;
+                ra_rate->max_mcs = he_rate->nrates - 1;
+                ra_rate->min_mcs = 0;
+                ra_rate->sgi = 0;
+                ra_rate->nss = ((i + 1) % 2) + 1;
+                ra_rate->nrates = he_rate->nrates;
+                ra_rate->rs_index = i;
+                memcpy(ra_rate->rates, he_rate->rates, sizeof(he_rate->rates));
+            }
+            break;
+        default:
+            XYLog("%s invalid mode=%d\n", __FUNCTION__, mode);
+            break;
+    }
+}
+
+const struct ieee80211_ra_rate *
+ieee80211_ra_get_rateset(struct ieee80211_ra_node *ra, struct ieee80211com *ic, struct ieee80211_node *ni, int mcs)
+{
+    int i;
+    int sup_nss = support_nss(ic);
+    struct ieee80211_ra_rate *last_ra_rate = &ra->active_rs[ra->rs_index];
+    if (last_ra_rate->min_mcs <= mcs && mcs <= last_ra_rate->max_mcs) {
+        return last_ra_rate;
+    }
+    int search_direction = mcs - last_ra_rate->max_mcs;
+    for (i = ra->rs_index; (search_direction > 0 ? (i <= ra->active_rs_count - 1) : (i >= 0)); search_direction > 0 ? i++ : i--) {
+        const struct ieee80211_ra_rate *ra_rate = &ra->active_rs[i];
+        if (ra_rate->sgi && !support_sgi(ni))
+            continue;
+        if (ra_rate->nss > sup_nss)
+            continue;
+        if (ra_rate->band_width > ni->ni_chw)
+            continue;
+        if (mcs >= ra_rate->min_mcs && mcs <= ra_rate->max_mcs)
+            return ra_rate;
+    }
+    panic("%s mcs=%d rs_count=%d sgi=%d nss=%d bw=%d rate==NULL!!!!\n", __FUNCTION__, mcs, ra->active_rs_count, ra->sgi, ra->nss, ra->bw);
 }
 
 /*
@@ -151,12 +289,12 @@ ieee80211_ra_get_ht_rateset(int mcs, int chw, int sgi)
  */
 
 uint64_t
-ieee80211_ra_get_txrate(int mcs, int chw, int sgi)
+ieee80211_ra_get_txrate(struct ieee80211_ra_node *ra, struct ieee80211com *ic, struct ieee80211_node *ni, int mcs)
 {
-    const struct ieee80211_ht_rateset *rs;
+    const struct ieee80211_ra_rate *rs;
     uint64_t txrate;
 
-    rs = ieee80211_ra_get_ht_rateset(mcs, chw, sgi);
+    rs = ieee80211_ra_get_rateset(ra, ic, ni, mcs);
     txrate = rs->rates[mcs - rs->min_mcs];
     txrate <<= RA_FP_SHIFT; /* convert to fixed-point */
     txrate *= 500; /* convert to kbit/s */
@@ -179,14 +317,13 @@ ieee80211_ra_get_txrate(int mcs, int chw, int sgi)
 #define IEEE80211_RA_MAX_PROBE_RETRIES 4
 
 int
-ieee80211_ra_next_lower_intra_rate(struct ieee80211_ra_node *rn,
+ieee80211_ra_next_lower_intra_rate(struct ieee80211_ra_node *rn, struct ieee80211com *ic,
     struct ieee80211_node *ni)
 {
-    const struct ieee80211_ht_rateset *rs;
+    const struct ieee80211_ra_rate *rs;
     int i, next;
-    int sgi = ht_support_sgi(ni);
 
-    rs = ieee80211_ra_get_ht_rateset(ni->ni_txmcs, ni->ni_chw, sgi);
+    rs = ieee80211_ra_get_rateset(rn, ic, ni, ni->ni_txmcs);
     if (ni->ni_txmcs == rs->min_mcs)
         return rs->min_mcs;
 
@@ -204,14 +341,13 @@ ieee80211_ra_next_lower_intra_rate(struct ieee80211_ra_node *rn,
 }
 
 int
-ieee80211_ra_next_intra_rate(struct ieee80211_ra_node *rn,
+ieee80211_ra_next_intra_rate(struct ieee80211_ra_node *rn, struct ieee80211com *ic,
     struct ieee80211_node *ni)
 {
-    const struct ieee80211_ht_rateset *rs;
+    const struct ieee80211_ra_rate *rs;
     int i, next;
-    int sgi = ht_support_sgi(ni);
 
-    rs = ieee80211_ra_get_ht_rateset(ni->ni_txmcs, ni->ni_chw, sgi);
+    rs = ieee80211_ra_get_rateset(rn, ic, ni, ni->ni_txmcs);
     if (ni->ni_txmcs == rs->max_mcs)
         return rs->max_mcs;
 
@@ -228,50 +364,62 @@ ieee80211_ra_next_intra_rate(struct ieee80211_ra_node *rn,
     return next;
 }
 
-const struct ieee80211_ht_rateset *
-ieee80211_ra_next_rateset(struct ieee80211_ra_node *rn,
+const struct ieee80211_ra_rate *
+ieee80211_ra_next_rateset(struct ieee80211_ra_node *rn, struct ieee80211com *ic,
     struct ieee80211_node *ni)
 {
-    const struct ieee80211_ht_rateset *rs, *rsnext;
+    const struct ieee80211_ra_rate *rs, *rsnext = NULL;
     int next = 0;
-    int mcs = ni->ni_txmcs;
-    int sgi = ht_support_sgi(ni);
-    int chw = ni->ni_chw;
+    bool found = false;
 
-    rs = ieee80211_ra_get_ht_rateset(mcs, ni->ni_chw, sgi);
+    rs = ieee80211_ra_get_rateset(rn, ic, ni, ni->ni_txmcs);
     if (rn->probing & IEEE80211_RA_PROBING_UP) {
-        if (rs->max_mcs == 31)
-            return NULL;
-        next = ((rs->max_mcs + 1) >> 2); /* ((rs->max_mcs + 1) / 8) * 2 */
-        if (sgi) {
-            next += 1;
+        next = rs->rs_index;
+        while (next < rn->active_rs_count - 1) {
+            next++;
+            rsnext = &rn->active_rs[next];
+            if (rsnext->band_width > ni->ni_chw)
+                continue;
+            if (rsnext->nss > support_nss(ic))
+                continue;
+            if (rsnext->sgi && !support_sgi(ni))
+                continue;
+            found = true;
+            break;
         }
-        if (chw == 40) {
-            next += IEEE80211_HT_RATESET_MIMO4_SGI + 1;
-        }
+        
     } else if (rn->probing & IEEE80211_RA_PROBING_DOWN) {
-        if (rs->min_mcs == 0)
-            return NULL;
-        next = ((rs->min_mcs - 1) >> 2); /* ((rs->min_mcs - 1) / 8) * 2 */
-        if (sgi) {
-            next += 1;
-        }
-        if (chw == 40) {
-            next += IEEE80211_HT_RATESET_MIMO4_SGI + 1;
+        next = rs->rs_index;
+        while (next > 0) {
+            next--;
+            rsnext = &rn->active_rs[next];
+            if (rsnext->band_width > ni->ni_chw)
+                continue;
+            if (rsnext->nss > support_nss(ic))
+                continue;
+            if (rsnext->sgi && !support_sgi(ni))
+                continue;
+            found = true;
+            break;
         }
     } else
         panic("%s: invalid probing mode %d", __func__, rn->probing);
+    
+    if (found) {
+#ifdef RA_DEBUG
+        DPRINTF(("%s rs befor_idx=%d after_idx=%d sgi=%d nss=%d sup_nss=%d bw=%d probing=%d\n", __FUNCTION__, rs->rs_index, rsnext->rs_index, rsnext->sgi, rsnext->nss, support_nss(ic), rsnext->band_width, rn->probing));
+#endif
+        return rsnext;
+    }
+    return NULL;
 
-    rsnext = &ieee80211_std_ratesets_11n[next];
-    if ((rsnext->mcs_mask & rn->valid_rates) == 0)
-        return NULL;
-
-    return rsnext;
+//    if ((rsnext->mcs_mask & rn->valid_rates) == 0)
+//        return NULL;
 }
 
 int
 ieee80211_ra_best_mcs_in_rateset(struct ieee80211_ra_node *rn,
-    const struct ieee80211_ht_rateset *rs)
+    const struct ieee80211_ra_rate *rs)
 {
     uint64_t gmax = 0;
     int i, best_mcs = rs->min_mcs;
@@ -291,22 +439,25 @@ ieee80211_ra_best_mcs_in_rateset(struct ieee80211_ra_node *rn,
 }
 
 void
-ieee80211_ra_probe_next_rateset(struct ieee80211_ra_node *rn,
-    struct ieee80211_node *ni, const struct ieee80211_ht_rateset *rsnext)
+ieee80211_ra_probe_next_rateset(struct ieee80211_ra_node *rn, struct ieee80211com *ic,
+    struct ieee80211_node *ni, const struct ieee80211_ra_rate *rsnext)
 {
-    const struct ieee80211_ht_rateset *rs;
+    const struct ieee80211_ra_rate *rs;
     struct ieee80211_ra_goodput_stats *g;
     int best_mcs, i;
-    int sgi = ht_support_sgi(ni);
 
     /* Find most recently measured best MCS from the current rateset. */
-    rs = ieee80211_ra_get_ht_rateset(ni->ni_txmcs, ni->ni_chw, sgi);
+    rs = ieee80211_ra_get_rateset(rn, ic, ni, ni->ni_txmcs);
     best_mcs = ieee80211_ra_best_mcs_in_rateset(rn, rs);
 
     /* Switch to the next rateset. */
     ni->ni_txmcs = rsnext->min_mcs;
+    rn->bw = rsnext->band_width;
+    rn->nss = rsnext->nss;
+    rn->sgi = rsnext->sgi;
+    rn->rs_index = rsnext->rs_index;
     if ((rn->valid_rates & (1 << rsnext->min_mcs)) == 0)
-        ni->ni_txmcs = ieee80211_ra_next_intra_rate(rn, ni);
+        ni->ni_txmcs = ieee80211_ra_next_intra_rate(rn, ic, ni);
 
     /* Select the lowest rate from the next rateset with loss-free
      * goodput close to the current best measurement. */
@@ -335,24 +486,24 @@ ieee80211_ra_probe_next_rateset(struct ieee80211_ra_node *rn,
     rn->candidate_rates |= (1 << ni->ni_txmcs);
     if (rn->probing & IEEE80211_RA_PROBING_UP) {
         rn->candidate_rates |=
-          (1 << ieee80211_ra_next_intra_rate(rn, ni));
+          (1 << ieee80211_ra_next_intra_rate(rn, ic, ni));
     } else if (rn->probing & IEEE80211_RA_PROBING_DOWN) {
         rn->candidate_rates |=
-            (1 << ieee80211_ra_next_lower_intra_rate(rn, ni));
+            (1 << ieee80211_ra_next_lower_intra_rate(rn, ic, ni));
     } else
         panic("%s: invalid probing mode %d", __func__, rn->probing);
 }
 
 int
-ieee80211_ra_next_mcs(struct ieee80211_ra_node *rn,
+ieee80211_ra_next_mcs(struct ieee80211_ra_node *rn, struct ieee80211com *ic,
     struct ieee80211_node *ni)
 {
     int next;
 
     if (rn->probing & IEEE80211_RA_PROBING_DOWN)
-        next = ieee80211_ra_next_lower_intra_rate(rn, ni);
+        next = ieee80211_ra_next_lower_intra_rate(rn, ic, ni);
     else if (rn->probing & IEEE80211_RA_PROBING_UP)
-        next = ieee80211_ra_next_intra_rate(rn, ni);
+        next = ieee80211_ra_next_intra_rate(rn, ic, ni);
     else
         panic("%s: invalid probing mode %d", __func__, rn->probing);
 
@@ -386,29 +537,28 @@ ieee80211_ra_probe_done(struct ieee80211_ra_node *rn)
 }
 
 int
-ieee80211_ra_intra_mode_ra_finished(struct ieee80211_ra_node *rn,
+ieee80211_ra_intra_mode_ra_finished(struct ieee80211_ra_node *rn, struct ieee80211com *ic,
     struct ieee80211_node *ni)
 {
-    const struct ieee80211_ht_rateset *rs;
+    const struct ieee80211_ra_rate *rs;
     struct ieee80211_ra_goodput_stats *g = &rn->g[ni->ni_txmcs];
     int next_mcs, best_mcs;
     uint64_t next_rate;
-    int sgi = ht_support_sgi(ni);
 
     rn->probed_rates = (rn->probed_rates | (1 << ni->ni_txmcs));
 
     /* Check if the min/max MCS in this rateset has been probed. */
-    rs = ieee80211_ra_get_ht_rateset(ni->ni_txmcs, ni->ni_chw, sgi);
+    rs = ieee80211_ra_get_rateset(rn, ic, ni, ni->ni_txmcs);
     if (rn->probing & IEEE80211_RA_PROBING_DOWN) {
         if (ni->ni_txmcs == rs->min_mcs ||
             rn->probed_rates & (1 << rs->min_mcs)) {
-            ieee80211_ra_trigger_next_rateset(rn, ni);
+            ieee80211_ra_trigger_next_rateset(rn, ic, ni);
             return 1;
         }
     } else if (rn->probing & IEEE80211_RA_PROBING_UP) {
         if (ni->ni_txmcs == rs->max_mcs ||
             rn->probed_rates & (1 << rs->max_mcs)) {
-            ieee80211_ra_trigger_next_rateset(rn, ni);
+            ieee80211_ra_trigger_next_rateset(rn, ic, ni);
             return 1;
         }
     }
@@ -417,15 +567,15 @@ ieee80211_ra_intra_mode_ra_finished(struct ieee80211_ra_node *rn,
      * Check if the measured goodput is loss-free and better than the
      * loss-free goodput of the candidate rate.
      */
-    next_mcs = ieee80211_ra_next_mcs(rn, ni);
+    next_mcs = ieee80211_ra_next_mcs(rn, ic, ni);
     if (next_mcs == ni->ni_txmcs) {
-        ieee80211_ra_trigger_next_rateset(rn, ni);
+        ieee80211_ra_trigger_next_rateset(rn, ic, ni);
         return 1;
     }
-    next_rate = ieee80211_ra_get_txrate(next_mcs, ni->ni_chw, sgi);
+    next_rate = ieee80211_ra_get_txrate(rn, ic, ni, next_mcs);
     if (g->loss == 0 &&
         g->measured >= next_rate + IEEE80211_RA_RATE_THRESHOLD) {
-        ieee80211_ra_trigger_next_rateset(rn, ni);
+        ieee80211_ra_trigger_next_rateset(rn, ic, ni);
         return 1;
     }
 
@@ -434,12 +584,12 @@ ieee80211_ra_intra_mode_ra_finished(struct ieee80211_ra_node *rn,
     if (best_mcs != ni->ni_txmcs && (rn->probed_rates & (1 << best_mcs))) {
         if ((rn->probing & IEEE80211_RA_PROBING_UP) &&
             best_mcs < ni->ni_txmcs) {
-            ieee80211_ra_trigger_next_rateset(rn, ni);
+            ieee80211_ra_trigger_next_rateset(rn, ic, ni);
             return 1;
         }
         if ((rn->probing & IEEE80211_RA_PROBING_DOWN) &&
             best_mcs > ni->ni_txmcs) {
-            ieee80211_ra_trigger_next_rateset(rn, ni);
+            ieee80211_ra_trigger_next_rateset(rn, ic, ni);
             return 1;
         }
     }
@@ -455,14 +605,14 @@ ieee80211_ra_intra_mode_ra_finished(struct ieee80211_ra_node *rn,
 }
 
 void
-ieee80211_ra_trigger_next_rateset(struct ieee80211_ra_node *rn,
+ieee80211_ra_trigger_next_rateset(struct ieee80211_ra_node *rn, struct ieee80211com *ic,
     struct ieee80211_node *ni)
 {
-    const struct ieee80211_ht_rateset *rsnext;
+    const struct ieee80211_ra_rate *rsnext;
 
-    rsnext = ieee80211_ra_next_rateset(rn, ni);
+    rsnext = ieee80211_ra_next_rateset(rn, ic, ni);
     if (rsnext) {
-        ieee80211_ra_probe_next_rateset(rn, ni, rsnext);
+        ieee80211_ra_probe_next_rateset(rn, ic, ni, rsnext);
         rn->probing |= IEEE80211_RA_PROBING_INTER;
     } else
         rn->probing &= ~IEEE80211_RA_PROBING_INTER;
@@ -510,12 +660,12 @@ ieee80211_ra_best_rate(struct ieee80211_ra_node *rn,
 }
 
 void
-ieee80211_ra_probe_next_rate(struct ieee80211_ra_node *rn,
+ieee80211_ra_probe_next_rate(struct ieee80211_ra_node *rn, struct ieee80211com *ic,
     struct ieee80211_node *ni)
 {
     /* Select the next rate to probe. */
     rn->probed_rates |= (1 << ni->ni_txmcs);
-    ni->ni_txmcs = ieee80211_ra_next_mcs(rn, ni);
+    ni->ni_txmcs = ieee80211_ra_next_mcs(rn, ic, ni);
 }
 
 int
@@ -557,7 +707,7 @@ ieee80211_ra_add_stats_ht(struct ieee80211_ra_node *rn,
 {
     static const uint64_t alpha = RA_FP_1 / 8; /* 1/8 = 0.125 */
     static const uint64_t beta =  RA_FP_1 / 4; /* 1/4 = 0.25 */
-    int s, sgi;
+    int s;
     struct ieee80211_ra_goodput_stats *g = &rn->g[mcs];
     uint64_t sfer, rate, delta;
 
@@ -594,8 +744,7 @@ ieee80211_ra_add_stats_ht(struct ieee80211_ra_node *rn,
     g->nprobe_fail = 0;
     g->nprobe_pkts = 0;
 
-    sgi = ht_support_sgi(ni);
-    rate = ieee80211_ra_get_txrate(mcs, ni->ni_chw, sgi);
+    rate = ieee80211_ra_get_txrate(rn, ic, ni, mcs);
 
     g->loss = sfer * 100;
     g->measured = RA_FP_MUL(RA_FP_1 - sfer, rate);
@@ -618,8 +767,7 @@ ieee80211_ra_choose(struct ieee80211_ra_node *rn, struct ieee80211com *ic,
 {
     struct ieee80211_ra_goodput_stats *g = &rn->g[ni->ni_txmcs];
     int s;
-    int sgi = ht_support_sgi(ni);
-    const struct ieee80211_ht_rateset *rs, *rsnext;
+    const struct ieee80211_ra_rate *rs, *rsnext;
 
     s = splnet();
 
@@ -633,8 +781,8 @@ ieee80211_ra_choose(struct ieee80211_ra_node *rn, struct ieee80211com *ic,
             return;
         }
         ieee80211_ra_probe_clear(rn, ni);
-        if (!ieee80211_ra_intra_mode_ra_finished(rn, ni)) {
-            ieee80211_ra_probe_next_rate(rn, ni);
+        if (!ieee80211_ra_intra_mode_ra_finished(rn, ic, ni)) {
+            ieee80211_ra_probe_next_rate(rn, ic, ni);
             DPRINTFN(3, ("probing MCS %d\n", ni->ni_txmcs));
         } else if (ieee80211_ra_inter_mode_ra_finished(rn, ni)) {
             rn->best_mcs = ieee80211_ra_best_rate(rn, ni);
@@ -648,7 +796,7 @@ ieee80211_ra_choose(struct ieee80211_ra_node *rn, struct ieee80211com *ic,
         rn->valid_probes = 0;
     }
 
-    rs = ieee80211_ra_get_ht_rateset(ni->ni_txmcs, ni->ni_chw, sgi);
+    rs = ieee80211_ra_get_rateset(rn, ic, ni, ni->ni_txmcs);
     if ((g->measured >> RA_FP_SHIFT) == 0LL ||
         (g->average >= 3 * g->stddeviation &&
         g->measured < g->average - 3 * g->stddeviation)) {
@@ -656,16 +804,16 @@ ieee80211_ra_choose(struct ieee80211_ra_node *rn, struct ieee80211com *ic,
         rn->probing = IEEE80211_RA_PROBING_DOWN;
         rn->probed_rates = 0;
         if (ni->ni_txmcs == rs->min_mcs) {
-            rsnext = ieee80211_ra_next_rateset(rn, ni);
+            rsnext = ieee80211_ra_next_rateset(rn, ic, ni);
             if (rsnext) {
-                ieee80211_ra_probe_next_rateset(rn, ni,
+                ieee80211_ra_probe_next_rateset(rn, ic, ni,
                     rsnext);
             } else {
                 /* Cannot probe further down. */
                 rn->probing = IEEE80211_RA_NOT_PROBING;
             }
         } else {
-            ni->ni_txmcs = ieee80211_ra_next_mcs(rn, ni);
+            ni->ni_txmcs = ieee80211_ra_next_mcs(rn, ic, ni);
             rn->candidate_rates = (1 << ni->ni_txmcs);
         }
     } else if (g->loss < 2 * RA_FP_1 ||
@@ -674,16 +822,16 @@ ieee80211_ra_choose(struct ieee80211_ra_node *rn, struct ieee80211com *ic,
         rn->probing = IEEE80211_RA_PROBING_UP;
         rn->probed_rates = 0;
         if (ni->ni_txmcs == rs->max_mcs) {
-            rsnext = ieee80211_ra_next_rateset(rn, ni);
+            rsnext = ieee80211_ra_next_rateset(rn, ic, ni);
             if (rsnext) {
-                ieee80211_ra_probe_next_rateset(rn, ni,
+                ieee80211_ra_probe_next_rateset(rn, ic, ni,
                     rsnext);
             } else {
                 /* Cannot probe further up. */
                 rn->probing = IEEE80211_RA_NOT_PROBING;
             }
         } else {
-            ni->ni_txmcs = ieee80211_ra_next_mcs(rn, ni);
+            ni->ni_txmcs = ieee80211_ra_next_mcs(rn, ic, ni);
             rn->candidate_rates = (1 << ni->ni_txmcs);
         }
     } else {
@@ -712,7 +860,11 @@ ieee80211_ra_choose(struct ieee80211_ra_node *rn, struct ieee80211com *ic,
 }
 
 void
-ieee80211_ra_node_init(struct ieee80211_ra_node *rn)
+ieee80211_ra_node_init(struct ieee80211com *ic, struct ieee80211_ra_node *rn, struct ieee80211_node *ni)
 {
     memset(rn, 0, sizeof(*rn));
+    build_rateset(rn, (enum ieee80211_phymode)ic->ic_curmode);
+    rn->bw = ni->ni_chw;
+    rn->sgi = support_sgi(ni);
+    rn->nss = support_nss(ic);
 }

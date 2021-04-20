@@ -208,7 +208,7 @@ ieee80211_channel_init(struct _ifnet *ifp)
             if (IEEE80211_IS_CHAN_N(c))
                 ic->ic_modecaps |= 1<<IEEE80211_MODE_11N;
             if (IEEE80211_IS_CHAN_AC(c))
-                ic->ic_modecaps |= 1<<IEEE80211_MODE_11AC;
+                ic->ic_modecaps |= 1<<IEEE80211_MODE_11AC | 1<<IEEE80211_MODE_11AX;
         }
     }
     /* validate ic->ic_curmode */
@@ -547,11 +547,31 @@ IFM_MAKEWORD(IFM_IEEE80211, (_s), (_o), 0), 0, NULL)
                 ADD(ic, IFM_IEEE80211_VHT_MCS0 + i,
                     mopt | IFM_IEEE80211_MONITOR);
         }
+        ieee80211_configure_ampdu_tx(ic, 1);
+    }
+    if (ic->ic_modecaps & (1 << IEEE80211_MODE_11AX)) {
+        mopt = IFM_IEEE80211_11AX;
+        ADD(ic, IFM_AUTO, mopt);
+        for (i = 0; i < IEEE80211_VHT_NUM_MCS; i++) {
 #if 0
-        ic->ic_flags |= IEEE80211_F_VHTON; /* enable 11ac by default */
-        if (ic->ic_caps & IEEE80211_C_QOS)
-            ic->ic_flags |= IEEE80211_F_QOS;
+            /* TODO: Obtain VHT MCS information from VHT CAP IE. */
+            if (!vht_mcs_supported)
+                continue;
 #endif
+            ADD(ic, IFM_IEEE80211_VHT_MCS0 + i, mopt);
+#ifndef IEEE80211_STA_ONLY
+            if (ic->ic_caps & IEEE80211_C_IBSS)
+                ADD(ic, IFM_IEEE80211_VHT_MCS0 + i,
+                    mopt | IFM_IEEE80211_IBSS);
+            if (ic->ic_caps & IEEE80211_C_HOSTAP)
+                ADD(ic, IFM_IEEE80211_VHT_MCS0 + i,
+                    mopt | IFM_IEEE80211_HOSTAP);
+#endif
+            if (ic->ic_caps & IEEE80211_C_MONITOR)
+                ADD(ic, IFM_IEEE80211_VHT_MCS0 + i,
+                    mopt | IFM_IEEE80211_MONITOR);
+        }
+        ieee80211_configure_ampdu_tx(ic, 1);
     }
     
     ieee80211_media_status(ifp, &imr);
@@ -626,6 +646,9 @@ ieee80211_media_change(struct _ifnet *ifp)
         case IFM_IEEE80211_11AC:
             newphymode = IEEE80211_MODE_11AC;
             break;
+        case IFM_IEEE80211_11AX:
+            newphymode = IEEE80211_MODE_11AX;
+            break;
         case IFM_AUTO:
             newphymode = IEEE80211_MODE_AUTO;
             break;
@@ -645,10 +668,11 @@ ieee80211_media_change(struct _ifnet *ifp)
     i = -1;
     if (IFM_SUBTYPE(ime->ifm_media) >= IFM_IEEE80211_VHT_MCS0 &&
         IFM_SUBTYPE(ime->ifm_media) <= IFM_IEEE80211_VHT_MCS9) {
-        if ((ic->ic_modecaps & (1 << IEEE80211_MODE_11AC)) == 0)
+        if (((ic->ic_modecaps & (1 << IEEE80211_MODE_11AC)) == 0) && ((ic->ic_modecaps & (1 << IEEE80211_MODE_11AX)) == 0))
             return EINVAL;
         if (newphymode != IEEE80211_MODE_AUTO &&
-            newphymode != IEEE80211_MODE_11AC)
+            newphymode != IEEE80211_MODE_11AC &&
+            newphymode != IEEE80211_MODE_11AX)
             return EINVAL;
         i = ieee80211_media2mcs(ime->ifm_media);
         /* TODO: Obtain VHT MCS information from VHT CAP IE. */
@@ -723,6 +747,8 @@ ieee80211_media_change(struct _ifnet *ifp)
      */
     if (newopmode == IEEE80211_M_HOSTAP &&
         newphymode == IEEE80211_MODE_AUTO) {
+        if (ic->ic_modecaps & (1 << IEEE80211_MODE_11AX))
+            newphymode = IEEE80211_MODE_11AX;
         if (ic->ic_modecaps & (1 << IEEE80211_MODE_11AC))
             newphymode = IEEE80211_MODE_11AC;
         else if (ic->ic_modecaps & (1 << IEEE80211_MODE_11N))
@@ -751,7 +777,12 @@ ieee80211_media_change(struct _ifnet *ifp)
      */
     ic->ic_flags &= ~(IEEE80211_F_HTON | IEEE80211_F_VHTON);
     ieee80211_configure_ampdu_tx(ic, 0);
-    if ((ic->ic_modecaps & (1 << IEEE80211_MODE_11AC)) &&
+    if ((ic->ic_modecaps & (1 << IEEE80211_MODE_11AX)) &&
+        (newphymode == IEEE80211_MODE_AUTO ||
+         newphymode == IEEE80211_MODE_11AX)) {
+        ic->ic_flags |= IEEE80211_F_HEON;
+        ieee80211_configure_ampdu_tx(ic, 1);
+    } else if ((ic->ic_modecaps & (1 << IEEE80211_MODE_11AC)) &&
         (newphymode == IEEE80211_MODE_AUTO ||
          newphymode == IEEE80211_MODE_11AC)) {
         ic->ic_flags |= IEEE80211_F_VHTON;
@@ -827,9 +858,13 @@ ieee80211_media_status(struct _ifnet *ifp, struct ifmediareq *imr)
         case IEEE80211_M_STA:
             ni = ic->ic_bss;
             if (ic->ic_curmode == IEEE80211_MODE_11N ||
-                ic->ic_curmode == IEEE80211_MODE_11AC)
+                ic->ic_curmode == IEEE80211_MODE_11AC ||
+                ic->ic_curmode == IEEE80211_MODE_11AX)
                 imr->ifm_active |= ieee80211_mcs2media(ic,
                                                        ni->ni_txmcs, (enum ieee80211_phymode)ic->ic_curmode);
+            else if (ni->ni_flags & IEEE80211_NODE_HE) /* in MODE_AUTO */
+                imr->ifm_active |= ieee80211_mcs2media(ic,
+                                                       ni->ni_txmcs, IEEE80211_MODE_11AX);
             else if (ni->ni_flags & IEEE80211_NODE_VHT) /* in MODE_AUTO */
                 imr->ifm_active |= ieee80211_mcs2media(ic,
                                                        ni->ni_txmcs, IEEE80211_MODE_11AC);
@@ -874,6 +909,9 @@ ieee80211_media_status(struct _ifnet *ifp, struct ifmediareq *imr)
             break;
         case IEEE80211_MODE_11AC:
             imr->ifm_active |= IFM_IEEE80211_11AC;
+            break;
+        case IEEE80211_MODE_11AX:
+            imr->ifm_active |= IFM_IEEE80211_11AX;
             break;
     }
 }
@@ -1008,6 +1046,44 @@ const struct ieee80211_vht_rateset ieee80211_std_ratesets_11ac[] = {
     
     /* MCS 0-9, 2 SS, 80MHz channel, SGI */
     { 10, { 130, 260, 390, 520, 780, 1040, 1170, 1300, 1560, 1734 }, 2, 1 },
+    
+    /* MCS 0-9, 1 SS, 160MHz channel, no SGI */
+    { 10, { 117, 234, 351, 468, 702, 936, 1053, 1170, 1404, 1560 }, 1, 0 },
+    
+    /* MCS 0-9, 1 SS, 160MHz channel, SGI */
+    { 10, { 130, 260, 390, 520, 780, 1040, 1170, 1300, 1560, 1734 }, 1, 1 },
+    
+    /* MCS 0-9, 2 SS, 160MHz channel, no SGI */
+    { 10, { 234, 468, 702, 936, 1404, 1872, 2106, 2340, 2808 }, 2, 0 },
+    
+    /* MCS 0-9, 2 SS, 160MHz channel, SGI */
+    { 10, { 260, 520, 780, 1040, 1560, 2080, 2340, 2600, 3120, 3464 }, 2, 1 },
+};
+
+const struct ieee80211_he_rateset ieee80211_std_ratesets_11ax[] = {
+    /* MCS 0-11 1 SS, 20MHz channel */
+    { 12, { 17, 34, 52, 69, 103, 138, 155, 172, 206, 230, 258, 287 }, 1 },
+    
+    /* MCS 0-11 2 SS, 20MHz channel */
+    { 12, { 34, 69, 103, 138, 206, 275, 310, 344, 413, 459, 516, 574 }, 2 },
+    
+    /* MCS 0-11 1 SS, 40MHz channel */
+    { 12, { 34, 69, 103, 138, 206, 275, 310, 344, 413, 459, 516, 574 }, 1 },
+    
+    /* MCS 0-11 2 SS, 40MHz channel */
+    { 12, { 69, 138, 206, 275, 413, 551, 619, 688, 826, 918, 1032, 1147 }, 2 },
+    
+    /* MCS 0-11 1 SS, 80MHz channel */
+    { 12, { 72, 144, 216, 288, 432, 577, 649, 721, 865, 961, 1081, 1201 }, 1 },
+    
+    /* MCS 0-11 2 SS, 80MHz channel */
+    { 12, { 288, 577, 865, 1153, 1729, 2306, 2594, 2882, 3459, 3843, 4324, 4804 }, 2},
+    
+    /* MCS 0-11 1 SS, 160MHz channel */
+    { 12, { 144, 288, 432, 564, 865, 1152, 1298, 1442, 1730, 1922, 2162, 2402 }, 1 },
+    
+    /* MCS 0-11 2 SS, 160MHz channel */
+    { 12, { 576, 1154, 1730, 2306, 3458, 4612, 5188, 5764, 6918, 7686, 8648, 9608 }, 2 },
 };
 
 /*
@@ -1027,6 +1103,7 @@ ieee80211_setbasicrates(struct ieee80211com *ic)
         { 4, { 2, 4, 11, 22 } },        /* IEEE80211_MODE_11G */
         { 0 },                /* IEEE80211_MODE_11N    */
         { 0 },                /* IEEE80211_MODE_11AC    */
+        { 0 },                /* IEEE80211_MODE_11AX    */
     };
     int mode;
     struct ieee80211_rateset *rs;
@@ -1110,6 +1187,7 @@ ieee80211_setmode(struct ieee80211com *ic, enum ieee80211_phymode mode)
         IEEE80211_CHAN_PUREG,    /* IEEE80211_MODE_11G */
         IEEE80211_CHAN_HT,    /* IEEE80211_MODE_11N */
         IEEE80211_CHAN_VHT,    /* IEEE80211_MODE_11AC */
+        IEEE80211_CHAN_VHT,    /* IEEE80211_MODE_11AX */
     };
     const struct ieee80211_channel *c;
     u_int modeflags;
@@ -1134,7 +1212,7 @@ ieee80211_setmode(struct ieee80211com *ic, enum ieee80211_phymode mode)
         if (mode == IEEE80211_MODE_AUTO) {
             if (c->ic_flags != 0)
                 break;
-        } else if ((c->ic_flags & modeflags) == modeflags)
+        } else if ((c->ic_flags & modeflags) != 0)
             break;
     }
     if (i > IEEE80211_CHAN_MAX) {
@@ -1227,6 +1305,13 @@ ieee80211_next_mode(struct _ifnet *ifp)
         if (mode == IEEE80211_MODE_11AC)
             continue;
         
+        /*
+         * Skip over 11ax mode. Its set of channels is the set
+         * of all channels supported by 11a.
+         */
+        if (mode == IEEE80211_MODE_11AX)
+            continue;
+        
         /* Start over if we have already tried all modes. */
         if (mode == IEEE80211_MODE_MAX) {
             mode = IEEE80211_MODE_AUTO;
@@ -1277,6 +1362,7 @@ ieee80211_chan2mode(struct ieee80211com *ic,
                     return IEEE80211_MODE_11G;
                 return IEEE80211_MODE_11B;
             case IEEE80211_MODE_11AC:
+            case IEEE80211_MODE_11AX:
                 return IEEE80211_MODE_11A;
             default:
                 return (enum ieee80211_phymode)ic->ic_curmode;
@@ -1314,6 +1400,11 @@ ieee80211_mcs2media(struct ieee80211com *ic, int mcs,
         case IEEE80211_MODE_11AC:
             if (mcs >= 0 && mcs < IEEE80211_VHT_NUM_MCS)
                 return (IFM_IEEE80211_11AC |
+                        (IFM_IEEE80211_VHT_MCS0 + mcs));
+            break;
+        case IEEE80211_MODE_11AX:
+            if (mcs >= 0 && mcs < IEEE80211_VHT_NUM_MCS)
+                return (IFM_IEEE80211_11AX |
                         (IFM_IEEE80211_VHT_MCS0 + mcs));
             break;
         case IEEE80211_MODE_AUTO:
@@ -1407,7 +1498,8 @@ ieee80211_rate2media(struct ieee80211com *ic, int rate,
             break;
         case IEEE80211_MODE_11N:
         case IEEE80211_MODE_11AC:
-            /* 11n/11ac uses MCS, not rates. */
+        case IEEE80211_MODE_11AX:
+            /* 11n/11ac/11ax uses MCS, not rates. */
             panic("%s: unexpected mode %d", __func__, mode);
             break;
     }

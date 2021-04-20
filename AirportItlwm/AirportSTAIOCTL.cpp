@@ -93,6 +93,12 @@ SInt32 AirportItlwm::apple80211Request(unsigned int request_type,
         case APPLE80211_IOC_MCS_INDEX_SET:
             IOCTL_GET(request_type, MCS_INDEX_SET, apple80211_mcs_index_set_data);
             break;
+        case APPLE80211_IOC_VHT_MCS_INDEX_SET:
+            IOCTL_GET(request_type, VHT_MCS_INDEX_SET, apple80211_vht_mcs_index_set_data);
+            break;
+        case APPLE80211_IOC_MCS_VHT:
+            IOCTL(request_type, MCS_VHT, apple80211_mcs_vht_data);
+            break;
         case APPLE80211_IOC_SUPPORTED_CHANNELS:  // 27
         case APPLE80211_IOC_HW_SUPPORTED_CHANNELS:
             IOCTL_GET(request_type, SUPPORTED_CHANNELS, apple80211_sup_channel_data);
@@ -302,8 +308,11 @@ static int ieeeChanFlag2apple(int flags, int bw)
     if (flags & IEEE80211_CHAN_DFS)
         ret |= APPLE80211_C_FLAG_DFS;
     if (bw == -1) {
-        if ((flags & IEEE80211_CHAN_VHT80) && (flags & IEEE80211_CHAN_VHT)) {
-            ret |= APPLE80211_C_FLAG_80MHZ;
+        if (flags & IEEE80211_CHAN_VHT) {
+            if ((flags & IEEE80211_CHAN_VHT160) || (flags & IEEE80211_CHAN_VHT80_80))
+                ret |= APPLE80211_C_FLAG_160MHZ;
+            if (flags & IEEE80211_CHAN_VHT80)
+                ret |= APPLE80211_C_FLAG_80MHZ;
         } else if ((flags & IEEE80211_CHAN_HT40) && (flags & IEEE80211_CHAN_HT)) {
             ret |= APPLE80211_C_FLAG_40MHZ;
             if (flags & IEEE80211_CHAN_HT40U)
@@ -315,15 +324,19 @@ static int ieeeChanFlag2apple(int flags, int bw)
         }
     } else {
         switch (bw) {
-            case 80:
+            case IEEE80211_CHAN_WIDTH_80P80:
+            case IEEE80211_CHAN_WIDTH_160:
+                ret |= APPLE80211_C_FLAG_160MHZ;
+                break;
+            case IEEE80211_CHAN_WIDTH_80:
                 ret |= APPLE80211_C_FLAG_80MHZ;
                 break;
-            case 40:
+            case IEEE80211_CHAN_WIDTH_40:
                 ret |= APPLE80211_C_FLAG_40MHZ;
                 if (flags & IEEE80211_CHAN_HT40U)
                     ret |= APPLE80211_C_FLAG_EXT_ABV;
                 break;
-            case 20:
+            case IEEE80211_CHAN_WIDTH_20:
                 ret |= APPLE80211_C_FLAG_20MHZ;
                 break;
             default:
@@ -445,14 +458,42 @@ getRATE(OSObject *object, struct apple80211_rate_data *rd)
     if (ic->ic_bss == NULL) {
         return kIOReturnError;
     }
-    int is_40mhz = ic->ic_bss->ni_chw == 40;
-    int sgi = ((!is_40mhz && ieee80211_node_supports_ht_sgi20(ic->ic_bss)) || (is_40mhz && ieee80211_node_supports_ht_sgi40(ic->ic_bss)));
+    int nss;
+    int sgi;
     int index = 0;
     if (ic->ic_state == IEEE80211_S_RUN) {
         memset(rd, 0, sizeof(*rd));
         rd->version = APPLE80211_VERSION;
         rd->num_radios = 1;
-        if (ic->ic_curmode >= IEEE80211_MODE_11N) {
+        if (ic->ic_curmode == IEEE80211_MODE_11AC) {
+            sgi = (ieee80211_node_supports_vht_sgi80(ic->ic_bss) || ieee80211_node_supports_vht_sgi160(ic->ic_bss));
+            if (sgi) {
+                index += 1;
+            }
+            nss = fHalService->getDriverInfo()->getTxNSS();
+            switch (ic->ic_bss->ni_chw) {
+                case IEEE80211_CHAN_WIDTH_40:
+                    index += 4;
+                    break;
+                case IEEE80211_CHAN_WIDTH_80:
+                    index += 8;
+                    break;
+                case IEEE80211_CHAN_WIDTH_80P80:
+                case IEEE80211_CHAN_WIDTH_160:
+                    index += 12;
+                    break;
+
+                case IEEE80211_CHAN_WIDTH_20_NOHT:
+                case IEEE80211_CHAN_WIDTH_20:    
+                default:
+                    break;
+            }
+            index += 2 * (nss - 1);
+            const struct ieee80211_vht_rateset *rs = &ieee80211_std_ratesets_11ac[index];
+            rd->rate[0] = rs->rates[ic->ic_bss->ni_txmcs % rs->nrates] / 2;
+        } else if (ic->ic_curmode == IEEE80211_MODE_11N) {
+            int is_40mhz = ic->ic_bss->ni_chw == IEEE80211_CHAN_WIDTH_40;
+            sgi = ((!is_40mhz && ieee80211_node_supports_ht_sgi20(ic->ic_bss)) || (is_40mhz && ieee80211_node_supports_ht_sgi40(ic->ic_bss)));
             if (sgi) {
                 index += 1;
             }
@@ -460,7 +501,9 @@ getRATE(OSObject *object, struct apple80211_rate_data *rd)
                 index += (IEEE80211_HT_RATESET_MIMO4_SGI + 1);
             }
             index += (ic->ic_bss->ni_txmcs / 16);
-            rd->rate[0] = ieee80211_std_ratesets_11n[index].rates[ic->ic_bss->ni_txmcs % 8];
+            nss = ic->ic_bss->ni_txmcs / 8 + 1;
+            index += 2 * (nss - 1);
+            rd->rate[0] = ieee80211_std_ratesets_11n[index].rates[ic->ic_bss->ni_txmcs % 8] / 2;
         } else {
             rd->rate[0] = ic->ic_bss->ni_rates.rs_rates[ic->ic_bss->ni_txrate];
         }
@@ -597,6 +640,57 @@ getMCS_INDEX_SET(OSObject *object, struct apple80211_mcs_index_set_data *ad)
 }
 
 IOReturn AirportItlwm::
+getVHT_MCS_INDEX_SET(OSObject *object, struct apple80211_vht_mcs_index_set_data *data)
+{
+    struct ieee80211com *ic = fHalService->get80211Controller();
+    if (ic->ic_bss == NULL || ic->ic_curmode < IEEE80211_MODE_11AC) {
+        return kIOReturnError;
+    }
+    memset(data, 0, sizeof(struct apple80211_vht_mcs_index_set_data));
+    data->version = APPLE80211_VERSION;
+    data->mcs_map = ic->ic_bss->ni_vht_mcsinfo.tx_mcs_map;
+    return kIOReturnSuccess;
+}
+
+IOReturn AirportItlwm::
+getMCS_VHT(OSObject *object, struct apple80211_mcs_vht_data *data)
+{
+    struct ieee80211com *ic = fHalService->get80211Controller();
+    if (ic->ic_bss == NULL || ic->ic_curmode < IEEE80211_MODE_11AC) {
+        return kIOReturnError;
+    }
+    memset(data, 0, sizeof(struct apple80211_mcs_vht_data));
+    data->version = APPLE80211_VERSION;
+    data->guard_interval = (ieee80211_node_supports_vht_sgi80(ic->ic_bss) || ieee80211_node_supports_vht_sgi160(ic->ic_bss)) ? 400 : 800;
+    data->index = ic->ic_bss->ni_txmcs;
+    data->nss = fHalService->getDriverInfo()->getTxNSS();
+    switch (ic->ic_bss->ni_chw) {
+        case IEEE80211_CHAN_WIDTH_40:
+            data->bw = 40;
+            break;
+        case IEEE80211_CHAN_WIDTH_80:
+            data->bw = 80;
+            break;
+        case IEEE80211_CHAN_WIDTH_80P80:
+        case IEEE80211_CHAN_WIDTH_160:
+            data->bw = 160;
+            break;
+            
+        default:
+            data->bw = 20;
+            break;
+    }
+    return kIOReturnSuccess;
+}
+
+IOReturn AirportItlwm::
+setMCS_VHT(OSObject *object, struct apple80211_mcs_vht_data *data)
+{
+    XYLog("%s gi=%d index=%d nss=%d bw=%d\n", __FUNCTION__, data->guard_interval, data->index, data->nss, data->bw);
+    return kIOReturnError;
+}
+
+IOReturn AirportItlwm::
 getRATE_SET(OSObject *object, struct apple80211_rate_set_data *ad)
 {
     struct ieee80211com *ic = fHalService->get80211Controller();
@@ -620,13 +714,20 @@ IOReturn AirportItlwm::
 getPHY_MODE(OSObject *object,
                             struct apple80211_phymode_data *pd)
 {
+    struct ieee80211com *ic = fHalService->get80211Controller();
+    
     pd->version = APPLE80211_VERSION;
     pd->phy_mode = APPLE80211_MODE_11A
     | APPLE80211_MODE_11B
     | APPLE80211_MODE_11G
     | APPLE80211_MODE_11N;
-    if (fHalService->getDriverInfo()->is5GBandSupport()) {
+    
+    if (ic->ic_flags & IEEE80211_F_VHTON) {
         pd->phy_mode |= APPLE80211_MODE_11AC;
+    }
+    
+    if (ic->ic_flags & IEEE80211_F_HEON) {
+        pd->phy_mode |= APPLE80211_MODE_11AX;
     }
     
     switch (fHalService->get80211Controller()->ic_curmode) {
@@ -647,6 +748,9 @@ getPHY_MODE(OSObject *object,
             break;
         case IEEE80211_MODE_11AC:
             pd->active_phy_mode = APPLE80211_MODE_11AC;
+            break;
+        case IEEE80211_MODE_11AX:
+            pd->active_phy_mode = APPLE80211_MODE_11AX;
             break;
             
         default:

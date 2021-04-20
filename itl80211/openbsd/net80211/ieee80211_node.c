@@ -1497,8 +1497,10 @@ ieee80211_end_scan(struct _ifnet *ifp)
               * may not carry HT information.
               */
              ni = ic->ic_bss;
-             if (ni->ni_flags & IEEE80211_NODE_VHT)
-                 ieee80211_setmode(ic, IEEE80211_MODE_11AC);
+             if (ni->ni_flags & IEEE80211_NODE_HE)
+                 ieee80211_setmode(ic, IEEE80211_MODE_11AX);
+             else if (ni->ni_flags & IEEE80211_NODE_VHT)
+                ieee80211_setmode(ic, IEEE80211_MODE_11AC);
              else if (ni->ni_flags & IEEE80211_NODE_HT)
                  ieee80211_setmode(ic, IEEE80211_MODE_11N);
              else
@@ -2436,6 +2438,49 @@ ieee80211_setup_htop(struct ieee80211_node *ni, const uint8_t *data,
     if (isprobe)
         memcpy(ni->ni_basic_mcs, &data[6], sizeof(ni->ni_basic_mcs));
     
+    return 1;
+}
+
+void
+ieee80211_setup_hecaps(struct ieee80211_node *ni, const uint8_t *data,
+                       uint8_t len)
+{
+    struct ieee80211_he_cap_elem *he_cap_ie_elem = (struct ieee80211_he_cap_elem *)data;
+    uint8_t mcs_nss_size, he_ppe_size, he_total_size;
+    
+    mcs_nss_size = ieee80211_he_mcs_nss_size(he_cap_ie_elem);
+    he_ppe_size =
+        ieee80211_he_ppe_size(data[sizeof(ni->ni_he_cap_elem) +
+                        mcs_nss_size],
+                      he_cap_ie_elem->phy_cap_info);
+    he_total_size = sizeof(ni->ni_he_cap_elem) + mcs_nss_size +
+            he_ppe_size;
+    
+    if (len < he_total_size)
+        return;
+    
+    memcpy(&ni->ni_he_cap_elem, data, sizeof(ni->ni_he_cap_elem));
+    
+    /* HE Tx/Rx HE MCS NSS Support Field */
+    memcpy(&ni->ni_he_mcs_nss_supp,
+           &data[sizeof(ni->ni_he_cap_elem)], mcs_nss_size);
+    
+    /* Check if there are (optional) PPE Thresholds */
+    if (ni->ni_he_cap_elem.phy_cap_info[6] &
+        IEEE80211_HE_PHY_CAP6_PPE_THRESHOLD_PRESENT)
+        memcpy(ni->ni_ppe_thres,
+               &data[sizeof(ni->ni_he_cap_elem) + mcs_nss_size],
+               he_ppe_size);
+}
+
+int
+ieee80211_setup_heop(struct ieee80211_node *ni, const uint8_t *data,
+                     uint8_t len)
+{
+    struct ieee80211_he_operation *he_op_ie = (struct ieee80211_he_operation *)data;
+    
+    ni->ni_he_oper_params = le32toh(he_op_ie->he_oper_params);
+    ni->ni_he_oper_nss_set = le16toh(he_op_ie->he_mcs_nss_set);
     return 1;
 }
 

@@ -362,7 +362,7 @@ ieee80211_mira_toverhead(struct ieee80211_mira_node *mn,
     int sgi = (ni->ni_flags & (IEEE80211_NODE_HT_SGI20 | IEEE80211_NODE_HT_SGI40)) ? 1 : 0;
     
     overhead = ieee80211_mira_ht_txtime(0, ni->ni_txmcs,
-                                        IEEE80211_IS_CHAN_2GHZ(ni->ni_chan), sgi, ni->ni_chw == 40);
+                                        IEEE80211_IS_CHAN_2GHZ(ni->ni_chan), sgi, ni->ni_chw == IEEE80211_CHAN_WIDTH_40);
     
     htprot = (enum ieee80211_htprot)(ic->ic_bss->ni_htop1 & IEEE80211_HTOP1_PROT_MASK);
     if (htprot == IEEE80211_HTPROT_NONMEMBER ||
@@ -400,7 +400,7 @@ ieee80211_mira_toverhead(struct ieee80211_mira_node *mn,
         txtime = ieee80211_mira_ht_txtime(mn->ampdu_size, ni->ni_txmcs,
                                           IEEE80211_IS_CHAN_2GHZ(ni->ni_chan), sgi, ni->ni_chw == 40);
         txtime += overhead - ieee80211_mira_ht_txtime(0, ni->ni_txmcs,
-                                                      IEEE80211_IS_CHAN_2GHZ(ni->ni_chan), sgi, ni->ni_chw == 40);
+                                                      IEEE80211_IS_CHAN_2GHZ(ni->ni_chan), sgi, ni->ni_chw == IEEE80211_CHAN_WIDTH_40);
         DPRINTFN(4, ("txtime: %u usec\n", txtime));
         DPRINTFN(4, ("overhead: %u usec\n", overhead));
         DPRINTFN(4, ("toverhead: %s\n", mira_fp_sprintf(toverhead)));
@@ -420,7 +420,7 @@ ieee80211_mira_update_stats(struct ieee80211_mira_node *mn,
     uint64_t agglen = mn->agglen;
     uint64_t ampdu_size = mn->ampdu_size * 8; /* convert to bits */
     int sgi = (ni->ni_flags & (IEEE80211_NODE_HT_SGI20 | IEEE80211_NODE_HT_SGI40)) ? 1 : 0;
-    uint64_t rate = ieee80211_mira_get_txrate(ni->ni_txmcs, sgi, ni->ni_chw == 40);
+    uint64_t rate = ieee80211_mira_get_txrate(ni->ni_txmcs, sgi, ni->ni_chw == IEEE80211_CHAN_WIDTH_40);
     struct ieee80211_mira_goodput_stats *g = &mn->g[ni->ni_txmcs];
     
     if (mn->frames == 0)
@@ -552,7 +552,7 @@ ieee80211_mira_next_lower_intra_rate(struct ieee80211_mira_node *mn,
     int i, next;
     int sgi = (ni->ni_flags & (IEEE80211_NODE_HT_SGI20 | IEEE80211_NODE_HT_SGI40)) ? 1 : 0;
     
-    rs = ieee80211_mira_get_rateset(ni->ni_txmcs, sgi, ni->ni_chw == 40);
+    rs = ieee80211_mira_get_rateset(ni->ni_txmcs, sgi, ni->ni_chw == IEEE80211_CHAN_WIDTH_40);
     if (ni->ni_txmcs == rs->min_mcs)
         return rs->min_mcs;
     
@@ -577,7 +577,7 @@ ieee80211_mira_next_intra_rate(struct ieee80211_mira_node *mn,
     int i, next;
     int sgi = (ni->ni_flags & (IEEE80211_NODE_HT_SGI20 | IEEE80211_NODE_HT_SGI40)) ? 1 : 0;
     
-    rs = ieee80211_mira_get_rateset(ni->ni_txmcs, sgi, ni->ni_chw == 40);
+    rs = ieee80211_mira_get_rateset(ni->ni_txmcs, sgi, ni->ni_chw == IEEE80211_CHAN_WIDTH_40);
     if (ni->ni_txmcs == rs->max_mcs)
         return rs->max_mcs;
     
@@ -603,7 +603,7 @@ ieee80211_mira_next_rateset(struct ieee80211_mira_node *mn,
     int mcs = ni->ni_txmcs;
     int sgi = (ni->ni_flags & (IEEE80211_NODE_HT_SGI20 | IEEE80211_NODE_HT_SGI40)) ? 1 : 0;
     
-    rs = ieee80211_mira_get_rateset(mcs, sgi, ni->ni_chw == 40);
+    rs = ieee80211_mira_get_rateset(mcs, sgi, ni->ni_chw == IEEE80211_CHAN_WIDTH_40);
     if (mn->probing & IEEE80211_MIRA_PROBING_UP) {
         if (rs->max_mcs == 7)    /* MCS 0-7 */
             next = sgi ? IEEE80211_HT_RATESET_MIMO2_SGI :
@@ -669,7 +669,7 @@ ieee80211_mira_probe_next_rateset(struct ieee80211_mira_node *mn,
     int sgi = (ni->ni_flags & (IEEE80211_NODE_HT_SGI20 | IEEE80211_NODE_HT_SGI40)) ? 1 : 0;
     
     /* Find most recently measured best MCS from the current rateset. */
-    rs = ieee80211_mira_get_rateset(ni->ni_txmcs, sgi, ni->ni_chw == 40);
+    rs = ieee80211_mira_get_rateset(ni->ni_txmcs, sgi, ni->ni_chw == IEEE80211_CHAN_WIDTH_40);
     best_mcs = ieee80211_mira_best_mcs_in_rateset(mn, rs);
     
     /* Switch to the next rateset. */
@@ -708,7 +708,7 @@ ieee80211_mira_probe_next_rateset(struct ieee80211_mira_node *mn,
     } else if (mn->probing & IEEE80211_MIRA_PROBING_DOWN) {
 #ifdef MIRA_AGGRESSIVE_DOWNWARDS_PROBING
         mn->candidate_rates |= ieee80211_mira_mcs_below(mn,
-                                                        ni->ni_txmcs, sgi, ni->ni_chw == 40);
+                                                        ni->ni_txmcs, sgi, ni->ni_chw == IEEE80211_CHAN_WIDTH_40);
 #else
         mn->candidate_rates |=
         (1 << ieee80211_mira_next_lower_intra_rate(mn, ni));
@@ -794,7 +794,7 @@ ieee80211_mira_intra_mode_ra_finished(struct ieee80211_mira_node *mn,
     int next_mcs, best_mcs, probed_rates;
     uint64_t next_rate;
     int sgi = (ni->ni_flags & (IEEE80211_NODE_HT_SGI20 | IEEE80211_NODE_HT_SGI40)) ? 1 : 0;
-    bool is_40mhz = (ni->ni_chw == 40);
+    bool is_40mhz = (ni->ni_chw == IEEE80211_CHAN_WIDTH_40);
     
     if (!ieee80211_mira_probe_valid(mn, ni))
         return 0;
@@ -1146,7 +1146,7 @@ ieee80211_mira_get_rts_threshold(struct ieee80211_mira_node *mn,
     txtime = ieee80211_mira_ht_txtime(framelen, ni->ni_txmcs,
                                       IEEE80211_IS_CHAN_2GHZ(ni->ni_chan),
                                       (ni->ni_flags & (IEEE80211_NODE_HT_SGI20 | IEEE80211_NODE_HT_SGI40)) ? 1 : 0, 
-                                      ni->ni_chw == 40);
+                                      ni->ni_chw == IEEE80211_CHAN_WIDTH_40);
     rtsoverhead = ieee80211_mira_legacy_txtime(MIRA_RTSLEN, rtsrate, ic);
     rtsoverhead += ieee80211_mira_legacy_txtime(MIRA_CTSLEN, rtsrate, ic);
     /* convert to fixed-point */
@@ -1215,7 +1215,7 @@ ieee80211_mira_choose(struct ieee80211_mira_node *mn, struct ieee80211com *ic,
     }
     
     /* Check if event-based probing should be triggered. */
-    rs = ieee80211_mira_get_rateset(ni->ni_txmcs, sgi, ni->ni_chw == 40);
+    rs = ieee80211_mira_get_rateset(ni->ni_txmcs, sgi, ni->ni_chw == IEEE80211_CHAN_WIDTH_40);
     if (g->measured < g->average - 2 * g->stddeviation &&
         ni->ni_txmcs != rs->min_mcs) {
         /* Channel becomes bad. Probe downwards. */
@@ -1231,7 +1231,7 @@ ieee80211_mira_choose(struct ieee80211_mira_node *mn, struct ieee80211com *ic,
 #ifdef MIRA_AGGRESSIVE_DOWNWARDS_PROBING
         /* Allow for probing all the way down within this rateset. */
         mn->candidate_rates = ieee80211_mira_mcs_below(mn,
-                                                       ni->ni_txmcs, sgi, ni->ni_chw == 40);
+                                                       ni->ni_txmcs, sgi, ni->ni_chw == IEEE80211_CHAN_WIDTH_40);
 #else
         /* Probe the lower candidate rate to see if it's any better. */
         mn->candidate_rates =

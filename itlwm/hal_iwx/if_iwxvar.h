@@ -212,6 +212,7 @@ struct iwx_nvm_data {
 	int sku_cap_ipan_enable;
 	int sku_cap_mimo_disable;
     int lar_enabled;
+    bool vht160_supported;
 
 	uint8_t valid_tx_ant, valid_rx_ant;
 

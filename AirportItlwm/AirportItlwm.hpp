@@ -154,6 +154,8 @@ public:
     IOReturn setDISASSOCIATE(OSObject *);
     FUNC_IOCTL_GET(RATE_SET, apple80211_rate_set_data)
     FUNC_IOCTL_GET(MCS_INDEX_SET, apple80211_mcs_index_set_data)
+    FUNC_IOCTL_GET(VHT_MCS_INDEX_SET, apple80211_vht_mcs_index_set_data)
+    FUNC_IOCTL(MCS_VHT, apple80211_mcs_vht_data)
     FUNC_IOCTL_GET(SUPPORTED_CHANNELS, apple80211_sup_channel_data)
     FUNC_IOCTL_GET(LOCALE, apple80211_locale_data)
     FUNC_IOCTL(DEAUTH, apple80211_deauth_data)

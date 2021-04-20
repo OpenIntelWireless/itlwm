@@ -179,6 +179,7 @@ public:
                                  const uint8_t *nvm_channels, size_t nchan);
     int    iwm_mimo_enabled(struct iwm_softc *);
     void    iwm_setup_ht_rates(struct iwm_softc *);
+    void    iwm_setup_vht_rates(struct iwm_softc *);
     static void    iwm_htprot_task(void *);
     static void    iwm_update_htprot(struct ieee80211com *, struct ieee80211_node *);
     void   iwm_init_reorder_buffer(struct iwm_reorder_buffer *, uint16_t,

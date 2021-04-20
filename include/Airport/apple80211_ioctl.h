@@ -825,6 +825,21 @@ struct apple80211_mcs_index_set_data
     u_int8_t    mcs_set_map[APPLE80211_MAP_SIZE( APPLE80211_MAX_MCS_INDEX + 1 )];
 };
 
+struct apple80211_vht_mcs_index_set_data
+{
+    u_int32_t   version;
+    u_int16_t    mcs_map;
+} __attribute__((packed));
+
+struct apple80211_mcs_vht_data 
+{
+    u_int32_t   version;
+    u_int32_t   index;
+    u_int32_t   nss;
+    u_int32_t   bw;
+    u_int32_t   guard_interval;
+} __attribute__((packed));
+
 struct apple80211_wow_parameter_data
 {
     u_int32_t                     version;
