@@ -898,7 +898,7 @@ ieee80211_watchdog(struct _ifnet *ifp)
             if (ni)
                 ni->ni_fails++;
             /* Try more times to join, some drivers will timeout when doing auth/assoc */
-            if (ni && ni->ni_fails < 3) {
+            if (ic->ic_state == IEEE80211_S_AUTH && ni && ni->ni_fails < 3) {
                 ieee80211_node_join_bss(ic, ni);
                 goto done;
             }
