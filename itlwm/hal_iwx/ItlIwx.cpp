@@ -247,7 +247,7 @@ setMulticastList(IOEthernetAddress *addr, int count)
     cmd = (struct iwx_mcast_filter_cmd *)malloc(len, 0, 0);
     if (!cmd)
         return kIOReturnError;
-    cmd->pass_all = count > IWX_MAX_MCAST_FILTERING_ADDRESSES;
+    cmd->pass_all = addr_count == 0;
     cmd->count = addr_count;
     cmd->port_id = 0;
     IEEE80211_ADDR_COPY(cmd->bssid, ic->ic_bss->ni_bssid);

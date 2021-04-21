@@ -749,7 +749,7 @@ IOReturn AirportItlwm::getPacketFilters(const OSSymbol *group, UInt32 *filters) 
     if (group == gIOEthernetWakeOnLANFilterGroup && magicPacketSupported) {
         *filters = kIOEthernetWakeOnMagicPacket;
     } else if (group == gIONetworkFilterGroup) {
-        *filters = kIOPacketFilterMulticast | kIOPacketFilterMulticastAll | kIOPacketFilterPromiscuous;
+        *filters = kIOPacketFilterMulticast | kIOPacketFilterPromiscuous;
     } else {
         rtn = IOEthernetController::getPacketFilters(group, filters);
     }
