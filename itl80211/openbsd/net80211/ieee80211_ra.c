@@ -893,6 +893,7 @@ ieee80211_ra_node_init(struct ieee80211com *ic, struct ieee80211_ra_node *rn, st
                 rn->rs_index = IEEE80211_VHT_RATESET_SISO_80;
             }
             break;
+        case IEEE80211_CHAN_WIDTH_80P80:
         case IEEE80211_CHAN_WIDTH_160:
             if (is_he(ni)) {
                 rn->rs_index = IEEE80211_HE_RATESET_SISO_160;
