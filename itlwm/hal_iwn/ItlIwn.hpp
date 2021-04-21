@@ -110,6 +110,8 @@ public:
     //driver controller
     virtual void clearScanningFlags() override;
     
+    virtual IOReturn setMulticastList(IOEthernetAddress *addr, int count) override;
+    
     void releaseAll();
     void joinSSID(const char *ssid, const char *pwd);
     

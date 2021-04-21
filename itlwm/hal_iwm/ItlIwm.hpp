@@ -78,6 +78,8 @@ public:
     //driver controller
     virtual void clearScanningFlags() override;
     
+    virtual IOReturn setMulticastList(IOEthernetAddress *addr, int count) override;
+    
     //utils
     int    iwm_send_bt_init_conf(struct iwm_softc *);
     

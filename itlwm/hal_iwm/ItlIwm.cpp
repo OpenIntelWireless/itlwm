@@ -120,6 +120,40 @@ clearScanningFlags()
     com.sc_flags &= ~(IWM_FLAG_SCANNING | IWM_FLAG_BGSCAN);
 }
 
+IOReturn ItlIwm::
+setMulticastList(IOEthernetAddress *addr, int count)
+{
+    struct ieee80211com *ic = &com.sc_ic;
+    struct iwm_mcast_filter_cmd *cmd;
+    int len;
+    uint8_t addr_count;
+    int err;
+    
+    if (ic->ic_state != IEEE80211_S_RUN || ic->ic_bss == NULL)
+        return kIOReturnError;
+    addr_count = count;
+    if (count > IWM_MAX_MCAST_FILTERING_ADDRESSES)
+        addr_count = 0;
+    if (addr == NULL)
+        addr_count = 0;
+    len = roundup(sizeof(struct iwm_mcast_filter_cmd) + addr_count * ETHER_ADDR_LEN, 4);
+    XYLog("%s multicast count=%d bssid=%s\n", __FUNCTION__, count, ether_sprintf(ic->ic_bss->ni_bssid));
+    cmd = (struct iwm_mcast_filter_cmd *)malloc(len, 0, 0);
+    if (!cmd)
+        return kIOReturnError;
+    cmd->pass_all = count > IWM_MAX_MCAST_FILTERING_ADDRESSES;
+    cmd->count = addr_count;
+    cmd->port_id = 0;
+    IEEE80211_ADDR_COPY(cmd->bssid, ic->ic_bss->ni_bssid);
+    if (addr_count > 0)
+        memcpy(cmd->addr_list,
+               addr->bytes, ETHER_ADDR_LEN * cmd->count);
+    err = iwm_send_cmd_pdu(&com, IWM_MCAST_FILTER_CMD, IWM_CMD_ASYNC, len,
+                     cmd);
+    ::free(cmd);
+    return err ? kIOReturnError : kIOReturnSuccess;
+}
+
 const char *ItlIwm::
 getFirmwareVersion()
 {

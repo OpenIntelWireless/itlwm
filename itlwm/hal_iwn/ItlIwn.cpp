@@ -160,6 +160,12 @@ clearScanningFlags()
     com.sc_flags &= ~(IWN_FLAG_SCANNING | IWN_FLAG_BGSCAN);
 }
 
+IOReturn ItlIwn::
+setMulticastList(IOEthernetAddress *addr, int count)
+{
+    return kIOReturnSuccess;
+}
+
 const char *ItlIwn::
 getFirmwareVersion()
 {

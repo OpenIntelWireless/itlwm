@@ -493,7 +493,8 @@ IOWorkLoop *AirportItlwm::getWorkLoop() const
     return _fWorkloop;
 }
 
-IOReturn AirportItlwm::selectMedium(const IONetworkMedium *medium) {
+IOReturn AirportItlwm::selectMedium(const IONetworkMedium *medium)
+{
     setSelectedMedium(medium);
     return kIOReturnSuccess;
 }
@@ -640,7 +641,8 @@ void AirportItlwm::disableAdapter(IONetworkInterface *netif)
     fHalService->disable(netif);
 }
 
-IOReturn AirportItlwm::getHardwareAddress(IOEthernetAddress *addrP) {
+IOReturn AirportItlwm::getHardwareAddress(IOEthernetAddress *addrP)
+{
     if (IEEE80211_ADDR_EQ(etheranyaddr, fHalService->get80211Controller()->ic_myaddr)) {
         return kIOReturnError;
     } else {
@@ -714,16 +716,19 @@ UInt32 AirportItlwm::getFeatures() const
     return fHalService->getDriverInfo()->supportedFeatures();
 }
 
-IOReturn AirportItlwm::setPromiscuousMode(IOEnetPromiscuousMode mode) {
+IOReturn AirportItlwm::setPromiscuousMode(IOEnetPromiscuousMode mode)
+{
     return kIOReturnSuccess;
 }
 
-IOReturn AirportItlwm::setMulticastMode(IOEnetMulticastMode mode) {
+IOReturn AirportItlwm::setMulticastMode(IOEnetMulticastMode mode)
+{
     return kIOReturnSuccess;
 }
 
-IOReturn AirportItlwm::setMulticastList(IOEthernetAddress* addr, UInt32 len) {
-    return kIOReturnSuccess;
+IOReturn AirportItlwm::setMulticastList(IOEthernetAddress* addr, UInt32 len)
+{
+    return fHalService->getDriverController()->setMulticastList(addr, len);
 }
 
 SInt32 AirportItlwm::monitorModeSetEnabled(
@@ -738,22 +743,17 @@ useAppleRSNSupplicant(IO80211Interface *interface)
     return true;
 }
 
-IOReturn AirportItlwm::getPacketFilters(const OSSymbol *group, UInt32 *filters) const {
+IOReturn AirportItlwm::getPacketFilters(const OSSymbol *group, UInt32 *filters) const
+{
     IOReturn    rtn = kIOReturnSuccess;
     if (group == gIOEthernetWakeOnLANFilterGroup && magicPacketSupported) {
         *filters = kIOEthernetWakeOnMagicPacket;
     } else if (group == gIONetworkFilterGroup) {
-        *filters = kIOPacketFilterUnicast | kIOPacketFilterBroadcast
-        | kIOPacketFilterPromiscuous | kIOPacketFilterMulticast
-        | kIOPacketFilterMulticastAll;
+        *filters = kIOPacketFilterMulticast | kIOPacketFilterMulticastAll | kIOPacketFilterPromiscuous;
     } else {
         rtn = IOEthernetController::getPacketFilters(group, filters);
     }
     return rtn;
-}
-
-IOReturn AirportItlwm::getMaxPacketSize(UInt32 *maxSize) const {
-    return super::getMaxPacketSize(maxSize);
 }
 
 IOReturn AirportItlwm::

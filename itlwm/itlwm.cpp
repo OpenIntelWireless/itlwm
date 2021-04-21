@@ -567,7 +567,8 @@ setLinkStatus(UInt32 status, const IONetworkMedium * activeMedium, UInt64 speed,
     return ret;
 }
 
-IOReturn itlwm::getHardwareAddress(IOEthernetAddress *addrP) {
+IOReturn itlwm::getHardwareAddress(IOEthernetAddress *addrP)
+{
     if (IEEE80211_ADDR_EQ(etheranyaddr, fHalService->get80211Controller()->ic_myaddr)) {
         return kIOReturnError;
     } else {
@@ -635,34 +636,32 @@ UInt32 itlwm::getFeatures() const
     return fHalService->getDriverInfo()->supportedFeatures();
 }
 
-IOReturn itlwm::setPromiscuousMode(IOEnetPromiscuousMode mode) {
+IOReturn itlwm::setPromiscuousMode(IOEnetPromiscuousMode mode)
+{
     return kIOReturnSuccess;
 }
 
-IOReturn itlwm::setMulticastMode(IOEnetMulticastMode mode) {
+IOReturn itlwm::setMulticastMode(IOEnetMulticastMode mode)
+{
     return kIOReturnSuccess;
 }
 
-IOReturn itlwm::setMulticastList(IOEthernetAddress* addr, UInt32 len) {
-    return kIOReturnSuccess;
+IOReturn itlwm::setMulticastList(IOEthernetAddress* addr, UInt32 len)
+{
+    return fHalService->getDriverController()->setMulticastList(addr, len);
 }
 
-IOReturn itlwm::getPacketFilters(const OSSymbol *group, UInt32 *filters) const {
+IOReturn itlwm::getPacketFilters(const OSSymbol *group, UInt32 *filters) const
+{
     IOReturn    rtn = kIOReturnSuccess;
     if (group == gIOEthernetWakeOnLANFilterGroup && magicPacketSupported) {
         *filters = kIOEthernetWakeOnMagicPacket;
     } else if (group == gIONetworkFilterGroup) {
-        *filters = kIOPacketFilterUnicast | kIOPacketFilterBroadcast
-        | kIOPacketFilterPromiscuous | kIOPacketFilterMulticast
-        | kIOPacketFilterMulticastAll;
+        *filters = kIOPacketFilterMulticast | kIOPacketFilterMulticastAll | kIOPacketFilterPromiscuous;
     } else {
         rtn = IOEthernetController::getPacketFilters(group, filters);
     }
     return rtn;
-}
-
-IOReturn itlwm::getMaxPacketSize(UInt32 *maxSize) const {
-    return super::getMaxPacketSize(maxSize);
 }
 
 IOReturn itlwm::

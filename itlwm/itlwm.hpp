@@ -63,7 +63,6 @@ public:
     virtual IOWorkLoop* getWorkLoop() const override;
     virtual const OSString * newVendorString() const override;
     virtual const OSString * newModelString() const override;
-    virtual IOReturn getMaxPacketSize(UInt32* maxSize) const override;
     virtual IONetworkInterface * createInterface() override;
     virtual bool setLinkStatus(
                                UInt32                  status,

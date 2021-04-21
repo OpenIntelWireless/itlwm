@@ -11,7 +11,8 @@
 #define super IO80211Interface
 OSDefineMetaClassAndStructors(AirportItlwmInterface, IO80211Interface);
 
-const char* hexdump(uint8_t *buf, size_t len) {
+const char* hexdump(uint8_t *buf, size_t len)
+{
     ssize_t str_len = len * 3 + 1;
     char *str = (char*)IOMalloc(str_len);
     if (!str)
