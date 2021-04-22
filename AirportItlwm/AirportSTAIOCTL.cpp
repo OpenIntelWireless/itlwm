@@ -7,6 +7,7 @@
 //
 
 #include "AirportItlwm.hpp"
+#include <sys/_netstat.h>
 
 extern IOCommandGate *_fCommandGate;
 
@@ -883,6 +884,7 @@ setPOWER(OSObject *object,
         (IFF_UP | IFF_RUNNING);
         if (pd->power_state[0] == 0) {
             if (isRunning) {
+                net80211_ifstats(fHalService->get80211Controller());
                 disableAdapter(fNetIf);
             }
         } else {

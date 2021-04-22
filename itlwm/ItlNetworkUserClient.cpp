@@ -13,6 +13,7 @@
 */
 
 #include "ItlNetworkUserClient.hpp"
+#include <sys/_netstat.h>
 
 #define super IOUserClient
 OSDefineMetaClassAndStructors( ItlNetworkUserClient, IOUserClient );
@@ -205,6 +206,7 @@ sPOWER(OSObject* target, void* data, bool isSet)
         if (ip->enabled) {
             that->fDriver->enable(that->fInf);
         } else {
+            net80211_ifstats(that->fDriver->fHalService->get80211Controller());
             that->fDriver->disable(that->fInf);
         }
     } else {

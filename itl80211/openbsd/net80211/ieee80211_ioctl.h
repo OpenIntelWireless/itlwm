@@ -124,20 +124,7 @@ struct ieee80211_stats {
 	u_int32_t	is_ht_rx_ba_timeout;
 	u_int32_t	is_ht_tx_ba_timeout;
     u_int32_t   is_vht_nego_no_mandatory_mcs;
-    u_int32_t   is_vht_nego_no_basic_mcs;
     u_int32_t   is_vht_nego_bad_crypto;
-    u_int32_t   is_vht_prot_change;
-    u_int32_t   is_vht_rx_ba_agreements;
-    u_int32_t   is_vht_tx_ba_agreements;
-    u_int32_t   is_vht_rx_frame_below_ba_winstart;
-    u_int32_t   is_vht_rx_frame_above_ba_winend;
-    u_int32_t   is_vht_rx_ba_window_slide;
-    u_int32_t   is_vht_rx_ba_window_jump;
-    u_int32_t   is_vht_rx_ba_no_buf;
-    u_int32_t   is_vht_rx_ba_frame_lost;
-    u_int32_t   is_vht_rx_ba_window_gap_timeout;
-    u_int32_t   is_vht_rx_ba_timeout;
-    u_int32_t   is_vht_tx_ba_timeout;
 };
 
 #define	SIOCG80211STATS		_IOWR('i', 242, struct ifreq)
