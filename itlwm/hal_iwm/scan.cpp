@@ -314,10 +314,15 @@ iwm_fill_probe_req(struct iwm_softc *sc, struct iwm_scan_probe_req *preq)
     preq->common_data.offset = htole16(frm - (uint8_t *)wh);
     pos = frm;
     if (ic->ic_flags & IEEE80211_F_HTON) {
-        if (remain < 28)
+        if (remain < sizeof(struct ieee80211_ie_htcap))
             return ENOBUFS;
         frm = ieee80211_add_htcaps(frm, ic);
         /* XXX add WME info? */
+    }
+    if (ic->ic_flags & IEEE80211_F_VHTON) {
+        if (remain < sizeof(struct ieee80211_ie_vhtcap))
+            return ENOBUFS;
+        frm = ieee80211_add_vhtcaps(frm, ic);
     }
     preq->common_data.len = htole16(frm - pos);
     
