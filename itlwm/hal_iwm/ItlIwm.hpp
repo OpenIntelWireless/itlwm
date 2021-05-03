@@ -182,8 +182,10 @@ public:
     int    iwm_mimo_enabled(struct iwm_softc *);
     void    iwm_setup_ht_rates(struct iwm_softc *);
     void    iwm_setup_vht_rates(struct iwm_softc *);
-    static void    iwm_htprot_task(void *);
-    static void    iwm_update_htprot(struct ieee80211com *, struct ieee80211_node *);
+    static void    iwm_mac_ctxt_task(void *);
+    static void    iwm_updateprot(struct ieee80211com *);
+    static void    iwm_updateslot(struct ieee80211com *);
+    static void    iwm_updateedca(struct ieee80211com *);
     void   iwm_init_reorder_buffer(struct iwm_reorder_buffer *, uint16_t,
                                    uint16_t);
     void   iwm_clear_reorder_buffer(struct iwm_softc *, struct iwm_rxba_data *);

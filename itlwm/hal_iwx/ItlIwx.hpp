@@ -272,8 +272,10 @@ public:
     void    iwx_setup_vht_rates(struct iwx_softc *);
     void    iwx_setup_he_rates(struct iwx_softc *);
     int    iwx_mimo_enabled(struct iwx_softc *);
-    static void    iwx_htprot_task(void *);
-    static void    iwx_update_htprot(struct ieee80211com *, struct ieee80211_node *);
+    static void    iwx_mac_ctxt_task(void *);
+    static void    iwx_updateprot(struct ieee80211com *);
+    static void    iwx_updateslot(struct ieee80211com *);
+    static void    iwx_updateedca(struct ieee80211com *);
     void    iwx_init_reorder_buffer(struct iwx_reorder_buffer *, uint16_t,
             uint16_t);
     void    iwx_clear_reorder_buffer(struct iwx_softc *, struct iwx_rxba_data *);

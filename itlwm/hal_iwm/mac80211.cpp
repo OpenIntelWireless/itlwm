@@ -3061,13 +3061,33 @@ iwm_update_chw(struct ieee80211com *ic)
  * beacons have changed.
  */
 void ItlIwm::
-iwm_update_htprot(struct ieee80211com *ic, struct ieee80211_node *ni)
+iwm_updateprot(struct ieee80211com *ic)
 {
     struct iwm_softc *sc = (struct iwm_softc *)ic->ic_softc;
     ItlIwm *that = container_of(sc, ItlIwm, com);
     
-    /* assumes that ni == ic->ic_bss */
-    that->iwm_add_task(sc, systq, &sc->htprot_task);
+    if (ic->ic_state == IEEE80211_S_RUN)
+        that->iwm_add_task(sc, systq, &sc->mac_ctxt_task);
+}
+
+void ItlIwm::
+iwm_updateslot(struct ieee80211com *ic)
+{
+    struct iwm_softc *sc = (struct iwm_softc *)ic->ic_softc;
+    ItlIwm *that = container_of(sc, ItlIwm, com);
+    
+    if (ic->ic_state == IEEE80211_S_RUN)
+        that->iwm_add_task(sc, systq, &sc->mac_ctxt_task);
+}
+
+void ItlIwm::
+iwm_updateedca(struct ieee80211com *ic)
+{
+    struct iwm_softc *sc = (struct iwm_softc *)ic->ic_softc;
+    ItlIwm *that = container_of(sc, ItlIwm, com);
+    
+    if (ic->ic_state == IEEE80211_S_RUN)
+        that->iwm_add_task(sc, systq, &sc->mac_ctxt_task);
 }
 
 int ItlIwm::iwm_media_change(struct _ifnet *ifp)
@@ -3225,7 +3245,7 @@ iwm_newstate(struct ieee80211com *ic, enum ieee80211_state nstate, int arg)
          }
         timeout_del(&sc->sc_calib_to);
         that->iwm_del_task(sc, systq, &sc->ba_task);
-        that->iwm_del_task(sc, systq, &sc->htprot_task);
+        that->iwm_del_task(sc, systq, &sc->mac_ctxt_task);
         for (i = 0; i < nitems(sc->sc_rxba_data); i++) {
             struct iwm_rxba_data *rxba = &sc->sc_rxba_data[i];
             that->iwm_clear_reorder_buffer(sc, rxba);
@@ -3739,7 +3759,7 @@ iwm_stop(struct _ifnet *ifp)
     task_del(systq, &sc->init_task);
     iwm_del_task(sc, sc->sc_nswq, &sc->newstate_task);
     iwm_del_task(sc, systq, &sc->ba_task);
-    iwm_del_task(sc, systq, &sc->htprot_task);
+    iwm_del_task(sc, systq, &sc->mac_ctxt_task);
     //    KASSERT(sc->task_refs.refs >= 1, "sc->task_refs.refs >= 1");
     //    refcnt_finalize(&sc->task_refs, "iwmstop");
     
@@ -4922,7 +4942,7 @@ iwm_attach(struct iwm_softc *sc, struct pci_attach_args *pa)
     task_set(&sc->init_task, iwm_init_task, sc, "init_task");
     task_set(&sc->newstate_task, iwm_newstate_task, sc, "newstate_task");
     task_set(&sc->ba_task, iwm_ba_task, sc, "ba_task");
-    task_set(&sc->htprot_task, iwm_htprot_task, sc, "htprot_task");
+    task_set(&sc->mac_ctxt_task, iwm_mac_ctxt_task, sc, "mac_ctxt_task");
     
     ic->ic_node_alloc = iwm_node_alloc;
     ic->ic_bgscan_start = iwm_bgscan;
@@ -4932,7 +4952,9 @@ iwm_attach(struct iwm_softc *sc, struct pci_attach_args *pa)
     /* Override 802.11 state transition machine. */
     sc->sc_newstate = ic->ic_newstate;
     ic->ic_newstate = iwm_newstate;
-    ic->ic_update_htprot = iwm_update_htprot;
+    ic->ic_updateprot = iwm_updateprot;
+    ic->ic_updateslot = iwm_updateslot;
+    ic->ic_updateedca = iwm_updateedca;
     ic->ic_ampdu_rx_start = iwm_ampdu_rx_start;
     ic->ic_ampdu_rx_stop = iwm_ampdu_rx_stop;
     ic->ic_ampdu_tx_start = iwm_ampdu_tx_start;
@@ -5013,7 +5035,7 @@ iwm_init_task(void *arg1)
 }
 
 void ItlIwm::
-iwm_htprot_task(void *arg)
+iwm_mac_ctxt_task(void *arg)
 {
     struct iwm_softc *sc = (struct iwm_softc *)arg;
     ItlIwm *that = container_of(sc, ItlIwm, com);
@@ -5027,11 +5049,9 @@ iwm_htprot_task(void *arg)
         return;
     }
     
-    /* This call updates HT protection based on in->in_ni.ni_htop1. */
     err = that->iwm_mac_ctxt_cmd(sc, in, IWM_FW_CTXT_ACTION_MODIFY, 1);
     if (err)
-        XYLog("%s: could not change HT protection: error %d\n",
-              DEVNAME(sc), err);
+        printf("%s: failed to update MAC\n", DEVNAME(sc));
     
     //    refcnt_rele_wake(&sc->task_refs);
     splx(s);

@@ -528,8 +528,8 @@ struct iwx_softc {
     
     struct iwx_tid_data sc_tid_data[IWX_MAX_TID_COUNT + 1];//per tid data + mgmt. Look at %iwx_tid_data.
 
-	/* Task for HT protection updates. */
-	struct task	htprot_task;
+    /* Task for ERP/HT prot/slot-time/EDCA updates. */
+    struct task        mac_ctxt_task;
 
 	bus_space_tag_t sc_st;
 	bus_space_handle_t sc_sh;

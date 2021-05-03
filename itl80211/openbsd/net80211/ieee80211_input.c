@@ -2192,6 +2192,7 @@ ieee80211_recv_probe_resp(struct ieee80211com *ic, mbuf_t m,
     if (ic->ic_opmode == IEEE80211_M_STA &&
         ic->ic_state == IEEE80211_S_RUN &&
         ni->ni_state == IEEE80211_STA_BSS) {
+        int updateprot = 0;
         /*
          * Check if protection mode has changed since last beacon.
          */
@@ -2207,6 +2208,7 @@ ieee80211_recv_probe_resp(struct ieee80211com *ic, mbuf_t m,
             else
                 ic->ic_flags &= ~IEEE80211_F_USEPROT;
             ic->ic_bss->ni_erp = erp;
+            updateprot = 1;
         }
         if (htop && (ic->ic_bss->ni_flags & IEEE80211_NODE_HT)) {
             enum ieee80211_htprot htprot_last, htprot;
@@ -2221,10 +2223,11 @@ ieee80211_recv_probe_resp(struct ieee80211com *ic, mbuf_t m,
                          htprot_last, htprot));
                 ic->ic_stats.is_ht_prot_change++;
                 ic->ic_bss->ni_htop1 = ni->ni_htop1;
-                if (ic->ic_update_htprot)
-                    ic->ic_update_htprot(ic, ic->ic_bss);
+                updateprot = 1;
             }
         }
+        if (updateprot && ic->ic_updateprot != NULL)
+            ic->ic_updateprot(ic);
         
         /*
          * Check if AP short slot time setting has changed

@@ -561,7 +561,8 @@ iwn_attach(struct iwn_softc *sc, struct pci_attach_args *pa)
     ic->ic_updateedca = iwn_updateedca;
     ic->ic_set_key = iwn_set_key;
     ic->ic_delete_key = iwn_delete_key;
-    ic->ic_update_htprot = iwn_update_htprot;
+    ic->ic_updateprot = iwn_updateprot;
+    ic->ic_updateslot = iwn_updateslot;
     ic->ic_ampdu_rx_start = iwn_ampdu_rx_start;
     ic->ic_ampdu_rx_stop = iwn_ampdu_rx_stop;
     ic->ic_ampdu_tx_start = iwn_ampdu_tx_start;
@@ -5889,26 +5890,60 @@ iwn_update_chw(struct ieee80211com *ic)
     XYLog("%s placeholder\n", __FUNCTION__);
 }
 
-/*
- * This function is called by upper layer when HT protection settings in
- * beacons have changed.
- */
 void ItlIwn::
-iwn_update_htprot(struct ieee80211com *ic, struct ieee80211_node *ni)
+iwn_updateprot(struct ieee80211com *ic)
 {
     struct iwn_softc *sc = (struct iwn_softc *)ic->ic_softc;
-    struct iwn_ops *ops = &sc->ops;
-    ItlIwn *that = container_of(sc, ItlIwn, com);
     enum ieee80211_htprot htprot;
-    struct iwn_rxon_assoc rxon_assoc;
-    int s, error;
+    
+    if (ic->ic_state != IEEE80211_S_RUN)
+        return;
+    
+    /* Update ERP protection setting. */
+    if (ic->ic_flags & IEEE80211_F_USEPROT)
+        sc->rxon.flags |= htole32(IWN_RXON_TGG_PROT);
+    else
+        sc->rxon.flags &= ~htole32(IWN_RXON_TGG_PROT);
 
     /* Update HT protection mode setting. */
-    htprot = (ieee80211_htprot)((ni->ni_htop1 & IEEE80211_HTOP1_PROT_MASK) >>
+    htprot = (enum ieee80211_htprot)((ic->ic_bss->ni_htop1 & IEEE80211_HTOP1_PROT_MASK) >>
         IEEE80211_HTOP1_PROT_SHIFT);
     sc->rxon.flags &= ~htole32(IWN_RXON_HT_PROTMODE(3));
     sc->rxon.flags |= htole32(IWN_RXON_HT_PROTMODE(htprot));
 
+    iwn_update_rxon(sc);
+}
+
+void ItlIwn::
+iwn_updateslot(struct ieee80211com *ic)
+{
+    struct iwn_softc *sc = (struct iwn_softc *)ic->ic_softc;
+    
+    if (ic->ic_state != IEEE80211_S_RUN)
+        return;
+    
+    if (ic->ic_flags & IEEE80211_F_SHSLOT)
+        sc->rxon.flags |= htole32(IWN_RXON_SHSLOT);
+    else
+        sc->rxon.flags &= ~htole32(IWN_RXON_SHSLOT);
+    
+    if (ic->ic_flags & IEEE80211_F_SHPREAMBLE)
+        sc->rxon.flags |= htole32(IWN_RXON_SHPREAMBLE);
+    else
+        sc->rxon.flags &= ~htole32(IWN_RXON_SHPREAMBLE);
+    
+    iwn_update_rxon(sc);
+}
+
+void ItlIwn::
+iwn_update_rxon(struct iwn_softc *sc)
+{
+    struct ieee80211com *ic = &sc->sc_ic;
+    ItlIwn *that = container_of(sc, ItlIwn, com);
+    struct iwn_ops *ops = &sc->ops;
+    struct iwn_rxon_assoc rxon_assoc;
+    int s, error;
+    
     /* Update RXON config. */
     memset(&rxon_assoc, 0, sizeof(rxon_assoc));
     rxon_assoc.flags = sc->rxon.flags;
@@ -5920,31 +5955,24 @@ iwn_update_htprot(struct ieee80211com *ic, struct ieee80211_node *ni)
     rxon_assoc.ht_triple_mask = sc->rxon.ht_triple_mask;
     rxon_assoc.rxchain = sc->rxon.rxchain;
     rxon_assoc.acquisition = sc->rxon.acquisition;
-
     s = splnet();
-
     error = that->iwn_cmd(sc, IWN_CMD_RXON_ASSOC, &rxon_assoc,
-        sizeof(rxon_assoc), 1);
+                    sizeof(rxon_assoc), 1);
     if (error != 0)
-        XYLog("%s: RXON_ASSOC command failed\n", sc->sc_dev.dv_xname);
-
+        printf("%s: RXON_ASSOC command failed\n", sc->sc_dev.dv_xname);
     DELAY(100);
-
     /* All RXONs wipe the firmware's txpower table. Restore it. */
     error = ops->set_txpower(sc, 1);
     if (error != 0)
-        XYLog("%s: could not set TX power\n", sc->sc_dev.dv_xname);
-
+        printf("%s: could not set TX power\n", sc->sc_dev.dv_xname);
     DELAY(100);
-
     /* Restore power saving level */
     if (ic->ic_flags & IEEE80211_F_PMGTON)
         error = that->iwn_set_pslevel(sc, 0, 3, 1);
     else
         error = that->iwn_set_pslevel(sc, 0, 0, 1);
     if (error != 0)
-        XYLog("%s: could not set PS level\n", sc->sc_dev.dv_xname);
-
+        printf("%s: could not set PS level\n", sc->sc_dev.dv_xname);
     splx(s);
 }
 

@@ -522,8 +522,8 @@ struct iwm_softc {
     uint16_t                ba_winsize[IWM_MAX_TID_COUNT];
     int                     ba_timeout_val[IWM_MAX_TID_COUNT];
 
-	/* Task for HT protection updates. */
-	struct task		htprot_task;
+    /* Task for ERP/HT prot/slot-time/EDCA updates. */
+    struct task		mac_ctxt_task;
 
 	bus_space_tag_t sc_st;
 	bus_space_handle_t sc_sh;

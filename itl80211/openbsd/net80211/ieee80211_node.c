@@ -968,8 +968,8 @@ ieee80211_create_ibss(struct ieee80211com* ic, struct ieee80211_channel *chan)
         ni->ni_htop1 = IEEE80211_HTPROT_NONE;
         /* Disallow Greenfield mode. None of our drivers support it. */
         ni->ni_htop1 |= IEEE80211_HTOP1_NONGF_STA;
-        if (ic->ic_update_htprot)
-            ic->ic_update_htprot(ic, ni);
+        if (ic->ic_updateprot)
+            ic->ic_updateprot(ic);
         
         /* Configure QoS EDCA parameters. */
         for (aci = 0; aci < EDCA_NUM_AC; aci++) {
@@ -2299,8 +2299,8 @@ ieee80211_clean_nodes(struct ieee80211com *ic, int cache_timeout)
             htop1 |= htprot;
             ic->ic_bss->ni_htop1 = htop1;
             ic->ic_protmode = protmode;
-            if (ic->ic_update_htprot)
-                ic->ic_update_htprot(ic, ic->ic_bss);
+            if (ic->ic_updateprot)
+                ic->ic_updateprot(ic);
         }
     }
     
@@ -2616,8 +2616,8 @@ ieee80211_node_join_ht(struct ieee80211com *ic, struct ieee80211_node *ni)
         htop1 &= ~IEEE80211_HTOP1_PROT_MASK;
         htop1 |= IEEE80211_HTPROT_NONHT_MIXED;
         ic->ic_bss->ni_htop1 = htop1;
-        if (ic->ic_update_htprot)
-            ic->ic_update_htprot(ic, ic->ic_bss);
+        if (ic->ic_updateprot)
+            ic->ic_updateprot(ic);
     }
 }
 
