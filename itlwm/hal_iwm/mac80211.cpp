@@ -2035,8 +2035,8 @@ iwm_flush_tx_path(struct iwm_softc *sc, int tfd_queue_msk)
 static uint8_t iwm_mvm_mac80211_ac_to_ucode_ac(enum ieee80211_edca_ac ac)
 {
    static const uint8_t mac80211_ac_to_ucode_ac[] = {
-       IWM_AC_BK,
        IWM_AC_BE,
+       IWM_AC_BK,
        IWM_AC_VI,
        IWM_AC_VO,
    };

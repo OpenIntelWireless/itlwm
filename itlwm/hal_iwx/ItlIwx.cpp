@@ -2562,8 +2562,8 @@ iwx_nic_init(struct iwx_softc *sc)
 
 /* Map ieee80211_edca_ac categories to firmware Tx FIFO. */
 const uint8_t iwx_ac_to_tx_fifo[] = {
-    IWX_GEN2_EDCA_TX_FIFO_BK,
     IWX_GEN2_EDCA_TX_FIFO_BE,
+    IWX_GEN2_EDCA_TX_FIFO_BK,
     IWX_GEN2_EDCA_TX_FIFO_VI,
     IWX_GEN2_EDCA_TX_FIFO_VO,
 };
@@ -6763,8 +6763,8 @@ iwx_ack_rates(struct iwx_softc *sc, struct iwx_node *in, int *cck_rates,
 static uint8_t iwx_mvm_mac80211_ac_to_ucode_ac(enum ieee80211_edca_ac ac)
 {
    static const uint8_t mac80211_ac_to_ucode_ac[] = {
-       IWX_AC_BK,
        IWX_AC_BE,
+       IWX_AC_BK,
        IWX_AC_VI,
        IWX_AC_VO
    };

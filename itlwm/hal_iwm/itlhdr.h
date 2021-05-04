@@ -277,8 +277,8 @@ struct iwm_nvm_section {
 
 /* Map ieee80211_edca_ac categories to firmware Tx FIFO. */
 const uint8_t iwm_ac_to_tx_fifo[] = {
-    IWM_TX_FIFO_BK,
     IWM_TX_FIFO_BE,
+    IWM_TX_FIFO_BK,
     IWM_TX_FIFO_VI,
     IWM_TX_FIFO_VO,
 };
