@@ -3521,8 +3521,8 @@ ieee80211_recv_delba(struct ieee80211com *ic, mbuf_t m,
     reason = LE_READ_2(&frm[4]);
     tid = params >> 12;
     
-    DPRINTF(("received DELBA from %s, TID %d, reason %d\n",
-             ether_sprintf(ni->ni_macaddr), tid, reason));
+    XYLog("received DELBA from %s, TID %d, reason %d\n",
+             ether_sprintf(ni->ni_macaddr), tid, reason);
     
     if (params & IEEE80211_DELBA_INITIATOR) {
         /* MLME-DELBA.indication(Originator) */
