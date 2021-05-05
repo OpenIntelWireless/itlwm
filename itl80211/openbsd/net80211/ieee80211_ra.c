@@ -52,8 +52,6 @@ void    ieee80211_ra_probe_next_rateset(struct ieee80211_ra_node *, struct ieee8
         struct ieee80211_node *, const struct ieee80211_ra_rate *);
 int    ieee80211_ra_next_mcs(struct ieee80211_ra_node *, struct ieee80211com *,
         struct ieee80211_node *);
-int    ieee80211_ra_probe_valid(struct ieee80211_ra_node *,
-        struct ieee80211_node *);
 void    ieee80211_ra_probe_done(struct ieee80211_ra_node *);
 int    ieee80211_ra_intra_mode_ra_finished(
         struct ieee80211_ra_node *, struct ieee80211com *, struct ieee80211_node *);
@@ -68,6 +66,7 @@ void    ieee80211_ra_probe_next_rate(struct ieee80211_ra_node *, struct ieee8021
 int    ieee80211_ra_valid_tx_mcs(struct ieee80211com *, int);
 uint32_t ieee80211_ra_valid_rates(struct ieee80211com *,
         struct ieee80211_node *);
+int    ieee80211_ra_probe_valid(struct ieee80211_ra_goodput_stats *);
 
 /* We use fixed point arithmetic with 64 bit integers. */
 #define RA_FP_SHIFT    21
@@ -310,12 +309,6 @@ ieee80211_ra_get_txrate(struct ieee80211_ra_node *ra, struct ieee80211com *ic, s
 /* A rate's goodput has to be at least this much larger to be "better". */
 #define IEEE80211_RA_RATE_THRESHOLD    (RA_FP_1 / 64) /* ~ 0.015 */
 
-/* Number of (sub-)frames which render a probe valid. */
-#define IEEE80211_RA_MIN_PROBE_FRAMES    8
-
-/* Number of Tx retries which, alternatively, render a probe valid. */
-#define IEEE80211_RA_MAX_PROBE_RETRIES 4
-
 int
 ieee80211_ra_next_lower_intra_rate(struct ieee80211_ra_node *rn, struct ieee80211com *ic,
     struct ieee80211_node *ni)
@@ -510,13 +503,6 @@ ieee80211_ra_next_mcs(struct ieee80211_ra_node *rn, struct ieee80211com *ic,
     return next;
 }
 
-int
-ieee80211_ra_probe_valid(struct ieee80211_ra_node *rn,
-    struct ieee80211_node *ni)
-{
-    return rn->valid_probes & (1UL << ni->ni_txmcs);
-}
-
 void
 ieee80211_ra_probe_clear(struct ieee80211_ra_node *rn,
     struct ieee80211_node *ni)
@@ -525,6 +511,21 @@ ieee80211_ra_probe_clear(struct ieee80211_ra_node *rn,
 
     g->nprobe_pkts = 0;
     g->nprobe_fail = 0;
+}
+
+int
+ieee80211_ra_probe_valid(struct ieee80211_ra_goodput_stats *g)
+{
+    /* 128 packets make up a valid probe in any case. */
+    if (g->nprobe_pkts >= 128)
+        return 1;
+    
+    /* 8 packets with > 75% loss make a valid probe, too. */
+    if (g->nprobe_pkts >= 8 &&
+        g->nprobe_pkts - g->nprobe_fail < g->nprobe_pkts / 4)
+        return 1;
+    
+    return 0;
 }
 
 void
@@ -725,11 +726,11 @@ ieee80211_ra_add_stats_ht(struct ieee80211_ra_node *rn,
     g->nprobe_pkts += total;
     g->nprobe_fail += fail;
 
-    if (g->nprobe_pkts < IEEE80211_RA_MIN_PROBE_FRAMES &&
-            g->nprobe_fail < IEEE80211_RA_MAX_PROBE_RETRIES) {
+    if (!ieee80211_ra_probe_valid(g)) {
         splx(s);
         return;
     }
+    rn->valid_probes |= 1U << mcs;
 
     if (g->nprobe_fail > g->nprobe_pkts) {
         DPRINTF(("%s fail %u > pkts %u\n",
@@ -740,7 +741,6 @@ ieee80211_ra_add_stats_ht(struct ieee80211_ra_node *rn,
 
     sfer = g->nprobe_fail << RA_FP_SHIFT;
     sfer /= g->nprobe_pkts;
-    rn->valid_probes |= 1U << mcs;
     g->nprobe_fail = 0;
     g->nprobe_pkts = 0;
 
@@ -776,7 +776,7 @@ ieee80211_ra_choose(struct ieee80211_ra_node *rn, struct ieee80211com *ic,
 
     if (rn->probing) {
         /* Probe another rate or settle at the best rate. */
-        if (!ieee80211_ra_probe_valid(rn, ni)) {
+        if (!(rn->valid_probes & (1UL << ni->ni_txmcs))) {
             splx(s);
             return;
         }
