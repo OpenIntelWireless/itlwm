@@ -5893,6 +5893,7 @@ iwn_update_chw(struct ieee80211com *ic)
 void ItlIwn::
 iwn_updateprot(struct ieee80211com *ic)
 {
+    XYLog("%s\n", __FUNCTION__);
     struct iwn_softc *sc = (struct iwn_softc *)ic->ic_softc;
     enum ieee80211_htprot htprot;
     
@@ -5917,6 +5918,7 @@ iwn_updateprot(struct ieee80211com *ic)
 void ItlIwn::
 iwn_updateslot(struct ieee80211com *ic)
 {
+    XYLog("%s\n", __FUNCTION__);
     struct iwn_softc *sc = (struct iwn_softc *)ic->ic_softc;
     
     if (ic->ic_state != IEEE80211_S_RUN)

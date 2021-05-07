@@ -3040,6 +3040,7 @@ iwm_ampdu_tx_stop(struct ieee80211com *ic, struct ieee80211_node *ni, uint8_t ti
 void ItlIwm::
 iwm_update_chw(struct ieee80211com *ic)
 {
+    XYLog("%s\n", __FUNCTION__);
     struct iwm_softc *sc = (struct iwm_softc *)ic->ic_softc;
     ItlIwm *that = container_of(sc, ItlIwm, com);
     int err = 0;
@@ -3061,30 +3062,33 @@ iwm_update_chw(struct ieee80211com *ic)
 void ItlIwm::
 iwm_updateprot(struct ieee80211com *ic)
 {
+    XYLog("%s\n", __FUNCTION__);
     struct iwm_softc *sc = (struct iwm_softc *)ic->ic_softc;
     ItlIwm *that = container_of(sc, ItlIwm, com);
     
-    if (ic->ic_state == IEEE80211_S_RUN)
+    if (ic->ic_state == IEEE80211_S_RUN && (sc->sc_flags & IWM_FLAG_STA_ACTIVE))
         that->iwm_add_task(sc, systq, &sc->mac_ctxt_task);
 }
 
 void ItlIwm::
 iwm_updateslot(struct ieee80211com *ic)
 {
+    XYLog("%s\n", __FUNCTION__);
     struct iwm_softc *sc = (struct iwm_softc *)ic->ic_softc;
     ItlIwm *that = container_of(sc, ItlIwm, com);
     
-    if (ic->ic_state == IEEE80211_S_RUN)
+    if (ic->ic_state == IEEE80211_S_RUN && (sc->sc_flags & IWM_FLAG_STA_ACTIVE))
         that->iwm_add_task(sc, systq, &sc->mac_ctxt_task);
 }
 
 void ItlIwm::
 iwm_updateedca(struct ieee80211com *ic)
 {
+    XYLog("%s\n", __FUNCTION__);
     struct iwm_softc *sc = (struct iwm_softc *)ic->ic_softc;
     ItlIwm *that = container_of(sc, ItlIwm, com);
     
-    if (ic->ic_state == IEEE80211_S_RUN)
+    if (ic->ic_state == IEEE80211_S_RUN && (sc->sc_flags & IWM_FLAG_STA_ACTIVE))
         that->iwm_add_task(sc, systq, &sc->mac_ctxt_task);
 }
 

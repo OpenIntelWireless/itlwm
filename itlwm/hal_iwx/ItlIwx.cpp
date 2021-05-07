@@ -3444,6 +3444,7 @@ iwx_mac_ctxt_task(void *arg)
 void ItlIwx::
 iwx_update_chw(struct ieee80211com *ic)
 {
+    XYLog("%s\n", __FUNCTION__);
     struct iwx_softc *sc = (struct iwx_softc *)ic->ic_softc;
     ItlIwx *that = container_of(sc, ItlIwx, com);
     struct iwx_node *in = (struct iwx_node *)ic->ic_bss;
@@ -3467,30 +3468,33 @@ iwx_update_chw(struct ieee80211com *ic)
 void ItlIwx::
 iwx_updateprot(struct ieee80211com *ic)
 {
+    XYLog("%s\n", __FUNCTION__);
     struct iwx_softc *sc = (struct iwx_softc *)ic->ic_softc;
     ItlIwx *that = container_of(sc, ItlIwx, com);
     
-    if (ic->ic_state == IEEE80211_S_RUN)
+    if (ic->ic_state == IEEE80211_S_RUN && (sc->sc_flags & IWX_FLAG_STA_ACTIVE))
         that->iwx_add_task(sc, systq, &sc->mac_ctxt_task);
 }
 
 void ItlIwx::
 iwx_updateslot(struct ieee80211com *ic)
 {
+    XYLog("%s\n", __FUNCTION__);
     struct iwx_softc *sc = (struct iwx_softc *)ic->ic_softc;
     ItlIwx *that = container_of(sc, ItlIwx, com);
     
-    if (ic->ic_state == IEEE80211_S_RUN)
+    if (ic->ic_state == IEEE80211_S_RUN && (sc->sc_flags & IWX_FLAG_STA_ACTIVE))
         that->iwx_add_task(sc, systq, &sc->mac_ctxt_task);
 }
 
 void ItlIwx::
 iwx_updateedca(struct ieee80211com *ic)
 {
+    XYLog("%s\n", __FUNCTION__);
     struct iwx_softc *sc = (struct iwx_softc *)ic->ic_softc;
     ItlIwx *that = container_of(sc, ItlIwx, com);
     
-    if (ic->ic_state == IEEE80211_S_RUN)
+    if (ic->ic_state == IEEE80211_S_RUN && (sc->sc_flags & IWX_FLAG_STA_ACTIVE))
         that->iwx_add_task(sc, systq, &sc->mac_ctxt_task);
 }
 
