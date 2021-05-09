@@ -574,8 +574,6 @@ ieee80211_michael_mic_failure_timeout(void *arg)
 void
 ieee80211_michael_mic_failure(struct ieee80211com *ic, u_int64_t tsc)
 {
-	int ticks = 1;
-    int hz = 1000;
 #ifndef IEEE80211_STA_ONLY
 	int sec;
 #endif
