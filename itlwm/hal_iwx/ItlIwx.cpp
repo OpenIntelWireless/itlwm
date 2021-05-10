@@ -6836,29 +6836,28 @@ iwx_mac_ctxt_cmd_common(struct iwx_softc *sc, struct iwx_node *in,
     if (ni->ni_flags & IEEE80211_NODE_HT) {
         enum ieee80211_htprot htprot =
         (enum ieee80211_htprot)(ni->ni_htop1 & IEEE80211_HTOP1_PROT_MASK);
+        
+        /* The fw does not distinguish between ht and fat */
+        uint32_t ht_flag = IWX_MAC_PROT_FLG_HT_PROT | IWX_MAC_PROT_FLG_FAT_PROT;
+        
+        /*
+         * See section 9.23.3.1 of IEEE 80211-2012.
+         * Nongreenfield HT STAs Present is not supported.
+         */
         switch (htprot) {
             case IEEE80211_HTPROT_NONE:
                 break;
             case IEEE80211_HTPROT_NONMEMBER:
             case IEEE80211_HTPROT_NONHT_MIXED:
-                cmd->protection_flags |=
-                htole32(IWX_MAC_PROT_FLG_HT_PROT);
-                if (ic->ic_protmode == IEEE80211_PROT_CTSONLY)
-                    cmd->protection_flags |=
-                    htole32(IWX_MAC_PROT_FLG_SELF_CTS_EN);
+                cmd->protection_flags = htole32(ht_flag);
                 break;
             case IEEE80211_HTPROT_20MHZ:
-                if (ni->ni_chw > IEEE80211_CHAN_WIDTH_20) {
-                    /* XXX ... and if our channel is 40 MHz ... */
-                    cmd->protection_flags |=
-                    htole32(IWX_MAC_PROT_FLG_HT_PROT |
-                            IWX_MAC_PROT_FLG_FAT_PROT);
-                    if (ic->ic_protmode == IEEE80211_PROT_CTSONLY)
-                        cmd->protection_flags |= htole32(
-                                                         IWX_MAC_PROT_FLG_SELF_CTS_EN);
-                }
+                /* Protect when channel wider than 20MHz */
+                if (ni->ni_chw > IEEE80211_CHAN_WIDTH_20)
+                    cmd->protection_flags = htole32(ht_flag);
                 break;
             default:
+                XYLog("Illegal protection mode %d\n", htprot);
                 break;
         }
         
