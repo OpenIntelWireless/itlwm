@@ -1039,7 +1039,8 @@ iwx_firmware_store_section(struct iwx_softc *sc, enum iwx_ucode_type type,
 
 #define IWX_DEFAULT_SCAN_CHANNELS    40
 /* Newer firmware might support more channels. Raise this value if needed. */
-#define IWX_MAX_SCAN_CHANNELS        52 /* as of 8265-34 firmware image */
+#define IWX_MAX_SCAN_CHANNELS        256 /* as of 8265-34 firmware image */
+#define IWX_STATION_COUNT_MAX        16
 
 struct iwx_tlv_calib_data {
     uint32_t ucode_type;
@@ -1458,7 +1459,34 @@ iwx_read_firmware(struct iwx_softc *sc)
             case IWX_UCODE_TLV_FW_RECOVERY_INFO:
                 break;
                 
-            case IWX_UCODE_TLV_FW_FSEQ_VERSION:
+            case IWX_UCODE_TLV_FW_FSEQ_VERSION: {
+                struct sfseq_ver {
+                    uint8_t version[32];
+                    uint8_t sha1[20];
+                };
+                sfseq_ver *seq_ver = (sfseq_ver *)tlv_data;
+                if (tlv_len != sizeof(struct sfseq_ver)) {
+                    err = EINVAL;
+                    goto parse_out;
+                }
+                XYLog("TLV_FW_FSEQ_VERSION: %s\n", __FUNCTION__, seq_ver->version);
+            }
+                break;
+                
+            case IWX_UCODE_PHY_INTEGRATION_VERSION:
+                break;
+            case IWX_UCODE_TLV_FW_NUM_STATIONS:
+                if (tlv_len != sizeof(uint32_t)) {
+                    err = EINVAL;
+                    goto parse_out;
+                }
+                sc->sc_capa_num_stations = le32toh(*(uint32_t *)tlv_data);
+                if (sc->sc_capa_num_stations > IWX_STATION_COUNT_MAX) {
+                    XYLog("%d is an invalid number of station\n",
+                          sc->sc_capa_num_stations);
+                    err = EINVAL;
+                    goto parse_out;
+                }
                 break;
                 
                 /* undocumented TLVs found in iwx-cc-a0-48 image */
@@ -1470,6 +1498,11 @@ iwx_read_firmware(struct iwx_softc *sc)
                 /* undocumented TLVs found in iwx-cc-a0-48 image */
             case 0x1000000:
             case 0x1000002:
+            case IWX_UCODE_TLV_TYPE_DEBUG_INFO:
+            case IWX_UCODE_TLV_TYPE_BUFFER_ALLOCATION:
+            case IWX_UCODE_TLV_TYPE_HCMD:
+            case IWX_UCODE_TLV_TYPE_REGIONS:
+            case IWX_UCODE_TLV_TYPE_TRIGGERS:
                 break;
                 
             default:
@@ -3817,6 +3850,8 @@ iwx_start_fw(struct iwx_softc *sc)
     XYLog("%s\n", __FUNCTION__);
     int err;
     
+    iwx_enable_rfkill_int(sc);
+    
     IWX_WRITE(sc, IWX_CSR_INT, 0xFFFFFFFF);
     
     iwx_disable_interrupts(sc);
@@ -3835,19 +3870,17 @@ iwx_start_fw(struct iwx_softc *sc)
         return err;
     }
     
-    iwx_enable_fwload_interrupt(sc);
-    
     return iwx_load_firmware(sc);
 }
 
 int ItlIwx::
 iwx_send_tx_ant_cfg(struct iwx_softc *sc, uint8_t valid_tx_ant)
 {
-    XYLog("%s\n", __FUNCTION__);
     struct iwx_tx_ant_cfg_cmd tx_ant_cmd = {
         .valid = htole32(valid_tx_ant),
     };
     
+    XYLog("%s select valid tx ant: %u\n", __FUNCTION__, valid_tx_ant);
     return iwx_send_cmd_pdu(sc, IWX_TX_ANT_CONFIGURATION_CMD,
                             0, sizeof(tx_ant_cmd), &tx_ant_cmd);
 }
@@ -3923,18 +3956,21 @@ iwx_run_init_mvm_ucode(struct iwx_softc *sc, int readnvm)
         XYLog("%s: failed to load init firmware\n", DEVNAME(sc));
         return err;
     }
+    
+    if (sc->sc_tx_with_siso_diversity)
+        init_cfg.init_flags |= htole32(IWX_INIT_PHY);
 
     /*
      * Send init config command to mark that we are sending NVM
      * access commands
      */
     err = iwx_send_cmd_pdu(sc, IWX_WIDE_ID(IWX_SYSTEM_GROUP,
-        IWX_INIT_EXTENDED_CFG_CMD), 0, sizeof(init_cfg), &init_cfg);
+                                           IWX_INIT_EXTENDED_CFG_CMD), IWX_CMD_SEND_IN_RFKILL, sizeof(init_cfg), &init_cfg);
     if (err)
         return err;
 
     err = iwx_send_cmd_pdu(sc, IWX_WIDE_ID(IWX_REGULATORY_AND_NVM_GROUP,
-        IWX_NVM_ACCESS_COMPLETE), 0, sizeof(nvm_complete), &nvm_complete);
+                                           IWX_NVM_ACCESS_COMPLETE), IWX_CMD_SEND_IN_RFKILL, sizeof(nvm_complete), &nvm_complete);
     if (err)
         return err;
 
@@ -6468,6 +6504,7 @@ iwx_get_scan_req_umac_data(struct iwx_softc *sc, struct iwx_scan_req_umac *req)
 #define IWL_SCAN_DWELL_FRAGMENTED    44
 #define IWL_SCAN_DWELL_EXTENDED        90
 #define IWL_SCAN_NUM_OF_FRAGS        3
+#define IWL_SCAN_LAST_2_4_CHN        14
 
 /* adaptive dwell max budget time [TU] for full scan */
 #define IWX_SCAN_ADWELL_MAX_BUDGET_FULL_SCAN 300
@@ -6877,7 +6914,7 @@ iwx_mac_ctxt_cmd_common(struct iwx_softc *sc, struct iwx_node *in,
     if (ic->ic_flags & IEEE80211_F_USEPROT)
         cmd->protection_flags |= htole32(IWX_MAC_PROT_FLG_TGG_PROTECT);
     
-    cmd->filter_flags = htole32(IWX_MAC_FILTER_ACCEPT_GRP);
+    cmd->filter_flags = htole32(0);
 #undef IWX_EXP2
 }
 
@@ -8414,12 +8451,72 @@ iwx_send_temp_report_ths_cmd(struct iwx_softc *sc)
     return err;
 }
 
+#define TX_FIFO_MAX_NUM            15
+#define RX_FIFO_MAX_NUM            2
+#define TX_FIFO_INTERNAL_MAX_NUM    6
+
+/**
+ * struct iwl_shared_mem_lmac_cfg - LMAC shared memory configuration
+ *
+ * @txfifo_addr: start addr of TXF0 (excluding the context table 0.5KB)
+ * @txfifo_size: size of TX FIFOs
+ * @rxfifo1_addr: RXF1 addr
+ * @rxfifo1_size: RXF1 size
+ */
+struct iwl_shared_mem_lmac_cfg {
+    __le32 txfifo_addr;
+    __le32 txfifo_size[TX_FIFO_MAX_NUM];
+    __le32 rxfifo1_addr;
+    __le32 rxfifo1_size;
+
+} __packed; /* SHARED_MEM_ALLOC_LMAC_API_S_VER_1 */
+
+/**
+ * struct iwl_shared_mem_cfg - Shared memory configuration information
+ *
+ * @shared_mem_addr: shared memory address
+ * @shared_mem_size: shared memory size
+ * @sample_buff_addr: internal sample (mon/adc) buff addr
+ * @sample_buff_size: internal sample buff size
+ * @rxfifo2_addr: start addr of RXF2
+ * @rxfifo2_size: size of RXF2
+ * @page_buff_addr: used by UMAC and performance debug (page miss analysis),
+ *    when paging is not supported this should be 0
+ * @page_buff_size: size of %page_buff_addr
+ * @lmac_num: number of LMACs (1 or 2)
+ * @lmac_smem: per - LMAC smem data
+ * @rxfifo2_control_addr: start addr of RXF2C
+ * @rxfifo2_control_size: size of RXF2C
+ */
+struct iwl_shared_mem_cfg {
+    __le32 shared_mem_addr;
+    __le32 shared_mem_size;
+    __le32 sample_buff_addr;
+    __le32 sample_buff_size;
+    __le32 rxfifo2_addr;
+    __le32 rxfifo2_size;
+    __le32 page_buff_addr;
+    __le32 page_buff_size;
+    __le32 lmac_num;
+    struct iwl_shared_mem_lmac_cfg lmac_smem[3];
+    __le32 rxfifo2_control_addr;
+    __le32 rxfifo2_control_size;
+} __packed; /* SHARED_MEM_ALLOC_API_S_VER_4 */
+
 int ItlIwx::
 iwx_init_hw(struct iwx_softc *sc)
 {
     XYLog("%s\n", __FUNCTION__);
     struct ieee80211com *ic = &sc->sc_ic;
     int err, i;
+    struct iwx_rx_packet *pkt;
+    struct iwl_shared_mem_cfg *resp;
+    struct iwx_host_cmd cmd {
+        .flags = IWX_CMD_WANT_RESP,
+        .data = { NULL, },
+        .len = { 0, },
+        .resp_pkt_len = sizeof(*pkt) + sizeof(*resp),
+    };
     
     err = iwx_preinit(sc);
     if (err)
@@ -8437,6 +8534,29 @@ iwx_init_hw(struct iwx_softc *sc)
     
     if (!iwx_nic_lock(sc))
         return EBUSY;
+    
+    if (isset(sc->sc_enabled_capa, IWX_UCODE_TLV_CAPA_EXTEND_SHARED_MEM_CFG)) {
+        cmd.id = iwx_cmd_id(IWX_SHARED_MEM_CFG_CMD, IWX_SYSTEM_GROUP, 0);
+    } else {
+        cmd.id = IWX_SHARED_MEM_CFG;
+    }
+    
+    err = iwx_send_cmd(sc, &cmd);
+    
+    if (err) {
+        XYLog("%s: could not get SHARE MEM\n", DEVNAME(sc));
+        return err;
+    }
+    pkt = cmd.resp_pkt;
+    struct iwl_shared_mem_cfg *mem_cfg = (struct iwl_shared_mem_cfg *)pkt->data;
+    
+    XYLog("%s lmac_num=%d num_txfifo_entries=%lu rxfifo2_size=%d\n", __FUNCTION__, le32toh(mem_cfg->lmac_num), ARRAY_SIZE(mem_cfg->lmac_smem[0].txfifo_size), le32toh(mem_cfg->rxfifo2_size));
+    
+    err = iwx_sf_config(sc, IWX_SF_INIT_OFF);
+    if (err) {
+        XYLog("%s: Failed to initialize Smart Fifo\n", DEVNAME(sc));
+        return err;
+    }
     
     err = iwx_send_tx_ant_cfg(sc, iwx_fw_valid_tx_ant(sc));
     if (err) {
@@ -8467,9 +8587,11 @@ iwx_init_hw(struct iwx_softc *sc)
     if (err)
         return err;
     
-    err = iwx_send_dqa_cmd(sc);
-    if (err)
-        return err;
+    if (isset(sc->sc_enabled_capa, IWX_UCODE_TLV_CAPA_DQA_SUPPORT)){
+        err = iwx_send_dqa_cmd(sc);
+        if (err)
+            return err;
+    }
     
     /* Add auxiliary station for scanning */
     err = iwx_add_aux_sta(sc);
@@ -8495,10 +8617,12 @@ iwx_init_hw(struct iwx_softc *sc)
         }
     }
     
-    err = iwx_config_ltr(sc);
-    if (err) {
-        XYLog("%s: PCIe LTR configuration failed (error %d)\n",
-               DEVNAME(sc), err);
+    if (!isset(sc->sc_enabled_capa, IWX_UCODE_TLV_CAPA_SET_LTR_GEN2)) {
+        err = iwx_config_ltr(sc);
+        if (err) {
+            XYLog("%s: PCIe LTR configuration failed (error %d)\n",
+                  DEVNAME(sc), err);
+        }
     }
     
     if (isset(sc->sc_enabled_capa, IWX_UCODE_TLV_CAPA_CT_KILL_BY_FW)) {
@@ -9254,6 +9378,7 @@ iwx_rx_pkt(struct iwx_softc *sc, struct iwx_rx_data *data, struct mbuf_list *ml)
                 
             case IWX_ALIVE: {
                 struct iwx_alive_resp_v4 *resp4;
+                struct iwx_alive_resp_v5 *resp5;
                 
 //                DPRINTF(("%s: firmware alive, size=%d\n", __FUNCTION__, iwx_rx_packet_payload_len(pkt)));
                 if (iwx_rx_packet_payload_len(pkt) == sizeof(*resp4)) {
@@ -9272,6 +9397,31 @@ iwx_rx_pkt(struct iwx_softc *sc, struct iwx_rx_data *data, struct mbuf_list *ml)
                         sc->sc_uc.uc_ok = 1;
                     else
                         sc->sc_uc.uc_ok = 0;
+                } else {
+                    SYNC_RESP_STRUCT(resp5, pkt, struct iwx_alive_resp_v5 *);
+                    sc->sc_uc.uc_lmac_error_event_table[0] = le32toh(
+                                                                     resp5->lmac_data[0].dbg_ptrs.error_event_table_ptr);
+                    sc->sc_uc.uc_lmac_error_event_table[1] = le32toh(
+                                                                     resp5->lmac_data[1].dbg_ptrs.error_event_table_ptr);
+                    sc->sc_uc.uc_log_event_table = le32toh(
+                                                           resp5->lmac_data[0].dbg_ptrs.log_event_table_ptr);
+                    sc->sched_base = le32toh(
+                                             resp5->lmac_data[0].dbg_ptrs.scd_base_ptr);
+                    sc->sc_uc.uc_umac_error_event_table = le32toh(
+                                                                  resp5->umac_data.dbg_ptrs.error_info_addr);
+                    if (resp5->status == IWX_ALIVE_STATUS_OK)
+                        sc->sc_uc.uc_ok = 1;
+                    else
+                        sc->sc_uc.uc_ok = 0;
+                    
+                    sc->sku_id[0] = le32toh(resp5->sku_id.data[0]);
+                    sc->sku_id[1] = le32toh(resp5->sku_id.data[1]);
+                    sc->sku_id[2] = le32toh(resp5->sku_id.data[2]);
+                    
+                    XYLog("Got sku_id: 0x0%x 0x0%x 0x0%x\n",
+                                 sc->sku_id[0],
+                                 sc->sku_id[1],
+                                 sc->sku_id[2]);
                 }
                 
                 sc->sc_uc.uc_intr = 1;
@@ -9425,6 +9575,9 @@ iwx_rx_pkt(struct iwx_softc *sc, struct iwx_rx_data *data, struct mbuf_list *ml)
                 break;
                 
             case IWX_WIDE_ID(IWX_SYSTEM_GROUP, IWX_INIT_EXTENDED_CFG_CMD):
+                break;
+                
+            case IWX_WIDE_ID(IWX_SYSTEM_GROUP, IWX_SHARED_MEM_CFG_CMD):
                 break;
                 
             case IWX_WIDE_ID(IWX_REGULATORY_AND_NVM_GROUP,
@@ -9770,35 +9923,59 @@ const struct iwl_cfg_trans_params iwl_qu_long_latency_trans_cfg = {
 };
 
 const struct iwl_cfg_trans_params iwl_qnj_trans_cfg = {
+    .device_family = IWX_DEVICE_FAMILY_22000,
+};
 
+const struct iwl_cfg_trans_params iwl_snj_trans_cfg = {
+    .device_family = IWX_DEVICE_FAMILY_22560,
+};
+
+const struct iwl_cfg_trans_params iwl_so_trans_cfg = {
+    .device_family = IWX_DEVICE_FAMILY_22560,
+    .integrated = 1,
+    .xtal_latency = 500,
+    .ltr_delay = IWX_SOC_FLAGS_LTR_APPLY_DELAY_200,
+};
+
+const struct iwl_cfg_trans_params iwl_so_long_latency_trans_cfg = {
+    .device_family = IWX_DEVICE_FAMILY_22560,
+    .integrated = 1,
+    .xtal_latency = 12000,
+    .ltr_delay = IWX_SOC_FLAGS_LTR_APPLY_DELAY_2500,
+};
+
+const struct iwl_cfg_trans_params iwl_ma_trans_cfg = {
+    .device_family = IWX_DEVICE_FAMILY_22560,
+    .integrated = 1,
 };
 
 const struct iwl_cfg_trans_params iwl_ax200_trans_cfg = {
+    .device_family = IWX_DEVICE_FAMILY_22000,
     .bisr_workaround = 1,
 };
 
 const struct iwl_cfg iwlax210_2ax_cfg_so_jf_a0 = {
     .name = "Intel(R) Wireless-AC 9560 160MHz",
-    .fwname = "iwlwifi-so-a0-jf-b0-48.ucode",
+    .fwname = "iwlwifi-so-a0-jf-b0-59.ucode",
     .device_family = IWX_DEVICE_FAMILY_22560,
 };
 
 const struct iwl_cfg iwlax210_2ax_cfg_so_hr_a0 = {
     .name = "Intel(R) Wi-Fi 6 AX210 160MHz",
-    .fwname = "iwlwifi-so-a0-hr-b0-48.ucode",
+    .fwname = "iwlwifi-so-a0-hr-b0-59.ucode",
     .device_family = IWX_DEVICE_FAMILY_22560,
 };
 
 const struct iwl_cfg iwlax211_2ax_cfg_so_gf_a0 = {
     .name = "Intel(R) Wi-Fi 6 AX211 160MHz",
-    .fwname = "iwlwifi-so-a0-gf-a0-48.ucode",
+    .fwname = "iwlwifi-so-a0-gf-a0-59.ucode",
     .uhb_supported = 1,
     .device_family = IWX_DEVICE_FAMILY_22560,
 };
 
 const struct iwl_cfg iwlax211_2ax_cfg_so_gf_a0_long = {
     .name = "Intel(R) Wi-Fi 6 AX211 160MHz",
-    .fwname = "iwlwifi-so-a0-gf-a0-48.ucode",
+    .fwname = "iwlwifi-so-a0-gf-a0-59.ucode",
     .uhb_supported = 1,
     .device_family = IWX_DEVICE_FAMILY_22560,
     .trans.xtal_latency = 12000,
@@ -9807,21 +9984,21 @@ const struct iwl_cfg iwlax211_2ax_cfg_so_gf_a0_long = {
 
 const struct iwl_cfg iwlax210_2ax_cfg_ty_gf_a0 = {
     .name = "Intel(R) Wi-Fi 6 AX210 160MHz",
-    .fwname = "iwlwifi-ty-a0-gf-a0-48.ucode",
+    .fwname = "iwlwifi-ty-a0-gf-a0-59.ucode",
     .uhb_supported = 1,
     .device_family = IWX_DEVICE_FAMILY_22560,
 };
 
 const struct iwl_cfg iwlax411_2ax_cfg_so_gf4_a0 = {
     .name = "Intel(R) Wi-Fi 6 AX411 160MHz",
-    .fwname = "iwlwifi-so-a0-gf4-a0-48.ucode",
+    .fwname = "iwlwifi-so-a0-gf4-a0-59.ucode",
     .uhb_supported = 1,
     .device_family = IWX_DEVICE_FAMILY_22560,
 };
 
 const struct iwl_cfg iwlax411_2ax_cfg_so_gf4_a0_long = {
     .name = "Intel(R) Wi-Fi 6 AX411 160MHz",
-    .fwname = "iwlwifi-so-a0-gf4-a0-48.ucode",
+    .fwname = "iwlwifi-so-a0-gf4-a0-59.ucode",
     .uhb_supported = 1,
     .device_family = IWX_DEVICE_FAMILY_22560,
     .trans.xtal_latency = 12000,
@@ -9830,53 +10007,97 @@ const struct iwl_cfg iwlax411_2ax_cfg_so_gf4_a0_long = {
 
 const struct iwl_cfg iwlax411_2ax_cfg_sosnj_gf4_a0 = {
     .name = "Intel(R) Wi-Fi 6 AX411 160MHz",
-    .fwname = "iwlwifi-SoSnj-a0-gf4-a0-48.ucode",
+    .fwname = "iwlwifi-SoSnj-a0-gf4-a0-59.ucode",
     .uhb_supported = 1,
     .device_family = IWX_DEVICE_FAMILY_22560,
 };
 
 const struct iwl_cfg iwlax211_cfg_snj_gf_a0 = {
     .name = "Intel(R) Wi-Fi 6 AX211 160MHz",
-    .fwname = "iwlwifi-SoSnj-a0-gf-a0-48.ucode",
+    .fwname = "iwlwifi-SoSnj-a0-gf-a0-59.ucode",
     .uhb_supported = 1,
     .device_family = IWX_DEVICE_FAMILY_22560,
+};
+
+const struct iwl_cfg iwl_cfg_snj_hr_b0 = {
+    .fwname = "iwlwifi-SoSnj-a0-hr-b0-59.ucode",
+    .uhb_supported = 1,
+    .device_family = IWX_DEVICE_FAMILY_22560,
+};
+
+const struct iwl_cfg iwl_cfg_snj_a0_jf_b0 = {
+    .fwname = "iwlwifi-SoSnj-a0-jf-b0-59.ucode",
+    .uhb_supported = 1,
+    .device_family = IWX_DEVICE_FAMILY_22560,
+};
+
+const struct iwl_cfg iwl_cfg_ma_a0_hr_b0 = {
+    .fwname = "iwlwifi-ma-a0-hr-b0-59.ucode",
+    .uhb_supported = 1,
+    .device_family = IWX_DEVICE_FAMILY_22560,
+};
+
+const struct iwl_cfg iwl_cfg_ma_a0_gf_a0 = {
+    .fwname = "iwlwifi-ma-a0-gf-a0-59.ucode",
+    .uhb_supported = 1,
+    .device_family = IWX_DEVICE_FAMILY_22560,
+};
+
+const struct iwl_cfg iwl_cfg_ma_a0_gf4_a0 = {
+    .fwname = "iwlwifi-ma-a0-gf4-a0-59.ucode",
+    .uhb_supported = 1,
+    .device_family = IWX_DEVICE_FAMILY_22560,
+};
+
+const struct iwl_cfg iwl_cfg_ma_a0_mr_a0 = {
+    .fwname = "iwlwifi-ma-a0-mr-a0-59.ucode",
+    .uhb_supported = 1,
+    .device_family = IWX_DEVICE_FAMILY_22560,
+};
+
+const struct iwl_cfg iwl_cfg_snj_a0_mr_a0 = {
+    .fwname = "iwlwifi-SoSnj-a0-mr-a0-59.ucode",
+    .uhb_supported = 1,
+    .device_family = IWX_DEVICE_FAMILY_22560,
+};
+
+const struct iwl_cfg iwl_cfg_so_a0_hr_a0 = {
+    .fwname = "iwlwifi-so-a0-hr-b0-59.ucode",
+    .device_family = IWX_DEVICE_FAMILY_22560,
+};
+
+const struct iwl_cfg iwl_cfg_quz_a0_hr_b0 = {
+    .fwname = "iwlwifi-QuZ-a0-hr-b0-48.ucode",
+    .device_family = IWX_DEVICE_FAMILY_22000,
 };
 
 static const struct pci_matchid iwx_devices[] = {
     /* Qu devices */
     {IWL_PCI_DEVICE(0x02F0, PCI_ANY_ID, iwl_qu_trans_cfg)},
     {IWL_PCI_DEVICE(0x06F0, PCI_ANY_ID, iwl_qu_trans_cfg)},
-
+    
     {IWL_PCI_DEVICE(0x34F0, PCI_ANY_ID, iwl_qu_medium_latency_trans_cfg)},
     {IWL_PCI_DEVICE(0x3DF0, PCI_ANY_ID, iwl_qu_medium_latency_trans_cfg)},
     {IWL_PCI_DEVICE(0x4DF0, PCI_ANY_ID, iwl_qu_medium_latency_trans_cfg)},
-
+    
     {IWL_PCI_DEVICE(0x43F0, PCI_ANY_ID, iwl_qu_long_latency_trans_cfg)},
     {IWL_PCI_DEVICE(0xA0F0, PCI_ANY_ID, iwl_qu_long_latency_trans_cfg)},
-
+    
     {IWL_PCI_DEVICE(0x2720, PCI_ANY_ID, iwl_qnj_trans_cfg)},
-
+    
     {IWL_PCI_DEVICE(0x2723, PCI_ANY_ID, iwl_ax200_trans_cfg)},
-
-    {IWL_PCI_DEVICE(0x2725, 0x0090, iwlax211_2ax_cfg_so_gf_a0)},
-    {IWL_PCI_DEVICE(0x2725, 0x0020, iwlax210_2ax_cfg_ty_gf_a0)},
-    {IWL_PCI_DEVICE(0x2725, 0x0310, iwlax210_2ax_cfg_ty_gf_a0)},
-    {IWL_PCI_DEVICE(0x2725, 0x0510, iwlax210_2ax_cfg_ty_gf_a0)},
-    {IWL_PCI_DEVICE(0x2725, 0x0A10, iwlax210_2ax_cfg_ty_gf_a0)},
-    {IWL_PCI_DEVICE(0x2725, 0x00B0, iwlax411_2ax_cfg_sosnj_gf4_a0)},
-    {IWL_PCI_DEVICE(0x2726, 0x0090, iwlax211_cfg_snj_gf_a0)},
-    {IWL_PCI_DEVICE(0x2726, 0x00B0, iwlax411_2ax_cfg_sosnj_gf4_a0)},
-    {IWL_PCI_DEVICE(0x2726, 0x0510, iwlax211_cfg_snj_gf_a0)},
-    {IWL_PCI_DEVICE(0x7A70, 0x0090, iwlax211_2ax_cfg_so_gf_a0_long)},
-    {IWL_PCI_DEVICE(0x7A70, 0x00B0, iwlax411_2ax_cfg_so_gf4_a0_long)},
-    {IWL_PCI_DEVICE(0x7A70, 0x0310, iwlax211_2ax_cfg_so_gf_a0_long)},
-    {IWL_PCI_DEVICE(0x7A70, 0x0510, iwlax211_2ax_cfg_so_gf_a0_long)},
-    {IWL_PCI_DEVICE(0x7A70, 0x0A10, iwlax211_2ax_cfg_so_gf_a0_long)},
-    {IWL_PCI_DEVICE(0x7AF0, 0x0090, iwlax211_2ax_cfg_so_gf_a0)},
-    {IWL_PCI_DEVICE(0x7AF0, 0x00B0, iwlax411_2ax_cfg_so_gf4_a0)},
-    {IWL_PCI_DEVICE(0x7AF0, 0x0310, iwlax211_2ax_cfg_so_gf_a0)},
-    {IWL_PCI_DEVICE(0x7AF0, 0x0510, iwlax211_2ax_cfg_so_gf_a0)},
-    {IWL_PCI_DEVICE(0x7AF0, 0x0A10, iwlax211_2ax_cfg_so_gf_a0)},
+    
+    /* So devices */
+    {IWL_PCI_DEVICE(0x2725, PCI_ANY_ID, iwl_so_trans_cfg)},
+    {IWL_PCI_DEVICE(0x2726, PCI_ANY_ID, iwl_snj_trans_cfg)},
+    {IWL_PCI_DEVICE(0x7A70, PCI_ANY_ID, iwl_so_long_latency_trans_cfg)},
+    {IWL_PCI_DEVICE(0x7AF0, PCI_ANY_ID, iwl_so_trans_cfg)},
+    {IWL_PCI_DEVICE(0x51F0, PCI_ANY_ID, iwl_so_long_latency_trans_cfg)},
+    {IWL_PCI_DEVICE(0x54F0, PCI_ANY_ID, iwl_so_long_latency_trans_cfg)},
+    
+    /* Ma devices */
+    {IWL_PCI_DEVICE(0x2729, PCI_ANY_ID, iwl_ma_trans_cfg)},
+    {IWL_PCI_DEVICE(0x7E40, PCI_ANY_ID, iwl_ma_trans_cfg)},
 };
 
 #define IWL_CFG_ANY (~0)
@@ -9887,6 +10108,9 @@ static const struct pci_matchid iwx_devices[] = {
 #define IWL_CFG_MAC_TYPE_QU        0x33
 #define IWL_CFG_MAC_TYPE_QUZ        0x35
 #define IWL_CFG_MAC_TYPE_QNJ        0x36
+#define IWL_CFG_MAC_TYPE_SO        0x37
+#define IWL_CFG_MAC_TYPE_SNJ        0x42
+#define IWL_CFG_MAC_TYPE_MA        0x44
 
 #define IWL_CFG_RF_TYPE_TH        0x105
 #define IWL_CFG_RF_TYPE_TH1        0x108
@@ -9894,6 +10118,8 @@ static const struct pci_matchid iwx_devices[] = {
 #define IWL_CFG_RF_TYPE_JF1        0x108
 #define IWL_CFG_RF_TYPE_HR2        0x10A
 #define IWL_CFG_RF_TYPE_HR1        0x10C
+#define IWL_CFG_RF_TYPE_GF        0x10D
+#define IWL_CFG_RF_TYPE_MR        0x110
 
 #define IWL_CFG_RF_ID_TH        0x1
 #define IWL_CFG_RF_ID_TH1        0x1
@@ -9909,6 +10135,9 @@ static const struct pci_matchid iwx_devices[] = {
 #define IWL_CFG_CORES_BT        0x0
 #define IWL_CFG_CORES_BT_GNSS        0x5
 
+#define IWL_CFG_NO_CDB            0x0
+#define IWL_CFG_CDB            0x1
+
 #define IWL_SUBDEVICE_RF_ID(subdevice)    ((u16)((subdevice) & 0x00F0) >> 4)
 #define IWL_SUBDEVICE_NO_160(subdevice)    ((u16)((subdevice) & 0x0100) >> 9)
 #define IWL_SUBDEVICE_CORES(subdevice)    ((u16)((subdevice) & 0x1C00) >> 10)
@@ -9923,6 +10152,49 @@ static const struct pci_matchid iwx_devices[] = {
 #define CSR_HW_RFID_DASH(_val)         (((_val) & 0x00000F0) >> 4)
 #define CSR_HW_RFID_STEP(_val)         (((_val) & 0x0000F00) >> 8)
 #define CSR_HW_RFID_TYPE(_val)         (((_val) & 0x0FFF000) >> 12)
+#define CSR_HW_RFID_IS_CDB(_val)       (((_val) & 0x10000000) >> 28)
+#define CSR_HW_RFID_IS_JACKET(_val)    (((_val) & 0x20000000) >> 29)
+
+#define CSR_HW_REV_TYPE_MSK        (0x000FFF0)
+#define CSR_HW_REV_TYPE_5300        (0x0000020)
+#define CSR_HW_REV_TYPE_5350        (0x0000030)
+#define CSR_HW_REV_TYPE_5100        (0x0000050)
+#define CSR_HW_REV_TYPE_5150        (0x0000040)
+#define CSR_HW_REV_TYPE_1000        (0x0000060)
+#define CSR_HW_REV_TYPE_6x00        (0x0000070)
+#define CSR_HW_REV_TYPE_6x50        (0x0000080)
+#define CSR_HW_REV_TYPE_6150        (0x0000084)
+#define CSR_HW_REV_TYPE_6x05        (0x00000B0)
+#define CSR_HW_REV_TYPE_6x30        CSR_HW_REV_TYPE_6x05
+#define CSR_HW_REV_TYPE_6x35        CSR_HW_REV_TYPE_6x05
+#define CSR_HW_REV_TYPE_2x30        (0x00000C0)
+#define CSR_HW_REV_TYPE_2x00        (0x0000100)
+#define CSR_HW_REV_TYPE_105        (0x0000110)
+#define CSR_HW_REV_TYPE_135        (0x0000120)
+#define CSR_HW_REV_TYPE_7265D        (0x0000210)
+#define CSR_HW_REV_TYPE_NONE        (0x00001F0)
+#define CSR_HW_REV_TYPE_QNJ        (0x0000360)
+#define CSR_HW_REV_TYPE_QNJ_B0        (0x0000364)
+#define CSR_HW_REV_TYPE_QU_B0        (0x0000334)
+#define CSR_HW_REV_TYPE_QU_C0        (0x0000338)
+#define CSR_HW_REV_TYPE_QUZ        (0x0000354)
+#define CSR_HW_REV_TYPE_HR_CDB        (0x0000340)
+#define CSR_HW_REV_TYPE_SO        (0x0000370)
+#define CSR_HW_REV_TYPE_TY        (0x0000420)
+
+/* RF_ID value */
+#define CSR_HW_RF_ID_TYPE_JF        (0x00105100)
+#define CSR_HW_RF_ID_TYPE_HR        (0x0010A000)
+#define CSR_HW_RF_ID_TYPE_HR1        (0x0010c100)
+#define CSR_HW_RF_ID_TYPE_HRCDB        (0x00109F00)
+#define CSR_HW_RF_ID_TYPE_GF        (0x0010D000)
+#define CSR_HW_RF_ID_TYPE_GF4        (0x0010E000)
+
+/* HW_RF CHIP ID  */
+#define CSR_HW_RF_ID_TYPE_CHIP_ID(_val) (((_val) >> 12) & 0xFFF)
+
+/* HW_RF CHIP STEP  */
+#define CSR_HW_RF_STEP(_val) (((_val) >> 8) & 0xF)
 
 struct iwl_dev_info {
     int32_t device;
@@ -9933,21 +10205,22 @@ struct iwl_dev_info {
     int8_t rf_id;
     int8_t no_160;
     int8_t cores;
+    uint8_t cdb;
     const struct iwl_cfg *cfg;
     const char *name;
 };
 
 #define _IWL_DEV_INFO(_device, _subdevice, _mac_type, _mac_step, _rf_type, \
-          _rf_id, _no_160, _cores, _cfg, _name)           \
-{ .device = (_device), .subdevice = (_subdevice), .cfg = &(_cfg),  \
-  .name = _name, .mac_type = _mac_type, .rf_type = _rf_type,       \
-  .no_160 = _no_160, .cores = _cores, .rf_id = _rf_id,           \
-  .mac_step = _mac_step }
+              _rf_id, _no_160, _cores, _cdb, _cfg, _name)           \
+    { .device = (_device), .subdevice = (_subdevice), .cfg = &(_cfg),  \
+      .name = _name, .mac_type = _mac_type, .rf_type = _rf_type,       \
+      .no_160 = _no_160, .cores = _cores, .rf_id = _rf_id,           \
+      .mac_step = _mac_step, .cdb = _cdb }
 
 #define IWL_DEV_INFO(_device, _subdevice, _cfg, _name) \
-_IWL_DEV_INFO(_device, _subdevice, IWL_CFG_ANY, IWL_CFG_ANY,       \
-          IWL_CFG_ANY, IWL_CFG_ANY, IWL_CFG_ANY, IWL_CFG_ANY,  \
-          _cfg, _name)
+    _IWL_DEV_INFO(_device, _subdevice, IWL_CFG_ANY, IWL_CFG_ANY,       \
+              IWL_CFG_ANY, IWL_CFG_ANY, IWL_CFG_ANY, IWL_CFG_ANY,  \
+              IWL_CFG_NO_CDB, _cfg, _name)
 
 const char iwl9162_name[] = "Intel(R) Wireless-AC 9162";
 const char iwl9260_name[] = "Intel(R) Wireless-AC 9260";
@@ -9970,14 +10243,22 @@ const char iwl9560_killer_1550i_name[] =
 const char iwl9560_killer_1550s_name[] =
     "Killer (R) Wireless-AC 1550s Wireless Network Adapter (9560NGW)";
 
+const char iwl_ax101_name[] = "Intel(R) Wi-Fi 6 AX101";
 const char iwl_ax200_name[] = "Intel(R) Wi-Fi 6 AX200 160MHz";
 const char iwl_ax201_name[] = "Intel(R) Wi-Fi 6 AX201 160MHz";
-const char iwl_ax101_name[] = "Intel(R) Wi-Fi 6 AX101";
+const char iwl_ax203_name[] = "Intel(R) Wi-Fi 6 AX203";
+const char iwl_ax211_name[] = "Intel(R) Wi-Fi 6 AX211 160MHz";
+const char iwl_ax411_name[] = "Intel(R) Wi-Fi 6 AX411 160MHz";
+const char iwl_ma_name[] = "Intel(R) Wi-Fi 6";
 
 const char iwl_ax200_killer_1650w_name[] =
     "Killer(R) Wi-Fi 6 AX1650w 160MHz Wireless Network Adapter (200D2W)";
 const char iwl_ax200_killer_1650x_name[] =
     "Killer(R) Wi-Fi 6 AX1650x 160MHz Wireless Network Adapter (200NGW)";
+const char iwl_ax201_killer_1650s_name[] =
+    "Killer(R) Wi-Fi 6 AX1650s 160MHz Wireless Network Adapter (201D2W)";
+const char iwl_ax201_killer_1650i_name[] =
+    "Killer(R) Wi-Fi 6 AX1650i 160MHz Wireless Network Adapter (201NGW)";
 
 const struct iwl_cfg iwl_ax200_cfg_cc = {
     .fwname = "iwlwifi-cc-a0-48.ucode",
@@ -10055,6 +10336,18 @@ const struct iwl_cfg iwl_qu_b0_hr1_b0 = {
     .uhb_supported = 0,
 };
 
+const struct iwl_cfg iwl_qu_b0_hr_b0 = {
+    .fwname = "iwlwifi-Qu-b0-hr-b0-48.ucode",
+    .device_family = IWX_DEVICE_FAMILY_22000,
+    .uhb_supported = 0,
+};
+
+const struct iwl_cfg iwl_qu_c0_hr_b0 = {
+    .fwname = "iwlwifi-Qu-b0-hr-b0-48.ucode",
+    .device_family = IWX_DEVICE_FAMILY_22000,
+    .uhb_supported = 0,
+};
+
 const struct iwl_cfg iwl_qu_c0_hr1_b0 = {
     .fwname = "iwlwifi-Qu-c0-hr-b0-48.ucode",
     .device_family = IWX_DEVICE_FAMILY_22000,
@@ -10098,10 +10391,7 @@ static const struct iwl_dev_info iwl_dev_info_table[] = {
     IWL_DEV_INFO(0x2723, 0x1653, iwl_ax200_cfg_cc, iwl_ax200_killer_1650w_name),
     IWL_DEV_INFO(0x2723, 0x1654, iwl_ax200_cfg_cc, iwl_ax200_killer_1650x_name),
     IWL_DEV_INFO(0x2723, IWL_CFG_ANY, iwl_ax200_cfg_cc, iwl_ax200_name),
-
-    /* QnJ with Hr */
-    IWL_DEV_INFO(0x2720, IWL_CFG_ANY, iwl_qnj_b0_hr_b0_cfg, iwl_ax201_name),
-
+    
     /* Qu with Hr */
     IWL_DEV_INFO(0x43F0, 0x0070, iwl_ax201_cfg_qu_hr, NULL),
     IWL_DEV_INFO(0x43F0, 0x0074, iwl_ax201_cfg_qu_hr, NULL),
@@ -10146,7 +10436,7 @@ static const struct iwl_dev_info iwl_dev_info_table[] = {
     IWL_DEV_INFO(0x34F0, 0x1652, killer1650i_2ax_cfg_qu_b0_hr_b0, NULL),
     IWL_DEV_INFO(0x34F0, 0x2074, iwl_ax201_cfg_qu_hr, NULL),
     IWL_DEV_INFO(0x34F0, 0x4070, iwl_ax201_cfg_qu_hr, NULL),
-
+    
     IWL_DEV_INFO(0x3DF0, 0x0070, iwl_ax201_cfg_qu_hr, NULL),
     IWL_DEV_INFO(0x3DF0, 0x0074, iwl_ax201_cfg_qu_hr, NULL),
     IWL_DEV_INFO(0x3DF0, 0x0078, iwl_ax201_cfg_qu_hr, NULL),
@@ -10156,7 +10446,7 @@ static const struct iwl_dev_info iwl_dev_info_table[] = {
     IWL_DEV_INFO(0x3DF0, 0x1652, killer1650i_2ax_cfg_qu_b0_hr_b0, NULL),
     IWL_DEV_INFO(0x3DF0, 0x2074, iwl_ax201_cfg_qu_hr, NULL),
     IWL_DEV_INFO(0x3DF0, 0x4070, iwl_ax201_cfg_qu_hr, NULL),
-
+    
     IWL_DEV_INFO(0x4DF0, 0x0070, iwl_ax201_cfg_qu_hr, NULL),
     IWL_DEV_INFO(0x4DF0, 0x0074, iwl_ax201_cfg_qu_hr, NULL),
     IWL_DEV_INFO(0x4DF0, 0x0078, iwl_ax201_cfg_qu_hr, NULL),
@@ -10166,204 +10456,358 @@ static const struct iwl_dev_info iwl_dev_info_table[] = {
     IWL_DEV_INFO(0x4DF0, 0x1652, killer1650i_2ax_cfg_qu_b0_hr_b0, NULL),
     IWL_DEV_INFO(0x4DF0, 0x2074, iwl_ax201_cfg_qu_hr, NULL),
     IWL_DEV_INFO(0x4DF0, 0x4070, iwl_ax201_cfg_qu_hr, NULL),
-
+    
+    /* So with HR */
+    IWL_DEV_INFO(0x2725, 0x0090, iwlax211_2ax_cfg_so_gf_a0, NULL),
+    IWL_DEV_INFO(0x2725, 0x0020, iwlax210_2ax_cfg_ty_gf_a0, NULL),
+    IWL_DEV_INFO(0x2725, 0x2020, iwlax210_2ax_cfg_ty_gf_a0, NULL),
+    IWL_DEV_INFO(0x2725, 0x0024, iwlax210_2ax_cfg_ty_gf_a0, NULL),
+    IWL_DEV_INFO(0x2725, 0x0310, iwlax210_2ax_cfg_ty_gf_a0, NULL),
+    IWL_DEV_INFO(0x2725, 0x0510, iwlax210_2ax_cfg_ty_gf_a0, NULL),
+    IWL_DEV_INFO(0x2725, 0x0A10, iwlax210_2ax_cfg_ty_gf_a0, NULL),
+    IWL_DEV_INFO(0x2725, 0xE020, iwlax210_2ax_cfg_ty_gf_a0, NULL),
+    IWL_DEV_INFO(0x2725, 0xE024, iwlax210_2ax_cfg_ty_gf_a0, NULL),
+    IWL_DEV_INFO(0x2725, 0x4020, iwlax210_2ax_cfg_ty_gf_a0, NULL),
+    IWL_DEV_INFO(0x2725, 0x6020, iwlax210_2ax_cfg_ty_gf_a0, NULL),
+    IWL_DEV_INFO(0x2725, 0x6024, iwlax210_2ax_cfg_ty_gf_a0, NULL),
+    IWL_DEV_INFO(0x7A70, 0x0090, iwlax211_2ax_cfg_so_gf_a0_long, NULL),
+    IWL_DEV_INFO(0x7A70, 0x0098, iwlax211_2ax_cfg_so_gf_a0_long, NULL),
+    IWL_DEV_INFO(0x7A70, 0x00B0, iwlax411_2ax_cfg_so_gf4_a0_long, NULL),
+    IWL_DEV_INFO(0x7A70, 0x0310, iwlax211_2ax_cfg_so_gf_a0_long, NULL),
+    IWL_DEV_INFO(0x7A70, 0x0510, iwlax211_2ax_cfg_so_gf_a0_long, NULL),
+    IWL_DEV_INFO(0x7A70, 0x0A10, iwlax211_2ax_cfg_so_gf_a0_long, NULL),
+    IWL_DEV_INFO(0x7AF0, 0x0090, iwlax211_2ax_cfg_so_gf_a0, NULL),
+    IWL_DEV_INFO(0x7AF0, 0x0098, iwlax211_2ax_cfg_so_gf_a0, NULL),
+    IWL_DEV_INFO(0x7AF0, 0x00B0, iwlax411_2ax_cfg_so_gf4_a0, NULL),
+    IWL_DEV_INFO(0x7AF0, 0x0310, iwlax211_2ax_cfg_so_gf_a0, NULL),
+    IWL_DEV_INFO(0x7AF0, 0x0510, iwlax211_2ax_cfg_so_gf_a0, NULL),
+    IWL_DEV_INFO(0x7AF0, 0x0A10, iwlax211_2ax_cfg_so_gf_a0, NULL),
+    
+    /* SnJ with HR */
+    IWL_DEV_INFO(0x2725, 0x00B0, iwlax411_2ax_cfg_sosnj_gf4_a0, NULL),
+    IWL_DEV_INFO(0x2726, 0x0090, iwlax211_cfg_snj_gf_a0, NULL),
+    IWL_DEV_INFO(0x2726, 0x0098, iwlax211_cfg_snj_gf_a0, NULL),
+    IWL_DEV_INFO(0x2726, 0x00B0, iwlax411_2ax_cfg_sosnj_gf4_a0, NULL),
+    IWL_DEV_INFO(0x2726, 0x00B4, iwlax411_2ax_cfg_sosnj_gf4_a0, NULL),
+    IWL_DEV_INFO(0x2726, 0x0510, iwlax211_cfg_snj_gf_a0, NULL),
+    IWL_DEV_INFO(0x2726, 0x1651, iwl_cfg_snj_hr_b0, iwl_ax201_killer_1650s_name),
+    IWL_DEV_INFO(0x2726, 0x1652, iwl_cfg_snj_hr_b0, iwl_ax201_killer_1650i_name),
+    
+    /* Qu with Jf */
     /* Qu B step */
     _IWL_DEV_INFO(IWL_CFG_ANY, IWL_CFG_ANY,
                   IWL_CFG_MAC_TYPE_QU, IWX_SILICON_B_STEP,
                   IWL_CFG_RF_TYPE_JF1, IWL_CFG_RF_ID_JF1,
-                  IWL_CFG_160, IWL_CFG_CORES_BT,
+                  IWL_CFG_160, IWL_CFG_CORES_BT, IWL_CFG_NO_CDB,
                   iwl9560_qu_b0_jf_b0_cfg, iwl9461_160_name),
     _IWL_DEV_INFO(IWL_CFG_ANY, IWL_CFG_ANY,
                   IWL_CFG_MAC_TYPE_QU, IWX_SILICON_B_STEP,
                   IWL_CFG_RF_TYPE_JF1, IWL_CFG_RF_ID_JF1,
-                  IWL_CFG_NO_160, IWL_CFG_CORES_BT,
+                  IWL_CFG_NO_160, IWL_CFG_CORES_BT, IWL_CFG_NO_CDB,
                   iwl9560_qu_b0_jf_b0_cfg, iwl9461_name),
     _IWL_DEV_INFO(IWL_CFG_ANY, IWL_CFG_ANY,
                   IWL_CFG_MAC_TYPE_QU, IWX_SILICON_B_STEP,
                   IWL_CFG_RF_TYPE_JF1, IWL_CFG_RF_ID_JF1_DIV,
-                  IWL_CFG_160, IWL_CFG_CORES_BT,
+                  IWL_CFG_160, IWL_CFG_CORES_BT, IWL_CFG_NO_CDB,
                   iwl9560_qu_b0_jf_b0_cfg, iwl9462_160_name),
     _IWL_DEV_INFO(IWL_CFG_ANY, IWL_CFG_ANY,
                   IWL_CFG_MAC_TYPE_QU, IWX_SILICON_B_STEP,
                   IWL_CFG_RF_TYPE_JF1, IWL_CFG_RF_ID_JF1_DIV,
-                  IWL_CFG_NO_160, IWL_CFG_CORES_BT,
+                  IWL_CFG_NO_160, IWL_CFG_CORES_BT, IWL_CFG_NO_CDB,
                   iwl9560_qu_b0_jf_b0_cfg, iwl9462_name),
-
+    
     _IWL_DEV_INFO(IWL_CFG_ANY, IWL_CFG_ANY,
                   IWL_CFG_MAC_TYPE_QU, IWX_SILICON_B_STEP,
                   IWL_CFG_RF_TYPE_JF2, IWL_CFG_RF_ID_JF,
-                  IWL_CFG_160, IWL_CFG_CORES_BT,
+                  IWL_CFG_160, IWL_CFG_CORES_BT, IWL_CFG_NO_CDB,
                   iwl9560_qu_b0_jf_b0_cfg, iwl9560_160_name),
     _IWL_DEV_INFO(IWL_CFG_ANY, IWL_CFG_ANY,
                   IWL_CFG_MAC_TYPE_QU, IWX_SILICON_B_STEP,
                   IWL_CFG_RF_TYPE_JF2, IWL_CFG_RF_ID_JF,
-                  IWL_CFG_NO_160, IWL_CFG_CORES_BT,
+                  IWL_CFG_NO_160, IWL_CFG_CORES_BT, IWL_CFG_NO_CDB,
                   iwl9560_qu_b0_jf_b0_cfg, iwl9560_name),
-
+    
     _IWL_DEV_INFO(IWL_CFG_ANY, 0x1551,
                   IWL_CFG_MAC_TYPE_QU, IWX_SILICON_B_STEP,
                   IWL_CFG_RF_TYPE_JF2, IWL_CFG_RF_ID_JF,
-                  IWL_CFG_NO_160, IWL_CFG_CORES_BT,
+                  IWL_CFG_NO_160, IWL_CFG_CORES_BT, IWL_CFG_NO_CDB,
                   iwl9560_qu_b0_jf_b0_cfg, iwl9560_killer_1550s_name),
     _IWL_DEV_INFO(IWL_CFG_ANY, 0x1552,
                   IWL_CFG_MAC_TYPE_QU, IWX_SILICON_B_STEP,
                   IWL_CFG_RF_TYPE_JF2, IWL_CFG_RF_ID_JF,
-                  IWL_CFG_NO_160, IWL_CFG_CORES_BT,
+                  IWL_CFG_NO_160, IWL_CFG_CORES_BT, IWL_CFG_NO_CDB,
                   iwl9560_qu_b0_jf_b0_cfg, iwl9560_killer_1550i_name),
-
+    
     /* Qu C step */
     _IWL_DEV_INFO(IWL_CFG_ANY, IWL_CFG_ANY,
                   IWL_CFG_MAC_TYPE_QU, IWX_SILICON_C_STEP,
                   IWL_CFG_RF_TYPE_JF1, IWL_CFG_RF_ID_JF1,
-                  IWL_CFG_160, IWL_CFG_CORES_BT,
+                  IWL_CFG_160, IWL_CFG_CORES_BT, IWL_CFG_NO_CDB,
                   iwl9560_qu_c0_jf_b0_cfg, iwl9461_160_name),
     _IWL_DEV_INFO(IWL_CFG_ANY, IWL_CFG_ANY,
                   IWL_CFG_MAC_TYPE_QU, IWX_SILICON_C_STEP,
                   IWL_CFG_RF_TYPE_JF1, IWL_CFG_RF_ID_JF1,
-                  IWL_CFG_NO_160, IWL_CFG_CORES_BT,
+                  IWL_CFG_NO_160, IWL_CFG_CORES_BT, IWL_CFG_NO_CDB,
                   iwl9560_qu_c0_jf_b0_cfg, iwl9461_name),
     _IWL_DEV_INFO(IWL_CFG_ANY, IWL_CFG_ANY,
                   IWL_CFG_MAC_TYPE_QU, IWX_SILICON_C_STEP,
                   IWL_CFG_RF_TYPE_JF1, IWL_CFG_RF_ID_JF1_DIV,
-                  IWL_CFG_160, IWL_CFG_CORES_BT,
+                  IWL_CFG_160, IWL_CFG_CORES_BT, IWL_CFG_NO_CDB,
                   iwl9560_qu_c0_jf_b0_cfg, iwl9462_160_name),
     _IWL_DEV_INFO(IWL_CFG_ANY, IWL_CFG_ANY,
                   IWL_CFG_MAC_TYPE_QU, IWX_SILICON_C_STEP,
                   IWL_CFG_RF_TYPE_JF1, IWL_CFG_RF_ID_JF1_DIV,
-                  IWL_CFG_NO_160, IWL_CFG_CORES_BT,
+                  IWL_CFG_NO_160, IWL_CFG_CORES_BT, IWL_CFG_NO_CDB,
                   iwl9560_qu_c0_jf_b0_cfg, iwl9462_name),
-
+    
     _IWL_DEV_INFO(IWL_CFG_ANY, IWL_CFG_ANY,
                   IWL_CFG_MAC_TYPE_QU, IWX_SILICON_C_STEP,
                   IWL_CFG_RF_TYPE_JF2, IWL_CFG_RF_ID_JF,
-                  IWL_CFG_160, IWL_CFG_CORES_BT,
+                  IWL_CFG_160, IWL_CFG_CORES_BT, IWL_CFG_NO_CDB,
                   iwl9560_qu_c0_jf_b0_cfg, iwl9560_160_name),
     _IWL_DEV_INFO(IWL_CFG_ANY, IWL_CFG_ANY,
                   IWL_CFG_MAC_TYPE_QU, IWX_SILICON_C_STEP,
                   IWL_CFG_RF_TYPE_JF2, IWL_CFG_RF_ID_JF,
-                  IWL_CFG_NO_160, IWL_CFG_CORES_BT,
+                  IWL_CFG_NO_160, IWL_CFG_CORES_BT, IWL_CFG_NO_CDB,
                   iwl9560_qu_c0_jf_b0_cfg, iwl9560_name),
-
+    
     _IWL_DEV_INFO(IWL_CFG_ANY, 0x1551,
                   IWL_CFG_MAC_TYPE_QU, IWX_SILICON_C_STEP,
                   IWL_CFG_RF_TYPE_JF2, IWL_CFG_RF_ID_JF,
-                  IWL_CFG_160, IWL_CFG_CORES_BT,
+                  IWL_CFG_160, IWL_CFG_CORES_BT, IWL_CFG_NO_CDB,
                   iwl9560_qu_c0_jf_b0_cfg, iwl9560_killer_1550s_name),
     _IWL_DEV_INFO(IWL_CFG_ANY, 0x1552,
                   IWL_CFG_MAC_TYPE_QU, IWX_SILICON_C_STEP,
                   IWL_CFG_RF_TYPE_JF2, IWL_CFG_RF_ID_JF,
-                  IWL_CFG_NO_160, IWL_CFG_CORES_BT,
+                  IWL_CFG_NO_160, IWL_CFG_CORES_BT, IWL_CFG_NO_CDB,
                   iwl9560_qu_c0_jf_b0_cfg, iwl9560_killer_1550i_name),
-
+    
     /* QuZ */
     _IWL_DEV_INFO(IWL_CFG_ANY, IWL_CFG_ANY,
                   IWL_CFG_MAC_TYPE_QUZ, IWL_CFG_ANY,
                   IWL_CFG_RF_TYPE_JF1, IWL_CFG_RF_ID_JF1,
-                  IWL_CFG_160, IWL_CFG_CORES_BT,
+                  IWL_CFG_160, IWL_CFG_CORES_BT, IWL_CFG_NO_CDB,
                   iwl9560_quz_a0_jf_b0_cfg, iwl9461_160_name),
     _IWL_DEV_INFO(IWL_CFG_ANY, IWL_CFG_ANY,
                   IWL_CFG_MAC_TYPE_QUZ, IWL_CFG_ANY,
                   IWL_CFG_RF_TYPE_JF1, IWL_CFG_RF_ID_JF1,
-                  IWL_CFG_NO_160, IWL_CFG_CORES_BT,
+                  IWL_CFG_NO_160, IWL_CFG_CORES_BT, IWL_CFG_NO_CDB,
                   iwl9560_quz_a0_jf_b0_cfg, iwl9461_name),
     _IWL_DEV_INFO(IWL_CFG_ANY, IWL_CFG_ANY,
                   IWL_CFG_MAC_TYPE_QUZ, IWL_CFG_ANY,
                   IWL_CFG_RF_TYPE_JF1, IWL_CFG_RF_ID_JF1_DIV,
-                  IWL_CFG_160, IWL_CFG_CORES_BT,
+                  IWL_CFG_160, IWL_CFG_CORES_BT, IWL_CFG_NO_CDB,
                   iwl9560_quz_a0_jf_b0_cfg, iwl9462_160_name),
     _IWL_DEV_INFO(IWL_CFG_ANY, IWL_CFG_ANY,
                   IWL_CFG_MAC_TYPE_QUZ, IWL_CFG_ANY,
                   IWL_CFG_RF_TYPE_JF1, IWL_CFG_RF_ID_JF1_DIV,
-                  IWL_CFG_NO_160, IWL_CFG_CORES_BT,
+                  IWL_CFG_NO_160, IWL_CFG_CORES_BT, IWL_CFG_NO_CDB,
                   iwl9560_quz_a0_jf_b0_cfg, iwl9462_name),
-
+    
     _IWL_DEV_INFO(IWL_CFG_ANY, IWL_CFG_ANY,
                   IWL_CFG_MAC_TYPE_QUZ, IWL_CFG_ANY,
                   IWL_CFG_RF_TYPE_JF2, IWL_CFG_RF_ID_JF,
-                  IWL_CFG_160, IWL_CFG_CORES_BT,
+                  IWL_CFG_160, IWL_CFG_CORES_BT, IWL_CFG_NO_CDB,
                   iwl9560_quz_a0_jf_b0_cfg, iwl9560_160_name),
     _IWL_DEV_INFO(IWL_CFG_ANY, IWL_CFG_ANY,
                   IWL_CFG_MAC_TYPE_QUZ, IWL_CFG_ANY,
                   IWL_CFG_RF_TYPE_JF2, IWL_CFG_RF_ID_JF,
-                  IWL_CFG_NO_160, IWL_CFG_CORES_BT,
+                  IWL_CFG_NO_160, IWL_CFG_CORES_BT, IWL_CFG_NO_CDB,
                   iwl9560_quz_a0_jf_b0_cfg, iwl9560_name),
-
+    
     _IWL_DEV_INFO(IWL_CFG_ANY, 0x1551,
                   IWL_CFG_MAC_TYPE_QUZ, IWL_CFG_ANY,
                   IWL_CFG_RF_TYPE_JF2, IWL_CFG_RF_ID_JF,
-                  IWL_CFG_160, IWL_CFG_CORES_BT,
+                  IWL_CFG_160, IWL_CFG_CORES_BT, IWL_CFG_NO_CDB,
                   iwl9560_quz_a0_jf_b0_cfg, iwl9560_killer_1550s_name),
     _IWL_DEV_INFO(IWL_CFG_ANY, 0x1552,
                   IWL_CFG_MAC_TYPE_QUZ, IWL_CFG_ANY,
                   IWL_CFG_RF_TYPE_JF2, IWL_CFG_RF_ID_JF,
-                  IWL_CFG_NO_160, IWL_CFG_CORES_BT,
+                  IWL_CFG_NO_160, IWL_CFG_CORES_BT, IWL_CFG_NO_CDB,
                   iwl9560_quz_a0_jf_b0_cfg, iwl9560_killer_1550i_name),
-
+    
     /* QnJ */
     _IWL_DEV_INFO(IWL_CFG_ANY, IWL_CFG_ANY,
                   IWL_CFG_MAC_TYPE_QNJ, IWL_CFG_ANY,
                   IWL_CFG_RF_TYPE_JF1, IWL_CFG_RF_ID_JF1,
-                  IWL_CFG_160, IWL_CFG_CORES_BT,
+                  IWL_CFG_160, IWL_CFG_CORES_BT, IWL_CFG_NO_CDB,
                   iwl9560_qnj_b0_jf_b0_cfg, iwl9461_160_name),
     _IWL_DEV_INFO(IWL_CFG_ANY, IWL_CFG_ANY,
                   IWL_CFG_MAC_TYPE_QNJ, IWL_CFG_ANY,
                   IWL_CFG_RF_TYPE_JF1, IWL_CFG_RF_ID_JF1,
-                  IWL_CFG_NO_160, IWL_CFG_CORES_BT,
+                  IWL_CFG_NO_160, IWL_CFG_CORES_BT, IWL_CFG_NO_CDB,
                   iwl9560_qnj_b0_jf_b0_cfg, iwl9461_name),
     _IWL_DEV_INFO(IWL_CFG_ANY, IWL_CFG_ANY,
                   IWL_CFG_MAC_TYPE_QNJ, IWL_CFG_ANY,
                   IWL_CFG_RF_TYPE_JF1, IWL_CFG_RF_ID_JF1_DIV,
-                  IWL_CFG_160, IWL_CFG_CORES_BT,
+                  IWL_CFG_160, IWL_CFG_CORES_BT, IWL_CFG_NO_CDB,
                   iwl9560_qnj_b0_jf_b0_cfg, iwl9462_160_name),
     _IWL_DEV_INFO(IWL_CFG_ANY, IWL_CFG_ANY,
                   IWL_CFG_MAC_TYPE_QNJ, IWL_CFG_ANY,
                   IWL_CFG_RF_TYPE_JF1, IWL_CFG_RF_ID_JF1_DIV,
-                  IWL_CFG_NO_160, IWL_CFG_CORES_BT,
+                  IWL_CFG_NO_160, IWL_CFG_CORES_BT, IWL_CFG_NO_CDB,
                   iwl9560_qnj_b0_jf_b0_cfg, iwl9462_name),
-
+    
     _IWL_DEV_INFO(IWL_CFG_ANY, IWL_CFG_ANY,
                   IWL_CFG_MAC_TYPE_QNJ, IWL_CFG_ANY,
                   IWL_CFG_RF_TYPE_JF2, IWL_CFG_RF_ID_JF,
-                  IWL_CFG_160, IWL_CFG_CORES_BT,
+                  IWL_CFG_160, IWL_CFG_CORES_BT, IWL_CFG_NO_CDB,
                   iwl9560_qnj_b0_jf_b0_cfg, iwl9560_160_name),
     _IWL_DEV_INFO(IWL_CFG_ANY, IWL_CFG_ANY,
                   IWL_CFG_MAC_TYPE_QNJ, IWL_CFG_ANY,
                   IWL_CFG_RF_TYPE_JF2, IWL_CFG_RF_ID_JF,
-                  IWL_CFG_NO_160, IWL_CFG_CORES_BT,
+                  IWL_CFG_NO_160, IWL_CFG_CORES_BT, IWL_CFG_NO_CDB,
                   iwl9560_qnj_b0_jf_b0_cfg, iwl9560_name),
-
+    
     _IWL_DEV_INFO(IWL_CFG_ANY, 0x1551,
                   IWL_CFG_MAC_TYPE_QNJ, IWL_CFG_ANY,
                   IWL_CFG_RF_TYPE_JF2, IWL_CFG_RF_ID_JF,
-                  IWL_CFG_160, IWL_CFG_CORES_BT,
+                  IWL_CFG_160, IWL_CFG_CORES_BT, IWL_CFG_NO_CDB,
                   iwl9560_qnj_b0_jf_b0_cfg, iwl9560_killer_1550s_name),
     _IWL_DEV_INFO(IWL_CFG_ANY, 0x1552,
                   IWL_CFG_MAC_TYPE_QNJ, IWL_CFG_ANY,
                   IWL_CFG_RF_TYPE_JF2, IWL_CFG_RF_ID_JF,
-                  IWL_CFG_NO_160, IWL_CFG_CORES_BT,
+                  IWL_CFG_NO_160, IWL_CFG_CORES_BT, IWL_CFG_NO_CDB,
                   iwl9560_qnj_b0_jf_b0_cfg, iwl9560_killer_1550i_name),
-
+    
     /* Qu with Hr */
     /* Qu B step */
     _IWL_DEV_INFO(IWL_CFG_ANY, IWL_CFG_ANY,
                   IWL_CFG_MAC_TYPE_QU, IWX_SILICON_B_STEP,
                   IWL_CFG_RF_TYPE_HR1, IWL_CFG_ANY,
-                  IWL_CFG_ANY, IWL_CFG_ANY,
+                  IWL_CFG_ANY, IWL_CFG_ANY, IWL_CFG_NO_CDB,
                   iwl_qu_b0_hr1_b0, iwl_ax101_name),
-
+    _IWL_DEV_INFO(IWL_CFG_ANY, IWL_CFG_ANY,
+                  IWL_CFG_MAC_TYPE_QU, IWX_SILICON_C_STEP,
+                  IWL_CFG_RF_TYPE_HR2, IWL_CFG_ANY,
+                  IWL_CFG_ANY, IWL_CFG_ANY, IWL_CFG_NO_CDB,
+                  iwl_qu_b0_hr_b0, iwl_ax203_name),
+    
     /* Qu C step */
     _IWL_DEV_INFO(IWL_CFG_ANY, IWL_CFG_ANY,
                   IWL_CFG_MAC_TYPE_QU, IWX_SILICON_C_STEP,
                   IWL_CFG_RF_TYPE_HR1, IWL_CFG_ANY,
-                  IWL_CFG_ANY, IWL_CFG_ANY,
+                  IWL_CFG_ANY, IWL_CFG_ANY, IWL_CFG_NO_CDB,
                   iwl_qu_c0_hr1_b0, iwl_ax101_name),
-
+    _IWL_DEV_INFO(IWL_CFG_ANY, IWL_CFG_ANY,
+                  IWL_CFG_MAC_TYPE_QU, IWX_SILICON_C_STEP,
+                  IWL_CFG_RF_TYPE_HR2, IWL_CFG_ANY,
+                  IWL_CFG_ANY, IWL_CFG_ANY, IWL_CFG_NO_CDB,
+                  iwl_qu_c0_hr_b0, iwl_ax203_name),
+    
     /* QuZ */
     _IWL_DEV_INFO(IWL_CFG_ANY, IWL_CFG_ANY,
                   IWL_CFG_MAC_TYPE_QUZ, IWL_CFG_ANY,
                   IWL_CFG_RF_TYPE_HR1, IWL_CFG_ANY,
-                  IWL_CFG_ANY, IWL_CFG_ANY,
+                  IWL_CFG_ANY, IWL_CFG_ANY, IWL_CFG_NO_CDB,
                   iwl_quz_a0_hr1_b0, iwl_ax101_name),
+    _IWL_DEV_INFO(IWL_CFG_ANY, IWL_CFG_ANY,
+                  IWL_CFG_MAC_TYPE_QUZ, IWX_SILICON_B_STEP,
+                  IWL_CFG_RF_TYPE_HR2, IWL_CFG_ANY,
+                  IWL_CFG_NO_160, IWL_CFG_ANY, IWL_CFG_NO_CDB,
+                  iwl_cfg_quz_a0_hr_b0, iwl_ax203_name),
+    
+    /* QnJ with Hr */
+    _IWL_DEV_INFO(IWL_CFG_ANY, IWL_CFG_ANY,
+                  IWL_CFG_MAC_TYPE_QNJ, IWL_CFG_ANY,
+                  IWL_CFG_RF_TYPE_HR2, IWL_CFG_ANY,
+                  IWL_CFG_ANY, IWL_CFG_ANY, IWL_CFG_NO_CDB,
+                  iwl_qnj_b0_hr_b0_cfg, iwl_ax201_name),
+    
+    /* SnJ with Jf */
+    _IWL_DEV_INFO(IWL_CFG_ANY, IWL_CFG_ANY,
+                  IWL_CFG_MAC_TYPE_SNJ, IWL_CFG_ANY,
+                  IWL_CFG_RF_TYPE_JF1, IWL_CFG_RF_ID_JF1,
+                  IWL_CFG_160, IWL_CFG_CORES_BT, IWL_CFG_NO_CDB,
+                  iwl_cfg_snj_a0_jf_b0, iwl9461_160_name),
+    _IWL_DEV_INFO(IWL_CFG_ANY, IWL_CFG_ANY,
+                  IWL_CFG_MAC_TYPE_SNJ, IWL_CFG_ANY,
+                  IWL_CFG_RF_TYPE_JF1, IWL_CFG_RF_ID_JF1,
+                  IWL_CFG_NO_160, IWL_CFG_CORES_BT, IWL_CFG_NO_CDB,
+                  iwl_cfg_snj_a0_jf_b0, iwl9461_name),
+    _IWL_DEV_INFO(IWL_CFG_ANY, IWL_CFG_ANY,
+                  IWL_CFG_MAC_TYPE_SNJ, IWL_CFG_ANY,
+                  IWL_CFG_RF_TYPE_JF1, IWL_CFG_RF_ID_JF1_DIV,
+                  IWL_CFG_160, IWL_CFG_CORES_BT, IWL_CFG_NO_CDB,
+                  iwl_cfg_snj_a0_jf_b0, iwl9462_160_name),
+    _IWL_DEV_INFO(IWL_CFG_ANY, IWL_CFG_ANY,
+                  IWL_CFG_MAC_TYPE_SNJ, IWL_CFG_ANY,
+                  IWL_CFG_RF_TYPE_JF1, IWL_CFG_RF_ID_JF1_DIV,
+                  IWL_CFG_NO_160, IWL_CFG_CORES_BT, IWL_CFG_NO_CDB,
+                  iwl_cfg_snj_a0_jf_b0, iwl9462_name),
+    
+    _IWL_DEV_INFO(IWL_CFG_ANY, IWL_CFG_ANY,
+                  IWL_CFG_MAC_TYPE_SNJ, IWL_CFG_ANY,
+                  IWL_CFG_RF_TYPE_JF2, IWL_CFG_RF_ID_JF,
+                  IWL_CFG_160, IWL_CFG_CORES_BT, IWL_CFG_NO_CDB,
+                  iwl_cfg_snj_a0_jf_b0, iwl9560_160_name),
+    _IWL_DEV_INFO(IWL_CFG_ANY, IWL_CFG_ANY,
+                  IWL_CFG_MAC_TYPE_SNJ, IWL_CFG_ANY,
+                  IWL_CFG_RF_TYPE_JF2, IWL_CFG_RF_ID_JF,
+                  IWL_CFG_NO_160, IWL_CFG_CORES_BT, IWL_CFG_NO_CDB,
+                  iwl_cfg_snj_a0_jf_b0, iwl9560_name),
+    
+    /* SnJ with Hr */
+    _IWL_DEV_INFO(IWL_CFG_ANY, IWL_CFG_ANY,
+                  IWL_CFG_MAC_TYPE_SNJ, IWL_CFG_ANY,
+                  IWL_CFG_RF_TYPE_HR1, IWL_CFG_ANY,
+                  IWL_CFG_ANY, IWL_CFG_ANY, IWL_CFG_NO_CDB,
+                  iwl_cfg_snj_hr_b0, iwl_ax101_name),
+    
+    _IWL_DEV_INFO(IWL_CFG_ANY, IWL_CFG_ANY,
+                  IWL_CFG_MAC_TYPE_SNJ, IWL_CFG_ANY,
+                  IWL_CFG_RF_TYPE_HR2, IWL_CFG_ANY,
+                  IWL_CFG_ANY, IWL_CFG_ANY, IWL_CFG_NO_CDB,
+                  iwl_cfg_snj_hr_b0, iwl_ax201_name),
+    
+    /* Ma */
+    _IWL_DEV_INFO(IWL_CFG_ANY, IWL_CFG_ANY,
+                  IWL_CFG_MAC_TYPE_MA, IWL_CFG_ANY,
+                  IWL_CFG_RF_TYPE_HR2, IWL_CFG_ANY,
+                  IWL_CFG_ANY, IWL_CFG_ANY, IWL_CFG_NO_CDB,
+                  iwl_cfg_ma_a0_hr_b0, iwl_ax201_name),
+    _IWL_DEV_INFO(IWL_CFG_ANY, IWL_CFG_ANY,
+                  IWL_CFG_MAC_TYPE_MA, IWL_CFG_ANY,
+                  IWL_CFG_RF_TYPE_GF, IWL_CFG_ANY,
+                  IWL_CFG_ANY, IWL_CFG_ANY, IWL_CFG_NO_CDB,
+                  iwl_cfg_ma_a0_gf_a0, iwl_ax211_name),
+    _IWL_DEV_INFO(IWL_CFG_ANY, IWL_CFG_ANY,
+                  IWL_CFG_MAC_TYPE_MA, IWL_CFG_ANY,
+                  IWL_CFG_RF_TYPE_GF, IWL_CFG_ANY,
+                  IWL_CFG_ANY, IWL_CFG_ANY, IWL_CFG_CDB,
+                  iwl_cfg_ma_a0_gf4_a0, iwl_ax211_name),
+    _IWL_DEV_INFO(IWL_CFG_ANY, IWL_CFG_ANY,
+                  IWL_CFG_MAC_TYPE_MA, IWL_CFG_ANY,
+                  IWL_CFG_RF_TYPE_MR, IWL_CFG_ANY,
+                  IWL_CFG_ANY, IWL_CFG_ANY, IWL_CFG_NO_CDB,
+                  iwl_cfg_ma_a0_mr_a0, iwl_ma_name),
+    _IWL_DEV_INFO(IWL_CFG_ANY, IWL_CFG_ANY,
+                  IWL_CFG_MAC_TYPE_SNJ, IWL_CFG_ANY,
+                  IWL_CFG_RF_TYPE_MR, IWL_CFG_ANY,
+                  IWL_CFG_ANY, IWL_CFG_ANY, IWL_CFG_NO_CDB,
+                  iwl_cfg_snj_a0_mr_a0, iwl_ma_name),
+    
+    /* So with Hr */
+    _IWL_DEV_INFO(IWL_CFG_ANY, IWL_CFG_ANY,
+                  IWL_CFG_MAC_TYPE_SO, IWL_CFG_ANY,
+                  IWL_CFG_RF_TYPE_HR2, IWL_CFG_ANY,
+                  IWL_CFG_NO_160, IWL_CFG_ANY, IWL_CFG_NO_CDB,
+                  iwl_cfg_so_a0_hr_a0, iwl_ax203_name),
+    _IWL_DEV_INFO(IWL_CFG_ANY, IWL_CFG_ANY,
+                  IWL_CFG_MAC_TYPE_SO, IWL_CFG_ANY,
+                  IWL_CFG_RF_TYPE_HR2, IWL_CFG_ANY,
+                  IWL_CFG_NO_160, IWL_CFG_ANY, IWL_CFG_NO_CDB,
+                  iwl_cfg_so_a0_hr_a0, iwl_ax203_name),
+    _IWL_DEV_INFO(IWL_CFG_ANY, IWL_CFG_ANY,
+                  IWL_CFG_MAC_TYPE_SO, IWL_CFG_ANY,
+                  IWL_CFG_RF_TYPE_HR1, IWL_CFG_ANY,
+                  IWL_CFG_160, IWL_CFG_ANY, IWL_CFG_NO_CDB,
+                  iwl_cfg_so_a0_hr_a0, iwl_ax101_name),
+    _IWL_DEV_INFO(IWL_CFG_ANY, IWL_CFG_ANY,
+                  IWL_CFG_MAC_TYPE_SO, IWL_CFG_ANY,
+                  IWL_CFG_RF_TYPE_HR2, IWL_CFG_ANY,
+                  IWL_CFG_160, IWL_CFG_ANY, IWL_CFG_NO_CDB,
+                  iwl_cfg_so_a0_hr_a0, iwl_ax201_name)
 };
 
 int ItlIwx::
@@ -10581,6 +11025,8 @@ iwx_attach(struct iwx_softc *sc, struct pci_attach_args *pa)
             (dev_info->rf_type == IWL_CFG_ANY ||
              dev_info->rf_type ==
              CSR_HW_RFID_TYPE(sc->sc_hw_rf_id)) &&
+            (dev_info->cdb == IWL_CFG_NO_CDB ||
+             CSR_HW_RFID_IS_CDB(sc->sc_hw_rf_id)) &&
             (dev_info->rf_id == IWL_CFG_ANY ||
              dev_info->rf_id ==
              IWL_SUBDEVICE_RF_ID(subsystem_device)) &&
@@ -10593,6 +11039,32 @@ iwx_attach(struct iwx_softc *sc, struct pci_attach_args *pa)
             sc->sc_cfg = dev_info->cfg;
         }
     }
+    /*
+     * Workaround for problematic SnJ device: sometimes when
+     * certain RF modules are connected to SnJ, the device ID
+     * changes to QnJ's ID.  So we are using QnJ's trans_cfg until
+     * here.  But if we detect that the MAC type is actually SnJ,
+     * we should switch to it here to avoid problems later.
+     */
+    if (CSR_HW_REV_TYPE(sc->sc_hw_rev) == IWL_CFG_MAC_TYPE_SNJ)
+        sc->sc_cfg_params = &iwl_so_trans_cfg;
+    
+    /* TODO: it is never happened. */
+    if (sc->sc_cfg == &iwlax210_2ax_cfg_so_hr_a0) {
+        if (sc->sc_hw_rev == CSR_HW_REV_TYPE_TY) {
+            sc->sc_cfg = &iwlax210_2ax_cfg_ty_gf_a0;
+        } else if (CSR_HW_RF_ID_TYPE_CHIP_ID(sc->sc_hw_rf_id) ==
+                   CSR_HW_RF_ID_TYPE_CHIP_ID(CSR_HW_RF_ID_TYPE_JF)) {
+            sc->sc_cfg = &iwlax210_2ax_cfg_so_jf_a0;
+        } else if (CSR_HW_RF_ID_TYPE_CHIP_ID(sc->sc_hw_rf_id) ==
+                   CSR_HW_RF_ID_TYPE_CHIP_ID(CSR_HW_RF_ID_TYPE_GF)) {
+            sc->sc_cfg = &iwlax211_2ax_cfg_so_gf_a0;
+        } else if (CSR_HW_RF_ID_TYPE_CHIP_ID(sc->sc_hw_rf_id) ==
+                   CSR_HW_RF_ID_TYPE_CHIP_ID(CSR_HW_RF_ID_TYPE_GF4)) {
+            sc->sc_cfg = &iwlax411_2ax_cfg_so_gf4_a0;
+        }
+    }
+    
     /*
      * This is a hack to switch from Qu B0 to Qu C0.  We need to
      * do this for all cfgs that use Qu B0, except for those using

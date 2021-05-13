@@ -236,6 +236,215 @@ struct iwx_context_info {
     uint32_t reserved3[16];
 } __packed;
 
+/**
+ * enum iwx_prph_scratch_flags - PRPH scratch control flags
+ * @IWL_PRPH_SCRATCH_EARLY_DEBUG_EN: enable early debug conf
+ * @IWL_PRPH_SCRATCH_EDBG_DEST_DRAM: use DRAM, with size allocated
+ *    in hwm config.
+ * @IWL_PRPH_SCRATCH_EDBG_DEST_INTERNAL: use buffer on SRAM
+ * @IWL_PRPH_SCRATCH_EDBG_DEST_ST_ARBITER: use st arbiter, mainly for
+ *    multicomm.
+ * @IWL_PRPH_SCRATCH_EDBG_DEST_TB22DTF: route debug data to SoC HW
+ * @IWL_PRPH_SCTATCH_RB_SIZE_4K: Use 4K RB size (the default is 2K)
+ * @IWL_PRPH_SCRATCH_MTR_MODE: format used for completion - 0: for
+ *    completion descriptor, 1 for responses (legacy)
+ * @IWL_PRPH_SCRATCH_MTR_FORMAT: a mask for the size of the tfd.
+ *    There are 4 optional values: 0: 16 bit, 1: 32 bit, 2: 64 bit,
+ *    3: 256 bit.
+ * @IWL_PRPH_SCRATCH_RB_SIZE_EXT_MASK: RB size full information, ignored
+ *    by older firmware versions, so set IWL_PRPH_SCRATCH_RB_SIZE_4K
+ *    appropriately; use the below values for this.
+ * @IWL_PRPH_SCRATCH_RB_SIZE_EXT_8K: 8kB RB size
+ * @IWL_PRPH_SCRATCH_RB_SIZE_EXT_12K: 12kB RB size
+ */
+enum iwx_prph_scratch_flags {
+    IWX_PRPH_SCRATCH_EARLY_DEBUG_EN        = BIT(4),
+    IWX_PRPH_SCRATCH_EDBG_DEST_DRAM        = BIT(8),
+    IWX_PRPH_SCRATCH_EDBG_DEST_INTERNAL    = BIT(9),
+    IWX_PRPH_SCRATCH_EDBG_DEST_ST_ARBITER    = BIT(10),
+    IWX_PRPH_SCRATCH_EDBG_DEST_TB22DTF    = BIT(11),
+    IWX_PRPH_SCRATCH_RB_SIZE_4K        = BIT(16),
+    IWX_PRPH_SCRATCH_MTR_MODE        = BIT(17),
+    IWX_PRPH_SCRATCH_MTR_FORMAT        = BIT(18) | BIT(19),
+    IWX_PRPH_SCRATCH_RB_SIZE_EXT_MASK    = 0xf << 20,
+    IWX_PRPH_SCRATCH_RB_SIZE_EXT_8K        = 8 << 20,
+    IWX_PRPH_SCRATCH_RB_SIZE_EXT_12K    = 9 << 20,
+};
+
+/*
+ * struct iwx_prph_scratch_version - version structure
+ * @mac_id: SKU and revision id
+ * @version: prph scratch information version id
+ * @size: the size of the context information in DWs
+ * @reserved: reserved
+ */
+struct iwx_prph_scratch_version {
+    __le16 mac_id;
+    __le16 version;
+    __le16 size;
+    __le16 reserved;
+} __packed; /* PERIPH_SCRATCH_VERSION_S */
+
+/*
+ * struct iwx_prph_scratch_control - control structure
+ * @control_flags: context information flags see &enum iwl_prph_scratch_flags
+ * @reserved: reserved
+ */
+struct iwx_prph_scratch_control {
+    __le32 control_flags;
+    __le32 reserved;
+} __packed; /* PERIPH_SCRATCH_CONTROL_S */
+
+/*
+ * struct iwx_prph_scratch_pnvm_cfg - ror config
+ * @pnvm_base_addr: PNVM start address
+ * @pnvm_size: PNVM size in DWs
+ * @reserved: reserved
+ */
+struct iwx_prph_scratch_pnvm_cfg {
+    __le64 pnvm_base_addr;
+    __le32 pnvm_size;
+    __le32 reserved;
+} __packed; /* PERIPH_SCRATCH_PNVM_CFG_S */
+
+/*
+ * struct iwx_prph_scratch_hwm_cfg - hwm config
+ * @hwm_base_addr: hwm start address
+ * @hwm_size: hwm size in DWs
+ * @reserved: reserved
+ */
+struct iwx_prph_scratch_hwm_cfg {
+    __le64 hwm_base_addr;
+    __le32 hwm_size;
+    __le32 reserved;
+} __packed; /* PERIPH_SCRATCH_HWM_CFG_S */
+
+/*
+ * struct iwx_prph_scratch_rbd_cfg - RBDs configuration
+ * @free_rbd_addr: default queue free RB CB base address
+ * @reserved: reserved
+ */
+struct iwx_prph_scratch_rbd_cfg {
+    __le64 free_rbd_addr;
+    __le32 reserved;
+} __packed; /* PERIPH_SCRATCH_RBD_CFG_S */
+
+/*
+ * struct iwx_prph_scratch_ctrl_cfg - prph scratch ctrl and config
+ * @version: version information of context info and HW
+ * @control: control flags of FH configurations
+ * @pnvm_cfg: ror configuration
+ * @hwm_cfg: hwm configuration
+ * @rbd_cfg: default RX queue configuration
+ */
+struct iwx_prph_scratch_ctrl_cfg {
+    struct iwx_prph_scratch_version version;
+    struct iwx_prph_scratch_control control;
+    struct iwx_prph_scratch_pnvm_cfg pnvm_cfg;
+    struct iwx_prph_scratch_hwm_cfg hwm_cfg;
+    struct iwx_prph_scratch_rbd_cfg rbd_cfg;
+} __packed; /* PERIPH_SCRATCH_CTRL_CFG_S */
+
+/*
+ * struct iwx_prph_scratch - peripheral scratch mapping
+ * @ctrl_cfg: control and configuration of prph scratch
+ * @dram: firmware images addresses in DRAM
+ * @reserved: reserved
+ */
+struct iwx_prph_scratch {
+    struct iwx_prph_scratch_ctrl_cfg ctrl_cfg;
+    __le32 reserved[16];
+    struct iwx_context_info_dram dram;
+} __packed; /* PERIPH_SCRATCH_S */
+
+/*
+ * struct iwx_prph_info - peripheral information
+ * @boot_stage_mirror: reflects the value in the Boot Stage CSR register
+ * @ipc_status_mirror: reflects the value in the IPC Status CSR register
+ * @sleep_notif: indicates the peripheral sleep status
+ * @reserved: reserved
+ */
+struct iwx_prph_info {
+    __le32 boot_stage_mirror;
+    __le32 ipc_status_mirror;
+    __le32 sleep_notif;
+    __le32 reserved;
+} __packed; /* PERIPH_INFO_S */
+
+/*
+ * struct iwx_context_info_gen3 - device INIT configuration
+ * @version: version of the context information
+ * @size: size of context information in DWs
+ * @config: context in which the peripheral would execute - a subset of
+ *    capability csr register published by the peripheral
+ * @prph_info_base_addr: the peripheral information structure start address
+ * @cr_head_idx_arr_base_addr: the completion ring head index array
+ *    start address
+ * @tr_tail_idx_arr_base_addr: the transfer ring tail index array
+ *    start address
+ * @cr_tail_idx_arr_base_addr: the completion ring tail index array
+ *    start address
+ * @tr_head_idx_arr_base_addr: the transfer ring head index array
+ *    start address
+ * @cr_idx_arr_size: number of entries in the completion ring index array
+ * @tr_idx_arr_size: number of entries in the transfer ring index array
+ * @mtr_base_addr: the message transfer ring start address
+ * @mcr_base_addr: the message completion ring start address
+ * @mtr_size: number of entries which the message transfer ring can hold
+ * @mcr_size: number of entries which the message completion ring can hold
+ * @mtr_doorbell_vec: the doorbell vector associated with the message
+ *    transfer ring
+ * @mcr_doorbell_vec: the doorbell vector associated with the message
+ *    completion ring
+ * @mtr_msi_vec: the MSI which shall be generated by the peripheral after
+ *    completing a transfer descriptor in the message transfer ring
+ * @mcr_msi_vec: the MSI which shall be generated by the peripheral after
+ *    completing a completion descriptor in the message completion ring
+ * @mtr_opt_header_size: the size of the optional header in the transfer
+ *    descriptor associated with the message transfer ring in DWs
+ * @mtr_opt_footer_size: the size of the optional footer in the transfer
+ *    descriptor associated with the message transfer ring in DWs
+ * @mcr_opt_header_size: the size of the optional header in the completion
+ *    descriptor associated with the message completion ring in DWs
+ * @mcr_opt_footer_size: the size of the optional footer in the completion
+ *    descriptor associated with the message completion ring in DWs
+ * @msg_rings_ctrl_flags: message rings control flags
+ * @prph_info_msi_vec: the MSI which shall be generated by the peripheral
+ *    after updating the Peripheral Information structure
+ * @prph_scratch_base_addr: the peripheral scratch structure start address
+ * @prph_scratch_size: the size of the peripheral scratch structure in DWs
+ * @reserved: reserved
+ */
+struct iwx_context_info_gen3 {
+    __le16 version;
+    __le16 size;
+    __le32 config;
+    __le64 prph_info_base_addr;
+    __le64 cr_head_idx_arr_base_addr;
+    __le64 tr_tail_idx_arr_base_addr;
+    __le64 cr_tail_idx_arr_base_addr;
+    __le64 tr_head_idx_arr_base_addr;
+    __le16 cr_idx_arr_size;
+    __le16 tr_idx_arr_size;
+    __le64 mtr_base_addr;
+    __le64 mcr_base_addr;
+    __le16 mtr_size;
+    __le16 mcr_size;
+    __le16 mtr_doorbell_vec;
+    __le16 mcr_doorbell_vec;
+    __le16 mtr_msi_vec;
+    __le16 mcr_msi_vec;
+    u8 mtr_opt_header_size;
+    u8 mtr_opt_footer_size;
+    u8 mcr_opt_header_size;
+    u8 mcr_opt_footer_size;
+    __le16 msg_rings_ctrl_flags;
+    __le16 prph_info_msi_vec;
+    __le64 prph_scratch_base_addr;
+    __le32 prph_scratch_size;
+    __le32 reserved;
+} __packed; /* IPC_CONTEXT_INFO_S */
+
 #define IWX_MQ_RX_TABLE_SIZE    512
 
 /* cb size is the exponent */
@@ -754,6 +963,13 @@ struct iwx_context_info {
 #define IWX_HPM_HIPM_GEN_CFG_CR_SLP_EN        (1 << 1)
 #define IWX_HPM_HIPM_GEN_CFG_CR_FORCE_ACTIVE    (1 << 10)
 
+#define IWX_UREG_DOORBELL_TO_ISR6        0xA05C04
+#define IWX_UREG_DOORBELL_TO_ISR6_NMI_BIT    (1 << 0)
+#define iWX_UREG_DOORBELL_TO_ISR6_RESET_HANDSHAKE ((1 << 0) | (1 << 1))
+#define IWX_UREG_DOORBELL_TO_ISR6_SUSPEND    (1 << 18)
+#define IWX_UREG_DOORBELL_TO_ISR6_RESUME    (1 << 19)
+#define IWX_UREG_DOORBELL_TO_ISR6_PNVM    (1 << 20)
+
 /*
  * Per-Tx-queue write pointer (index, really!)
  * Indicates index to next TFD that driver will fill (1 past latest filled).
@@ -940,9 +1156,16 @@ enum iwx_msix_ivar_for_cause {
 #define IWX_UCODE_TLV_API_ADAPTIVE_DWELL_V2    42
 #define IWX_UCODE_TLV_API_BEACON_FILTER_V4    47
 #define IWX_UCODE_TLV_API_REGULATORY_NVM_INFO   48
+#define IWX_UCODE_TLV_API_FTM_NEW_RANGE_REQ     49
+#define IWX_UCODE_TLV_API_SCAN_OFFLOAD_CHANS    50
+#define IWX_UCODE_TLV_API_MBSSID_HE             52
+#define IWX_UCODE_TLV_API_WOWLAN_TCP_SYN_WAKE   53
+#define IWX_UCODE_TLV_API_FTM_RTT_ACCURACY      54
+#define IWX_UCODE_TLV_API_SAR_TABLE_VER         55
 #define IWX_UCODE_TLV_API_REDUCED_SCAN_CONFIG   56
 #define IWX_UCODE_TLV_API_ADWELL_HB_DEF_N_AP    57
 #define IWX_UCODE_TLV_API_SCAN_EXT_CHAN_VER    58
+#define IWX_UCODE_TLV_API_BAND_IN_RX_DATA       59
 #define IWX_NUM_UCODE_TLV_API            128
 
 #define IWX_UCODE_TLV_API_BITS \
@@ -1038,6 +1261,10 @@ enum iwx_msix_ivar_for_cause {
 #define IWX_UCODE_TLV_CAPA_TLC_OFFLOAD                  43
 #define IWX_UCODE_TLV_CAPA_DYNAMIC_QUOTA                44
 #define IWX_UCODE_TLV_CAPA_ULTRA_HB_CHANNELS        48
+#define IWX_UCODE_TLV_CAPA_CS_MODIFY                49
+#define IWX_UCODE_TLV_CAPA_SET_LTR_GEN2             50
+#define IWX_UCODE_TLV_CAPA_SET_PPAG                 52
+#define IWX_UCODE_TLV_CAPA_SESSION_PROT_CMD         54
 #define IWX_UCODE_TLV_CAPA_EXTENDED_DTS_MEASURE        64
 #define IWX_UCODE_TLV_CAPA_SHORT_PM_TIMEOUTS        65
 #define IWX_UCODE_TLV_CAPA_BT_MPLUT_SUPPORT        67
@@ -1092,6 +1319,11 @@ struct iwx_tlv_calib_ctrl {
 #define IWX_FW_PHY_CFG_TX_CHAIN        (0xf << IWX_FW_PHY_CFG_TX_CHAIN_POS)
 #define IWX_FW_PHY_CFG_RX_CHAIN_POS    20
 #define IWX_FW_PHY_CFG_RX_CHAIN        (0xf << IWX_FW_PHY_CFG_RX_CHAIN_POS)
+#define IWX_FW_PHY_CFG_CHAIN_SAD_POS    23
+#define IWX_FW_PHY_CFG_CHAIN_SAD_ENABLED (0x1 << IWX_FW_PHY_CFG_CHAIN_SAD_POS)
+#define IWX_FW_PHY_CFG_CHAIN_SAD_ANT_A  (0x2 << IWX_FW_PHY_CFG_CHAIN_SAD_POS)
+#define IWX_FW_PHY_CFG_CHAIN_SAD_ANT_B  (0x4 << IWX_FW_PHY_CFG_CHAIN_SAD_POS)
+#define IWX_FW_PHY_CFG_SHARED_CLK       (1 << 31)
 
 /**
  * struct iwx_fw_cipher_scheme - a cipher scheme supported by FW.
@@ -1209,8 +1441,13 @@ struct iwx_ucode_header {
 #define IWX_UCODE_TLV_FW_RECOVERY_INFO    57
 #define IWX_UCODE_TLV_FW_FMAC_RECOVERY_INFO 59
 #define IWX_UCODE_TLV_FW_FSEQ_VERSION    60
+#define IWX_UCODE_PHY_INTEGRATION_VERSION 61
+#define IWX_UCODE_TLV_PNVM_VERSION        62
+#define IWX_UCODE_TLV_PNVM_SKU            64
 
 #define IWX_UCODE_TLV_DEBUG_BASE    0x1000005
+#define IWX_UCODE_TLV_CONST_BASE    0x100
+#define IWX_UCODE_TLV_FW_NUM_STATIONS       (IWX_UCODE_TLV_CONST_BASE + 0)
 #define IWX_UCODE_TLV_TYPE_DEBUG_INFO        (IWX_UCODE_TLV_DEBUG_BASE + 0)
 #define IWX_UCODE_TLV_TYPE_BUFFER_ALLOCATION    (IWX_UCODE_TLV_DEBUG_BASE + 1)
 #define IWX_UCODE_TLV_TYPE_HCMD            (IWX_UCODE_TLV_DEBUG_BASE + 2)
@@ -1502,6 +1739,8 @@ struct iwx_tx_queue_cfg_rsp {
 /* global key */
 #define IWX_WEP_KEY    0x20
 
+#define IWX_SHARED_MEM_CFG  0x25
+
 /* MAC and Binding commands */
 #define IWX_MAC_CONTEXT_CMD        0x28
 #define IWX_TIME_EVENT_CMD        0x29 /* both CMD and response */
@@ -1635,6 +1874,8 @@ struct iwx_tx_queue_cfg_rsp {
 /* REGULATORY_AND_NVM group subcommand IDs */
 #define IWX_NVM_ACCESS_COMPLETE    0x00
 #define IWX_NVM_GET_INFO    0x02
+#define IWX_TAS_CONFIG      0x03
+#define IWX_PNVM_INIT_COMPLETE_NTFY 0x04
 
 /*
  * struct iwx_dqa_enable_cmd
@@ -1643,6 +1884,10 @@ struct iwx_tx_queue_cfg_rsp {
 struct iwx_dqa_enable_cmd {
     uint32_t cmd_queue;
 } __packed; /* DQA_CONTROL_CMD_API_S_VER_1 */
+
+struct iwx_sku_id {
+    uint32_t data[3];
+} __packed; /* SKU_ID_API_S_VER_1 */
 
 /**
  * struct iwx_cmd_response - generic response struct for most commands
@@ -1943,6 +2188,14 @@ struct iwx_alive_resp_v4 {
     struct iwx_umac_alive umac_data;
 } __packed; /* ALIVE_RES_API_S_VER_4 */
 
+struct iwx_alive_resp_v5 {
+    uint16_t status;
+    uint16_t flags;
+    struct iwx_lmac_alive lmac_data[2];
+    struct iwx_umac_alive umac_data;
+    struct iwx_sku_id sku_id;
+} __packed; /* UCODE_ALIVE_NTFY_API_S_VER_5 */ 
+
 #define IWX_SOC_CONFIG_CMD_FLAGS_DISCRETE    (1 << 0)
 #define IWX_SOC_CONFIG_CMD_FLAGS_LOW_LATENCY    (1 << 1)
 
@@ -1972,9 +2225,11 @@ struct iwx_soc_configuration_cmd {
  * commands driver may send before finishing init flow
  * @IWX_INIT_DEBUG_CFG: driver is going to send debug config command
  * @IWX_INIT_NVM: driver is going to send NVM_ACCESS commands
+ * @IWX_INIT_PHY: driver is going to send PHY_DB commands
  */
 #define IWX_INIT_DEBUG_CFG    (1 << 0)
 #define IWX_INIT_NVM        (1 << 1)
+#define IWX_INIT_PHY        (1 << 2)
 
 /**
  * struct iwx_extended_cfg_cmd - mark what commands ucode should wait for
