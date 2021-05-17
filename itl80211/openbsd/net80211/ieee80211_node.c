@@ -2370,6 +2370,18 @@ ieee80211_setup_htcaps(struct ieee80211_node *ni, const uint8_t *data,
         return;
     
     ni->ni_htcaps = (data[0] | (data[1] << 8));
+    ni->ni_htcaps &= le16toh(ni->ni_ic->ic_htcaps |
+                             ~(IEEE80211_HTCAP_CBW20_40 |
+                               IEEE80211_HTCAP_SGI40 |
+                               IEEE80211_HTCAP_SGI20 |
+                               IEEE80211_HTCAP_GF |
+                               IEEE80211_HTCAP_LDPC |
+                               IEEE80211_HTCAP_DSSSCCK40));
+    if (!(ni->ni_ic->ic_htcaps & IEEE80211_HTCAP_TXSTBC))
+        ni->ni_htcaps &= ~IEEE80211_HTCAP_RXSTBC_MASK;
+    if (!(ni->ni_ic->ic_htcaps & IEEE80211_HTCAP_RXSTBC_MASK))
+        ni->ni_htcaps &= ~IEEE80211_HTCAP_TXSTBC;
+    
     ni->ni_ampdu_param = data[2];
     
     memcpy(ni->ni_rxmcs, &data[3], sizeof(ni->ni_rxmcs));
