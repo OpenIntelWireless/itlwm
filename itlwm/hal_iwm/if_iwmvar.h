@@ -602,7 +602,7 @@ struct iwm_softc {
 	 */
 	int sc_generation;
 
-//	struct rwlock ioctl_rwl;
+	struct rwlock ioctl_rwl;
 
 	int sc_cap_off; /* PCIe caps */
 

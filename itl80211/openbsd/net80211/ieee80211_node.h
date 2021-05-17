@@ -505,14 +505,23 @@ RB_HEAD(ieee80211_ess_tree, ieee80211_ess_rbt);
 static inline void
 ieee80211_node_incref(struct ieee80211_node *ni)
 {
-    OSIncrementAtomic(&((ni)->ni_refcnt));
+    int        s;
+
+    s = splnet();
+    ni->ni_refcnt++;
+    splx(s);
 }
 
 static inline u_int
 ieee80211_node_decref(struct ieee80211_node *ni)
 {
-	OSDecrementAtomic(&ni->ni_refcnt);
-    return ni->ni_refcnt;
+    u_int        refcnt;
+    int         s;
+
+    s = splnet();
+    refcnt = --ni->ni_refcnt;
+    splx(s);
+    return refcnt;
 }
 
 static inline struct ieee80211_node *

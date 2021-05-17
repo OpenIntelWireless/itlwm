@@ -33,6 +33,7 @@
 #include <net80211/ieee80211_mira.h>
 #include <net80211/ieee80211_amrr.h>
 #include <sys/pcireg.h>
+#include <sys/_rwlock.h>
 
 // the following isn't actually used
 #define BUS_SPACE_BARRIER_READ	0

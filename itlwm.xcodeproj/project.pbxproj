@@ -321,7 +321,22 @@
 		5088ECC0252884C10068A63D /* libkmod.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 5088ECBC252884870068A63D /* libkmod.a */; };
 		5088ECC1252884D70068A63D /* libkmod.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 5088ECBC252884870068A63D /* libkmod.a */; };
 		F800DD9B24FBEBF000789320 /* ItlDriverController.hpp in Headers */ = {isa = PBXBuildFile; fileRef = F800DD9A24FBEBF000789320 /* ItlDriverController.hpp */; };
+		F826EF51264E1F8F00B6D54A /* IOEventLock.cpp in Sources */ = {isa = PBXBuildFile; fileRef = F826EF4F264E1F8F00B6D54A /* IOEventLock.cpp */; };
+		F826EF52264E1F8F00B6D54A /* IOEventLock.cpp in Sources */ = {isa = PBXBuildFile; fileRef = F826EF4F264E1F8F00B6D54A /* IOEventLock.cpp */; };
+		F826EF53264E1F8F00B6D54A /* IOEventLock.cpp in Sources */ = {isa = PBXBuildFile; fileRef = F826EF4F264E1F8F00B6D54A /* IOEventLock.cpp */; };
+		F826EF54264E1F8F00B6D54A /* IOEventLock.cpp in Sources */ = {isa = PBXBuildFile; fileRef = F826EF4F264E1F8F00B6D54A /* IOEventLock.cpp */; };
+		F826EF55264E1F8F00B6D54A /* IOEventLock.cpp in Sources */ = {isa = PBXBuildFile; fileRef = F826EF4F264E1F8F00B6D54A /* IOEventLock.cpp */; };
+		F826EF56264E1F8F00B6D54A /* IOEventLock.hpp in Headers */ = {isa = PBXBuildFile; fileRef = F826EF50264E1F8F00B6D54A /* IOEventLock.hpp */; };
+		F826EF57264E1F8F00B6D54A /* IOEventLock.hpp in Headers */ = {isa = PBXBuildFile; fileRef = F826EF50264E1F8F00B6D54A /* IOEventLock.hpp */; };
+		F826EF58264E1F8F00B6D54A /* IOEventLock.hpp in Headers */ = {isa = PBXBuildFile; fileRef = F826EF50264E1F8F00B6D54A /* IOEventLock.hpp */; };
+		F826EF59264E1F8F00B6D54A /* IOEventLock.hpp in Headers */ = {isa = PBXBuildFile; fileRef = F826EF50264E1F8F00B6D54A /* IOEventLock.hpp */; };
+		F826EF5A264E1F8F00B6D54A /* IOEventLock.hpp in Headers */ = {isa = PBXBuildFile; fileRef = F826EF50264E1F8F00B6D54A /* IOEventLock.hpp */; };
 		F8294FE424FCBF5100239253 /* FwBinary.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5076FA7F24CC71E40011B2BB /* FwBinary.cpp */; };
+		F85D4C95264E11B800F45B55 /* _rwlock.h in Headers */ = {isa = PBXBuildFile; fileRef = F85D4C94264E11B800F45B55 /* _rwlock.h */; };
+		F85D4C96264E11B800F45B55 /* _rwlock.h in Headers */ = {isa = PBXBuildFile; fileRef = F85D4C94264E11B800F45B55 /* _rwlock.h */; };
+		F85D4C97264E11B800F45B55 /* _rwlock.h in Headers */ = {isa = PBXBuildFile; fileRef = F85D4C94264E11B800F45B55 /* _rwlock.h */; };
+		F85D4C98264E11B800F45B55 /* _rwlock.h in Headers */ = {isa = PBXBuildFile; fileRef = F85D4C94264E11B800F45B55 /* _rwlock.h */; };
+		F85D4C99264E11B800F45B55 /* _rwlock.h in Headers */ = {isa = PBXBuildFile; fileRef = F85D4C94264E11B800F45B55 /* _rwlock.h */; };
 		F88CB91424FBE9130060B1A5 /* ItlDriverInfo.hpp in Headers */ = {isa = PBXBuildFile; fileRef = F88CB91324FBE9130060B1A5 /* ItlDriverInfo.hpp */; };
 		F88D2B3D2414E64000BBE700 /* sha1-pbkdf2.c in Sources */ = {isa = PBXBuildFile; fileRef = F88D2B3B2414E64000BBE700 /* sha1-pbkdf2.c */; };
 		F89B6BBC25021C9C000F77FF /* AirportItlwm.hpp in Headers */ = {isa = PBXBuildFile; fileRef = F89B6BBB25021C9C000F77FF /* AirportItlwm.hpp */; };
@@ -632,6 +647,9 @@
 		5088ECBA252884060068A63D /* iwlwifi-firmware-license */ = {isa = PBXFileReference; lastKnownFileType = text; path = "iwlwifi-firmware-license"; sourceTree = "<group>"; };
 		5088ECBC252884870068A63D /* libkmod.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libkmod.a; path = MacKernelSDK/Library/x86_64/libkmod.a; sourceTree = "<group>"; };
 		F800DD9A24FBEBF000789320 /* ItlDriverController.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = ItlDriverController.hpp; sourceTree = "<group>"; };
+		F826EF4F264E1F8F00B6D54A /* IOEventLock.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = IOEventLock.cpp; sourceTree = "<group>"; };
+		F826EF50264E1F8F00B6D54A /* IOEventLock.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = IOEventLock.hpp; sourceTree = "<group>"; };
+		F85D4C94264E11B800F45B55 /* _rwlock.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = _rwlock.h; sourceTree = "<group>"; };
 		F889443424D670EE001DF7B7 /* iwlwifi-Qu-b0-jf-b0-48.ucode */ = {isa = PBXFileReference; lastKnownFileType = file; path = "iwlwifi-Qu-b0-jf-b0-48.ucode"; sourceTree = "<group>"; };
 		F889443524D670EE001DF7B7 /* iwlwifi-Qu-c0-jf-b0-48.ucode */ = {isa = PBXFileReference; lastKnownFileType = file; path = "iwlwifi-Qu-c0-jf-b0-48.ucode"; sourceTree = "<group>"; };
 		F889443624D670EE001DF7B7 /* iwlwifi-Qu-c0-hr-b0-48.ucode */ = {isa = PBXFileReference; lastKnownFileType = file; path = "iwlwifi-Qu-c0-hr-b0-48.ucode"; sourceTree = "<group>"; };
@@ -1116,6 +1134,9 @@
 				F8BEFA9124CA93E900F6D938 /* _malloc.h */,
 				F8C7EF7B263125DE00BA87B6 /* _netstat.h */,
 				F8BB56172647FDF500F180EC /* _clock.h */,
+				F85D4C94264E11B800F45B55 /* _rwlock.h */,
+				F826EF4F264E1F8F00B6D54A /* IOEventLock.cpp */,
+				F826EF50264E1F8F00B6D54A /* IOEventLock.hpp */,
 			);
 			path = sys;
 			sourceTree = "<group>";
@@ -1194,6 +1215,7 @@
 				F8AF3A3224F9F35B008911C1 /* ItlIwm.hpp in Headers */,
 				024A084323FCBC6C009FBA6C /* gmac.h in Headers */,
 				F8C2EC9C2408062D007A9422 /* pcireg.h in Headers */,
+				F826EF56264E1F8F00B6D54A /* IOEventLock.hpp in Headers */,
 				F8C2EC9624080557007A9422 /* _if_ether.h in Headers */,
 				F8C2EC6E2408031A007A9422 /* ieee80211_var.h in Headers */,
 				F8C2EC9924080557007A9422 /* _null.h in Headers */,
@@ -1218,6 +1240,7 @@
 				F8C2EC612408031A007A9422 /* ieee80211_proto.h in Headers */,
 				024A084723FCBC6C009FBA6C /* cast.h in Headers */,
 				F8C2EC622408031A007A9422 /* ieee80211_rssadapt.h in Headers */,
+				F85D4C95264E11B800F45B55 /* _rwlock.h in Headers */,
 				F8D2577A2495DEFC00872E4F /* IoctlId.h in Headers */,
 				F8C2EC652408031A007A9422 /* ieee80211_ioctl.h in Headers */,
 				024A083C23FCBC6C009FBA6C /* chachapoly.h in Headers */,
@@ -1250,10 +1273,12 @@
 				35CBE661251CB89700435CBC /* apple80211_var.h in Headers */,
 				35CBE664251CB89700435CBC /* AirportItlwmInterface.hpp in Headers */,
 				F8F7EA4D252D834600520FD4 /* IO80211Interface.h in Headers */,
+				F826EF5A264E1F8F00B6D54A /* IOEventLock.hpp in Headers */,
 				F8F7EA49252D834600520FD4 /* IO80211SkywalkInterface.h in Headers */,
 				35CBE666251CB89700435CBC /* AirportItlwm.hpp in Headers */,
 				F8F7EA3D252D834600520FD4 /* IO80211VirtualInterface.h in Headers */,
 				F8F7EA41252D834600520FD4 /* IO80211Controller.h in Headers */,
+				F85D4C99264E11B800F45B55 /* _rwlock.h in Headers */,
 				F8C594DC25FD935B0007D19C /* ieee80211_ra.h in Headers */,
 				35CBE66F251CB89700435CBC /* apple80211_wps.h in Headers */,
 			);
@@ -1271,10 +1296,12 @@
 				35CBE6CB251CB8BF00435CBC /* apple80211_var.h in Headers */,
 				35CBE6CE251CB8BF00435CBC /* AirportItlwmInterface.hpp in Headers */,
 				F8F7EA4B252D834600520FD4 /* IO80211Interface.h in Headers */,
+				F826EF58264E1F8F00B6D54A /* IOEventLock.hpp in Headers */,
 				F8F7EA47252D834600520FD4 /* IO80211SkywalkInterface.h in Headers */,
 				35CBE6D0251CB8BF00435CBC /* AirportItlwm.hpp in Headers */,
 				F8F7EA3B252D834600520FD4 /* IO80211VirtualInterface.h in Headers */,
 				F8F7EA3F252D834600520FD4 /* IO80211Controller.h in Headers */,
+				F85D4C97264E11B800F45B55 /* _rwlock.h in Headers */,
 				F8C594DA25FD935B0007D19C /* ieee80211_ra.h in Headers */,
 				35CBE6D9251CB8BF00435CBC /* apple80211_wps.h in Headers */,
 			);
@@ -1292,10 +1319,12 @@
 				35CBE736251CB8CA00435CBC /* apple80211_var.h in Headers */,
 				35CBE739251CB8CA00435CBC /* AirportItlwmInterface.hpp in Headers */,
 				F8F7EA4A252D834600520FD4 /* IO80211Interface.h in Headers */,
+				F826EF57264E1F8F00B6D54A /* IOEventLock.hpp in Headers */,
 				F8F7EA46252D834600520FD4 /* IO80211SkywalkInterface.h in Headers */,
 				35CBE73B251CB8CA00435CBC /* AirportItlwm.hpp in Headers */,
 				F8F7EA3A252D834600520FD4 /* IO80211VirtualInterface.h in Headers */,
 				F8F7EA3E252D834600520FD4 /* IO80211Controller.h in Headers */,
+				F85D4C96264E11B800F45B55 /* _rwlock.h in Headers */,
 				F8C594D925FD935B0007D19C /* ieee80211_ra.h in Headers */,
 				35CBE744251CB8CA00435CBC /* apple80211_wps.h in Headers */,
 			);
@@ -1313,10 +1342,12 @@
 				F89B6BC925021DED000F77FF /* apple80211_var.h in Headers */,
 				F8CA44A425091AF60036119A /* AirportItlwmInterface.hpp in Headers */,
 				F8F7EA4C252D834600520FD4 /* IO80211Interface.h in Headers */,
+				F826EF59264E1F8F00B6D54A /* IOEventLock.hpp in Headers */,
 				F8F7EA48252D834600520FD4 /* IO80211SkywalkInterface.h in Headers */,
 				F89B6BBC25021C9C000F77FF /* AirportItlwm.hpp in Headers */,
 				F8F7EA3C252D834600520FD4 /* IO80211VirtualInterface.h in Headers */,
 				F8F7EA40252D834600520FD4 /* IO80211Controller.h in Headers */,
+				F85D4C98264E11B800F45B55 /* _rwlock.h in Headers */,
 				F8C594DB25FD935B0007D19C /* ieee80211_ra.h in Headers */,
 				F89B6BC725021DED000F77FF /* apple80211_wps.h in Headers */,
 			);
@@ -1585,6 +1616,7 @@
 				F8C594D325FD935B0007D19C /* ieee80211_ra.c in Sources */,
 				024A085823FCBC6C009FBA6C /* rmd160.c in Sources */,
 				024A084223FCBC6C009FBA6C /* cmac.c in Sources */,
+				F826EF51264E1F8F00B6D54A /* IOEventLock.cpp in Sources */,
 				F8A33574244AED060039DA12 /* IOTaskQueue.cpp in Sources */,
 				F8C2EC532408031A007A9422 /* ieee80211.c in Sources */,
 				024A084E23FCBC6C009FBA6C /* chachapoly.c in Sources */,
@@ -1655,6 +1687,7 @@
 				35CBE694251CB89700435CBC /* cmac.c in Sources */,
 				35CBE695251CB89700435CBC /* ecb_enc.c in Sources */,
 				35CBE696251CB89700435CBC /* chachapoly.c in Sources */,
+				F826EF55264E1F8F00B6D54A /* IOEventLock.cpp in Sources */,
 				35CBE697251CB89700435CBC /* md5.c in Sources */,
 				35CBE698251CB89700435CBC /* arc4.c in Sources */,
 				35CBE699251CB89700435CBC /* blf.c in Sources */,
@@ -1732,6 +1765,7 @@
 				35CBE6FE251CB8BF00435CBC /* cmac.c in Sources */,
 				35CBE6FF251CB8BF00435CBC /* ecb_enc.c in Sources */,
 				35CBE700251CB8BF00435CBC /* chachapoly.c in Sources */,
+				F826EF53264E1F8F00B6D54A /* IOEventLock.cpp in Sources */,
 				35CBE701251CB8BF00435CBC /* md5.c in Sources */,
 				35CBE702251CB8BF00435CBC /* arc4.c in Sources */,
 				35CBE703251CB8BF00435CBC /* blf.c in Sources */,
@@ -1809,6 +1843,7 @@
 				35CBE769251CB8CA00435CBC /* cmac.c in Sources */,
 				35CBE76A251CB8CA00435CBC /* ecb_enc.c in Sources */,
 				35CBE76B251CB8CA00435CBC /* chachapoly.c in Sources */,
+				F826EF52264E1F8F00B6D54A /* IOEventLock.cpp in Sources */,
 				35CBE76C251CB8CA00435CBC /* md5.c in Sources */,
 				35CBE76D251CB8CA00435CBC /* arc4.c in Sources */,
 				35CBE76E251CB8CA00435CBC /* blf.c in Sources */,
@@ -1886,6 +1921,7 @@
 				F89B6C13250231E4000F77FF /* cmac.c in Sources */,
 				F89B6C14250231E4000F77FF /* ecb_enc.c in Sources */,
 				F89B6C15250231E4000F77FF /* chachapoly.c in Sources */,
+				F826EF54264E1F8F00B6D54A /* IOEventLock.cpp in Sources */,
 				F89B6C16250231E4000F77FF /* md5.c in Sources */,
 				F89B6C17250231E4000F77FF /* arc4.c in Sources */,
 				F89B6C18250231E4000F77FF /* blf.c in Sources */,

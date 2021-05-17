@@ -226,7 +226,7 @@ struct iwn_softc {
 
     bus_dma_tag_t        sc_dmat;
 
-//    struct rwlock        sc_rwlock;
+    struct rwlock        sc_rwlock;
     u_int            sc_flags;
 #define IWN_FLAG_HAS_5GHZ    (1 << 0)
 #define IWN_FLAG_HAS_OTPROM    (1 << 1)

@@ -3595,7 +3595,7 @@ iwm_init(struct _ifnet *ifp)
     ItlIwm *that = container_of(sc, ItlIwm, com);
     int err, generation;
     
-    //    rw_assert_wrlock(&sc->ioctl_rwl);
+    rw_assert_wrlock(&sc->ioctl_rwl);
     
     sc->first_agg_txq = IWM_FIRST_AGG_TX_QUEUE;
     sc->agg_tid_disable = 0xffff;
@@ -3752,7 +3752,7 @@ iwm_stop(struct _ifnet *ifp)
     struct iwm_node *in = (struct iwm_node *)ic->ic_bss;
     int i, s = splnet();
     
-    //    rw_assert_wrlock(&sc->ioctl_rwl);
+    rw_assert_wrlock(&sc->ioctl_rwl);
     
     sc->sc_flags |= IWM_FLAG_SHUTDOWN; /* Disallow new tasks. */
     
@@ -3846,9 +3846,9 @@ iwm_ioctl(struct _ifnet *ifp, u_long cmd, caddr_t data)
      * Prevent processes from entering this function while another
      * process is tsleep'ing in it.
      */
-    //    err = rw_enter(&sc->ioctl_rwl, RW_WRITE | RW_INTR);
+    err = rw_enter(&sc->ioctl_rwl, RW_WRITE | RW_INTR);
     if (err == 0 && generation != sc->sc_generation) {
-        //        rw_exit(&sc->ioctl_rwl);
+        rw_exit(&sc->ioctl_rwl);
         return ENXIO;
     }
     if (err)
@@ -3884,7 +3884,7 @@ iwm_ioctl(struct _ifnet *ifp, u_long cmd, caddr_t data)
     }
     
     splx(s);
-    //    rw_exit(&sc->ioctl_rwl);
+    rw_exit(&sc->ioctl_rwl);
     
     return err;
 }
@@ -4582,7 +4582,7 @@ iwm_attach(struct iwm_softc *sc, struct pci_attach_args *pa)
     sc->sc_pcitag = pa->pa_tag;
     sc->sc_dmat = pa->pa_dmat;
     
-    //    rw_init(&sc->ioctl_rwl, "iwmioctl");
+    rw_init(&sc->ioctl_rwl, "iwmioctl");
     
     err = pci_get_capability(sc->sc_pct, sc->sc_pcitag,
                              PCI_CAP_PCIEXPRESS, &sc->sc_cap_off, NULL);
@@ -5016,9 +5016,9 @@ iwm_init_task(void *arg1)
     int generation = sc->sc_generation;
     int fatal = (sc->sc_flags & (IWM_FLAG_HW_ERR | IWM_FLAG_RFKILL));
     
-    //    rw_enter_write(&sc->ioctl_rwl);
+    rw_enter_write(&sc->ioctl_rwl);
     if (generation != sc->sc_generation) {
-        //        rw_exit(&sc->ioctl_rwl);
+        rw_exit(&sc->ioctl_rwl);
         splx(s);
         return;
     }
@@ -5031,7 +5031,7 @@ iwm_init_task(void *arg1)
     if (!fatal && (ifp->if_flags & (IFF_UP | IFF_RUNNING)) == IFF_UP)
         that->iwm_init(ifp);
     
-    //    rw_exit(&sc->ioctl_rwl);
+    rw_exit(&sc->ioctl_rwl);
     splx(s);
 }
 
@@ -5184,9 +5184,9 @@ iwm_activate(struct iwm_softc *sc, int act)
     switch (act) {
         case DVACT_QUIESCE:
             if (ifp->if_flags & IFF_RUNNING) {
-                //                rw_enter_write(&sc->ioctl_rwl);
+                rw_enter_write(&sc->ioctl_rwl);
                 iwm_stop(ifp);
-                //                rw_exit(&sc->ioctl_rwl);
+                rw_exit(&sc->ioctl_rwl);
             }
             break;
         case DVACT_RESUME:
