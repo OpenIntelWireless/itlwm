@@ -3682,13 +3682,10 @@ _iwm_start_task(OSObject *target, void *arg0, void *arg1, void *arg2, void *arg3
 #ifndef AIRPORT
             ic->ic_state != IEEE80211_S_RUN ||
 #endif
-            (ic->ic_xflags & IEEE80211_F_TX_MGMT_ONLY)) {
-            ifp->if_snd->lockFlush();
+            (ic->ic_xflags & IEEE80211_F_TX_MGMT_ONLY))
             break;
-        }
         
         m = ifp->if_snd->lockDequeue();
-//        XYLog("%s if_snd->lockDequeue\n", __FUNCTION__);
         if (!m) {
             break;
         }
