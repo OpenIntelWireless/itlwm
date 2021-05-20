@@ -99,7 +99,7 @@ sDRIVER_INFO(OSObject* target, void* data, bool isSet)
     drv_info->version = IOCTL_VERSION;
     snprintf(drv_info->bsd_name, sizeof(drv_info->bsd_name), "%s%d", ifnet_name(that->fInf->getIfnet()), ifnet_unit(that->fInf->getIfnet()));
     strncpy(drv_info->fw_version, that->fDriverInfo->getFirmwareVersion(), sizeof(drv_info->fw_version));
-    memcpy(drv_info->driver_version, ITLWM_VERSION, sizeof(drv_info->driver_version));
+    snprintf(drv_info->driver_version, sizeof(drv_info->driver_version), "%s%s", ITLWM_VERSION, GIT_COMMIT);
     return kIOReturnSuccess;
 }
 

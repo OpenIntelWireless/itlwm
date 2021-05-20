@@ -39,11 +39,11 @@ jobs:
 
     - name: Build itlwm
       run: |
-        xcodebuild -scheme itlwm -configuration Debug -derivedDataPath build | xcpretty && exit ${PIPESTATUS[0]}
+        xcodebuild -scheme itlwm -configuration Debug -derivedDataPath build GIT_COMMIT=_${SHORT_SHA} | xcpretty && exit ${PIPESTATUS[0]}
 
     - name: Build AirportItlwm
       run: |
-        xcodebuild -scheme "AirportItlwm (all)" -configuration Debug -derivedDataPath build | xcpretty && exit ${PIPESTATUS[0]}
+        xcodebuild -scheme "AirportItlwm (all)" -configuration Debug -derivedDataPath build GIT_COMMIT=_${SHORT_SHA} | xcpretty && exit ${PIPESTATUS[0]}
 
     - name: Pack Artifacts
       run: |

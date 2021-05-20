@@ -1102,7 +1102,7 @@ getDRIVER_VERSION(OSObject *object,
                                   struct apple80211_version_data *hv)
 {
     hv->version = APPLE80211_VERSION;
-    snprintf(hv->string, sizeof(hv->string), "itlwm: %s fw: %s", ITLWM_VERSION, fHalService->getDriverInfo()->getFirmwareVersion());
+    snprintf(hv->string, sizeof(hv->string), "itlwm: %s%s fw: %s", ITLWM_VERSION, GIT_COMMIT, fHalService->getDriverInfo()->getFirmwareVersion());
     hv->string_len = strlen(hv->string);
     return kIOReturnSuccess;
 }
