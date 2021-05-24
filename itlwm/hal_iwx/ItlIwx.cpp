@@ -3284,6 +3284,8 @@ iwx_setup_he_rates(struct iwx_softc *sc)
             IEEE80211_HE_PHY_CAP5_BEAMFORMEE_NUM_SND_DIM_UNDER_80MHZ_2 |
             IEEE80211_HE_PHY_CAP5_BEAMFORMEE_NUM_SND_DIM_ABOVE_80MHZ_2,
         .phy_cap_info[6] =
+            IEEE80211_HE_PHY_CAP6_TRIG_SU_BEAMFORMER_FB |
+            IEEE80211_HE_PHY_CAP6_TRIG_MU_BEAMFORMER_FB |
             IEEE80211_HE_PHY_CAP6_PPE_THRESHOLD_PRESENT,
         .phy_cap_info[7] =
             IEEE80211_HE_PHY_CAP7_POWER_BOOST_FACTOR_AR |
@@ -7235,17 +7237,13 @@ uint16_t rs_fw_get_config_flags(struct iwx_softc *sc)
         return flags;
     }
     
-    if (ic->ic_flags & IEEE80211_F_HEON) {
-        if (ni->ni_he_cap_elem.phy_cap_info[2] &
-            IEEE80211_HE_PHY_CAP2_STBC_RX_UNDER_80MHZ)
-            flags |= IWX_TLC_MNG_CFG_FLAGS_STBC_MSK;
-
-        if (ni->ni_he_cap_elem.phy_cap_info[7] &
-            IEEE80211_HE_PHY_CAP7_STBC_RX_ABOVE_80MHZ)
-            flags |= IWX_TLC_MNG_CFG_FLAGS_HE_STBC_160MHZ_MSK;
-    } else if ((ni->ni_htcaps & IEEE80211_HTCAP_RXSTBC_MASK) ||
-               ((ic->ic_flags & IEEE80211_F_VHTON) &&
-                (ni->ni_vhtcaps & IEEE80211_VHTCAP_RXSTBC_MASK)))
+    if (ic->ic_flags & IEEE80211_F_HEON &&
+        ni->ni_he_cap_elem.phy_cap_info[2] &
+        IEEE80211_HE_PHY_CAP2_STBC_RX_UNDER_80MHZ) {
+        flags |= IWX_TLC_MNG_CFG_FLAGS_STBC_MSK;
+    } else if (ni->ni_vhtcaps & IEEE80211_VHTCAP_RXSTBC_MASK)
+        flags |= IWX_TLC_MNG_CFG_FLAGS_STBC_MSK;
+    else if (ni->ni_htcaps & IEEE80211_HTCAP_RXSTBC_MASK)
         flags |= IWX_TLC_MNG_CFG_FLAGS_STBC_MSK;
     
     if (((ni->ni_htcaps & IEEE80211_HTCAP_LDPC) ||
