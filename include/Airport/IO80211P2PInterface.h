@@ -93,7 +93,9 @@ public:
 #if __IO80211_TARGET >= __MAC_10_15
     void notifyHostapState(apple80211_hostap_state *);
 #endif
+#if __IO80211_TARGET >= __MAC_10_13
     bool isAwdlAssistedDiscoveryEnabled(void);
+#endif
     void handleChannelSwitchAnnouncement(apple80211_channel_switch_announcement *);
     void awdlSetUnitNumber(char const*);
     void awdlInit(void);
