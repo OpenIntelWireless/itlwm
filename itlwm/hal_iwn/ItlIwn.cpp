@@ -5245,7 +5245,6 @@ iwn_config(struct iwn_softc *sc)
             rxchain |= (IWN_RXCHAIN_DRIVER_FORCE | IWN_RXCHAIN_MIMO_FORCE);
     }
     sc->rxon.rxchain = htole16(rxchain);
-    sc->rxon.flags |= htole32(iwn_get_rxon_ht_flags(ic, ic->ic_bss));
     DPRINTF(("setting configuration\n"));
     DPRINTF(("%s: rxon chan %d flags %x cck %x ofdm %x rxchain %x\n",
         __func__, sc->rxon.chan, le32toh(sc->rxon.flags), sc->rxon.cck_mask,
