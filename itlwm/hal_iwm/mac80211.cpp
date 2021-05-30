@@ -2838,9 +2838,9 @@ iwm_setrates(struct iwm_node *in, int async)
                     tab |= IWM_RATE_MCS_HT_MSK;
                     if (sgi_ok)
                         tab |= IWM_RATE_MCS_SGI_MSK;
-                    if (is_40mhz) {
+                    /* TODO: If we enable 40mhz Tx rate in 2.4ghz band, the data will all sent fail */
+                    if (is_40mhz && IEEE80211_IS_CHAN_5GHZ(ni->ni_chan))
                         tab |= IWM_RATE_MCS_CHAN_WIDTH_40;
-                    }
                     break;
                 }
             }
