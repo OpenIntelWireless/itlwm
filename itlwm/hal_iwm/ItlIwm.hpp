@@ -93,6 +93,7 @@ public:
                                         struct iwm_scan_channel_cfg_umac *chan, int n_ssids, int bgscan);
     
     int    iwm_is_mimo_ht_plcp(uint8_t);
+    int    iwm_is_mimo_vht_plcp(uint8_t);
     int    iwm_is_mimo_mcs(int);
     int    iwm_store_cscheme(struct iwm_softc *, uint8_t *, size_t);
     int    iwm_firmware_store_section(struct iwm_softc *, enum iwm_ucode_type,

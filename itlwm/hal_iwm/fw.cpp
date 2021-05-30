@@ -130,6 +130,13 @@ iwm_is_mimo_ht_plcp(uint8_t ht_plcp)
 }
 
 int ItlIwm::
+iwm_is_mimo_vht_plcp(uint8_t ht_plcp)
+{
+    return (ht_plcp != IWM_RATE_VHT_SISO_MCS_INV_PLCP &&
+            (ht_plcp & IWM_RATE_VHT_MCS_NSS_MSK));
+}
+
+int ItlIwm::
 iwm_is_mimo_mcs(int mcs)
 {
     int ridx = iwm_mcs2ridx[mcs];

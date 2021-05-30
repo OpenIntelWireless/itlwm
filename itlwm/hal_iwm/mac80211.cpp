@@ -1632,17 +1632,10 @@ iwm_tx_fill_cmd(struct iwm_softc *sc, struct iwm_node *in,
 
     XYLog("%s ridx=%d\n", __FUNCTION__, ridx);
     rinfo = &iwm_rates[ridx];
-    if ((IEEE80211_IS_CHAN_2GHZ(ni->ni_chan)) && (type != IEEE80211_FC0_TYPE_DATA || IEEE80211_IS_MULTICAST(wh->i_addr1))) {
-        if (sc->sc_device_family <= IWM_DEVICE_FAMILY_8000) {
-            rate_flags = (IWM_ANT_A << IWM_RATE_MCS_ANT_POS);
-        } else {
-            rate_flags = (IWM_ANT_B << IWM_RATE_MCS_ANT_POS);
-        }
-        
-    } else {
-        rate_flags = ((1 << sc->sc_mgmt_last_antenna_idx) << IWM_RATE_MCS_ANT_POS);
-        XYLog("%s antenna=%d\n", __FUNCTION__, sc->sc_mgmt_last_antenna_idx);
-    }
+    if (iwm_is_mimo_ht_plcp(rinfo->ht_plcp) || iwm_is_mimo_vht_plcp(rinfo->vht_plcp))
+        rate_flags = IWM_RATE_MCS_ANT_AB_MSK;
+    else
+        rate_flags = IWM_RATE_MCS_ANT_A_MSK;
     if (IWM_RIDX_IS_CCK(ridx))
         rate_flags |= IWM_RATE_MCS_CCK_MSK;
     tx->rate_n_flags = htole32(rate_flags | rinfo->plcp);

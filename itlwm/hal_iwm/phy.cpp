@@ -607,6 +607,8 @@ iwm_send_cmd(struct iwm_softc *sc, struct iwm_host_cmd *hcmd)
             goto out;
         }
     }
+    
+    DPRINTFN(2, ("%s: sending command 0x%x\n", __func__, code));
 
     iwm_update_sched(sc, ring->qid, ring->cur, 0, 0);
     /* Kick command ring. */
@@ -724,6 +726,8 @@ iwm_cmd_done(struct iwm_softc *sc, int qid, int idx, int code)
         data->m = NULL;
     }
     wakeupOn(&ring->desc[idx]);
+    
+    DPRINTFN(2, ("%s: command 0x%x done\n", __func__, code));
     
     if (ring->queued == 0) {
         XYLog("%s: unexpected firmware response to command 0x%x\n",
