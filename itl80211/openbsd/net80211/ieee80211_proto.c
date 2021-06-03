@@ -843,6 +843,80 @@ ieee80211_he_negotiate(struct ieee80211com *ic, struct ieee80211_node *ni)
 }
 
 void
+ieee80211_sta_set_rx_nss(struct ieee80211com *ic, struct ieee80211_node *ni)
+{
+    uint8_t ht_rx_nss = 0, vht_rx_nss = 0, he_rx_nss = 0, rx_nss;
+    bool support_160;
+
+    if (ni->ni_flags & IEEE80211_NODE_HE) {
+        int i;
+        uint8_t rx_mcs_80 = 0, rx_mcs_160 = 0;
+        uint16_t mcs_160_map =
+            le16toh(ni->ni_he_mcs_nss_supp.rx_mcs_160);
+        uint16_t mcs_80_map = le16toh(ni->ni_he_mcs_nss_supp.rx_mcs_80);
+
+        for (i = 7; i >= 0; i--) {
+            uint8_t mcs_160 = (mcs_160_map >> (2 * i)) & 3;
+
+            if (mcs_160 != IEEE80211_VHT_MCS_NOT_SUPPORTED) {
+                rx_mcs_160 = i + 1;
+                break;
+            }
+        }
+        for (i = 7; i >= 0; i--) {
+            uint8_t mcs_80 = (mcs_80_map >> (2 * i)) & 3;
+
+            if (mcs_80 != IEEE80211_VHT_MCS_NOT_SUPPORTED) {
+                rx_mcs_80 = i + 1;
+                break;
+            }
+        }
+
+        support_160 = ni->ni_he_cap_elem.phy_cap_info[0] &
+                  IEEE80211_HE_PHY_CAP0_CHANNEL_WIDTH_SET_160MHZ_IN_5G;
+
+        if (support_160)
+            he_rx_nss = min(rx_mcs_80, rx_mcs_160);
+        else
+            he_rx_nss = rx_mcs_80;
+    }
+
+    if (ni->ni_flags & IEEE80211_NODE_HT) {
+        if (ic->ic_sup_mcs[0])
+            ht_rx_nss++;
+        if (ic->ic_sup_mcs[1])
+            ht_rx_nss++;
+        if (ic->ic_sup_mcs[2])
+            ht_rx_nss++;
+        if (ic->ic_sup_mcs[3])
+            ht_rx_nss++;
+        /* FIXME: consider rx_highest? */
+    }
+
+    if (ni->ni_flags & IEEE80211_NODE_VHT) {
+        int i;
+        uint16_t rx_mcs_map;
+
+        rx_mcs_map = le16toh(ni->ni_vht_mcsinfo.rx_mcs_map);
+
+        for (i = 7; i >= 0; i--) {
+            uint8_t mcs = (rx_mcs_map >> (2 * i)) & 3;
+
+            if (mcs != IEEE80211_VHT_MCS_NOT_SUPPORTED) {
+                vht_rx_nss = i + 1;
+                break;
+            }
+        }
+        /* FIXME: consider rx_highest? */
+    }
+
+    rx_nss = max(vht_rx_nss, ht_rx_nss);
+    rx_nss = max(he_rx_nss, rx_nss);
+    ni->ni_rx_nss = max_t(u8, 1, rx_nss);
+    XYLog("%s ni_rx_nss: %d\n", __FUNCTION__, ni->ni_rx_nss);
+}
+
+void
 ieee80211_tx_ba_timeout(void *arg)
 {
 	struct ieee80211_tx_ba *ba = (struct ieee80211_tx_ba *)arg;

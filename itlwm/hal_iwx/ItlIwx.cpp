@@ -7227,7 +7227,7 @@ static uint16_t iwx_rs_fw_get_max_amsdu_len(struct ieee80211_node *ni)
 }
 
 static 
-uint16_t rs_fw_get_config_flags(struct iwx_softc *sc)
+uint16_t iwx_rs_fw_get_config_flags(struct iwx_softc *sc)
 {
     struct ieee80211com *ic = &sc->sc_ic;
     struct ieee80211_node *ni = ic->ic_bss;
@@ -7293,14 +7293,14 @@ int rs_fw_vht_highest_rx_mcs_index(struct iwx_softc *sc,
 }
 
 static void
-rs_fw_vht_set_enabled_rates(struct iwx_softc *sc,
+iwx_rs_fw_vht_set_enabled_rates(struct iwx_softc *sc,
                 struct iwx_tlc_config_cmd *cmd)
 {
     uint16_t supp;
     int i, highest_mcs;
     struct ieee80211com *ic = &sc->sc_ic;
 
-    for (i = 0; i < IWX_TLC_NSS_MAX; i++) {
+    for (i = 0; i < IWX_TLC_NSS_MAX && i < ic->ic_bss->ni_rx_nss; i++) {
         highest_mcs = rs_fw_vht_highest_rx_mcs_index(sc, i + 1);
         if (!highest_mcs)
             continue;
@@ -7332,8 +7332,20 @@ static uint16_t rs_fw_he_ieee80211_mcs_to_rs_mcs(uint16_t mcs)
     return 0;
 }
 
+static uint8_t iwx_rs_fw_set_active_chains(uint8_t chains)
+{
+    uint8_t fw_chains = 0;
+
+    if (chains & IWX_ANT_A)
+        fw_chains |= IWX_TLC_MNG_CHAIN_A_MSK;
+    if (chains & IWX_ANT_B)
+        fw_chains |= IWX_TLC_MNG_CHAIN_B_MSK;
+
+    return fw_chains;
+}
+
 static void
-rs_fw_he_set_enabled_rates(struct iwx_softc *sc,
+iwx_rs_fw_he_set_enabled_rates(struct iwx_softc *sc,
                            struct iwx_tlc_config_cmd *cmd)
 {
     struct ieee80211com *ic = &sc->sc_ic;
@@ -7344,7 +7356,7 @@ rs_fw_he_set_enabled_rates(struct iwx_softc *sc,
     uint16_t tx_mcs_160 =
     le16toh(ic->ic_he_mcs_nss_supp.tx_mcs_160);
     int i;
-    uint8_t nss = 2;
+    uint8_t nss = ic->ic_bss->ni_rx_nss;
 
     for (i = 0; i < nss && i < IWX_TLC_NSS_MAX; i++) {
         uint16_t _mcs_160 = (mcs_160 >> (2 * i)) & 0x3;
@@ -7397,11 +7409,11 @@ iwx_rs_init(struct iwx_softc *sc, struct iwx_node *in, bool update)
     if (ni->ni_flags & IEEE80211_NODE_HE) {
         XYLog("%s line=%d\n", __FUNCTION__, __LINE__);
         cfg_cmd.mode = IWX_TLC_MNG_MODE_HE;
-        rs_fw_he_set_enabled_rates(sc, &cfg_cmd);
+        iwx_rs_fw_he_set_enabled_rates(sc, &cfg_cmd);
     } else if (ni->ni_flags & IEEE80211_NODE_VHT) {
         XYLog("%s line=%d\n", __FUNCTION__, __LINE__);
         cfg_cmd.mode = IWX_TLC_MNG_MODE_VHT;
-        rs_fw_vht_set_enabled_rates(sc, &cfg_cmd);
+        iwx_rs_fw_vht_set_enabled_rates(sc, &cfg_cmd);
     } else if (ni->ni_flags & IEEE80211_NODE_HT) {
         XYLog("%s line=%d\n", __FUNCTION__, __LINE__);
         cfg_cmd.mode = IWX_TLC_MNG_MODE_HT;
@@ -7412,9 +7424,9 @@ iwx_rs_init(struct iwx_softc *sc, struct iwx_node *in, bool update)
 
     cfg_cmd.sta_id = IWX_STATION_ID;
     cfg_cmd.max_ch_width = update ? iwx_rs_fw_bw_from_sta_bw(ni->ni_chw) : IWX_RATE_MCS_CHAN_WIDTH_20;
-    cfg_cmd.chains = IWX_TLC_MNG_CHAIN_A_MSK | IWX_TLC_MNG_CHAIN_B_MSK;
+    cfg_cmd.chains = iwx_rs_fw_set_active_chains(iwx_fw_valid_tx_ant(sc));
     cfg_cmd.max_mpdu_len = iwx_rs_fw_get_max_amsdu_len(ni);
-    cfg_cmd.flags = rs_fw_get_config_flags(sc);
+    cfg_cmd.flags = iwx_rs_fw_get_config_flags(sc);
     if ((ni->ni_flags & IEEE80211_NODE_HE) == 0) {
         if (ieee80211_node_supports_ht_sgi20(ni))
             cfg_cmd.sgi_ch_width_supp = (1 << IWX_TLC_MNG_CH_WIDTH_20MHZ);

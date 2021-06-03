@@ -186,6 +186,7 @@ extern  void ieee80211_vht_negotiate(struct ieee80211com *,
     struct ieee80211_node *);
 extern  void ieee80211_he_negotiate(struct ieee80211com *,
     struct ieee80211_node *);
+extern  void ieee80211_sta_set_rx_nss(struct ieee80211com *, struct ieee80211_node *);
 extern	void ieee80211_tx_ba_timeout(void *);
 extern	void ieee80211_rx_ba_timeout(void *);
 extern	int ieee80211_addba_request(struct ieee80211com *,

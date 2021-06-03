@@ -432,6 +432,8 @@ struct ieee80211_node {
 
 	int			ni_txmcs;	/* current MCS used for TX */
 	int			ni_vht_ss;	/* VHT # spatial streams */
+    
+    uint8_t     ni_rx_nss;
 
 	/* others */
 	u_int16_t		ni_associd;	/* assoc response */
