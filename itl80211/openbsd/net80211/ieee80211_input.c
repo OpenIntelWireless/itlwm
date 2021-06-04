@@ -3054,6 +3054,8 @@ ieee80211_recv_assoc_resp(struct ieee80211com *ic, mbuf_t m,
         ieee80211_setmode(ic, IEEE80211_MODE_11N);
     else
         ieee80211_setmode(ic, ieee80211_chan2mode(ic, ni->ni_chan));
+    
+    ieee80211_sta_set_rx_nss(ic, ni);
     /*
      * Reset the erp state (mostly the slot time) now that
      * our operating mode has been nailed down.
