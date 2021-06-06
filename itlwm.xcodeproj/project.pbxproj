@@ -2186,6 +2186,7 @@
 				GCC_PREFIX_HEADER = itlwm/PrivateSPI.pch;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"$(inherited)",
+					USE_APPLE_SUPPLICANT,
 					AIRPORT,
 					"__IO80211_TARGET=__MAC_11_0",
 					__PRIVATE_SPI__,
@@ -2216,6 +2217,7 @@
 				GCC_PREFIX_HEADER = itlwm/PrivateSPI.pch;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"__IO80211_TARGET=__MAC_11_0",
+					USE_APPLE_SUPPLICANT,
 					AIRPORT,
 					__PRIVATE_SPI__,
 					"$(inherited)",
@@ -2245,6 +2247,7 @@
 				GCC_PREFIX_HEADER = itlwm/PrivateSPI.pch;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"$(inherited)",
+					USE_APPLE_SUPPLICANT,
 					AIRPORT,
 					"__IO80211_TARGET=__MAC_10_14",
 					__PRIVATE_SPI__,
@@ -2273,6 +2276,7 @@
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = itlwm/PrivateSPI.pch;
 				GCC_PREPROCESSOR_DEFINITIONS = (
+					USE_APPLE_SUPPLICANT,
 					AIRPORT,
 					"__IO80211_TARGET=__MAC_10_14",
 					__PRIVATE_SPI__,
@@ -2303,6 +2307,7 @@
 				GCC_PREFIX_HEADER = itlwm/PrivateSPI.pch;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"$(inherited)",
+					USE_APPLE_SUPPLICANT,
 					AIRPORT,
 					"__IO80211_TARGET=__MAC_10_13",
 					__PRIVATE_SPI__,
@@ -2332,6 +2337,7 @@
 				GCC_PREFIX_HEADER = itlwm/PrivateSPI.pch;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"__IO80211_TARGET=__MAC_10_13",
+					USE_APPLE_SUPPLICANT,
 					AIRPORT,
 					__PRIVATE_SPI__,
 					"$(inherited)",
@@ -2374,6 +2380,7 @@
 				GCC_PREFIX_HEADER = itlwm/PrivateSPI.pch;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"$(inherited)",
+					USE_APPLE_SUPPLICANT,
 					AIRPORT,
 					"__IO80211_TARGET=__MAC_10_15",
 					__PRIVATE_SPI__,
@@ -2405,6 +2412,7 @@
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = itlwm/PrivateSPI.pch;
 				GCC_PREPROCESSOR_DEFINITIONS = (
+					USE_APPLE_SUPPLICANT,
 					AIRPORT,
 					"__IO80211_TARGET=__MAC_10_15",
 					__PRIVATE_SPI__,

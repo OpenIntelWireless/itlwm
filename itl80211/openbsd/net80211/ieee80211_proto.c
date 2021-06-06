@@ -1563,7 +1563,7 @@ justcleanup:
 				    (ni->ni_flags & IEEE80211_NODE_HT) ?
 					" HT enabled" : "");
 			}
-#ifdef AIRPORT
+#if (defined AIRPORT) && (defined USE_APPLE_SUPPLICANT)
 			{
 #else
 			if (!(ic->ic_flags & IEEE80211_F_RSNON)) {

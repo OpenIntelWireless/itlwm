@@ -792,6 +792,7 @@ getRSSI(OSObject *object,
 IOReturn AirportItlwm::
 getRSN_IE(OSObject *object, struct apple80211_rsn_ie_data *data)
 {
+#ifdef USE_APPLE_SUPPLICANT
     struct ieee80211com *ic = fHalService->get80211Controller();
     if (ic->ic_bss == NULL || ic->ic_bss->ni_rsnie == NULL) {
         return kIOReturnError;
@@ -806,22 +807,30 @@ getRSN_IE(OSObject *object, struct apple80211_rsn_ie_data *data)
         memcpy(data->ie, ic->ic_bss->ni_rsnie, data->len);
     }
     return kIOReturnSuccess;
+#else
+    return kIOReturnUnsupported;
+#endif
 }
 
 IOReturn AirportItlwm::
 setRSN_IE(OSObject *object, struct apple80211_rsn_ie_data *data)
 {
+#ifdef USE_APPLE_SUPPLICANT
     struct ieee80211com *ic = fHalService->get80211Controller();
     static_assert(sizeof(ic->ic_rsn_ie_override) == APPLE80211_MAX_RSN_IE_LEN, "Max RSN IE length mismatch");
     memcpy(ic->ic_rsn_ie_override, data->ie, APPLE80211_MAX_RSN_IE_LEN);
     if (ic->ic_state == IEEE80211_S_RUN && ic->ic_bss != nullptr)
         ieee80211_save_ie(data->ie, &ic->ic_bss->ni_rsnie);
     return kIOReturnSuccess;
+#else
+    return kIOReturnUnsupported;
+#endif
 }
 
 IOReturn AirportItlwm::
 getAP_IE_LIST(OSObject *object, struct apple80211_ap_ie_data *data)
 {
+#ifdef USE_APPLE_SUPPLICANT
     struct ieee80211com *ic = fHalService->get80211Controller();
     if (ic->ic_bss == NULL || ic->ic_bss->ni_rsnie_tlv == NULL || ic->ic_bss->ni_rsnie_tlv_len > data->len) {
         return kIOReturnError;
@@ -830,6 +839,9 @@ getAP_IE_LIST(OSObject *object, struct apple80211_ap_ie_data *data)
     data->len = ic->ic_bss->ni_rsnie_tlv_len;
     memcpy(data->ie_data, ic->ic_bss->ni_rsnie_tlv, data->len);
     return kIOReturnSuccess;
+#else
+    return kIOReturnUnsupported;
+#endif
 }
 
 IOReturn AirportItlwm::
@@ -970,7 +982,9 @@ IOReturn AirportItlwm::setDISASSOCIATE(OSObject *object)
 
     ieee80211_del_ess(ic, nullptr, 0, 1);
     ieee80211_deselect_ess(ic);
+#ifdef USE_APPLE_SUPPLICANT
     ic->ic_rsn_ie_override[1] = 0;
+#endif
     ic->ic_assoc_status = APPLE80211_STATUS_UNAVAILABLE;
     ic->ic_deauth_reason = APPLE80211_REASON_ASSOC_LEAVING;
     ieee80211_new_state(ic, IEEE80211_S_SCAN, -1);

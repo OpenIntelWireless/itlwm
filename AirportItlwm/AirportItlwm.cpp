@@ -740,7 +740,11 @@ SInt32 AirportItlwm::monitorModeSetEnabled(
 bool AirportItlwm::
 useAppleRSNSupplicant(IO80211Interface *interface)
 {
+#ifdef USE_APPLE_SUPPLICANT
     return true;
+#else
+    return false;
+#endif
 }
 
 IOReturn AirportItlwm::getPacketFilters(const OSSymbol *group, UInt32 *filters) const
