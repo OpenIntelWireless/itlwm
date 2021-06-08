@@ -62,6 +62,20 @@
                ReferencedContainer = "container:itlwm.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "F897ECB6266EFF93005EE8F7"
+               BuildableName = "AirportItlwm.kext"
+               BlueprintName = "AirportItlwm-Monterey"
+               ReferencedContainer = "container:itlwm.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
       </BuildActionEntries>
    </BuildAction>
    <TestAction

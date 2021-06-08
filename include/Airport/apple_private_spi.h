@@ -71,4 +71,8 @@ struct ifnet_init_eparams {
     
 };
 
+#ifndef __MAC_12_0
+#define __MAC_12_0  120000
+#endif
+
 #endif /* apple_private_spi_h */
