@@ -76,7 +76,6 @@ releaseAll()
     }
     pci.pa_tag = NULL;
     pci.workloop = NULL;
-    rw_free(&com.ioctl_rwl);
 }
 
 IOReturn ItlIwm::
