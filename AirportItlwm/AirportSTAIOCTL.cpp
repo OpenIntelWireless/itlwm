@@ -1034,7 +1034,10 @@ getASSOCIATION_STATUS(OSObject *object, struct apple80211_assoc_status_data *hv)
     struct ieee80211com *ic = fHalService->get80211Controller();
     memset(hv, 0, sizeof(*hv));
     hv->version = APPLE80211_VERSION;
-    hv->status = APPLE80211_STATUS_SUCCESS;
+    if (ic->ic_state == IEEE80211_S_RUN)
+        hv->status = APPLE80211_STATUS_SUCCESS;
+    else
+        hv->status = APPLE80211_STATUS_UNAVAILABLE;
 //    XYLog("%s, %d\n", __FUNCTION__, hv->status);
     return kIOReturnSuccess;
 }
