@@ -1268,10 +1268,16 @@ getSCAN_RESULT(OSObject *object, struct apple80211_scan_result **sr)
     result->version = APPLE80211_VERSION;
     if (fNextNodeToSend->ni_rsnie_tlv) {
         result->asr_ie_len = fNextNodeToSend->ni_rsnie_tlv_len;
+#if __IO80211_TARGET < __MAC_12_0
         result->asr_ie_data = fNextNodeToSend->ni_rsnie_tlv;
+#else
+        memcpy(result->asr_ie_data, fNextNodeToSend->ni_rsnie_tlv, result->asr_ie_len);
+#endif
     } else {
         result->asr_ie_len = 0;
+#if __IO80211_TARGET < __MAC_12_0
         result->asr_ie_data = NULL;
+#endif
     }
     result->asr_beacon_int = fNextNodeToSend->ni_intval;
     for (int i = 0; i < result->asr_nrates; i++ )

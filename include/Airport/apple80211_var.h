@@ -482,15 +482,19 @@ struct apple80211_scan_result
     u_int32_t             asr_rates[ APPLE80211_MAX_RATES ]; // 0x24 - 0x5f
     u_int8_t              asr_ssid_len;   // 0x60
     u_int8_t              asr_ssid[ APPLE80211_MAX_SSID_LEN ]; // 0x61 - 0x80
-    __attribute__((packed)) __attribute__((aligned(1))) int16_t unk;
+    int16_t               unk;
     uint8_t               unk2;
     u_int32_t             asr_age;        // (ms) non-zero for cached scan result // 0x84
 
     u_int16_t             unk3;
     int16_t               asr_ie_len;
+#if __IO80211_TARGET < __MAC_12_0
     uint32_t              asr_unk3;
     void*                 asr_ie_data;
-};
+#else
+    uint8_t               asr_ie_data[1024];
+#endif
+} __attribute__((packed));
 
 struct apple80211_network_data
 {
