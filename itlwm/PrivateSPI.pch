@@ -4,3 +4,7 @@
 #ifdef __PRIVATE_SPI__
 typedef u_int32_t ifnet_ctl_cmd_t;
 #endif
+
+#ifndef __MAC_12_0
+#define __MAC_12_0  120000
+#endif
