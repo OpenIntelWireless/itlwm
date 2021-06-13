@@ -503,8 +503,10 @@ iwn_attach(struct iwn_softc *sc, struct pci_attach_args *pa)
         ic->ic_htcaps |=
             IEEE80211_HTCAP_AMSDU7935;
 #endif
+#ifdef notyet
         if (sc->hw_type != IWN_HW_REV_TYPE_4965)
             ic->ic_htcaps |= IEEE80211_HTCAP_GF;
+#endif
         if (sc->hw_type == IWN_HW_REV_TYPE_6050)
             ic->ic_htcaps |= IEEE80211_HTCAP_SMPS_DYN << IEEE80211_HTCAP_SMPS_SHIFT;
         else
