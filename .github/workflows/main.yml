@@ -64,18 +64,17 @@ jobs:
         git log -"5" --format="- %H %s" | sed '/^$/d' >> ReleaseNotes.md
 
     - name: Delete Old Prerelease
-      uses: dev-drprasad/delete-tag-and-release@v0.1.2
+      uses: dev-drprasad/delete-tag-and-release@v0.2.0
       with:
         tag_name: ${{ env.OLD_PRE_TAG }}
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Publish GitHub Release
-      uses: ncipollo/release-action@v1
+      uses: ncipollo/release-action@v1.8.6
       with:
         prerelease: true
         bodyFile: ReleaseNotes.md
         artifacts: "${{ env.BUILD_OUTPUT }}/*.zip"
         tag: "v${{ env.ITLWM_VER }}-alpha"
         token: ${{ secrets.GITHUB_TOKEN }}
-

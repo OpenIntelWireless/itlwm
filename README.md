@@ -4,7 +4,7 @@
 
 ## Documentation
 
-We highly recommended exploring our documentation before using this Kernel Extension
+We highly recommend exploring our documentation before using this Kernel Extension
 
 - [Intro](https://OpenIntelWireless.github.io/itlwm)
 - [Compatibility](https://openintelwireless.github.io/itlwm/Compat)
@@ -35,7 +35,7 @@ We only accept bug reports in GitHub Issues, before opening an issue, you're rec
 - [pigworlds](https://github.com/OpenIntelWireless/itlwm/commits?author=pigworlds) for DVM devices support, MIRA bug fixes, and Tx aggregation for MVM Gen 1 devices
 - [rpeshkov](https://github.com/rpeshkov) for [black80211](https://github.com/rpeshkov/black80211)
 - [usr-sse2](https://github.com/zxystd) for implementing the usage of Apple RSN Supplicant and bug fixes
-- [zxystd](https://github.com/zxystd) for developing [itlwm](https://github.com/OpenIntelWireless/zxystd)
+- [zxystd](https://github.com/zxystd) for developing [itlwm](https://github.com/OpenIntelWireless/itlwm)
 
 ## Acknowledgements
 
