@@ -238,11 +238,6 @@ iwm_nic_lock(struct iwm_softc *sc)
 void ItlIwm::
 iwm_nic_assert_locked(struct iwm_softc *sc)
 {
-    uint32_t reg = IWM_READ(sc, IWM_CSR_GP_CNTRL);
-    if ((reg & IWM_CSR_GP_CNTRL_REG_FLAG_MAC_CLOCK_READY) == 0)
-        panic("%s: mac clock not ready", DEVNAME(sc));
-    if (reg & IWM_CSR_GP_CNTRL_REG_FLAG_GOING_TO_SLEEP)
-        panic("%s: mac gone to sleep", DEVNAME(sc));
     if (sc->sc_nic_locks <= 0)
         panic("%s: nic locks counter %d", DEVNAME(sc), sc->sc_nic_locks);
 }
