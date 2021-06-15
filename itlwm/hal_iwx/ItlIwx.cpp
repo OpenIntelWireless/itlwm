@@ -1144,6 +1144,8 @@ iwx_read_firmware(struct iwx_softc *sc)
     sc->sc_capaflags = 0;
     sc->sc_capa_n_scan_channels = IWX_DEFAULT_SCAN_CHANNELS;
     memset(sc->sc_enabled_capa, 0, sizeof(sc->sc_enabled_capa));
+    memset(sc->sc_ucode_api, 0, sizeof(sc->sc_ucode_api));
+    sc->n_cmd_versions = 0;
     memcpy(sc->sc_fw_mcc, "ZZ", sizeof(sc->sc_fw_mcc));
     sc->sc_fw_mcc_int = 0x3030;
     
