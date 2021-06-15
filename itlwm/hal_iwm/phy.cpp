@@ -432,10 +432,14 @@ iwm_binding_cmd(struct iwm_softc *sc, struct iwm_node *in, uint32_t action)
     int i, err, active = (sc->sc_flags & IWM_FLAG_BINDING_ACTIVE);
     uint32_t status;
     
-    if (action == IWM_FW_CTXT_ACTION_ADD && active)
-        panic("binding already added");
-    if (action == IWM_FW_CTXT_ACTION_REMOVE && !active)
-        panic("binding already removed");
+    if (action == IWM_FW_CTXT_ACTION_ADD && active) {
+        XYLog("binding already added\n");
+        return 0;
+    }
+    if (action == IWM_FW_CTXT_ACTION_REMOVE && !active) {
+        XYLog("binding already removed\n");
+        return 0;
+    }
     
     if (phyctxt == NULL) /* XXX race with iwm_stop() */
         return EINVAL;

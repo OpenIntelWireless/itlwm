@@ -5090,10 +5090,14 @@ iwx_binding_cmd(struct iwx_softc *sc, struct iwx_node *in, uint32_t action)
     int i, err, active = (sc->sc_flags & IWX_FLAG_BINDING_ACTIVE);
     uint32_t status;
     
-    if (action == IWX_FW_CTXT_ACTION_ADD && active)
-        panic("binding already added");
-    if (action == IWX_FW_CTXT_ACTION_REMOVE && !active)
-        panic("binding already removed");
+    if (action == IWX_FW_CTXT_ACTION_ADD && active) {
+        XYLog("binding already added\n");
+        return 0;
+    }
+    if (action == IWX_FW_CTXT_ACTION_REMOVE && !active) {
+        XYLog("binding already removed\n");
+        return 0;
+    }
     
     if (phyctxt == NULL) /* XXX race with iwx_stop() */
         return EINVAL;
@@ -6008,8 +6012,10 @@ iwx_add_sta_cmd(struct iwx_softc *sc, struct iwx_node *in, int update)
     uint32_t status, agg_size = 0;
     struct ieee80211com *ic = &sc->sc_ic;
     
-    if (!update && (sc->sc_flags & IWX_FLAG_STA_ACTIVE))
-        panic("STA already added");
+    if (!update && (sc->sc_flags & IWX_FLAG_STA_ACTIVE)) {
+        XYLog("STA already added\n");
+        return 0;
+    }
     
     memset(&add_sta_cmd, 0, sizeof(add_sta_cmd));
     
@@ -6146,8 +6152,10 @@ iwx_rm_sta_cmd(struct iwx_softc *sc, struct iwx_node *in)
     struct iwx_rm_sta_cmd rm_sta_cmd;
     int err;
     
-    if ((sc->sc_flags & IWX_FLAG_STA_ACTIVE) == 0)
-        panic("sta already removed");
+    if ((sc->sc_flags & IWX_FLAG_STA_ACTIVE) == 0) {
+        XYLog("sta already removed\n");
+        return 0;
+    }
     
     memset(&rm_sta_cmd, 0, sizeof(rm_sta_cmd));
     if (ic->ic_opmode == IEEE80211_M_MONITOR)
@@ -6902,10 +6910,14 @@ iwx_mac_ctxt_cmd(struct iwx_softc *sc, struct iwx_node *in, uint32_t action,
     struct iwx_mac_ctx_cmd cmd;
     int active = (sc->sc_flags & IWX_FLAG_MAC_ACTIVE);
     
-    if (action == IWX_FW_CTXT_ACTION_ADD && active)
-        panic("MAC already added");
-    if (action == IWX_FW_CTXT_ACTION_REMOVE && !active)
-        panic("MAC already removed");
+    if (action == IWX_FW_CTXT_ACTION_ADD && active) {
+        XYLog("MAC already added\n");
+        return 0;
+    }
+    if (action == IWX_FW_CTXT_ACTION_REMOVE && !active) {
+        XYLog("MAC already removed\n");
+        return 0;
+    }
     
     memset(&cmd, 0, sizeof(cmd));
     

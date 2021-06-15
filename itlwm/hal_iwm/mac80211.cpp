@@ -2146,10 +2146,14 @@ iwm_mac_ctxt_cmd(struct iwm_softc *sc, struct iwm_node *in, uint32_t action,
     struct iwm_mac_ctx_cmd cmd;
     int active = (sc->sc_flags & IWM_FLAG_MAC_ACTIVE);
     
-    if (action == IWM_FW_CTXT_ACTION_ADD && active)
-        panic("MAC already added");
-    if (action == IWM_FW_CTXT_ACTION_REMOVE && !active)
-        panic("MAC already removed");
+    if (action == IWM_FW_CTXT_ACTION_ADD && active) {
+        XYLog("MAC already added");
+        return 0;
+    }
+    if (action == IWM_FW_CTXT_ACTION_REMOVE && !active) {
+        XYLog("MAC already removed");
+        return 0;
+    }
     
     memset(&cmd, 0, sizeof(cmd));
     

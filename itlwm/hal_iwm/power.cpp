@@ -263,8 +263,10 @@ iwm_add_sta_cmd(struct iwm_softc *sc, struct iwm_node *in, int update, unsigned 
     size_t cmdsize;
     struct ieee80211com *ic = &sc->sc_ic;
     
-    if (!update && (sc->sc_flags & IWM_FLAG_STA_ACTIVE))
-        panic("STA already added");
+    if (!update && (sc->sc_flags & IWM_FLAG_STA_ACTIVE)) {
+        XYLog("STA already added\n");
+        return 0;
+    }
     
     memset(&add_sta_cmd, 0, sizeof(add_sta_cmd));
     
@@ -445,8 +447,10 @@ iwm_rm_sta_cmd(struct iwm_softc *sc, struct iwm_node *in)
     int err;
     uint8_t qid;
     
-    if ((sc->sc_flags & IWM_FLAG_STA_ACTIVE) == 0)
-        panic("sta already removed");
+    if ((sc->sc_flags & IWM_FLAG_STA_ACTIVE) == 0) {
+        XYLog("sta already removed\n");
+        return 0;
+    }
     
     if (ic->ic_opmode == IEEE80211_M_STA) {
         err = iwm_drain_sta(sc, in, true);
