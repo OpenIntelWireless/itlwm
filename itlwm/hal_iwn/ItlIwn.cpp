@@ -503,8 +503,10 @@ iwn_attach(struct iwn_softc *sc, struct pci_attach_args *pa)
         ic->ic_htcaps |=
             IEEE80211_HTCAP_AMSDU7935;
 #endif
+#ifdef notyet
         if (sc->hw_type != IWN_HW_REV_TYPE_4965)
             ic->ic_htcaps |= IEEE80211_HTCAP_GF;
+#endif
         if (sc->hw_type == IWN_HW_REV_TYPE_6050)
             ic->ic_htcaps |= IEEE80211_HTCAP_SMPS_DYN << IEEE80211_HTCAP_SMPS_SHIFT;
         else
@@ -3605,8 +3607,6 @@ iwn_tx(struct iwn_softc *sc, mbuf_t m, struct ieee80211_node *ni)
                 tx->rflags |= IWN_RFLAG_SGI;
             }
         }
-        if (ni->ni_htcaps & IEEE80211_HTCAP_GF)
-            tx->rflags |= IWN_RFLAG_GREENFIELD;
         if (iwn_is_mimo_ht_plcp(rinfo->ht_plcp))
             tx->rflags |= IWN_RFLAG_ANT(sc->txchainmask);
         else
@@ -4009,7 +4009,7 @@ iwn_set_link_quality(struct iwn_softc *sc, struct ieee80211_node *ni)
     struct iwn_cmd_link_quality linkq;
     struct ieee80211_rateset *rs = &ni->ni_rates;
     uint8_t txant;
-    int i, ridx, ridx_min, ridx_max, j, sgi_ok = 0, is_40mhz = 0, gf = 0, mimo, tab = 0, rflags = 0;
+    int i, ridx, ridx_min, ridx_max, j, sgi_ok = 0, is_40mhz = 0, mimo, tab = 0, rflags = 0;
 
     /* Use the first valid TX antenna. */
     txant = IWN_LSB(sc->txchainmask);
@@ -4037,11 +4037,6 @@ iwn_set_link_quality(struct iwn_softc *sc, struct ieee80211_node *ni)
         } else {
             sgi_ok = 0;
         }
-    }
-    
-    if ((ni->ni_flags & IEEE80211_NODE_HT) &&
-        ni->ni_htcaps & IEEE80211_HTCAP_GF) {
-        gf = 1;
     }
     
     /*
@@ -4082,8 +4077,6 @@ iwn_set_link_quality(struct iwn_softc *sc, struct ieee80211_node *ni)
                         rflags |= IWN_RFLAG_SGI;
                     if (is_40mhz)
                         rflags |= IWN_RFLAG_HT40;
-                    if (gf)
-                        rflags |= IWN_RFLAG_GREENFIELD;
                     break;
                 }
             }
