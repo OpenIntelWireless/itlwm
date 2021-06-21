@@ -4521,7 +4521,6 @@ iwx_rx_reorder(struct iwx_softc *sc, mbuf_t m, int chanidx,
 
     type = wh->i_fc[0] & IEEE80211_FC0_TYPE_MASK;
     subtype = wh->i_fc[0] & IEEE80211_FC0_SUBTYPE_MASK;
-    ni = ieee80211_find_rxnode(ic, wh);
 
     /*
      * We are only interested in Block Ack requests and unicast QoS data.
@@ -4562,6 +4561,7 @@ iwx_rx_reorder(struct iwx_softc *sc, mbuf_t m, int chanidx,
         buffer->valid = 1;
     }
 
+    ni = ieee80211_find_rxnode(ic, wh);
     if (type == IEEE80211_FC0_TYPE_CTL &&
         subtype == IEEE80211_FC0_SUBTYPE_BAR) {
         iwx_release_frames(sc, ni, rxba, buffer, nssn, ml);
@@ -4602,6 +4602,7 @@ iwx_rx_reorder(struct iwx_softc *sc, mbuf_t m, int chanidx,
         if (iwx_is_sn_less(buffer->head_sn, nssn, buffer->buf_size) &&
            (!is_amsdu || last_subframe))
             buffer->head_sn = nssn;
+        ieee80211_release_node(ic, ni);
         return 0;
     }
 
@@ -4616,6 +4617,7 @@ iwx_rx_reorder(struct iwx_softc *sc, mbuf_t m, int chanidx,
     if (!buffer->num_stored && sn == buffer->head_sn) {
         if (!is_amsdu || last_subframe)
             buffer->head_sn = (buffer->head_sn + 1) & 0xfff;
+        ieee80211_release_node(ic, ni);
         return 0;
     }
 
@@ -4671,10 +4673,12 @@ iwx_rx_reorder(struct iwx_softc *sc, mbuf_t m, int chanidx,
     if (!is_amsdu || last_subframe)
         iwx_release_frames(sc, ni, rxba, buffer, nssn, ml);
 
+    ieee80211_release_node(ic, ni);
     return 1;
 
 drop:
     mbuf_freem(m);
+    ieee80211_release_node(ic, ni);
     return 1;
 }
 
