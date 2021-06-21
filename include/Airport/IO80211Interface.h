@@ -112,7 +112,9 @@ public:
     virtual void setEnabledBySystem(bool);
 
     virtual bool setLinkState(IO80211LinkState, unsigned int);
+#if __IO80211_TARGET >= __MAC_10_11
     virtual bool setLinkState(IO80211LinkState, int, unsigned int);
+#endif
     virtual UInt32 outputPacket(mbuf_t, void*);
 
     virtual bool setLinkQualityMetric(int);

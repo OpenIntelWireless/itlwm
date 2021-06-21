@@ -166,8 +166,10 @@ public:
     virtual void requestPacketTx(void*, UInt);
     virtual IOReturn getHardwareAddressForInterface(IO80211Interface *,IOEthernetAddress *);
     virtual void inputMonitorPacket(mbuf_t,UInt,void *,unsigned long);
+#if __IO80211_TARGET >= __MAC_10_11
     virtual int outputRaw80211Packet(IO80211Interface *,mbuf_t);
     virtual int outputActionFrame(IO80211Interface *,mbuf_t);
+#endif
     virtual int bpfOutputPacket(OSObject *,UInt,mbuf_t m);
     virtual SInt32 monitorModeSetEnabled(IO80211Interface*, bool, UInt);
     virtual IO80211Interface* getNetworkInterface(void);

@@ -115,7 +115,9 @@ public:
     static void fakeScanDone(OSObject *owner, IOTimerEventSource *sender);
     //authentication
     virtual bool useAppleRSNSupplicant(IO80211Interface *interface) override;
+#if __IO80211_TARGET >= __MAC_10_11
     virtual int outputRaw80211Packet(IO80211Interface *interface, mbuf_t m) override;
+#endif
     //virtual interface
     virtual SInt32 enableVirtualInterface(IO80211VirtualInterface *interface) override;
     virtual SInt32 disableVirtualInterface(IO80211VirtualInterface *interface) override;
