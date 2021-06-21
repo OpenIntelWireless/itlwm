@@ -484,8 +484,12 @@ bool AirportItlwm::initPCIPowerManagment(IOPCIDevice *provider)
 
 bool AirportItlwm::createWorkLoop()
 {
-    _fWorkloop = IO80211WorkLoop::workLoop();
-    return _fWorkloop != 0;
+    _fWorkloop = nullptr;
+    if (super::createWorkLoop())
+    {
+        _fWorkloop = OSDynamicCast(IO80211WorkLoop, super::getWorkLoop());
+    }
+    return _fWorkloop != nullptr;
 }
 
 IOWorkLoop *AirportItlwm::getWorkLoop() const

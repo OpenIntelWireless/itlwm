@@ -199,11 +199,13 @@ public:
     virtual bool requiresExplicitMBufRelease() {
         return false;
     }
+#if __IO80211_TARGET >= __MAC_10_12
     virtual bool flowIdSupported() {
         return false;
     }
     virtual IO80211FlowQueueLegacy* requestFlowQueue(FlowIdMetadata const*);
     virtual void releaseFlowQueue(IO80211FlowQueue *);
+#endif
 #if __IO80211_TARGET >= __MAC_10_15
     virtual void getLogPipes(CCPipe**, CCPipe**, CCPipe**) {};
 #endif
@@ -215,8 +217,10 @@ public:
         return kIOReturnUnsupported;
     }
 #endif
+#if __IO80211_TARGET >= __MAC_10_12
     virtual UInt32 selfDiagnosticsReport(int,char const*,UInt);
     virtual UInt32 getDataQueueDepth(OSObject *);
+#endif
 #if __IO80211_TARGET >= __MAC_11_0
     virtual bool isAssociatedToMovingNetwork(void) { return false; }
 #endif
