@@ -896,12 +896,15 @@ IOReturn AirportItlwm::registerWithPolicyMaker(IOService *policyMaker)
 
 void AirportItlwm::setPowerStateOff()
 {
+    XYLog("%s\n", __FUNCTION__);
     pmPowerState = kPowerStateOff;
+    disableAdapter(fNetIf);
     pmPolicyMaker->acknowledgeSetPowerState();
 }
 
 void AirportItlwm::setPowerStateOn()
 {
+    XYLog("%s\n", __FUNCTION__);
     pmPowerState = kPowerStateOn;
     pmPolicyMaker->acknowledgeSetPowerState();
 }
