@@ -999,7 +999,7 @@ getSUPPORTED_CHANNELS(OSObject *object, struct apple80211_sup_channel_data *ad)
     struct ieee80211com *ic = fHalService->get80211Controller();
     for (int i = 0; i < IEEE80211_CHAN_MAX; i++) {
         if (ic->ic_channels[i].ic_freq != 0) {
-            ad->supported_channels[ad->num_channels++].channel = ieee80211_chan2ieee(ic, &ic->ic_channels[i]);
+            ad->supported_channels[ad->num_channels].channel = ieee80211_chan2ieee(ic, &ic->ic_channels[i]);
             ad->supported_channels[ad->num_channels].flags = ieeeChanFlag2apple(ic->ic_channels[i].ic_flags, -1);
             ad->num_channels++;
         }
