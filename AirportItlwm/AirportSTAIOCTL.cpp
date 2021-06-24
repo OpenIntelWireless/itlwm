@@ -1197,7 +1197,7 @@ setSCAN_REQ(OSObject *object,
     if (ic->ic_state <= IEEE80211_S_INIT) {
         return 22;
     }
-    if (sd->scan_type == APPLE80211_SCAN_TYPE_FAST) {
+    if (sd->scan_type == APPLE80211_SCAN_TYPE_FAST || sd->scan_type == APPLE80211_SCAN_TYPE_PASSIVE) {
         if (scanSource) {
             scanSource->setTimeoutMS(100);
             scanSource->enable();
