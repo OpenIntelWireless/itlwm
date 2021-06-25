@@ -368,6 +368,7 @@ bool AirportItlwm::start(IOService *provider)
         super::stop(pciNub);
         return false;
     }
+    _fWorkloop = OSDynamicCast(IO80211WorkLoop, getWorkLoop());
     if (_fWorkloop == NULL) {
         XYLog("No _fWorkloop!!\n");
         super::stop(pciNub);
@@ -482,21 +483,6 @@ bool AirportItlwm::initPCIPowerManagment(IOPCIDevice *provider)
     return true;
 }
 
-bool AirportItlwm::createWorkLoop()
-{
-    _fWorkloop = nullptr;
-    if (super::createWorkLoop())
-    {
-        _fWorkloop = OSDynamicCast(IO80211WorkLoop, super::getWorkLoop());
-    }
-    return _fWorkloop != nullptr;
-}
-
-IOWorkLoop *AirportItlwm::getWorkLoop() const
-{
-    return _fWorkloop;
-}
-
 IOReturn AirportItlwm::selectMedium(const IONetworkMedium *medium)
 {
     setSelectedMedium(medium);
@@ -587,7 +573,7 @@ void AirportItlwm::releaseAll()
             fWatchdogWorkLoop->release();
             fWatchdogWorkLoop = NULL;
         }
-        _fWorkloop->release();
+//        _fWorkloop->release();
         _fWorkloop = NULL;
     }
     unregistPM();
