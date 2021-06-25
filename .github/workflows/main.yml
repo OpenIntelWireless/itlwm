@@ -6,6 +6,7 @@ on:
 
 env:
   BUILD_OUTPUT: 'build/Build/Products/Debug'
+  BUILD_LEGACY_OUTPUT: 'build-legacy/Build/Products/Debug'
 
 jobs:
 
@@ -45,10 +46,27 @@ jobs:
       run: |
         xcodebuild -scheme "AirportItlwm (all)" -configuration Debug -derivedDataPath build GIT_COMMIT=_${SHORT_SHA} | xcpretty && exit ${PIPESTATUS[0]}
 
-    - name: Pack Artifacts
+    - name: Build AirportItlwm-legacy
+      run: |
+        xcodebuild -scheme "AirportItlwm-legacy" -configuration Debug -derivedDataPath build-legacy GIT_COMMIT=_${SHORT_SHA} | xcpretty && exit ${PIPESTATUS[0]}
+
+    - name: Pack Artifacts itlwm
       run: |
         cd $BUILD_OUTPUT
           zip -r itlwm-v${ITLWM_VER}-DEBUG-alpha-${SHORT_SHA}.zip itlwm.kext
+        cd -
+
+    - name: Pack Artifacts AirportItlwm
+      run: |
+        cd $BUILD_OUTPUT
+          while read -r tgt ; do
+            zip -r AirportItlwm-${tgt// /_}-v${ITLWM_VER}-DEBUG-alpha-${SHORT_SHA}.zip "$tgt"
+          done < <(find . -mindepth 1 -maxdepth 1 -type d -not -path "*.kext" | cut -c 3-)
+        cd -
+
+    - name: Pack Artifacts AirportItlwm-legacy
+      run: |
+        cd $BUILD_LEGACY_OUTPUT
           while read -r tgt ; do
             zip -r AirportItlwm-${tgt// /_}-v${ITLWM_VER}-DEBUG-alpha-${SHORT_SHA}.zip "$tgt"
           done < <(find . -mindepth 1 -maxdepth 1 -type d -not -path "*.kext" | cut -c 3-)
@@ -78,3 +96,21 @@ jobs:
         artifacts: "${{ env.BUILD_OUTPUT }}/*.zip"
         tag: "v${{ env.ITLWM_VER }}-alpha"
         token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Upload to Artifacts itlwm
+      uses: actions/upload-artifact@v2
+      with:
+        name: itlwm
+        path: "${{ env.BUILD_OUTPUT }}/itlwm-*.zip"
+
+    - name: Upload to Artifacts AirportItlwm
+      uses: actions/upload-artifact@v2
+      with:
+        name: AirportItlwm
+        path: "${{ env.BUILD_OUTPUT }}/AirportItlwm-*.zip"
+
+    - name: Upload to Artifacts AirportItlwm-legacy
+      uses: actions/upload-artifact@v2
+      with:
+        name: AirportItlwm-legacy
+        path: "${{ env.BUILD_LEGACY_OUTPUT }}/AirportItlwm-*.zip"
