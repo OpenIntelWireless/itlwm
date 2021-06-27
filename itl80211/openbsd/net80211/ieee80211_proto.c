@@ -1612,6 +1612,7 @@ ieee80211_set_link_state(struct ieee80211com *ic, int nstate)
 	}
     link_state = nstate;
     if (link_state != ifp->if_link_state) {
+        ifp->if_link_state = link_state;
         if (link_state == LINK_STATE_UP) {
             XYLog("%s LINK_STATE_IS_UP\n", __FUNCTION__);
             ifp->controller->setLinkStatus(kIONetworkLinkValid | kIONetworkLinkActive, ifp->controller->getCurrentMedium());
@@ -1619,7 +1620,6 @@ ieee80211_set_link_state(struct ieee80211com *ic, int nstate)
             XYLog("%s LINK_STATE_IS_DOWN\n", __FUNCTION__);
             ifp->controller->setLinkStatus(kIONetworkLinkValid);
         }
-        ifp->if_link_state = link_state;
     }
 //	if (nstate != ifp->if_link_state) {
 //		ifp->if_link_state = nstate;

@@ -516,7 +516,7 @@ void AirportItlwm::stop(IOService *provider)
 bool AirportItlwm::
 setLinkStatus(UInt32 status, const IONetworkMedium * activeMedium, UInt64 speed, OSData * data)
 {
-    _ifnet *ifq = &fHalService->get80211Controller()->ic_ac.ac_if;
+    struct _ifnet *ifq = &fHalService->get80211Controller()->ic_ac.ac_if;
     if (status == currentStatus) {
         return true;
     }
@@ -528,13 +528,8 @@ setLinkStatus(UInt32 status, const IONetworkMedium * activeMedium, UInt64 speed,
             fNetIf->startOutputThread();
 #endif
             ifq_set_oactive(&ifq->if_snd);
-            fNetIf->setLinkState(kIO80211NetworkLinkUp, 0);
+            getCommandGate()->runAction(setLinkStateGated, (void *)kIO80211NetworkLinkUp, (void *)0);
             fNetIf->setLinkQualityMetric(100);
-            fNetIf->postMessage(APPLE80211_M_LINK_CHANGED);
-            if (fAWDLInterface) {
-                fAWDLInterface->setLinkState(kIO80211NetworkLinkUp, 0);
-                fAWDLInterface->postMessage(APPLE80211_M_LINK_CHANGED);
-            }
         } else if (!(status & kIONetworkLinkNoNetworkChange)) {
 #ifdef __PRIVATE_SPI__
             fNetIf->stopOutputThread();
@@ -543,15 +538,17 @@ setLinkStatus(UInt32 status, const IONetworkMedium * activeMedium, UInt64 speed,
             ifq->if_snd->lockFlush();
             mq_purge(&fHalService->get80211Controller()->ic_mgtq);
             ifq_clr_oactive(&ifq->if_snd);
-            fNetIf->setLinkState(kIO80211NetworkLinkDown, fHalService->get80211Controller()->ic_deauth_reason);
-            fNetIf->postMessage(APPLE80211_M_LINK_CHANGED);
-            if (fAWDLInterface) {
-                fAWDLInterface->setLinkState(kIO80211NetworkLinkDown, fHalService->get80211Controller()->ic_deauth_reason);
-                fAWDLInterface->postMessage(APPLE80211_M_LINK_CHANGED);
-            }
+            getCommandGate()->runAction(setLinkStateGated, (void *)kIO80211NetworkLinkDown, (void *)fHalService->get80211Controller()->ic_deauth_reason);
         }
     }
     return ret;
+}
+
+IOReturn AirportItlwm::
+setLinkStateGated(OSObject *target, void *arg0, void *arg1, void *arg2, void *arg3)
+{
+    AirportItlwm *that = OSDynamicCast(AirportItlwm, target);
+    return that->getNetworkInterface()->setLinkState((IO80211LinkState)(uint64_t)arg0, (unsigned int)(uint64_t)arg1);
 }
 
 void AirportItlwm::releaseAll()
@@ -660,7 +657,7 @@ IOReturn AirportItlwm::getHardwareAddressForInterface(
 #ifdef __PRIVATE_SPI__
 IOReturn AirportItlwm::outputStart(IONetworkInterface *interface, IOOptionBits options)
 {
-    _ifnet *ifp = &fHalService->get80211Controller()->ic_ac.ac_if;
+    struct _ifnet *ifp = &fHalService->get80211Controller()->ic_ac.ac_if;
     mbuf_t m = NULL;
     if (!ifq_is_oactive(&ifp->if_snd)) {
         return kIOReturnNoResources;
@@ -679,7 +676,7 @@ UInt32 AirportItlwm::outputPacket(mbuf_t m, void *param)
 {
 //    XYLog("%s\n", __FUNCTION__);
     IOReturn ret = kIOReturnOutputSuccess;
-    _ifnet *ifp = &fHalService->get80211Controller()->ic_ac.ac_if;
+    struct _ifnet *ifp = &fHalService->get80211Controller()->ic_ac.ac_if;
     
     if (fHalService->get80211Controller()->ic_state != IEEE80211_S_RUN || ifp->if_snd == NULL) {
         if (m && mbuf_type(m) != MBUF_TYPE_FREE) {
