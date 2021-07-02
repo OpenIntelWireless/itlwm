@@ -288,6 +288,8 @@ struct iwx_rx_ring {
 	struct iwx_dma_info	stat_dma;
 	struct iwx_dma_info	used_desc_dma;
 	struct iwx_dma_info	buf_dma;
+    struct iwx_dma_info tr_tail_dma;
+    struct iwx_dma_info cr_tail_dma;
 	void			*desc;
 	struct iwx_rb_status	*stat;
 	struct iwx_rx_data	data[IWX_RX_MQ_RING_COUNT];
@@ -404,6 +406,8 @@ struct iwl_cfg {
     int device_family;
     int tx_with_siso_diversity;
     int uhb_supported;
+    uint8_t max_tx_agg_size;
+    uint16_t num_rbds;
 };
 
 /**
@@ -571,6 +575,10 @@ struct iwx_softc {
 
 	struct iwx_dma_info ctxt_info_dma;
 	struct iwx_self_init_dram init_dram;
+    /* For gen3 */
+    struct iwx_dma_info prph_scratch_dma;
+    struct iwx_dma_info prph_info_dma;
+    struct iwx_dma_info iml_dma;
 
 	int sc_fw_chunk_done;
 	int sc_init_complete;
@@ -591,6 +599,9 @@ struct iwx_softc {
 	int n_cmd_versions;
     char sc_fw_mcc[3];
     uint16_t sc_fw_mcc_int;
+#define IWX_IML_MAX_LEN 4096*10
+    uint32_t sc_iml_len;
+    uint8_t sc_iml[IWX_IML_MAX_LEN];
 
 	int sc_intmask;
 	int sc_flags;

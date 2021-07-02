@@ -75,6 +75,17 @@
 #define IWX_MAX_DRAM_ENTRY    64
 #define IWX_CSR_CTXT_INFO_BA    0x40
 
+#define IWX_CSR_CTXT_INFO_BOOT_CTRL         0x0
+#define IWX_CSR_CTXT_INFO_ADDR              0x118
+#define IWX_CSR_IML_DATA_ADDR               0x120
+#define IWX_CSR_IML_SIZE_ADDR               0x128
+#define IWX_CSR_IML_RESP_ADDR               0x12c
+
+/* Set bit for enabling automatic function boot */
+#define IWX_CSR_AUTO_FUNC_BOOT_ENA          (1 << 1)
+/* Set bit for initiating function boot */
+#define IWX_CSR_AUTO_FUNC_INIT              (1 << 7)
+
 /**
  * enum iwx_context_info_flags - Context information control flags
  * @IWX_CTXT_INFO_AUTO_FUNC_INIT: If set, FW will not wait before interrupting
@@ -271,6 +282,49 @@ enum iwx_prph_scratch_flags {
     IWX_PRPH_SCRATCH_RB_SIZE_EXT_12K    = 9 << 20,
 };
 
+/**
+ * enum iwx_ini_cfg_state
+ * @IWX_INI_CFG_STATE_NOT_LOADED: no debug cfg was given
+ * @IWX_INI_CFG_STATE_LOADED: debug cfg was found and loaded
+ * @IWX_INI_CFG_STATE_CORRUPTED: debug cfg was found and some of the TLVs
+ *    are corrupted. The rest of the debug TLVs will still be used
+ */
+enum iwx_ini_cfg_state {
+    IWX_INI_CFG_STATE_NOT_LOADED,
+    IWX_INI_CFG_STATE_LOADED,
+    IWX_INI_CFG_STATE_CORRUPTED,
+};
+
+/**
+ * enum iwx_fw_ini_buffer_location
+ *
+ * @IWX_FW_INI_LOCATION_INVALID: invalid
+ * @IWX_FW_INI_LOCATION_SRAM_PATH: SRAM location
+ * @IWX_FW_INI_LOCATION_DRAM_PATH: DRAM location
+ * @IWX_FW_INI_LOCATION_NPK_PATH: NPK location
+ */
+enum iwx_fw_ini_buffer_location {
+    IWX_FW_INI_LOCATION_INVALID,
+    IWX_FW_INI_LOCATION_SRAM_PATH,
+    IWX_FW_INI_LOCATION_DRAM_PATH,
+    IWX_FW_INI_LOCATION_NPK_PATH,
+    IWX_FW_INI_LOCATION_NUM,
+}; /* FW_DEBUG_TLV_BUFFER_LOCATION_E_VER_1 */
+
+/**
+ * enum iwx_prph_scratch_mtr_format - tfd size configuration
+ * @IWL_PRPH_MTR_FORMAT_16B: 16 bit tfd
+ * @IWL_PRPH_MTR_FORMAT_32B: 32 bit tfd
+ * @IWL_PRPH_MTR_FORMAT_64B: 64 bit tfd
+ * @IWL_PRPH_MTR_FORMAT_256B: 256 bit tfd
+ */
+enum iwx_prph_scratch_mtr_format {
+    IWX_PRPH_MTR_FORMAT_16B = 0x0,
+    IWX_PRPH_MTR_FORMAT_32B = 0x40000,
+    IWX_PRPH_MTR_FORMAT_64B = 0x80000,
+    IWX_PRPH_MTR_FORMAT_256B = 0xC0000,
+};
+
 /*
  * struct iwx_prph_scratch_version - version structure
  * @mac_id: SKU and revision id
@@ -450,6 +504,59 @@ struct iwx_context_info_gen3 {
 /* cb size is the exponent */
 #define IWX_RX_QUEUE_CB_SIZE(x)    ((sizeof(x) <= 4) ? (_fls(x) - 1) : (flsl(x) - 1))
 
+#define GEN3_UMAC_PRPH_OFFSET    0x300000
+
+/**
+ * struct iwx_fw_ini_header - Common Header for all ini debug TLV's structures
+ *
+ * @version: TLV version
+ * @domain: domain of the TLV. One of &enum iwl_fw_ini_dbg_domain
+ * @data: TLV data
+ */
+struct iwx_fw_ini_header {
+    __le32 version;
+    __le32 domain;
+    u8 data[];
+} __packed; /* FW_TLV_DEBUG_HEADER_S_VER_1 */
+
+/**
+ * struct iwx_fw_ini_allocation_tlv - Allocates DRAM buffers
+ *
+ * @hdr: debug header
+ * @alloc_id: allocation id. One of &enum iwl_fw_ini_allocation_id
+ * @buf_location: buffer location. One of &enum iwl_fw_ini_buffer_location
+ * @req_size: requested buffer size
+ * @max_frags_num: maximum number of fragments
+ * @min_size: minimum buffer size
+ */
+struct iwx_fw_ini_allocation_tlv {
+    struct iwx_fw_ini_header hdr;
+    __le32 alloc_id;
+    __le32 buf_location;
+    __le32 req_size;
+    __le32 max_frags_num;
+    __le32 min_size;
+} __packed; /* FW_TLV_DEBUG_BUFFER_ALLOCATION_API_S_VER_1 */
+
+/**
+ * enum iwx_fw_ini_allocation_id
+ *
+ * @IWX_FW_INI_ALLOCATION_INVALID: invalid
+ * @IWX_FW_INI_ALLOCATION_ID_DBGC1: allocation meant for DBGC1 configuration
+ * @IWX_FW_INI_ALLOCATION_ID_DBGC2: allocation meant for DBGC2 configuration
+ * @IWX_FW_INI_ALLOCATION_ID_DBGC3: allocation meant for DBGC3 configuration
+ * @IWX_FW_INI_ALLOCATION_ID_INTERNAL: allocation meant for Intreanl SMEM in D3
+ * @IWX_FW_INI_ALLOCATION_NUM: number of allocation ids
+*/
+enum iwx_fw_ini_allocation_id {
+    IWX_FW_INI_ALLOCATION_INVALID,
+    IWX_FW_INI_ALLOCATION_ID_DBGC1,
+    IWX_FW_INI_ALLOCATION_ID_DBGC2,
+    IWX_FW_INI_ALLOCATION_ID_DBGC3,
+    IWX_FW_INI_ALLOCATION_ID_INTERNAL,
+    IWX_FW_INI_ALLOCATION_NUM,
+}; /* FW_DEBUG_TLV_ALLOCATION_ID_E_VER_1 */
+
 /*
  * CSR (control and status registers)
  *
@@ -517,6 +624,21 @@ struct iwx_context_info_gen3 {
 #define IWX_CSR_DRAM_INT_TBL_REG    (0x0A0)
 #define IWX_CSR_MAC_SHADOW_REG_CTRL    (0x0A8) /* 6000 and up */
 
+/* LTR control (since IWL_DEVICE_FAMILY_22000) */
+#define IWX_CSR_LTR_LONG_VAL_AD            0x0D4
+#define IWX_CSR_LTR_LONG_VAL_AD_NO_SNOOP_REQ    0x80000000
+#define IWX_CSR_LTR_LONG_VAL_AD_NO_SNOOP_SCALE    0x1c000000
+#define IWX_CSR_LTR_LONG_VAL_AD_NO_SNOOP_VAL    0x03ff0000
+#define IWX_CSR_LTR_LONG_VAL_AD_SNOOP_REQ        0x00008000
+#define IWX_CSR_LTR_LONG_VAL_AD_SNOOP_SCALE        0x00001c00
+#define IWX_CSR_LTR_LONG_VAL_AD_SNOOP_VAL        0x000003ff
+#define IWX_CSR_LTR_LONG_VAL_AD_SCALE_USEC        2
+
+/* LTR control (Qu only) */
+#define IWX_HPM_MAC_LTR_CSR            0xa0348c
+#define IWX_HPM_MAC_LRT_ENABLE_ALL        0xf
+/* also uses CSR_LTR_* for values */
+#define IWX_HPM_UMAC_LTR            0xa03480
 
 /* GIO Chicken Bits (PCI Express bus link power management) */
 #define IWX_CSR_GIO_CHICKEN_BITS    (0x100)
@@ -1533,8 +1655,7 @@ struct iwx_rb_status {
 #define IWX_TFD_QUEUE_SIZE_BC_DUP    (64)
 #define IWX_TFD_QUEUE_BC_SIZE        (IWX_TFD_QUEUE_SIZE_MAX + \
                     IWX_TFD_QUEUE_SIZE_BC_DUP)
-#define IWX_TFD_QUEUE_BC_SIZE_GEN3    (IWX_TFD_QUEUE_SIZE_MAX_GEN3 + \
-                    IWX_TFD_QUEUE_SIZE_BC_DUP)
+#define IWX_TFD_QUEUE_BC_SIZE_GEN3    1024
 #define IWX_TFH_NUM_TBS        25
 
 /**
@@ -6965,6 +7086,12 @@ iwx_rx_packet_payload_len(const struct iwx_rx_packet *pkt)
 
 #define IWX_WRITE(sc, reg, val)                        \
     bus_space_write_4((sc)->sc_st, (sc)->sc_sh, (reg), (val))
+
+#define IWX_WRITE64(sc, reg, val)                        \
+do {   \
+    IWX_WRITE((sc), (uint32_t)(reg), (val) & 0xffffffff);   \
+    IWX_WRITE((sc), (uint32_t)(reg) + 4, (val) >> 32);  \
+} while(0)
 
 #define IWX_WRITE_1(sc, reg, val)                    \
     bus_space_write_1((sc)->sc_st, (sc)->sc_sh, (reg), (val))

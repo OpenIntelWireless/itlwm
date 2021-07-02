@@ -892,6 +892,102 @@ monitor:
     return 0;
 }
 
+void ItlIwx::
+iwx_set_ltr(struct iwx_softc *sc)
+{
+    uint32_t ltr_val = IWX_CSR_LTR_LONG_VAL_AD_NO_SNOOP_REQ |
+                    u32_encode_bits(IWX_CSR_LTR_LONG_VAL_AD_SCALE_USEC,
+                    IWX_CSR_LTR_LONG_VAL_AD_NO_SNOOP_SCALE) |
+                    u32_encode_bits(250,
+                    IWX_CSR_LTR_LONG_VAL_AD_NO_SNOOP_VAL) |
+                    IWX_CSR_LTR_LONG_VAL_AD_SNOOP_REQ |
+                    u32_encode_bits(IWX_CSR_LTR_LONG_VAL_AD_SCALE_USEC,
+                    IWX_CSR_LTR_LONG_VAL_AD_SNOOP_SCALE) |
+                    u32_encode_bits(250, IWX_CSR_LTR_LONG_VAL_AD_SNOOP_VAL);
+    
+    /*
+     * To workaround hardware latency issues during the boot process,
+     * initialize the LTR to ~250 usec (see ltr_val above).
+     * The firmware initializes this again later (to a smaller value).
+     */
+    if ((sc->sc_device_family == IWX_DEVICE_FAMILY_22560 ||
+         sc->sc_device_family == IWX_DEVICE_FAMILY_22000) &&
+        !sc->sc_integrated) {
+        IWX_WRITE(sc, IWX_CSR_LTR_LONG_VAL_AD, ltr_val);
+    } else if (sc->sc_integrated &&
+           sc->sc_device_family == IWX_DEVICE_FAMILY_22000) {
+        if (iwx_nic_lock(sc)) {
+            iwx_write_prph(sc, IWX_HPM_MAC_LTR_CSR, IWX_HPM_MAC_LRT_ENABLE_ALL);
+            iwx_write_prph(sc, IWX_HPM_UMAC_LTR, ltr_val);
+            iwx_nic_unlock(sc);
+        }
+    }
+}
+
+static inline bool iwl_trans_dbg_ini_valid(struct iwx_softc *sc)
+{
+    return false;
+}
+
+int ItlIwx::
+iwx_ctxt_info_dbg_enable(struct iwx_softc *sc, struct iwx_prph_scratch_hwm_cfg *dbg_cfg, uint32_t *control_flags)
+{
+//    enum iwx_fw_ini_allocation_id alloc_id = IWX_FW_INI_ALLOCATION_ID_DBGC1;
+//    struct iwx_fw_ini_allocation_tlv *fw_mon_cfg;
+//    uint32_t dbg_flags = 0;
+//    
+//    if (!iwl_trans_dbg_ini_valid(sc)) {
+//        struct iwx_dma_info *fw_mon = &sc->fw_mon;
+//
+//        iwx_alloc_fw_monitor(sc, 0);
+//
+//        if (fw_mon->size) {
+//            dbg_flags |= IWX_PRPH_SCRATCH_EDBG_DEST_DRAM;
+//
+//            XYLog("WRT: Applying DRAM buffer destination\n");
+//
+//            dbg_cfg->hwm_base_addr = htole64(fw_mon->paddr);
+//            dbg_cfg->hwm_size = htole32(fw_mon->size);
+//        }
+//
+//        goto out;
+//    }
+//    
+//    fw_mon_cfg = &trans->dbg.fw_mon_cfg[alloc_id];
+//    
+//    switch (le32toh(fw_mon_cfg->buf_location)) {
+//        case IWX_FW_INI_LOCATION_SRAM_PATH:
+//            dbg_flags |= IWX_PRPH_SCRATCH_EDBG_DEST_INTERNAL;
+//            XYLog("WRT: Applying SMEM buffer destination\n");
+//            break;
+//            
+//        case IWX_FW_INI_LOCATION_NPK_PATH:
+//            dbg_flags |= IWX_PRPH_SCRATCH_EDBG_DEST_TB22DTF;
+//            XYLog("WRT: Applying NPK buffer destination\n");
+//            break;
+//            
+//        case IWX_FW_INI_LOCATION_DRAM_PATH:
+//            if (trans->dbg.fw_mon_ini[alloc_id].num_frags) {
+//                struct iwx_dram_data *frag =
+//                &trans->dbg.fw_mon_ini[alloc_id].frags[0];
+//                dbg_flags |= IWX_PRPH_SCRATCH_EDBG_DEST_DRAM;
+//                dbg_cfg->hwm_base_addr = cpu_to_le64(frag->physical);
+//                dbg_cfg->hwm_size = cpu_to_le32(frag->size);
+//                XYLog("WRT: Applying DRAM destination (alloc_id=%u, num_frags=%u)\n",
+//                      alloc_id,
+//                      trans->dbg.fw_mon_ini[alloc_id].num_frags);
+//            }
+//            break;
+//        default:
+//            XYLog("WRT: Invalid buffer destination\n");
+//    }
+//out:
+//    if (dbg_flags)
+//        *control_flags |= IWX_PRPH_SCRATCH_EARLY_DEBUG_EN | dbg_flags;
+//    
+    return 0;
+}
+
 int ItlIwx::
 iwx_ctxt_info_init(struct iwx_softc *sc, const struct iwx_fw_sects *fws)
 {
@@ -899,7 +995,6 @@ iwx_ctxt_info_init(struct iwx_softc *sc, const struct iwx_fw_sects *fws)
     struct iwx_context_info *ctxt_info;
     struct iwx_context_info_rbd_cfg *rx_cfg;
     uint32_t control_flags = 0, rb_size;
-    uint64_t paddr;
     int err;
     
     ctxt_info = (struct iwx_context_info *)sc->ctxt_info_dma.vaddr;
@@ -910,10 +1005,7 @@ iwx_ctxt_info_init(struct iwx_softc *sc, const struct iwx_fw_sects *fws)
     /* size is in DWs */
     ctxt_info->version.size = htole16(sizeof(*ctxt_info) / 4);
     
-    if (sc->sc_device_family >= IWX_DEVICE_FAMILY_22560)
-        rb_size = IWX_CTXT_INFO_RB_SIZE_2K;
-    else
-        rb_size = IWX_CTXT_INFO_RB_SIZE_4K;
+    rb_size = IWX_CTXT_INFO_RB_SIZE_4K;
     
     KASSERT(IWX_RX_QUEUE_CB_SIZE(IWX_MQ_RX_TABLE_SIZE) < 0xF, "IWX_RX_QUEUE_CB_SIZE(IWX_MQ_RX_TABLE_SIZE) < 0xF");
     control_flags = IWX_CTXT_INFO_TFD_FORMAT_LONG |
@@ -952,14 +1044,9 @@ iwx_ctxt_info_init(struct iwx_softc *sc, const struct iwx_fw_sects *fws)
     
     iwx_enable_fwload_interrupt(sc);
     
-    /*
-      * Write the context info DMA base address. The device expects a
-      * 64-bit address but a simple bus_space_write_8 to this register
-      * won't work on some devices, such as the AX201.
-      */
-     paddr = sc->ctxt_info_dma.paddr;
-     IWX_WRITE(sc, IWX_CSR_CTXT_INFO_BA, paddr & 0xffffffff);
-     IWX_WRITE(sc, IWX_CSR_CTXT_INFO_BA + 4, paddr >> 32);
+    IWX_WRITE64(sc, IWX_CSR_CTXT_INFO_BA, sc->ctxt_info_dma.paddr);
+    
+    iwx_set_ltr(sc);
     
     /* kick FW self load */
     if (!iwx_nic_lock(sc))
@@ -970,6 +1057,128 @@ iwx_ctxt_info_init(struct iwx_softc *sc, const struct iwx_fw_sects *fws)
     /* Context info will be released upon alive or failure to get one */
     
     return 0;
+}
+
+#define IWL_NUM_OF_COMPLETION_RINGS    31
+//#define IWL_NUM_OF_TRANSFER_RINGS    527
+#define IWL_NUM_OF_TRANSFER_RINGS   IWX_TX_RING_COUNT
+
+int ItlIwx::
+iwx_ctxt_info_gen3_init(struct iwx_softc *sc, const struct iwx_fw_sects *fws)
+{
+    XYLog("%s\n", __FUNCTION__);
+    struct iwx_context_info_gen3 *ctxt_info_gen3;
+    struct iwx_prph_scratch *prph_scratch;
+    struct iwx_prph_scratch_ctrl_cfg *prph_sc_ctrl;
+    uint32_t control_flags = 0;
+    int err;
+    
+    /* Allocate prph scratch. */
+    err = iwx_dma_contig_alloc(sc->sc_dmat, &sc->prph_scratch_dma,
+                               sizeof(struct iwx_prph_scratch), 2048);
+    if (err) {
+        XYLog("%s: could not allocate prph scratch\n", DEVNAME(sc));
+        return false;
+    }
+    
+    prph_scratch = (struct iwx_prph_scratch *)sc->prph_scratch_dma.vaddr;
+    
+    prph_sc_ctrl = &prph_scratch->ctrl_cfg;
+    prph_sc_ctrl->version.version = 0;
+    prph_sc_ctrl->version.mac_id =
+        htole16((uint16_t)IWX_READ(sc, IWX_CSR_HW_REV));
+    prph_sc_ctrl->version.size = htole16(sizeof(*prph_scratch) / 4);
+    
+    control_flags |= IWX_PRPH_SCRATCH_MTR_MODE;
+    control_flags |= IWX_PRPH_MTR_FORMAT_256B & IWX_PRPH_SCRATCH_MTR_FORMAT;
+    
+    /* initialize RX default queue */
+    prph_sc_ctrl->rbd_cfg.free_rbd_addr =
+        htole64(sc->rxq.free_desc_dma.paddr);
+    
+    /* allocate ucode sections in dram and set addresses */
+    err = iwx_init_fw_sec(sc, fws, &prph_scratch->dram);
+    if (err) {
+        iwx_ctxt_info_free_fw_img(sc);
+        return err;
+    }
+    
+    iwx_ctxt_info_dbg_enable(sc, &prph_sc_ctrl->hwm_cfg, &control_flags);
+    
+    prph_sc_ctrl->control.control_flags = htole32(control_flags);
+    
+    /* Allocate prph information. */
+    err = iwx_dma_contig_alloc(sc->sc_dmat, &sc->prph_info_dma,
+                               sizeof(struct iwx_prph_info), 32);
+    if (err) {
+        XYLog("%s: could not allocate prph information\n", DEVNAME(sc));
+        goto fail0;
+    }
+    
+    ctxt_info_gen3 = (struct iwx_context_info_gen3 *)sc->ctxt_info_dma.vaddr;
+    
+    ctxt_info_gen3->prph_info_base_addr =
+        htole64(sc->prph_info_dma.paddr);
+    ctxt_info_gen3->prph_scratch_base_addr =
+        htole64(sc->prph_scratch_dma.paddr);
+    ctxt_info_gen3->prph_scratch_size =
+        htole32(sizeof(*prph_scratch));
+    ctxt_info_gen3->cr_head_idx_arr_base_addr =
+        htole64(sc->rxq.stat_dma.paddr);
+    ctxt_info_gen3->tr_tail_idx_arr_base_addr =
+        htole64(sc->rxq.tr_tail_dma.paddr);
+    ctxt_info_gen3->cr_tail_idx_arr_base_addr =
+        htole64(sc->rxq.cr_tail_dma.paddr);
+    ctxt_info_gen3->cr_idx_arr_size =
+        htole16(IWL_NUM_OF_COMPLETION_RINGS);
+    ctxt_info_gen3->tr_idx_arr_size =
+        htole16(IWL_NUM_OF_TRANSFER_RINGS);
+    ctxt_info_gen3->mtr_base_addr =
+        htole64(sc->txq[IWX_DQA_CMD_QUEUE].desc_dma.paddr);
+    ctxt_info_gen3->mcr_base_addr =
+        htole64(sc->rxq.used_desc_dma.paddr);
+    ctxt_info_gen3->mtr_size =
+        htole16(IWX_TFD_QUEUE_CB_SIZE(IWX_TX_RING_COUNT));
+    ctxt_info_gen3->mcr_size =
+        htole16(IWX_RX_QUEUE_CB_SIZE(IWX_RX_MQ_RING_COUNT));
+    
+    /* Allocate IML. */
+    err = iwx_dma_contig_alloc(sc->sc_dmat, &sc->iml_dma,
+                               sc->sc_iml_len, 16);
+    if (err) {
+        XYLog("%s: could not allocate IML\n", DEVNAME(sc));
+        goto fail1;
+    }
+    
+    memcpy(sc->iml_dma.vaddr, sc->sc_iml, sc->sc_iml_len);
+    
+    iwx_enable_fwload_interrupt(sc);
+    
+    /* kick FW self load */
+    IWX_WRITE64(sc, IWX_CSR_CTXT_INFO_ADDR,
+            sc->ctxt_info_dma.paddr);
+    IWX_WRITE64(sc, IWX_CSR_IML_DATA_ADDR,
+            sc->iml_dma.paddr);
+    IWX_WRITE(sc, IWX_CSR_IML_SIZE_ADDR, sc->sc_iml_len);
+
+    IWX_SETBITS(sc, IWX_CSR_CTXT_INFO_BOOT_CTRL,
+            IWX_CSR_AUTO_FUNC_BOOT_ENA);
+    
+    iwx_set_ltr(sc);
+    
+    if (!iwx_nic_lock(sc))
+        return EBUSY;
+    iwx_write_umac_prph(sc, IWX_UREG_CPU_INIT_RUN, 1);
+    iwx_nic_unlock(sc);
+    
+    return 0;
+    
+fail1:
+    iwx_dma_contig_free(&sc->iml_dma);
+fail0:
+    iwx_dma_contig_free(&sc->prph_info_dma);
+    iwx_dma_contig_free(&sc->prph_scratch_dma);
+    return ENOMEM;
 }
 
 void ItlIwx::
@@ -1439,6 +1648,16 @@ iwx_read_firmware(struct iwx_softc *sc)
             case IWX_UCODE_TLV_FW_MEM_SEG:
                 break;
                 
+            case IWX_UCODE_TLV_IML:
+                if (sizeof(sc->sc_iml) < tlv_len) {
+                    XYLog("IML max len mismatch. len1: %zu len2: %zu\n", sizeof(sc->sc_iml), tlv_len);
+                    err = EINVAL;
+                    goto parse_out;
+                }
+                sc->sc_iml_len = (uint32_t)tlv_len;
+                memcpy(sc->sc_iml, tlv_data, sc->sc_iml_len);
+                break;
+                
             case IWX_UCODE_TLV_CMD_VERSIONS:
                 if (tlv_len % sizeof(struct iwx_fw_cmd_version)) {
                     tlv_len /= sizeof(struct iwx_fw_cmd_version);
@@ -1469,7 +1688,7 @@ iwx_read_firmware(struct iwx_softc *sc)
                     err = EINVAL;
                     goto parse_out;
                 }
-                XYLog("TLV_FW_FSEQ_VERSION: %s\n", __FUNCTION__, seq_ver->version);
+                XYLog("TLV_FW_FSEQ_VERSION: %s\n", seq_ver->version);
             }
                 break;
                 
@@ -1540,24 +1759,62 @@ out:
     return err;
 }
 
+static uint32_t iwx_prph_msk(struct iwx_softc *sc)
+{
+    if (sc->sc_device_family >= IWX_DEVICE_FAMILY_22560)
+        return 0x00FFFFFF;
+    else
+        return 0x000FFFFF;
+}
+
+uint32_t ItlIwx::
+iwx_read_prph_unlocked(struct iwx_softc *sc, uint32_t addr)
+{
+    IWX_WRITE(sc,
+              IWX_HBUS_TARG_PRPH_RADDR, ((addr & iwx_prph_msk(sc)) | (3 << 24)));
+    IWX_BARRIER_READ_WRITE(sc);
+    return IWX_READ(sc, IWX_HBUS_TARG_PRPH_RDAT);
+}
+
 uint32_t ItlIwx::
 iwx_read_prph(struct iwx_softc *sc, uint32_t addr)
 {
     iwx_nic_assert_locked(sc);
+    return iwx_read_prph_unlocked(sc, addr);
+}
+
+uint32_t ItlIwx::
+iwx_read_umac_prph(struct iwx_softc *sc, uint32_t addr)
+{
+    int off = 0;
+    if (sc->sc_device_family >= IWX_DEVICE_FAMILY_22560)
+        off = GEN3_UMAC_PRPH_OFFSET;
+    return iwx_read_prph(sc, off + addr);
+}
+
+void ItlIwx::
+iwx_write_prph_unlocked(struct iwx_softc *sc, uint32_t addr, uint32_t val)
+{
     IWX_WRITE(sc,
-              IWX_HBUS_TARG_PRPH_RADDR, ((addr & 0x000fffff) | (3 << 24)));
-    IWX_BARRIER_READ_WRITE(sc);
-    return IWX_READ(sc, IWX_HBUS_TARG_PRPH_RDAT);
+              IWX_HBUS_TARG_PRPH_WADDR, ((addr & iwx_prph_msk(sc)) | (3 << 24)));
+    IWX_BARRIER_WRITE(sc);
+    IWX_WRITE(sc, IWX_HBUS_TARG_PRPH_WDAT, val);
+}
+
+void ItlIwx::
+iwx_write_umac_prph(struct iwx_softc *sc, uint32_t addr, uint32_t val)
+{
+    int off = 0;
+    if (sc->sc_device_family >= IWX_DEVICE_FAMILY_22560)
+        off = GEN3_UMAC_PRPH_OFFSET;
+    iwx_write_prph(sc, off + addr, val);
 }
 
 void ItlIwx::
 iwx_write_prph(struct iwx_softc *sc, uint32_t addr, uint32_t val)
 {
     iwx_nic_assert_locked(sc);
-    IWX_WRITE(sc,
-              IWX_HBUS_TARG_PRPH_WADDR, ((addr & 0x000fffff) | (3 << 24)));
-    IWX_BARRIER_WRITE(sc);
-    IWX_WRITE(sc, IWX_HBUS_TARG_PRPH_WDAT, val);
+    iwx_write_prph_unlocked(sc, addr, val);
 }
 
 void ItlIwx::
@@ -1785,6 +2042,20 @@ iwx_alloc_rx_ring(struct iwx_softc *sc, struct iwx_rx_ring *ring)
     }
     ring->desc = ring->free_desc_dma.vaddr;
     
+    err = iwx_dma_contig_alloc(sc->sc_dmat, &ring->tr_tail_dma, sizeof(uint16_t), 2);
+    if (err) {
+        XYLog("%s: could not allocate RX ring TR tail DMA memory\n",
+              DEVNAME(sc));
+        goto fail;
+    }
+    
+    err = iwx_dma_contig_alloc(sc->sc_dmat, &ring->cr_tail_dma, sizeof(uint16_t), 2);
+    if (err) {
+        XYLog("%s: could not allocate RX ring CR tail DMA memory\n",
+              DEVNAME(sc));
+        goto fail;
+    }
+    
     /* Allocate RX status area (16-byte aligned). */
     err = iwx_dma_contig_alloc(sc->sc_dmat, &ring->stat_dma,
                                sizeof(*ring->stat), 16);
@@ -1864,6 +2135,8 @@ iwx_free_rx_ring(struct iwx_softc *sc, struct iwx_rx_ring *ring)
     iwx_dma_contig_free(&ring->free_desc_dma);
     iwx_dma_contig_free(&ring->stat_dma);
     iwx_dma_contig_free(&ring->used_desc_dma);
+    iwx_dma_contig_free(&ring->cr_tail_dma);
+    iwx_dma_contig_free(&ring->tr_tail_dma);
     
     for (i = 0; i < IWX_RX_MQ_RING_COUNT; i++) {
         struct iwx_rx_data *data = &ring->data[i];
@@ -3819,7 +4092,10 @@ iwx_load_firmware(struct iwx_softc *sc)
     sc->sc_uc.uc_intr = 0;
     
     fws = &sc->sc_fw.fw_sects[IWX_UCODE_TYPE_REGULAR];
-    err = iwx_ctxt_info_init(sc, fws);
+    if (sc->sc_device_family >= IWX_DEVICE_FAMILY_22560)
+        err = iwx_ctxt_info_gen3_init(sc, fws);
+    else
+        err = iwx_ctxt_info_init(sc, fws);
     if (err) {
         XYLog("%s: could not init context info\n", DEVNAME(sc));
         return err;
@@ -9380,7 +9656,7 @@ iwx_rx_pkt(struct iwx_softc *sc, struct iwx_rx_data *data, struct mbuf_list *ml)
                 struct iwx_alive_resp_v4 *resp4;
                 struct iwx_alive_resp_v5 *resp5;
                 
-//                DPRINTF(("%s: firmware alive, size=%d\n", __FUNCTION__, iwx_rx_packet_payload_len(pkt)));
+                DPRINTF(("%s: firmware alive, size=%d\n", __FUNCTION__, iwx_rx_packet_payload_len(pkt)));
                 if (iwx_rx_packet_payload_len(pkt) == sizeof(*resp4)) {
                     SYNC_RESP_STRUCT(resp4, pkt, struct iwx_alive_resp_v4 *);
                     sc->sc_uc.uc_lmac_error_event_table[0] = le32toh(
@@ -9655,7 +9931,7 @@ iwx_notif_intr(struct iwx_softc *sc)
 int ItlIwx::
 iwx_intr(OSObject *object, IOInterruptEventSource* sender, int count)
 {
-//    XYLog("Interrupt!!!\n");
+    XYLog("Interrupt!!!\n");
     ItlIwx *that = (ItlIwx*)object;
     struct iwx_softc *sc = &that->com;
     int handled = 0;
@@ -9900,6 +10176,26 @@ iwx_intr_msix(OSObject *object, IOInterruptEventSource* sender, int count)
 .pm_sub_vid = PCI_ANY_ID, .pm_sub_dev = (subdev), \
 .drv_data = (void *)&(cfg)
 
+/*
+ * If the device doesn't support HE, no need to have that many buffers.
+ * 22000 devices can split multiple frames into a single RB, so fewer are
+ * needed; AX210 cannot (but use smaller RBs by default) - these sizes
+ * were picked according to 8 MSDUs inside 256 A-MSDUs in an A-MPDU, with
+ * additional overhead to account for processing time.
+ */
+#define IWL_NUM_RBDS_NON_HE        512
+#define IWL_NUM_RBDS_22000_HE        2048
+#define IWL_NUM_RBDS_AX210_HE        4096
+
+/*
+ * A-MPDU buffer sizes
+ * According to HT size varies from 8 to 64 frames
+ * HE adds the ability to have up to 256 frames.
+ */
+#define IEEE80211_MIN_AMPDU_BUF        0x8
+#define IEEE80211_MAX_AMPDU_BUF_HT    0x40
+#define IEEE80211_MAX_AMPDU_BUF        0x100
+
 const struct iwl_cfg_trans_params iwl_qu_trans_cfg = {
     .device_family = IWX_DEVICE_FAMILY_22000,
     .integrated = 1,
@@ -9958,12 +10254,14 @@ const struct iwl_cfg iwlax210_2ax_cfg_so_jf_a0 = {
     .name = "Intel(R) Wireless-AC 9560 160MHz",
     .fwname = "iwlwifi-so-a0-jf-b0-59.ucode",
     .device_family = IWX_DEVICE_FAMILY_22560,
+    .num_rbds = IWL_NUM_RBDS_NON_HE,
 };
 
 const struct iwl_cfg iwlax210_2ax_cfg_so_hr_a0 = {
     .name = "Intel(R) Wi-Fi 6 AX210 160MHz",
     .fwname = "iwlwifi-so-a0-hr-b0-59.ucode",
     .device_family = IWX_DEVICE_FAMILY_22560,
+    .num_rbds = IWL_NUM_RBDS_NON_HE,
 };
 
 const struct iwl_cfg iwlax211_2ax_cfg_so_gf_a0 = {
@@ -9971,6 +10269,7 @@ const struct iwl_cfg iwlax211_2ax_cfg_so_gf_a0 = {
     .fwname = "iwlwifi-so-a0-gf-a0-59.ucode",
     .uhb_supported = 1,
     .device_family = IWX_DEVICE_FAMILY_22560,
+    .num_rbds = IWL_NUM_RBDS_AX210_HE,
 };
 
 const struct iwl_cfg iwlax211_2ax_cfg_so_gf_a0_long = {
@@ -9980,6 +10279,7 @@ const struct iwl_cfg iwlax211_2ax_cfg_so_gf_a0_long = {
     .device_family = IWX_DEVICE_FAMILY_22560,
     .trans.xtal_latency = 12000,
     .trans.low_latency_xtal = 1,
+    .num_rbds = IWL_NUM_RBDS_AX210_HE,
 };
 
 const struct iwl_cfg iwlax210_2ax_cfg_ty_gf_a0 = {
@@ -9987,6 +10287,7 @@ const struct iwl_cfg iwlax210_2ax_cfg_ty_gf_a0 = {
     .fwname = "iwlwifi-ty-a0-gf-a0-59.ucode",
     .uhb_supported = 1,
     .device_family = IWX_DEVICE_FAMILY_22560,
+    .num_rbds = IWL_NUM_RBDS_AX210_HE,
 };
 
 const struct iwl_cfg iwlax411_2ax_cfg_so_gf4_a0 = {
@@ -9994,6 +10295,7 @@ const struct iwl_cfg iwlax411_2ax_cfg_so_gf4_a0 = {
     .fwname = "iwlwifi-so-a0-gf4-a0-59.ucode",
     .uhb_supported = 1,
     .device_family = IWX_DEVICE_FAMILY_22560,
+    .num_rbds = IWL_NUM_RBDS_AX210_HE,
 };
 
 const struct iwl_cfg iwlax411_2ax_cfg_so_gf4_a0_long = {
@@ -10003,6 +10305,7 @@ const struct iwl_cfg iwlax411_2ax_cfg_so_gf4_a0_long = {
     .device_family = IWX_DEVICE_FAMILY_22560,
     .trans.xtal_latency = 12000,
     .trans.low_latency_xtal = 1,
+    .num_rbds = IWL_NUM_RBDS_AX210_HE,
 };
 
 const struct iwl_cfg iwlax411_2ax_cfg_sosnj_gf4_a0 = {
@@ -10010,6 +10313,7 @@ const struct iwl_cfg iwlax411_2ax_cfg_sosnj_gf4_a0 = {
     .fwname = "iwlwifi-SoSnj-a0-gf4-a0-59.ucode",
     .uhb_supported = 1,
     .device_family = IWX_DEVICE_FAMILY_22560,
+    .num_rbds = IWL_NUM_RBDS_AX210_HE,
 };
 
 const struct iwl_cfg iwlax211_cfg_snj_gf_a0 = {
@@ -10017,58 +10321,74 @@ const struct iwl_cfg iwlax211_cfg_snj_gf_a0 = {
     .fwname = "iwlwifi-SoSnj-a0-gf-a0-59.ucode",
     .uhb_supported = 1,
     .device_family = IWX_DEVICE_FAMILY_22560,
+    .num_rbds = IWL_NUM_RBDS_AX210_HE,
 };
 
 const struct iwl_cfg iwl_cfg_snj_hr_b0 = {
     .fwname = "iwlwifi-SoSnj-a0-hr-b0-59.ucode",
     .uhb_supported = 1,
     .device_family = IWX_DEVICE_FAMILY_22560,
+    .num_rbds = IWL_NUM_RBDS_AX210_HE,
 };
 
 const struct iwl_cfg iwl_cfg_snj_a0_jf_b0 = {
     .fwname = "iwlwifi-SoSnj-a0-jf-b0-59.ucode",
     .uhb_supported = 1,
     .device_family = IWX_DEVICE_FAMILY_22560,
+    .num_rbds = IWL_NUM_RBDS_AX210_HE,
 };
 
 const struct iwl_cfg iwl_cfg_ma_a0_hr_b0 = {
     .fwname = "iwlwifi-ma-a0-hr-b0-59.ucode",
     .uhb_supported = 1,
     .device_family = IWX_DEVICE_FAMILY_22560,
+    .num_rbds = IWL_NUM_RBDS_AX210_HE,
 };
 
 const struct iwl_cfg iwl_cfg_ma_a0_gf_a0 = {
     .fwname = "iwlwifi-ma-a0-gf-a0-59.ucode",
     .uhb_supported = 1,
     .device_family = IWX_DEVICE_FAMILY_22560,
+    .num_rbds = IWL_NUM_RBDS_AX210_HE,
 };
 
 const struct iwl_cfg iwl_cfg_ma_a0_gf4_a0 = {
     .fwname = "iwlwifi-ma-a0-gf4-a0-59.ucode",
     .uhb_supported = 1,
     .device_family = IWX_DEVICE_FAMILY_22560,
+    .num_rbds = IWL_NUM_RBDS_AX210_HE,
 };
 
 const struct iwl_cfg iwl_cfg_ma_a0_mr_a0 = {
     .fwname = "iwlwifi-ma-a0-mr-a0-59.ucode",
     .uhb_supported = 1,
     .device_family = IWX_DEVICE_FAMILY_22560,
+    .num_rbds = IWL_NUM_RBDS_AX210_HE,
 };
 
 const struct iwl_cfg iwl_cfg_snj_a0_mr_a0 = {
     .fwname = "iwlwifi-SoSnj-a0-mr-a0-59.ucode",
     .uhb_supported = 1,
     .device_family = IWX_DEVICE_FAMILY_22560,
+    .num_rbds = IWL_NUM_RBDS_AX210_HE,
 };
 
 const struct iwl_cfg iwl_cfg_so_a0_hr_a0 = {
     .fwname = "iwlwifi-so-a0-hr-b0-59.ucode",
     .device_family = IWX_DEVICE_FAMILY_22560,
+    .num_rbds = IWL_NUM_RBDS_AX210_HE,
 };
 
 const struct iwl_cfg iwl_cfg_quz_a0_hr_b0 = {
-    .fwname = "iwlwifi-QuZ-a0-hr-b0-48.ucode",
+    .fwname = "iwlwifi-QuZ-a0-hr-b0-50.ucode",
     .device_family = IWX_DEVICE_FAMILY_22000,
+    /*
+     * This device doesn't support receiving BlockAck with a large bitmap
+     * so we need to restrict the size of transmitted aggregation to the
+     * HT size; mac80211 would otherwise pick the HE max (256) by default.
+     */
+    .max_tx_agg_size = IEEE80211_MAX_AMPDU_BUF_HT,
+    .num_rbds = IWL_NUM_RBDS_22000_HE,
 };
 
 static const struct pci_matchid iwx_devices[] = {
@@ -10265,6 +10585,13 @@ const struct iwl_cfg iwl_ax200_cfg_cc = {
     .device_family = IWX_DEVICE_FAMILY_22000,
     .tx_with_siso_diversity = 0,
     .uhb_supported = 0,
+    /*
+     * This device doesn't support receiving BlockAck with a large bitmap
+     * so we need to restrict the size of transmitted aggregation to the
+     * HT size; mac80211 would otherwise pick the HE max (256) by default.
+     */
+    .max_tx_agg_size = IEEE80211_MAX_AMPDU_BUF_HT,
+    .num_rbds = IWL_NUM_RBDS_22000_HE,
 };
 
 const struct iwl_cfg iwl_qnj_b0_hr_b0_cfg = {
@@ -10272,6 +10599,13 @@ const struct iwl_cfg iwl_qnj_b0_hr_b0_cfg = {
     .device_family = IWX_DEVICE_FAMILY_22000,
     .tx_with_siso_diversity = 0,
     .uhb_supported = 0,
+    /*
+     * This device doesn't support receiving BlockAck with a large bitmap
+     * so we need to restrict the size of transmitted aggregation to the
+     * HT size; mac80211 would otherwise pick the HE max (256) by default.
+     */
+    .max_tx_agg_size = IEEE80211_MAX_AMPDU_BUF_HT,
+    .num_rbds = IWL_NUM_RBDS_22000_HE,
 };
 
 const struct iwl_cfg iwl_ax201_cfg_qu_hr = {
@@ -10280,6 +10614,13 @@ const struct iwl_cfg iwl_ax201_cfg_qu_hr = {
     .device_family = IWX_DEVICE_FAMILY_22000,
     .tx_with_siso_diversity = 0,
     .uhb_supported = 0,
+    /*
+     * This device doesn't support receiving BlockAck with a large bitmap
+     * so we need to restrict the size of transmitted aggregation to the
+     * HT size; mac80211 would otherwise pick the HE max (256) by default.
+     */
+    .max_tx_agg_size = IEEE80211_MAX_AMPDU_BUF_HT,
+    .num_rbds = IWL_NUM_RBDS_22000_HE,
 };
 
 #define killer1650s_2ax_cfg_qu_b0_hr_b0 iwl_ax201_cfg_qu_hr
@@ -10287,10 +10628,17 @@ const struct iwl_cfg iwl_ax201_cfg_qu_hr = {
 
 const struct iwl_cfg iwl_ax201_cfg_quz_hr = {
     .name = "Intel(R) Wi-Fi 6 AX201 160MHz",
-    .fwname = "iwlwifi-QuZ-a0-hr-b0-48.ucode",
+    .fwname = "iwlwifi-QuZ-a0-hr-b0-50.ucode",
     .device_family = IWX_DEVICE_FAMILY_22000,
     .tx_with_siso_diversity = 0,
     .uhb_supported = 0,
+    /*
+         * This device doesn't support receiving BlockAck with a large bitmap
+         * so we need to restrict the size of transmitted aggregation to the
+         * HT size; mac80211 would otherwise pick the HE max (256) by default.
+         */
+    .max_tx_agg_size = IEEE80211_MAX_AMPDU_BUF_HT,
+    .num_rbds = IWL_NUM_RBDS_22000_HE,
 };
 
 #define iwl_ax1650s_cfg_quz_hr iwl_ax201_cfg_quz_hr
@@ -10306,6 +10654,7 @@ const struct iwl_cfg iwl9560_qu_b0_jf_b0_cfg = {
     .device_family = IWX_DEVICE_FAMILY_22000,
     .tx_with_siso_diversity = 0,
     .uhb_supported = 0,
+    .num_rbds = IWL_NUM_RBDS_NON_HE,
 };
 
 const struct iwl_cfg iwl9560_qu_c0_jf_b0_cfg = {
@@ -10313,6 +10662,7 @@ const struct iwl_cfg iwl9560_qu_c0_jf_b0_cfg = {
     .device_family = IWX_DEVICE_FAMILY_22000,
     .tx_with_siso_diversity = 0,
     .uhb_supported = 0,
+    .num_rbds = IWL_NUM_RBDS_NON_HE,
 };
 
 const struct iwl_cfg iwl9560_quz_a0_jf_b0_cfg = {
@@ -10320,6 +10670,13 @@ const struct iwl_cfg iwl9560_quz_a0_jf_b0_cfg = {
     .device_family = IWX_DEVICE_FAMILY_22000,
     .tx_with_siso_diversity = 0,
     .uhb_supported = 0,
+    /*
+     * This device doesn't support receiving BlockAck with a large bitmap
+     * so we need to restrict the size of transmitted aggregation to the
+     * HT size; mac80211 would otherwise pick the HE max (256) by default.
+     */
+    .max_tx_agg_size = IEEE80211_MAX_AMPDU_BUF_HT,
+    .num_rbds = IWL_NUM_RBDS_NON_HE,
 };
 
 const struct iwl_cfg iwl9560_qnj_b0_jf_b0_cfg = {
@@ -10327,6 +10684,13 @@ const struct iwl_cfg iwl9560_qnj_b0_jf_b0_cfg = {
     .device_family = IWX_DEVICE_FAMILY_22000,
     .tx_with_siso_diversity = 0,
     .uhb_supported = 0,
+    /*
+     * This device doesn't support receiving BlockAck with a large bitmap
+     * so we need to restrict the size of transmitted aggregation to the
+     * HT size; mac80211 would otherwise pick the HE max (256) by default.
+     */
+    .max_tx_agg_size = IEEE80211_MAX_AMPDU_BUF_HT,
+    .num_rbds = IWL_NUM_RBDS_NON_HE,
 };
 
 const struct iwl_cfg iwl_qu_b0_hr1_b0 = {
@@ -10334,18 +10698,39 @@ const struct iwl_cfg iwl_qu_b0_hr1_b0 = {
     .device_family = IWX_DEVICE_FAMILY_22000,
     .tx_with_siso_diversity = 1,
     .uhb_supported = 0,
+    /*
+     * This device doesn't support receiving BlockAck with a large bitmap
+     * so we need to restrict the size of transmitted aggregation to the
+     * HT size; mac80211 would otherwise pick the HE max (256) by default.
+     */
+    .max_tx_agg_size = IEEE80211_MAX_AMPDU_BUF_HT,
+    .num_rbds = IWL_NUM_RBDS_22000_HE,
 };
 
 const struct iwl_cfg iwl_qu_b0_hr_b0 = {
     .fwname = "iwlwifi-Qu-b0-hr-b0-48.ucode",
     .device_family = IWX_DEVICE_FAMILY_22000,
     .uhb_supported = 0,
+    /*
+     * This device doesn't support receiving BlockAck with a large bitmap
+     * so we need to restrict the size of transmitted aggregation to the
+     * HT size; mac80211 would otherwise pick the HE max (256) by default.
+     */
+    .max_tx_agg_size = IEEE80211_MAX_AMPDU_BUF_HT,
+    .num_rbds = IWL_NUM_RBDS_22000_HE,
 };
 
 const struct iwl_cfg iwl_qu_c0_hr_b0 = {
     .fwname = "iwlwifi-Qu-b0-hr-b0-48.ucode",
     .device_family = IWX_DEVICE_FAMILY_22000,
     .uhb_supported = 0,
+    /*
+     * This device doesn't support receiving BlockAck with a large bitmap
+     * so we need to restrict the size of transmitted aggregation to the
+     * HT size; mac80211 would otherwise pick the HE max (256) by default.
+     */
+    .max_tx_agg_size = IEEE80211_MAX_AMPDU_BUF_HT,
+    .num_rbds = IWL_NUM_RBDS_22000_HE,
 };
 
 const struct iwl_cfg iwl_qu_c0_hr1_b0 = {
@@ -10353,13 +10738,27 @@ const struct iwl_cfg iwl_qu_c0_hr1_b0 = {
     .device_family = IWX_DEVICE_FAMILY_22000,
     .tx_with_siso_diversity = 1,
     .uhb_supported = 0,
+    /*
+     * This device doesn't support receiving BlockAck with a large bitmap
+     * so we need to restrict the size of transmitted aggregation to the
+     * HT size; mac80211 would otherwise pick the HE max (256) by default.
+     */
+    .max_tx_agg_size = IEEE80211_MAX_AMPDU_BUF_HT,
+    .num_rbds = IWL_NUM_RBDS_22000_HE,
 };
 
 const struct iwl_cfg iwl_quz_a0_hr1_b0 = {
-    .fwname = "iwlwifi-QuZ-a0-hr-b0-48.ucode",
+    .fwname = "iwlwifi-QuZ-a0-hr-b0-50.ucode",
     .device_family = IWX_DEVICE_FAMILY_22000,
     .tx_with_siso_diversity = 1,
     .uhb_supported = 0,
+    /*
+     * This device doesn't support receiving BlockAck with a large bitmap
+     * so we need to restrict the size of transmitted aggregation to the
+     * HT size; mac80211 would otherwise pick the HE max (256) by default.
+     */
+    .max_tx_agg_size = IEEE80211_MAX_AMPDU_BUF_HT,
+    .num_rbds = IWL_NUM_RBDS_22000_HE,
 };
 
 const struct iwl_cfg iwl_ax201_cfg_qu_c0_hr_b0 = {
@@ -10368,6 +10767,13 @@ const struct iwl_cfg iwl_ax201_cfg_qu_c0_hr_b0 = {
     .device_family = IWX_DEVICE_FAMILY_22000,
     .tx_with_siso_diversity = 0,
     .uhb_supported = 0,
+    /*
+     * This device doesn't support receiving BlockAck with a large bitmap
+     * so we need to restrict the size of transmitted aggregation to the
+     * HT size; mac80211 would otherwise pick the HE max (256) by default.
+     */
+    .max_tx_agg_size = IEEE80211_MAX_AMPDU_BUF_HT,
+    .num_rbds = IWL_NUM_RBDS_22000_HE,
 };
 
 const struct iwl_cfg killer1650s_2ax_cfg_qu_c0_hr_b0 = {
@@ -10376,6 +10782,13 @@ const struct iwl_cfg killer1650s_2ax_cfg_qu_c0_hr_b0 = {
     .device_family = IWX_DEVICE_FAMILY_22000,
     .tx_with_siso_diversity = 0,
     .uhb_supported = 0,
+    /*
+     * This device doesn't support receiving BlockAck with a large bitmap
+     * so we need to restrict the size of transmitted aggregation to the
+     * HT size; mac80211 would otherwise pick the HE max (256) by default.
+     */
+    .max_tx_agg_size = IEEE80211_MAX_AMPDU_BUF_HT,
+    .num_rbds = IWL_NUM_RBDS_22000_HE,
 };
 
 const struct iwl_cfg killer1650i_2ax_cfg_qu_c0_hr_b0 = {
@@ -10384,6 +10797,13 @@ const struct iwl_cfg killer1650i_2ax_cfg_qu_c0_hr_b0 = {
     .device_family = IWX_DEVICE_FAMILY_22000,
     .tx_with_siso_diversity = 0,
     .uhb_supported = 0,
+    /*
+     * This device doesn't support receiving BlockAck with a large bitmap
+     * so we need to restrict the size of transmitted aggregation to the
+     * HT size; mac80211 would otherwise pick the HE max (256) by default.
+     */
+    .max_tx_agg_size = IEEE80211_MAX_AMPDU_BUF_HT,
+    .num_rbds = IWL_NUM_RBDS_22000_HE,
 };
 
 static const struct iwl_dev_info iwl_dev_info_table[] = {
@@ -11141,13 +11561,17 @@ iwx_attach(struct iwx_softc *sc, struct pci_attach_args *pa)
     }
     
     /* Allocate DMA memory for loading firmware. */
-     err = iwx_dma_contig_alloc(sc->sc_dmat, &sc->ctxt_info_dma,
-         sizeof(struct iwx_context_info), 0);
-     if (err) {
-         XYLog("%s: could not allocate memory for loading firmware\n",
-             DEVNAME(sc));
-         return false;
-     }
+    if (sc->sc_device_family >= IWX_DEVICE_FAMILY_22560)
+        err = iwx_dma_contig_alloc(sc->sc_dmat, &sc->ctxt_info_dma,
+                                   sizeof(struct iwx_context_info_gen3), 0);
+    else
+        err = iwx_dma_contig_alloc(sc->sc_dmat, &sc->ctxt_info_dma,
+                                   sizeof(struct iwx_context_info), 0);
+    if (err) {
+        XYLog("%s: could not allocate memory for loading firmware\n",
+              DEVNAME(sc));
+        return false;
+    }
     
     /* Allocate interrupt cause table (ICT).*/
     err = iwx_dma_contig_alloc(sc->sc_dmat, &sc->ict_dma,
@@ -11158,8 +11582,12 @@ iwx_attach(struct iwx_softc *sc, struct pci_attach_args *pa)
     }
     
     /* TX scheduler rings must be aligned on a 1KB boundary. */
-    err = iwx_dma_contig_alloc(sc->sc_dmat, &sc->sched_dma,
-                               nitems(sc->txq) * sizeof(struct iwx_agn_scd_bc_tbl), 1024);
+    if (sc->sc_device_family >= IWX_DEVICE_FAMILY_22560)
+        err = iwx_dma_contig_alloc(sc->sc_dmat, &sc->sched_dma,
+                                   nitems(sc->txq) * sizeof(struct iwx_gen3_bc_tbl), 1024);
+    else
+        err = iwx_dma_contig_alloc(sc->sc_dmat, &sc->sched_dma,
+                                   nitems(sc->txq) * sizeof(struct iwx_agn_scd_bc_tbl), 1024);
     if (err) {
         XYLog("%s: could not allocate TX scheduler rings\n",
               DEVNAME(sc));
@@ -11278,7 +11706,7 @@ iwx_attach(struct iwx_softc *sc, struct pci_attach_args *pa)
      */
     //    config_mountroot(self, iwx_attach_hook);
     if (iwx_preinit(sc)) {
-        goto fail4;
+        goto fail5;
     }
 
     if (isset(sc->sc_enabled_capa, IWX_UCODE_TLV_CAPA_TLC_OFFLOAD)) {
@@ -11288,6 +11716,11 @@ iwx_attach(struct iwx_softc *sc, struct pci_attach_args *pa)
     
     return true;
     
+fail5:
+    for (i = 0; i < nitems(sc->sc_rxba_data); i++) {
+        struct iwx_rxba_data *rxba = &sc->sc_rxba_data[i];
+        iwx_clear_reorder_buffer(sc, rxba);
+    }
 fail4:    while (--txq_i >= 0)
     iwx_free_tx_ring(sc, &sc->txq[txq_i]);
     iwx_free_rx_ring(sc, &sc->rxq);

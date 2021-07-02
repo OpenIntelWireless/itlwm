@@ -198,7 +198,9 @@ public:
     int    iwx_alloc_fw_monitor_block(struct iwx_softc *, uint8_t, uint8_t);
     int    iwx_alloc_fw_monitor(struct iwx_softc *, uint8_t);
     int    iwx_apply_debug_destination(struct iwx_softc *);
+    int    iwx_ctxt_info_dbg_enable(struct iwx_softc *, struct iwx_prph_scratch_hwm_cfg *, uint32_t *);
     int    iwx_ctxt_info_init(struct iwx_softc *, const struct iwx_fw_sects *);
+    int    iwx_ctxt_info_gen3_init(struct iwx_softc *, const struct iwx_fw_sects *);
     void iwx_ctxt_info_free_fw_img(struct iwx_softc *sc);
     int iwx_ctxt_info_alloc_dma(struct iwx_softc *sc,
                                 const struct iwx_fw_onesect *sec, struct iwx_dma_info *dram);
@@ -211,8 +213,12 @@ public:
     int    iwx_set_default_calib(struct iwx_softc *, const void *);
     void    iwx_fw_info_free(struct iwx_fw_info *);
     int    iwx_read_firmware(struct iwx_softc *);
+    uint32_t iwx_read_prph_unlocked(struct iwx_softc *, uint32_t);
     uint32_t iwx_read_prph(struct iwx_softc *, uint32_t);
+    uint32_t iwx_read_umac_prph(struct iwx_softc *, uint32_t);
     void    iwx_write_prph(struct iwx_softc *, uint32_t, uint32_t);
+    void    iwx_write_prph_unlocked(struct iwx_softc *, uint32_t, uint32_t);
+    void    iwx_write_umac_prph(struct iwx_softc *, uint32_t, uint32_t);
     void iwx_write_prph64(struct iwx_softc *sc, uint64_t addr, uint64_t val);
     int    iwx_read_mem(struct iwx_softc *, uint32_t, void *, int);
     int    iwx_write_mem(struct iwx_softc *, uint32_t, const void *, int);
@@ -298,6 +304,7 @@ public:
     int    iwx_is_valid_mac_addr(const uint8_t *);
     int    iwx_nvm_get(struct iwx_softc *);
     int    iwx_load_firmware(struct iwx_softc *);
+    void   iwx_set_ltr(struct iwx_softc *);
     int    iwx_start_fw(struct iwx_softc *);
     int    iwx_send_tx_ant_cfg(struct iwx_softc *, uint8_t);
     int    iwx_send_phy_cfg_cmd(struct iwx_softc *);
