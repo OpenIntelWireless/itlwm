@@ -10806,7 +10806,7 @@ iwx_attach(struct iwx_softc *sc, struct pci_attach_args *pa)
      */
     //    config_mountroot(self, iwx_attach_hook);
     if (iwx_preinit(sc)) {
-        goto fail4;
+        goto fail5;
     }
 
     if (isset(sc->sc_enabled_capa, IWX_UCODE_TLV_CAPA_TLC_OFFLOAD)) {
@@ -10816,6 +10816,11 @@ iwx_attach(struct iwx_softc *sc, struct pci_attach_args *pa)
     
     return true;
     
+fail5:
+    for (i = 0; i < nitems(sc->sc_rxba_data); i++) {
+        struct iwx_rxba_data *rxba = &sc->sc_rxba_data[i];
+        iwx_clear_reorder_buffer(sc, rxba);
+    }
 fail4:    while (--txq_i >= 0)
     iwx_free_tx_ring(sc, &sc->txq[txq_i]);
     iwx_free_rx_ring(sc, &sc->rxq);

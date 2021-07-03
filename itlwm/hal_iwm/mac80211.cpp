@@ -4961,13 +4961,18 @@ iwm_attach(struct iwm_softc *sc, struct pci_attach_args *pa)
      */
     //    config_mountroot(self, iwm_attach_hook);
     if (iwm_preinit(sc)) {
-        goto fail4;
+        goto fail5;
     }
     
     XYLog("attach succeed.\n");
     
     return true;
     
+fail5:
+    for (i = 0; i < nitems(sc->sc_rxba_data); i++) {
+        struct iwm_rxba_data *rxba = &sc->sc_rxba_data[i];
+        iwm_clear_reorder_buffer(sc, rxba);
+    }
 fail4:    while (--txq_i >= 0)
     iwm_free_tx_ring(sc, &sc->txq[txq_i]);
     iwm_free_rx_ring(sc, &sc->rxq);
