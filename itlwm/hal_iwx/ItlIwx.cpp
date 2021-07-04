@@ -705,7 +705,7 @@ iwx_init_fw_sec(struct iwx_softc *sc, const struct iwx_fw_sects *fws,
             return ret;
         ctxt_dram->lmac_img[i] =
             htole64(dram->fw[fw_cnt].paddr);
-        DPRINTFN(3, ("%s: firmware LMAC section %d at 0x%llx size %lld\n", __func__, i,
+        DPRINTFN(1, ("%s: firmware LMAC section %d at 0x%llx size %lld\n", __func__, i,
             (unsigned long long)dram->fw[fw_cnt].paddr,
             (unsigned long long)dram->fw[fw_cnt].size));
         fw_cnt++;
@@ -720,7 +720,7 @@ iwx_init_fw_sec(struct iwx_softc *sc, const struct iwx_fw_sects *fws,
             return ret;
         ctxt_dram->umac_img[i] =
             htole64(dram->fw[fw_cnt].paddr);
-        DPRINTFN(3, ("%s: firmware UMAC section %d at 0x%llx size %lld\n", __func__, i,
+        DPRINTFN(1, ("%s: firmware UMAC section %d at 0x%llx size %lld\n", __func__, i,
             (unsigned long long)dram->fw[fw_cnt].paddr,
             (unsigned long long)dram->fw[fw_cnt].size));
         fw_cnt++;
@@ -746,7 +746,7 @@ iwx_init_fw_sec(struct iwx_softc *sc, const struct iwx_fw_sects *fws,
             return ret;
 
         ctxt_dram->virtual_img[i] = htole64(dram->paging[i].paddr);
-        DPRINTFN(3, ("%s: firmware paging section %d at 0x%llx size %lld\n", __func__, i,
+        DPRINTFN(1, ("%s: firmware paging section %d at 0x%llx size %lld\n", __func__, i,
             (unsigned long long)dram->paging[i].paddr,
             (unsigned long long)dram->paging[i].size));
     }
@@ -932,27 +932,31 @@ static inline bool iwl_trans_dbg_ini_valid(struct iwx_softc *sc)
 int ItlIwx::
 iwx_ctxt_info_dbg_enable(struct iwx_softc *sc, struct iwx_prph_scratch_hwm_cfg *dbg_cfg, uint32_t *control_flags)
 {
-//    enum iwx_fw_ini_allocation_id alloc_id = IWX_FW_INI_ALLOCATION_ID_DBGC1;
-//    struct iwx_fw_ini_allocation_tlv *fw_mon_cfg;
-//    uint32_t dbg_flags = 0;
-//    
-//    if (!iwl_trans_dbg_ini_valid(sc)) {
-//        struct iwx_dma_info *fw_mon = &sc->fw_mon;
-//
-//        iwx_alloc_fw_monitor(sc, 0);
-//
-//        if (fw_mon->size) {
-//            dbg_flags |= IWX_PRPH_SCRATCH_EDBG_DEST_DRAM;
-//
-//            XYLog("WRT: Applying DRAM buffer destination\n");
-//
-//            dbg_cfg->hwm_base_addr = htole64(fw_mon->paddr);
-//            dbg_cfg->hwm_size = htole32(fw_mon->size);
-//        }
-//
-//        goto out;
-//    }
-//    
+    enum iwx_fw_ini_allocation_id alloc_id = IWX_FW_INI_ALLOCATION_ID_DBGC1;
+    struct iwx_fw_ini_allocation_tlv *fw_mon_cfg;
+    uint32_t dbg_flags = 0;
+    
+    if (!iwl_trans_dbg_ini_valid(sc)) {
+        struct iwx_dma_info *fw_mon = &sc->fw_mon;
+
+        iwx_alloc_fw_monitor(sc, 0);
+
+        if (fw_mon->size) {
+            dbg_flags |= IWX_PRPH_SCRATCH_EDBG_DEST_DRAM;
+
+            XYLog("WRT: Applying DRAM buffer destination\n");
+
+            dbg_cfg->hwm_base_addr = htole64(fw_mon->paddr);
+            dbg_cfg->hwm_size = htole32(fw_mon->size);
+        }
+
+        goto out;
+    }
+    
+    /*test*/
+    dbg_flags |= IWX_PRPH_SCRATCH_EDBG_DEST_INTERNAL;
+    /**/
+    
 //    fw_mon_cfg = &trans->dbg.fw_mon_cfg[alloc_id];
 //    
 //    switch (le32toh(fw_mon_cfg->buf_location)) {
@@ -981,10 +985,10 @@ iwx_ctxt_info_dbg_enable(struct iwx_softc *sc, struct iwx_prph_scratch_hwm_cfg *
 //        default:
 //            XYLog("WRT: Invalid buffer destination\n");
 //    }
-//out:
-//    if (dbg_flags)
-//        *control_flags |= IWX_PRPH_SCRATCH_EARLY_DEBUG_EN | dbg_flags;
-//    
+out:
+    if (dbg_flags)
+        *control_flags |= IWX_PRPH_SCRATCH_EARLY_DEBUG_EN | dbg_flags;
+    
     return 0;
 }
 
@@ -1060,8 +1064,8 @@ iwx_ctxt_info_init(struct iwx_softc *sc, const struct iwx_fw_sects *fws)
 }
 
 #define IWL_NUM_OF_COMPLETION_RINGS    31
-//#define IWL_NUM_OF_TRANSFER_RINGS    527
-#define IWL_NUM_OF_TRANSFER_RINGS   IWX_TX_RING_COUNT
+#define IWL_NUM_OF_TRANSFER_RINGS    527
+//#define IWL_NUM_OF_TRANSFER_RINGS   IWX_TX_RING_COUNT
 
 int ItlIwx::
 iwx_ctxt_info_gen3_init(struct iwx_softc *sc, const struct iwx_fw_sects *fws)
@@ -1075,7 +1079,7 @@ iwx_ctxt_info_gen3_init(struct iwx_softc *sc, const struct iwx_fw_sects *fws)
     
     /* Allocate prph scratch. */
     err = iwx_dma_contig_alloc(sc->sc_dmat, &sc->prph_scratch_dma,
-                               sizeof(struct iwx_prph_scratch), 2048);
+                               sizeof(struct iwx_prph_scratch), 0);
     if (err) {
         XYLog("%s: could not allocate prph scratch\n", DEVNAME(sc));
         return false;
@@ -1096,6 +1100,10 @@ iwx_ctxt_info_gen3_init(struct iwx_softc *sc, const struct iwx_fw_sects *fws)
     prph_sc_ctrl->rbd_cfg.free_rbd_addr =
         htole64(sc->rxq.free_desc_dma.paddr);
     
+    iwx_ctxt_info_dbg_enable(sc, &prph_sc_ctrl->hwm_cfg, &control_flags);
+    
+    prph_sc_ctrl->control.control_flags = htole32(control_flags);
+    
     /* allocate ucode sections in dram and set addresses */
     err = iwx_init_fw_sec(sc, fws, &prph_scratch->dram);
     if (err) {
@@ -1103,13 +1111,9 @@ iwx_ctxt_info_gen3_init(struct iwx_softc *sc, const struct iwx_fw_sects *fws)
         return err;
     }
     
-    iwx_ctxt_info_dbg_enable(sc, &prph_sc_ctrl->hwm_cfg, &control_flags);
-    
-    prph_sc_ctrl->control.control_flags = htole32(control_flags);
-    
     /* Allocate prph information. */
     err = iwx_dma_contig_alloc(sc->sc_dmat, &sc->prph_info_dma,
-                               sizeof(struct iwx_prph_info), 32);
+                               sizeof(struct iwx_prph_info), 0);
     if (err) {
         XYLog("%s: could not allocate prph information\n", DEVNAME(sc));
         goto fail0;
@@ -1144,7 +1148,7 @@ iwx_ctxt_info_gen3_init(struct iwx_softc *sc, const struct iwx_fw_sects *fws)
     
     /* Allocate IML. */
     err = iwx_dma_contig_alloc(sc->sc_dmat, &sc->iml_dma,
-                               sc->sc_iml_len, 16);
+                               sc->sc_iml_len, 0);
     if (err) {
         XYLog("%s: could not allocate IML\n", DEVNAME(sc));
         goto fail1;
@@ -1193,6 +1197,32 @@ iwx_force_power_gating(struct iwx_softc *sc)
    DELAY(20);
    iwx_clear_bits_prph(sc, IWX_HPM_HIPM_GEN_CFG,
        IWX_HPM_HIPM_GEN_CFG_CR_FORCE_ACTIVE);
+}
+
+void ItlIwx::
+iwx_clear_persistence_bit(struct iwx_softc *sc)
+{
+    uint32_t hpm, wprot;
+    
+    if (sc->sc_device_family >= IWX_DEVICE_FAMILY_22560)
+        return;
+    
+    wprot = IWX_PREG_PRPH_WPROT_22000;
+    if (iwx_nic_lock(sc)) {
+        hpm = iwx_read_umac_prph(sc, IWX_HPM_DEBUG);
+        if (hpm != 0xa5a5a5a0 && (hpm & IWX_PERSISTENCE_BIT)) {
+            uint32_t wprot_val = iwx_read_umac_prph(sc, wprot);
+            
+            if (wprot_val & IWX_PREG_WFPM_ACCESS) {
+                XYLog("Error, can not clear persistence bit\n");
+                iwx_nic_unlock(sc);
+                return;
+            }
+            iwx_write_umac_prph(sc, IWX_HPM_DEBUG,
+                                hpm & ~IWX_PERSISTENCE_BIT);
+        }
+        iwx_nic_unlock(sc);
+    }
 }
 
 void ItlIwx::
@@ -2181,8 +2211,12 @@ iwx_alloc_tx_ring(struct iwx_softc *sc, struct iwx_tx_ring *ring, int qid)
     }
     ring->desc = (struct iwx_tfh_tfd*)ring->desc_dma.vaddr;
 
-    err = iwx_dma_contig_alloc(sc->sc_dmat, &ring->bc_tbl,
-                               sizeof(struct iwx_agn_scd_bc_tbl), 0);
+    if (sc->sc_device_family >= IWX_DEVICE_FAMILY_22560)
+        err = iwx_dma_contig_alloc(sc->sc_dmat, &ring->bc_tbl,
+                                   sizeof(struct iwx_gen3_bc_tbl), 0);
+    else
+        err = iwx_dma_contig_alloc(sc->sc_dmat, &ring->bc_tbl,
+                                   sizeof(struct iwx_agn_scd_bc_tbl), 0);
     if (err) {
         XYLog("%s: could not allocate byte count table DMA memory\n",
               DEVNAME(sc));
@@ -2420,7 +2454,7 @@ iwx_ict_reset(struct iwx_softc *sc)
     /* Switch to ICT interrupt mode in driver. */
     sc->sc_flags |= IWX_FLAG_USE_ICT;
     
-    IWX_WRITE(sc, IWX_CSR_INT, ~0);
+    IWX_WRITE(sc, IWX_CSR_INT, sc->sc_intmask);
     iwx_enable_interrupts(sc);
 }
 
@@ -2698,11 +2732,13 @@ iwx_start_hw(struct iwx_softc *sc)
     if (err)
         return err;
     
+    iwx_clear_persistence_bit(sc);
+    
     /* Reset the entire device */
     IWX_SETBITS(sc, IWX_CSR_RESET, IWX_CSR_RESET_REG_FLAG_SW_RESET);
     DELAY(5000);
     
-    if (sc->sc_integrated) {
+    if (sc->sc_device_family == IWX_DEVICE_FAMILY_22000 && sc->sc_integrated) {
         IWX_SETBITS(sc, IWX_CSR_GP_CNTRL,
                     IWX_CSR_GP_CNTRL_REG_FLAG_INIT_DONE);
         DELAY(20);
@@ -2908,7 +2944,7 @@ iwx_enable_txq(struct iwx_softc *sc, int sta_id, int qid, int tid,
         return err;
     
     pkt = hcmd.resp_pkt;
-    if (!pkt || (pkt->hdr.flags & IWX_CMD_FAILED_MSK)) {
+    if (!pkt || (pkt->hdr.group_id & IWX_CMD_FAILED_MSK)) {
         DPRINTF(("SCD_QUEUE_CFG command failed\n"));
         err = EIO;
         goto out;
@@ -2988,8 +3024,12 @@ iwx_tvqm_enable_txq(struct iwx_softc *sc, int tid, int ssn)
         goto fail;
     }
     ring.desc = (struct iwx_tfh_tfd*)ring.desc_dma.vaddr;
-    err = iwx_dma_contig_alloc(sc->sc_dmat, &ring.bc_tbl,
-                               sizeof(struct iwx_agn_scd_bc_tbl), 0);
+    if (sc->sc_device_family >= IWX_DEVICE_FAMILY_22560)
+        err = iwx_dma_contig_alloc(sc->sc_dmat, &ring.bc_tbl,
+                                   sizeof(struct iwx_gen3_bc_tbl), 0);
+    else
+        err = iwx_dma_contig_alloc(sc->sc_dmat, &ring.bc_tbl,
+                                   sizeof(struct iwx_agn_scd_bc_tbl), 0);
     if (err) {
         XYLog("%s: could not allocate byte count table DMA memory\n",
               DEVNAME(sc));
@@ -3033,7 +3073,7 @@ iwx_tvqm_enable_txq(struct iwx_softc *sc, int tid, int ssn)
         return err;
 
     pkt = hcmd.resp_pkt;
-    if (!pkt || (pkt->hdr.flags & IWX_CMD_FAILED_MSK)) {
+    if (!pkt || (pkt->hdr.group_id & IWX_CMD_FAILED_MSK)) {
         XYLog("SCD_QUEUE_CFG command failed\n");
         err = EIO;
         goto fail;
@@ -3107,7 +3147,7 @@ iwx_send_time_event_cmd(struct iwx_softc *sc,
         return err;
     
     pkt = hcmd.resp_pkt;
-    if (!pkt || (pkt->hdr.flags & IWX_CMD_FAILED_MSK)) {
+    if (!pkt || (pkt->hdr.group_id & IWX_CMD_FAILED_MSK)) {
         err = EIO;
         goto out;
     }
@@ -4125,6 +4165,12 @@ iwx_start_fw(struct iwx_softc *sc)
     
     XYLog("%s\n", __FUNCTION__);
     int err;
+    
+    err = iwx_prepare_card_hw(sc);
+    if (err) {
+        XYLog("%s: could not initialize hardware\n", DEVNAME(sc));
+        return err;
+    }
     
     iwx_enable_rfkill_int(sc);
     
@@ -5628,6 +5674,7 @@ iwx_send_cmd(struct iwx_softc *sc, struct iwx_host_cmd *hcmd)
     async = hcmd->flags & IWX_CMD_ASYNC;
     idx = ring->cur;
     
+    paylen = 0;
     for (i = 0, paylen = 0; i < nitems(hcmd->len); i++) {
         paylen += hcmd->len[i];
     }
@@ -5692,7 +5739,7 @@ iwx_send_cmd(struct iwx_softc *sc, struct iwx_host_cmd *hcmd)
             mbuf_freem(m);
             goto out;
         }
-        //        XYLog("map fw cmd dm_nsegs=%d\n", txdata->map->dm_nsegs);
+                XYLog("map fw cmd dm_nsegs=%d\n", txdata->map->dm_nsegs);
         txdata->m = m; /* mbuf will be freed in iwm_cmd_done() */
         paddr = seg.location;
     } else {
@@ -5701,16 +5748,17 @@ iwx_send_cmd(struct iwx_softc *sc, struct iwx_host_cmd *hcmd)
     }
     
     if (group_id != 0) {
-        cmd->hdr_wide.opcode = iwx_cmd_opcode(code);
+        cmd->hdr_wide.cmd = iwx_cmd_opcode(code);
         cmd->hdr_wide.group_id = group_id;
         cmd->hdr_wide.qid = ring->qid;
         cmd->hdr_wide.idx = idx;
         cmd->hdr_wide.length = htole16(paylen);
+    cmd->hdr_wide.reserved = 0;
         cmd->hdr_wide.version = iwx_cmd_version(code);
         data = cmd->data_wide;
     } else {
-        cmd->hdr.code = code;
-        cmd->hdr.flags = 0;
+        cmd->hdr.cmd = code;
+        cmd->hdr.group_id = 0;
         cmd->hdr.qid = ring->qid;
         cmd->hdr.idx = idx;
         data = cmd->data;
@@ -5741,7 +5789,7 @@ iwx_send_cmd(struct iwx_softc *sc, struct iwx_host_cmd *hcmd)
     //        (char *)(void *)desc - (char *)(void *)ring->desc_dma.vaddr,
     //        sizeof (*desc), BUS_DMASYNC_PREWRITE);
     /* Kick command ring. */
-    DPRINTF(("%s: sending command 0x%x\n", __func__, code));
+    DPRINTF(("%s: Sending command (%.2x.%.2x), %d bytes at [%d]:%d\n", __func__, group_id, cmd->hdr_wide.cmd, paylen, idx, ring->qid));
     ring->queued++;
     ring->cur = (ring->cur + 1) % IWX_TX_RING_COUNT;
     IWX_WRITE(sc, IWX_HBUS_TARG_WRPTR, ring->qid << 16 | ring->cur);
@@ -5800,7 +5848,7 @@ iwx_send_cmd_status(struct iwx_softc *sc, struct iwx_host_cmd *cmd,
         return err;
     
     pkt = cmd->resp_pkt;
-    if (pkt == NULL || (pkt->hdr.flags & IWX_CMD_FAILED_MSK))
+    if (pkt == NULL || (pkt->hdr.group_id & IWX_CMD_FAILED_MSK))
         return EIO;
     
     resp_len = iwx_rx_packet_payload_len(pkt);
@@ -5950,13 +5998,12 @@ iwx_tx_fill_cmd(struct iwx_softc *sc, struct iwx_node *in,
 }
 
 void ItlIwx::
-iwx_tx_update_byte_tbl(struct iwx_tx_ring *txq, int idx, uint16_t byte_cnt,
+iwx_tx_update_byte_tbl(struct iwx_softc *sc, struct iwx_tx_ring *txq, int idx, uint16_t byte_cnt,
                        uint16_t num_tbs)
 {
     uint8_t filled_tfd_size, num_fetch_chunks;
     uint16_t len = byte_cnt;
     uint16_t bc_ent;
-    struct iwx_agn_scd_bc_tbl *scd_bc_tbl = (struct iwx_agn_scd_bc_tbl *)txq->bc_tbl.vaddr;
     
     filled_tfd_size = offsetof(struct iwx_tfh_tfd, tbs) +
     num_tbs * sizeof(struct iwx_tfh_tb);
@@ -5970,10 +6017,20 @@ iwx_tx_update_byte_tbl(struct iwx_tx_ring *txq, int idx, uint16_t byte_cnt,
      */
     num_fetch_chunks = howmany(filled_tfd_size, 64) - 1;
     
-    /* Before AX210, the HW expects DW */
-    len = howmany(len, 4);
-    bc_ent = htole16(len | (num_fetch_chunks << 12));
-    scd_bc_tbl->tfd_offset[idx] = bc_ent;
+    if (sc->sc_device_family >= IWX_DEVICE_FAMILY_22560) {
+        struct iwx_gen3_bc_tbl *scd_bc_tbl_gen3 = (struct iwx_gen3_bc_tbl *)txq->bc_tbl.vaddr;
+        
+        /* Starting from AX210, the HW expects bytes */
+        bc_ent = htole16(len | (num_fetch_chunks << 14));
+        scd_bc_tbl_gen3->tfd_offset[idx] = bc_ent;
+    } else {
+        struct iwx_agn_scd_bc_tbl *scd_bc_tbl = (struct iwx_agn_scd_bc_tbl *)txq->bc_tbl.vaddr;
+        
+        /* Before AX210, the HW expects DW */
+        len = howmany(len, 4);
+        bc_ent = htole16(len | (num_fetch_chunks << 12));
+        scd_bc_tbl->tfd_offset[idx] = bc_ent;
+    }
 }
 
 int ItlIwx::
@@ -6041,8 +6098,8 @@ iwx_tx(struct iwx_softc *sc, mbuf_t m, struct ieee80211_node *ni, int ac)
     data = &ring->data[ring->cur];
     
     cmd = &ring->cmd[ring->cur];
-    cmd->hdr.code = IWX_TX_CMD;
-    cmd->hdr.flags = 0;
+    cmd->hdr.cmd = IWX_TX_CMD;
+    cmd->hdr.group_id = 0;
     cmd->hdr.qid = ring->qid;
     cmd->hdr.idx = ring->cur;
     
@@ -6158,7 +6215,7 @@ iwx_tx(struct iwx_softc *sc, mbuf_t m, struct ieee80211_node *ni, int ac)
     //        (char *)(void *)desc - (char *)(void *)ring->desc_dma.vaddr,
     //        sizeof (*desc), BUS_DMASYNC_PREWRITE);
     
-    iwx_tx_update_byte_tbl(ring, ring->cur, totlen, num_tbs);
+    iwx_tx_update_byte_tbl(sc, ring, ring->cur, totlen, num_tbs);
     
     /* Kick TX ring. */
     ring->cur = (ring->cur + 1) % IWX_TX_RING_COUNT;
@@ -8674,7 +8731,7 @@ iwx_send_update_mcc_cmd(struct iwx_softc *sc, const char *alpha2)
         return err;
     
     pkt = hcmd.resp_pkt;
-    if (!pkt || (pkt->hdr.flags & IWX_CMD_FAILED_MSK)) {
+    if (!pkt || (pkt->hdr.group_id & IWX_CMD_FAILED_MSK)) {
         err = EIO;
         goto out;
     }
@@ -8780,6 +8837,44 @@ struct iwl_shared_mem_cfg {
 } __packed; /* SHARED_MEM_ALLOC_API_S_VER_4 */
 
 int ItlIwx::
+iwx_start_dbg_conf(struct iwx_softc *sc, uint8_t conf_id)
+{
+    struct iwx_fw_info *fw = &sc->sc_fw;
+    uint8_t *ptr;
+    int i;
+    int err;
+    
+    if (conf_id >= nitems(fw->dbg_conf_tlv)) {
+        XYLog("Invalid configuration %d\n", conf_id);
+        return -EINVAL;
+    }
+    
+    /* EARLY START - firmware's configuration is hard coded */
+    if ((!fw->dbg_conf_tlv[conf_id] ||
+         !fw->dbg_conf_tlv[conf_id]->num_of_hcmds) &&
+        conf_id == IWX_FW_DBG_START_FROM_ALIVE)
+        return 0;
+    
+    if (!fw->dbg_conf_tlv[conf_id])
+        return -EINVAL;
+    
+    /* Send all HCMDs for configuring the FW debug */
+    ptr = (uint8_t *)&fw->dbg_conf_tlv[conf_id]->hcmd;
+    for (i = 0; i < fw->dbg_conf_tlv[conf_id]->num_of_hcmds; i++) {
+        struct iwx_fw_dbg_conf_hcmd *cmd = (struct iwx_fw_dbg_conf_hcmd *)ptr;
+
+        err = iwx_send_cmd_pdu(sc, cmd->id, 0, le16toh(cmd->len), cmd->data);
+        if (err)
+            return err;
+
+        ptr += sizeof(*cmd);
+        ptr += le16toh(cmd->len);
+    }
+    
+    return 0;
+}
+
+int ItlIwx::
 iwx_init_hw(struct iwx_softc *sc)
 {
     XYLog("%s\n", __FUNCTION__);
@@ -8828,11 +8923,13 @@ iwx_init_hw(struct iwx_softc *sc)
     
     XYLog("%s lmac_num=%d num_txfifo_entries=%lu rxfifo2_size=%d\n", __FUNCTION__, le32toh(mem_cfg->lmac_num), ARRAY_SIZE(mem_cfg->lmac_smem[0].txfifo_size), le32toh(mem_cfg->rxfifo2_size));
     
-    err = iwx_sf_config(sc, IWX_SF_INIT_OFF);
-    if (err) {
-        XYLog("%s: Failed to initialize Smart Fifo\n", DEVNAME(sc));
-        return err;
-    }
+//    err = iwx_sf_config(sc, IWX_SF_INIT_OFF);
+//    if (err) {
+//        XYLog("%s: Failed to initialize Smart Fifo\n", DEVNAME(sc));
+//        return err;
+//    }
+    
+    iwx_start_dbg_conf(sc, IWX_FW_DBG_START_FROM_ALIVE);
     
     err = iwx_send_tx_ant_cfg(sc, iwx_fw_valid_tx_ant(sc));
     if (err) {
@@ -9555,7 +9652,7 @@ iwx_rx_pkt_valid(struct iwx_rx_packet *pkt)
     
     qid = pkt->hdr.qid & ~0x80;
     idx = pkt->hdr.idx;
-    code = IWX_WIDE_ID(pkt->hdr.flags, pkt->hdr.code);
+    code = IWX_WIDE_ID(pkt->hdr.group_id, pkt->hdr.cmd);
     
     return (!(qid == 0 && idx == 0 && code == 0) &&
             pkt->len_n_flags != htole32(IWX_FH_RSCSR_FRAME_INVALID));
@@ -9580,7 +9677,7 @@ iwx_rx_pkt(struct iwx_softc *sc, struct iwx_rx_data *data, struct mbuf_list *ml)
         qid = pkt->hdr.qid;
         idx = pkt->hdr.idx;
         
-        code = IWX_WIDE_ID(pkt->hdr.flags, pkt->hdr.code);
+        code = IWX_WIDE_ID(pkt->hdr.group_id, pkt->hdr.cmd);
         
         if (!iwx_rx_pkt_valid(pkt))
             break;
@@ -9768,7 +9865,7 @@ iwx_rx_pkt(struct iwx_softc *sc, struct iwx_rx_data *data, struct mbuf_list *ml)
                 pkt_len = sizeof(pkt->len_n_flags) +
                 iwx_rx_packet_len(pkt);
                 
-                if ((pkt->hdr.flags & IWX_CMD_FAILED_MSK) ||
+                if ((pkt->hdr.group_id & IWX_CMD_FAILED_MSK) ||
                     pkt_len < sizeof(*pkt) ||
                     pkt_len > sc->sc_cmd_resp_len[idx]) {
                     ::free(sc->sc_cmd_resp_pkt[idx]);
@@ -9931,7 +10028,7 @@ iwx_notif_intr(struct iwx_softc *sc)
 int ItlIwx::
 iwx_intr(OSObject *object, IOInterruptEventSource* sender, int count)
 {
-    XYLog("Interrupt!!!\n");
+//    XYLog("Interrupt!!!\n");
     ItlIwx *that = (ItlIwx*)object;
     struct iwx_softc *sc = &that->com;
     int handled = 0;
@@ -10380,7 +10477,7 @@ const struct iwl_cfg iwl_cfg_so_a0_hr_a0 = {
 };
 
 const struct iwl_cfg iwl_cfg_quz_a0_hr_b0 = {
-    .fwname = "iwlwifi-QuZ-a0-hr-b0-50.ucode",
+    .fwname = "iwlwifi-QuZ-a0-hr-b0-48.ucode",
     .device_family = IWX_DEVICE_FAMILY_22000,
     /*
      * This device doesn't support receiving BlockAck with a large bitmap
@@ -10628,7 +10725,7 @@ const struct iwl_cfg iwl_ax201_cfg_qu_hr = {
 
 const struct iwl_cfg iwl_ax201_cfg_quz_hr = {
     .name = "Intel(R) Wi-Fi 6 AX201 160MHz",
-    .fwname = "iwlwifi-QuZ-a0-hr-b0-50.ucode",
+    .fwname = "iwlwifi-QuZ-a0-hr-b0-48.ucode",
     .device_family = IWX_DEVICE_FAMILY_22000,
     .tx_with_siso_diversity = 0,
     .uhb_supported = 0,
@@ -10748,7 +10845,7 @@ const struct iwl_cfg iwl_qu_c0_hr1_b0 = {
 };
 
 const struct iwl_cfg iwl_quz_a0_hr1_b0 = {
-    .fwname = "iwlwifi-QuZ-a0-hr-b0-50.ucode",
+    .fwname = "iwlwifi-QuZ-a0-hr-b0-48.ucode",
     .device_family = IWX_DEVICE_FAMILY_22000,
     .tx_with_siso_diversity = 1,
     .uhb_supported = 0,

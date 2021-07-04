@@ -516,7 +516,7 @@ struct iwx_context_info_gen3 {
 struct iwx_fw_ini_header {
     __le32 version;
     __le32 domain;
-    u8 data[];
+    u8 data[0];
 } __packed; /* FW_TLV_DEBUG_HEADER_S_VER_1 */
 
 /**
@@ -5231,6 +5231,29 @@ struct iwx_tx_cmd_gen2 {
     struct ieee80211_frame hdr[0];
 } __packed; /* TX_CMD_API_S_VER_7 */
 
+/**
+ * struct iwx_tx_cmd_gen3 - TX command struct to FW for AX210+ devices
+ * ( TX_CMD = 0x1c )
+ * @len: in bytes of the payload, see below for details
+ * @flags: combination of &enum iwl_tx_cmd_flags
+ * @offload_assist: TX offload configuration
+ * @dram_info: FW internal DRAM storage
+ * @rate_n_flags: rate for *all* Tx attempts, if TX_CMD_FLG_STA_RATE_MSK is
+ *    cleared. Combination of RATE_MCS_*
+ * @ttl: time to live - packet lifetime limit. The FW should drop if
+ *    passed.
+ * @hdr: 802.11 header
+ */
+struct iwx_tx_cmd_gen3 {
+    __le16 len;
+    __le16 flags;
+    __le32 offload_assist;
+    struct iwx_dram_sec_info dram_info;
+    __le32 rate_n_flags;
+    __le64 ttl;
+    struct ieee80211_frame hdr[0];
+} __packed; /* TX_CMD_API_S_VER_8 */
+
 /* For aggregation queues, index must be aligned to frame sequence number. */
 #define IWX_AGG_SSN_TO_TXQ_IDX(x)    ((x) & (IWX_TX_RING_COUNT - 1))
 
@@ -6987,14 +7010,14 @@ iwx_cmd_id(uint8_t opcode, uint8_t groupid, uint8_t version)
 #define IWX_WIDE_ID(grp, opcode) ((grp << 8) | opcode)
 
 struct iwx_cmd_header {
-    uint8_t code;
-    uint8_t flags;
+    uint8_t cmd;
+    uint8_t group_id;
     uint8_t idx;
     uint8_t qid;
 } __packed;
 
 struct iwx_cmd_header_wide {
-    uint8_t opcode;
+    uint8_t cmd;
     uint8_t group_id;
     uint8_t idx;
     uint8_t qid;
@@ -7097,10 +7120,10 @@ do {   \
     bus_space_write_1((sc)->sc_st, (sc)->sc_sh, (reg), (val))
 
 #define IWX_SETBITS(sc, reg, mask)                    \
-    IWX_WRITE(sc, reg, IWX_READ(sc, reg) | (mask))
+    IWX_WRITE(sc, reg, IWX_READ(sc, reg) & ~(mask) | (mask))
 
 #define IWX_CLRBITS(sc, reg, mask)                    \
-    IWX_WRITE(sc, reg, IWX_READ(sc, reg) & ~(mask))
+    IWX_WRITE(sc, reg, IWX_READ(sc, reg) & ~(mask) | 0)
 
 #define IWX_BARRIER_WRITE(sc)                        \
     bus_space_barrier((sc)->sc_st, (sc)->sc_sh, 0, (sc)->sc_sz,    \

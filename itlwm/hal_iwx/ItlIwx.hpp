@@ -251,6 +251,7 @@ public:
     int    iwx_set_hw_ready(struct iwx_softc *);
     int    iwx_prepare_card_hw(struct iwx_softc *);
     void    iwx_force_power_gating(struct iwx_softc *);
+    void    iwx_clear_persistence_bit(struct iwx_softc *);
     void    iwx_apm_config(struct iwx_softc *);
     int    iwx_apm_init(struct iwx_softc *);
     void    iwx_apm_stop(struct iwx_softc *);
@@ -355,7 +356,7 @@ public:
     uint32_t iwx_get_tx_ant(struct iwx_softc *sc, struct ieee80211_node *ni,
                             const struct iwx_rate *rinfo, int type, struct ieee80211_frame *wh);
     void    iwx_toggle_tx_ant(struct iwx_softc *sc, uint8_t *ant);
-    void    iwx_tx_update_byte_tbl(struct iwx_tx_ring *, int, uint16_t, uint16_t);
+    void    iwx_tx_update_byte_tbl(struct iwx_softc *, struct iwx_tx_ring *, int, uint16_t, uint16_t);
     int    iwx_tx(struct iwx_softc *, mbuf_t, struct ieee80211_node *, int);
     int    iwx_flush_tx_path(struct iwx_softc *);
     int    iwx_beacon_filter_send_cmd(struct iwx_softc *,
@@ -423,6 +424,7 @@ public:
     int    iwx_send_soc_conf(struct iwx_softc *);
     int    iwx_send_update_mcc_cmd(struct iwx_softc *, const char *);
     int    iwx_send_temp_report_ths_cmd(struct iwx_softc *);
+    int    iwx_start_dbg_conf(struct iwx_softc *, uint8_t conf_id);
     int    iwx_init_hw(struct iwx_softc *);
     int    iwx_init(struct _ifnet *);
     static void    iwx_start(struct _ifnet *);
