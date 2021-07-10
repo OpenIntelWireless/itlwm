@@ -705,7 +705,7 @@ iwx_init_fw_sec(struct iwx_softc *sc, const struct iwx_fw_sects *fws,
             return ret;
         ctxt_dram->lmac_img[i] =
             htole64(dram->fw[fw_cnt].paddr);
-        DPRINTFN(1, ("%s: firmware LMAC section %d at 0x%llx size %lld\n", __func__, i,
+        DPRINTFN(3, ("%s: firmware LMAC section %d at 0x%llx size %lld\n", __func__, i,
             (unsigned long long)dram->fw[fw_cnt].paddr,
             (unsigned long long)dram->fw[fw_cnt].size));
         fw_cnt++;
@@ -720,7 +720,7 @@ iwx_init_fw_sec(struct iwx_softc *sc, const struct iwx_fw_sects *fws,
             return ret;
         ctxt_dram->umac_img[i] =
             htole64(dram->fw[fw_cnt].paddr);
-        DPRINTFN(1, ("%s: firmware UMAC section %d at 0x%llx size %lld\n", __func__, i,
+        DPRINTFN(3, ("%s: firmware UMAC section %d at 0x%llx size %lld\n", __func__, i,
             (unsigned long long)dram->fw[fw_cnt].paddr,
             (unsigned long long)dram->fw[fw_cnt].size));
         fw_cnt++;
@@ -746,7 +746,7 @@ iwx_init_fw_sec(struct iwx_softc *sc, const struct iwx_fw_sects *fws,
             return ret;
 
         ctxt_dram->virtual_img[i] = htole64(dram->paging[i].paddr);
-        DPRINTFN(1, ("%s: firmware paging section %d at 0x%llx size %lld\n", __func__, i,
+        DPRINTFN(3, ("%s: firmware paging section %d at 0x%llx size %lld\n", __func__, i,
             (unsigned long long)dram->paging[i].paddr,
             (unsigned long long)dram->paging[i].size));
     }
@@ -1100,7 +1100,7 @@ iwx_ctxt_info_gen3_init(struct iwx_softc *sc, const struct iwx_fw_sects *fws)
     prph_sc_ctrl->rbd_cfg.free_rbd_addr =
         htole64(sc->rxq.free_desc_dma.paddr);
     
-    iwx_ctxt_info_dbg_enable(sc, &prph_sc_ctrl->hwm_cfg, &control_flags);
+//    iwx_ctxt_info_dbg_enable(sc, &prph_sc_ctrl->hwm_cfg, &control_flags);
     
     prph_sc_ctrl->control.control_flags = htole32(control_flags);
     
@@ -1148,7 +1148,7 @@ iwx_ctxt_info_gen3_init(struct iwx_softc *sc, const struct iwx_fw_sects *fws)
     
     /* Allocate IML. */
     err = iwx_dma_contig_alloc(sc->sc_dmat, &sc->iml_dma,
-                               sc->sc_iml_len, 0);
+                               IWX_IML_MAX_LEN, 0);
     if (err) {
         XYLog("%s: could not allocate IML\n", DEVNAME(sc));
         goto fail1;
@@ -2054,16 +2054,30 @@ iwx_dma_contig_free(struct iwx_dma_info *dma)
     dma->vaddr = NULL;
 }
 
+/**
+ * struct iwl_rx_transfer_desc - transfer descriptor
+ * @addr: ptr to free buffer start address
+ * @rbid: unique tag of the buffer
+ * @reserved: reserved
+ */
+struct iwx_rx_transfer_desc {
+    uint16_t rbid;
+    uint16_t reserved[3];
+    uint64_t addr;
+} __packed;
+
 int ItlIwx::
 iwx_alloc_rx_ring(struct iwx_softc *sc, struct iwx_rx_ring *ring)
 {
     bus_size_t size;
     int i, err;
+    int rb_stts_size = sc->sc_device_family >= IWX_DEVICE_FAMILY_22560 ? sizeof(uint16_t) : sizeof(iwx_rb_status);
+    int rb_stts_align = sc->sc_device_family >= IWX_DEVICE_FAMILY_22560 ? 0 : 16;
     
     ring->cur = 0;
     
     /* Allocate RX descriptors (256-byte aligned). */
-    size = IWX_RX_MQ_RING_COUNT * sizeof(uint64_t);
+    size = IWX_RX_MQ_RING_COUNT * (sc->sc_device_family >= IWX_DEVICE_FAMILY_22560 ? sizeof(struct iwx_rx_transfer_desc) : sizeof(uint64_t));
     err = iwx_dma_contig_alloc(sc->sc_dmat, &ring->free_desc_dma, size, 256);
     if (err) {
         XYLog("%s: could not allocate RX ring DMA memory\n",
@@ -2072,14 +2086,14 @@ iwx_alloc_rx_ring(struct iwx_softc *sc, struct iwx_rx_ring *ring)
     }
     ring->desc = ring->free_desc_dma.vaddr;
     
-    err = iwx_dma_contig_alloc(sc->sc_dmat, &ring->tr_tail_dma, sizeof(uint16_t), 2);
+    err = iwx_dma_contig_alloc(sc->sc_dmat, &ring->tr_tail_dma, sizeof(uint16_t), 0);
     if (err) {
         XYLog("%s: could not allocate RX ring TR tail DMA memory\n",
               DEVNAME(sc));
         goto fail;
     }
     
-    err = iwx_dma_contig_alloc(sc->sc_dmat, &ring->cr_tail_dma, sizeof(uint16_t), 2);
+    err = iwx_dma_contig_alloc(sc->sc_dmat, &ring->cr_tail_dma, sizeof(uint16_t), 0);
     if (err) {
         XYLog("%s: could not allocate RX ring CR tail DMA memory\n",
               DEVNAME(sc));
@@ -2088,15 +2102,15 @@ iwx_alloc_rx_ring(struct iwx_softc *sc, struct iwx_rx_ring *ring)
     
     /* Allocate RX status area (16-byte aligned). */
     err = iwx_dma_contig_alloc(sc->sc_dmat, &ring->stat_dma,
-                               sizeof(*ring->stat), 16);
+                               rb_stts_size, rb_stts_align);
     if (err) {
         XYLog("%s: could not allocate RX status DMA memory\n",
               DEVNAME(sc));
         goto fail;
     }
-    ring->stat = (struct iwx_rb_status*)ring->stat_dma.vaddr;
+    ring->stat = ring->stat_dma.vaddr;
     
-    size = IWX_RX_MQ_RING_COUNT * sizeof(uint32_t);
+    size = IWX_RX_MQ_RING_COUNT * (sc->sc_device_family >= IWX_DEVICE_FAMILY_22560 ? sizeof(struct iwx_rx_completion_desc) : sizeof(uint32_t));
     err = iwx_dma_contig_alloc(sc->sc_dmat, &ring->used_desc_dma,
                                size, 256);
     if (err) {
@@ -2134,12 +2148,22 @@ iwx_disable_rx_dma(struct iwx_softc *sc)
     int ntries;
     
     if (iwx_nic_lock(sc)) {
-        iwx_write_prph(sc, IWX_RFH_RXF_DMA_CFG, 0);
-        for (ntries = 0; ntries < 1000; ntries++) {
-            if (iwx_read_prph(sc, IWX_RFH_GEN_STATUS) &
-                IWX_RXF_DMA_IDLE)
-                break;
-            DELAY(10);
+        if (sc->sc_device_family >= IWX_DEVICE_FAMILY_22560) {
+            iwx_write_umac_prph(sc, IWX_RFH_RXF_DMA_CFG_GEN3, 0);
+            for (ntries = 0; ntries < 1000; ntries++) {
+                if (iwx_read_umac_prph(sc, IWX_RFH_GEN_STATUS_GEN3) &
+                    IWX_RXF_DMA_IDLE)
+                    break;
+                DELAY(10);
+            }
+        } else {
+            iwx_write_prph(sc, IWX_RFH_RXF_DMA_CFG, 0);
+            for (ntries = 0; ntries < 1000; ntries++) {
+                if (iwx_read_prph(sc, IWX_RFH_GEN_STATUS) &
+                    IWX_RXF_DMA_IDLE)
+                    break;
+                DELAY(10);
+            }
         }
         iwx_nic_unlock(sc);
     }
@@ -2151,7 +2175,10 @@ iwx_reset_rx_ring(struct iwx_softc *sc, struct iwx_rx_ring *ring)
     ring->cur = 0;
     //    bus_dmamap_sync(sc->sc_dmat, ring->stat_dma.map, 0,
     //        ring->stat_dma.size, BUS_DMASYNC_PREWRITE);
-    memset(ring->stat, 0, sizeof(*ring->stat));
+    if (sc->sc_device_family >= IWX_DEVICE_FAMILY_22560)
+        memset(ring->stat, 0, sizeof(uint16_t));
+    else
+        memset(ring->stat, 0, sizeof(struct iwx_rb_status));
     //    bus_dmamap_sync(sc->sc_dmat, ring->stat_dma.map, 0,
     //        ring->stat_dma.size, BUS_DMASYNC_POSTWRITE);
     
@@ -2642,7 +2669,7 @@ iwx_conf_msix_hw(struct iwx_softc *sc, int stopped)
     if (!sc->sc_msix) {
         /* Newer chips default to MSIX. */
         if (!stopped && iwx_nic_lock(sc)) {
-            iwx_write_prph(sc, IWX_UREG_CHICK,
+            iwx_write_umac_prph(sc, IWX_UREG_CHICK,
                            IWX_UREG_CHICK_MSI_ENABLE);
             iwx_nic_unlock(sc);
         }
@@ -2650,7 +2677,7 @@ iwx_conf_msix_hw(struct iwx_softc *sc, int stopped)
     }
     
     if (!stopped && iwx_nic_lock(sc)) {
-        iwx_write_prph(sc, IWX_UREG_CHICK, IWX_UREG_CHICK_MSIX_ENABLE);
+        iwx_write_umac_prph(sc, IWX_UREG_CHICK, IWX_UREG_CHICK_MSIX_ENABLE);
         iwx_nic_unlock(sc);
     }
     
@@ -4122,6 +4149,13 @@ out:
    return err;
 }
 
+#define UMAG_SB_CPU_1_STATUS        0xA038C0
+#define UMAG_SB_CPU_2_STATUS        0xA038C4
+#define UMAG_GEN_HW_STATUS        0xA038C8
+#define UREG_UMAC_CURRENT_PC        0xa05c18
+#define UREG_LMAC1_CURRENT_PC        0xa05c1c
+#define UREG_LMAC2_CURRENT_PC        0xa05c20
+
 int ItlIwx::
 iwx_load_firmware(struct iwx_softc *sc)
 {
@@ -4146,8 +4180,21 @@ iwx_load_firmware(struct iwx_softc *sc)
 //        err = tsleep_nsec(&sc->sc_uc, 0, "iwxuc", MSEC_TO_NSEC(100));
 //    }
     err = tsleep_nsec(&sc->sc_uc, 0, "iwxuc", SEC_TO_NSEC(1));
-    if (err || !sc->sc_uc.uc_ok)
+    if (err || !sc->sc_uc.uc_ok) {
+        if (iwx_nic_lock(sc)) {
+            XYLog("SecBoot CPU1 Status: 0x%x, CPU2 Status: 0x%x\n",
+                  iwx_read_umac_prph(sc, UMAG_SB_CPU_1_STATUS),
+                  iwx_read_umac_prph(sc, UMAG_SB_CPU_2_STATUS));
+            XYLog("UMAC PC: 0x%x\n",
+                  iwx_read_umac_prph(sc,
+                                     UREG_UMAC_CURRENT_PC));
+            XYLog("LMAC PC: 0x%x\n",
+                  iwx_read_umac_prph(sc,
+                                     UREG_LMAC1_CURRENT_PC));
+            iwx_nic_unlock(sc);
+        }
         XYLog("%s: could not load firmware\n", DEVNAME(sc));
+    }
     
     iwx_ctxt_info_free_fw_img(sc);
     
@@ -4341,8 +4388,14 @@ iwx_update_rx_desc(struct iwx_softc *sc, struct iwx_rx_ring *ring, int idx)
 {
     struct iwx_rx_data *data = &ring->data[idx];
     
-    ((uint64_t *)ring->desc)[idx] =
-    htole64(data->map->dm_segs[0].location | (idx & 0x0fff));
+    if (sc->sc_device_family >= IWX_DEVICE_FAMILY_22560) {
+        struct iwx_rx_transfer_desc *bd = (struct iwx_rx_transfer_desc *)ring->desc;
+        
+        bd[idx].addr = htole64(data->map->dm_segs[0].location);
+        bd[idx].rbid = htole16(idx & 0x0fff);
+    } else
+        ((uint64_t *)ring->desc)[idx] =
+        htole64(data->map->dm_segs[0].location | (idx & 0x0fff));
     //    bus_dmamap_sync(sc->sc_dmat, ring->free_desc_dma.map,
     //        idx * sizeof(uint64_t), sizeof(uint64_t),
     //        BUS_DMASYNC_PREWRITE);
@@ -4408,8 +4461,13 @@ iwx_rxmq_get_signal_strength(struct iwx_softc *sc,
 {
     int energy_a, energy_b;
     
-    energy_a = desc->v1.energy_a;
-    energy_b = desc->v1.energy_b;
+    if (sc->sc_device_family >= IWX_DEVICE_FAMILY_22560) {
+        energy_a = desc->v3.energy_a;
+        energy_b = desc->v3.energy_b;
+    } else {
+        energy_a = desc->v1.energy_a;
+        energy_b = desc->v1.energy_b;
+    }
     energy_a = energy_a ? -energy_a : -256;
     energy_b = energy_b ? -energy_b : -256;
     return MAX(energy_a, energy_b);
@@ -5051,10 +5109,15 @@ iwx_rx_mpdu_mq(struct iwx_softc *sc, mbuf_t m, void *pktdata,
     int rssi;
     uint8_t chanidx;
     uint16_t phy_info;
+    size_t desc_size;
     
     memset(&rxi, 0, sizeof(rxi));
     
     desc = (struct iwx_rx_mpdu_desc *)pktdata;
+    if (sc->sc_device_family >= IWX_DEVICE_FAMILY_22560)
+        desc_size = sizeof(struct iwx_rx_mpdu_desc);
+    else
+        desc_size = IWX_RX_DESC_SIZE_V1;
     
     if (!(desc->status & htole16(IWX_RX_MPDU_RES_STATUS_CRC_OK)) ||
         !(desc->status & htole16(IWX_RX_MPDU_RES_STATUS_OVERRUN_OK))) {
@@ -5077,7 +5140,7 @@ iwx_rx_mpdu_mq(struct iwx_softc *sc, mbuf_t m, void *pktdata,
         mbuf_freem(m);
         return;
     }
-    if (len > maxlen - sizeof(*desc)) {
+    if (len > maxlen - desc_size) {
         IC2IFP(ic)->netStat->inputErrors++;
         mbuf_freem(m);
         return;
@@ -5085,7 +5148,7 @@ iwx_rx_mpdu_mq(struct iwx_softc *sc, mbuf_t m, void *pktdata,
     
     //    m->m_data = pktdata + sizeof(*desc);
     //    m->m_pkthdr.len = m->m_len = len;
-    mbuf_setdata(m, (uint8_t*)pktdata + sizeof(*desc), len);
+    mbuf_setdata(m, (uint8_t*)pktdata + desc_size, len);
     mbuf_pkthdr_setlen(m, len);
     mbuf_setlen(m, len);
     
@@ -5169,17 +5232,24 @@ iwx_rx_mpdu_mq(struct iwx_softc *sc, mbuf_t m, void *pktdata,
         return;
     }
     
-    phy_info = le16toh(desc->phy_info);
-    rate_n_flags = le32toh(desc->v1.rate_n_flags);
-    chanidx = desc->v1.channel;
-    device_timestamp = desc->v1.gp2_on_air_rise;
-    
     rssi = iwx_rxmq_get_signal_strength(sc, desc);
     rssi = (0 - IWX_MIN_DBM) + rssi;    /* normalize */
     rssi = MIN(rssi, ic->ic_max_rssi);    /* clip to max. 100% */
     
     rxi.rxi_rssi = rssi;
-    rxi.rxi_tstamp = le64toh(desc->v1.tsf_on_air_rise);
+    
+    phy_info = le16toh(desc->phy_info);
+    if (sc->sc_device_family >= IWX_DEVICE_FAMILY_22560) {
+        rate_n_flags = le32toh(desc->v3.rate_n_flags);
+        chanidx = desc->v3.channel;
+        device_timestamp = desc->v3.gp2_on_air_rise;
+        rxi.rxi_tstamp = (uint32_t)le64toh(desc->v3.tsf_on_air_rise);
+    } else {
+        rate_n_flags = le32toh(desc->v1.rate_n_flags);
+        chanidx = desc->v1.channel;
+        device_timestamp = desc->v1.gp2_on_air_rise;
+        rxi.rxi_tstamp = (uint32_t)le64toh(desc->v1.tsf_on_air_rise);
+    }
     
     if (iwx_rx_reorder(sc, m, chanidx, desc,
                        (phy_info & IWX_RX_MPDU_PHY_SHORT_PREAMBLE),
@@ -5669,12 +5739,14 @@ iwx_send_cmd(struct iwx_softc *sc, struct iwx_host_cmd *hcmd)
     int generation = sc->sc_generation;
     unsigned int max_chunks = 1;
     IOPhysicalSegment seg;
+    unsigned long copy_size;
+    uint16_t tb0_size;
+    uint64_t addr2;
     
     code = hcmd->id;
     async = hcmd->flags & IWX_CMD_ASYNC;
     idx = ring->cur;
     
-    paylen = 0;
     for (i = 0, paylen = 0; i < nitems(hcmd->len); i++) {
         paylen += hcmd->len[i];
     }
@@ -5705,6 +5777,8 @@ iwx_send_cmd(struct iwx_softc *sc, struct iwx_host_cmd *hcmd)
     txdata = &ring->data[idx];
     
     group_id = iwx_cmd_groupid(code);
+//    hdrlen = sizeof(cmd->hdr_wide);
+//    datasz = sizeof(cmd->data_wide);
     if (group_id != 0) {
         hdrlen = sizeof(cmd->hdr_wide);
         datasz = sizeof(cmd->data_wide);
@@ -5747,13 +5821,21 @@ iwx_send_cmd(struct iwx_softc *sc, struct iwx_host_cmd *hcmd)
         paddr = txdata->cmd_paddr;
     }
     
+//    cmd->hdr_wide.cmd = iwx_cmd_opcode(code);
+//    cmd->hdr_wide.group_id = group_id;
+//    cmd->hdr_wide.qid = ring->qid;
+//    cmd->hdr_wide.idx = idx;
+//    cmd->hdr_wide.length = htole16(paylen);
+//    cmd->hdr_wide.reserved = htole16(0);
+//    cmd->hdr_wide.version = iwx_cmd_version(code);
+//    data = cmd->data_wide;
     if (group_id != 0) {
         cmd->hdr_wide.cmd = iwx_cmd_opcode(code);
         cmd->hdr_wide.group_id = group_id;
         cmd->hdr_wide.qid = ring->qid;
         cmd->hdr_wide.idx = idx;
         cmd->hdr_wide.length = htole16(paylen);
-    cmd->hdr_wide.reserved = 0;
+        cmd->hdr_wide.reserved = 0;
         cmd->hdr_wide.version = iwx_cmd_version(code);
         data = cmd->data_wide;
     } else {
@@ -5772,10 +5854,24 @@ iwx_send_cmd(struct iwx_softc *sc, struct iwx_host_cmd *hcmd)
     }
     KASSERT(off == paylen, "off == paylen");
     
-    desc->tbs[0].tb_len = htole16(hdrlen + paylen);
+    copy_size = paylen + hdrlen;
+    tb0_size = min(copy_size, 20);
+    desc->tbs[0].tb_len = htole16(tb0_size);
     addr = htole64((uint64_t)paddr);
     memcpy(&desc->tbs[0].addr, &addr, sizeof(addr));
+    XYLog("%s tb0_size: %d paylen: %d hdrlen: %d\n", __FUNCTION__, tb0_size, paylen, hdrlen);
     desc->num_tbs = 1;
+    if (copy_size > tb0_size) {
+        XYLog("%s copy_size: %d\n", __FUNCTION__, copy_size);
+        desc->tbs[1].tb_len = htole16(copy_size - tb0_size);
+        addr2 = htole64((uint8_t *)paddr + tb0_size);
+        memcpy(&desc->tbs[1].addr, &addr2, sizeof(addr2));
+        desc->num_tbs++;
+    }
+//    desc->tbs[0].tb_len = htole16(hdrlen + paylen);
+//    addr = htole64((uint64_t)paddr);
+//    memcpy(&desc->tbs[0].addr, &addr, sizeof(addr));
+//    desc->num_tbs = 1;
     
     //    if (paylen > datasz) {
     //        bus_dmamap_sync(sc->sc_dmat, txdata->map, 0,
@@ -5950,7 +6046,7 @@ iwx_toggle_tx_ant(struct iwx_softc *sc, uint8_t *ant)
  */
 const struct iwx_rate *ItlIwx::
 iwx_tx_fill_cmd(struct iwx_softc *sc, struct iwx_node *in,
-                struct ieee80211_frame *wh, struct iwx_tx_cmd_gen2 *tx)
+                struct ieee80211_frame *wh, uint32_t *flags, uint32_t *rate_n_flags)
 {
     struct ieee80211com *ic = &sc->sc_ic;
     struct ieee80211_node *ni = &in->in_ni;
@@ -5959,19 +6055,19 @@ iwx_tx_fill_cmd(struct iwx_softc *sc, struct iwx_node *in,
     int type = wh->i_fc[0] & IEEE80211_FC0_TYPE_MASK;
     int min_ridx = iwx_rval2ridx(ieee80211_min_basic_rate(ic));
     int ridx, rate_flags;
-    uint32_t flags = 0;
 
+    *flags = 0;
     if (IEEE80211_IS_MULTICAST(wh->i_addr1) ||
         type != IEEE80211_FC0_TYPE_DATA) {
         /* for non-data, use the lowest supported rate */
         ridx = min_ridx;
-        flags |= IWX_TX_FLAGS_CMD_RATE;
+        *flags |= IWX_TX_FLAGS_CMD_RATE;
     } else if (ic->ic_fixed_mcs != -1) {
         ridx = sc->sc_fixed_ridx;
-        flags |= IWX_TX_FLAGS_CMD_RATE;
+        *flags |= IWX_TX_FLAGS_CMD_RATE;
     } else if (ic->ic_fixed_rate != -1) {
         ridx = sc->sc_fixed_ridx;
-        flags |= IWX_TX_FLAGS_CMD_RATE;
+        *flags |= IWX_TX_FLAGS_CMD_RATE;
     } else if (ni->ni_flags & IEEE80211_NODE_HT) {
         ridx = iwx_mcs2ridx[ni->ni_txmcs];
         return &iwx_rates[ridx];
@@ -5984,15 +6080,13 @@ iwx_tx_fill_cmd(struct iwx_softc *sc, struct iwx_node *in,
         return &iwx_rates[ridx];
     }
     
-    tx->flags = htole32(flags);
-    
     rinfo = &iwx_rates[ridx];
     
     rate_flags = iwx_get_tx_ant(sc, ni, rinfo, type, wh);
     
     if (IWX_RIDX_IS_CCK(ridx))
         rate_flags |= IWX_RATE_MCS_CCK_MSK;
-    tx->rate_n_flags = htole32(rate_flags | rinfo->plcp);
+    *rate_n_flags = htole32(rate_flags | rinfo->plcp);
     
     return rinfo;
 }
@@ -6042,7 +6136,8 @@ iwx_tx(struct iwx_softc *sc, mbuf_t m, struct ieee80211_node *ni, int ac)
     struct iwx_tx_data *data;
     struct iwx_tfh_tfd *desc;
     struct iwx_device_cmd *cmd;
-    struct iwx_tx_cmd_gen2 *tx;
+    struct iwx_tx_cmd_gen2 *tx_gen2;
+    struct iwx_tx_cmd_gen3 *tx_gen3;
     struct ieee80211_frame *wh;
     struct ieee80211_key *k = NULL;
     const struct iwx_rate *rinfo;
@@ -6051,6 +6146,9 @@ iwx_tx(struct iwx_softc *sc, mbuf_t m, struct ieee80211_node *ni, int ac)
     IOPhysicalSegment *seg;
     IOPhysicalSegment segs[IWX_TFH_NUM_TBS - 2];
     int nsegs = 0;
+    uint32_t flags = 0, rate_n_flags = 0;
+    uint16_t offload_assist = 0;
+    uint16_t cmd_size = 0;
 
     uint16_t num_tbs;
     uint8_t tid, type, subtype;
@@ -6103,10 +6201,7 @@ iwx_tx(struct iwx_softc *sc, mbuf_t m, struct ieee80211_node *ni, int ac)
     cmd->hdr.qid = ring->qid;
     cmd->hdr.idx = ring->cur;
     
-    tx = (struct iwx_tx_cmd_gen2 *)cmd->data;
-    memset(tx, 0, sizeof(*tx));
-    
-    rinfo = iwx_tx_fill_cmd(sc, in, wh, tx);
+    rinfo = iwx_tx_fill_cmd(sc, in, wh, &flags, &rate_n_flags);
     
 #if NBPFILTER > 0
     if (sc->sc_drvbpf != NULL) {
@@ -6142,23 +6237,43 @@ iwx_tx(struct iwx_softc *sc, mbuf_t m, struct ieee80211_node *ni, int ac)
                 return ENOBUFS;
             /* 802.11 header may have moved. */
             wh = mtod(m, struct ieee80211_frame *);
-            tx->flags |= htole32(IWX_TX_FLAGS_ENCRYPT_DIS);
+            flags |= htole32(IWX_TX_FLAGS_ENCRYPT_DIS);
         } else {
             k->k_tsc++;
             /* Hardware increments PN internally and adds IV. */
         }
     } else
-        tx->flags |= htole32(IWX_TX_FLAGS_ENCRYPT_DIS);
+        flags |= htole32(IWX_TX_FLAGS_ENCRYPT_DIS);
     //    totlen = m->m_pkthdr.len;
     totlen = mbuf_pkthdr_len(m);
     
     if (hdrlen % 4)
-        tx->offload_assist |= htole16(IWX_TX_CMD_OFFLD_PAD);
+        offload_assist |= IWX_TX_CMD_OFFLD_PAD;
     
-    tx->len = htole16(totlen);
-    
-    /* Copy 802.11 header in TX command. */
-    memcpy(((uint8_t *)tx) + sizeof(*tx), wh, hdrlen);
+    if (sc->sc_device_family >= IWX_DEVICE_FAMILY_22560) {
+        tx_gen3 = (struct iwx_tx_cmd_gen3 *)cmd->data;
+        
+        cmd_size = sizeof(*tx_gen3);
+        memset(tx_gen3, 0, cmd_size);
+        
+        tx_gen3->len = htole16(totlen);
+        tx_gen3->offload_assist = htole32(offload_assist);
+        /* Copy 802.11 header in TX command. */
+        memcpy(((uint8_t *)tx_gen3) + sizeof(*tx_gen3), wh, hdrlen);
+        tx_gen3->flags = htole16(flags);
+        tx_gen3->rate_n_flags = htole32(rate_n_flags);
+    } else {
+        tx_gen2 = (struct iwx_tx_cmd_gen2 *)cmd->data;
+        
+        cmd_size = sizeof(*tx_gen2);
+        memset(tx_gen2, 0, cmd_size);
+        tx_gen2->len = htole16(totlen);
+        tx_gen2->offload_assist = htole16(offload_assist);
+        /* Copy 802.11 header in TX command. */
+        memcpy(((uint8_t *)tx_gen2) + sizeof(*tx_gen2), wh, hdrlen);
+        tx_gen2->flags = htole32(flags);
+        tx_gen2->rate_n_flags = htole32(rate_n_flags);
+    }
     
     /* Trim 802.11 header. */
     mbuf_adj(m, hdrlen);
@@ -6175,8 +6290,8 @@ iwx_tx(struct iwx_softc *sc, mbuf_t m, struct ieee80211_node *ni, int ac)
     data->type = type;
 
     DPRINTFN(3, ("sending data: 嘤嘤嘤 tid=%d qid=%d idx=%d queued=%d len=%d nsegs=%d flags=0x%08x rate_n_flags=0x%08x offload_assist=%u\n",
-          tid, ring->qid, ring->cur, ring->queued, totlen, nsegs, le32toh(tx->flags),
-          le32toh(tx->rate_n_flags), tx->offload_assist));
+          tid, ring->qid, ring->cur, ring->queued, totlen, nsegs, le32toh(flags),
+          le32toh(rate_n_flags), offload_assist));
     
     /* Fill TX descriptor. */
     num_tbs = 2 + nsegs;
@@ -6188,7 +6303,7 @@ iwx_tx(struct iwx_softc *sc, mbuf_t m, struct ieee80211_node *ni, int ac)
     if (data->cmd_paddr >> 32 != (data->cmd_paddr + le32toh(desc->tbs[0].tb_len)) >> 32)
         DPRINTF(("%s: TB0 crosses 32bit boundary\n", __func__));
     desc->tbs[1].tb_len = htole16(_ALIGN(sizeof(struct iwx_cmd_header) +
-                                  sizeof(*tx) + hdrlen - IWX_FIRST_TB_SIZE, 4));
+                                  cmd_size + hdrlen - IWX_FIRST_TB_SIZE, 4));
     paddr = htole64(data->cmd_paddr + IWX_FIRST_TB_SIZE);
     memcpy(&desc->tbs[1].addr, &paddr, sizeof(paddr));
     
@@ -9679,10 +9794,10 @@ iwx_rx_pkt(struct iwx_softc *sc, struct iwx_rx_data *data, struct mbuf_list *ml)
         
         code = IWX_WIDE_ID(pkt->hdr.group_id, pkt->hdr.cmd);
         
+        XYLog("%s gid=%d cmd=%d code=0x%02x qid=%d idx=%d packet_len=%d payload_len=%d\n", __FUNCTION__, pkt->hdr.group_id, pkt->hdr.cmd, code, qid, idx, iwx_rx_packet_len(pkt), iwx_rx_packet_payload_len(pkt));
+        
         if (!iwx_rx_pkt_valid(pkt))
             break;
-        
-//        XYLog("%s code=0x%02x\n", __FUNCTION__, code);
         
         len = sizeof(pkt->len_n_flags) + iwx_rx_packet_len(pkt);
         if (len < sizeof(pkt->hdr) ||
@@ -9992,6 +10107,9 @@ iwx_rx_pkt(struct iwx_softc *sc, struct iwx_rx_data *data, struct mbuf_list *ml)
         }
         
         offset += roundup(len, IWX_FH_RSCSR_FRAME_ALIGN);
+        
+        if (sc->sc_device_family >= IWX_DEVICE_FAMILY_22560)
+            break;
     }
     
     if (m0 && m0 != data->m && mbuf_type(m0) != MBUF_TYPE_FREE)
@@ -10001,19 +10119,26 @@ iwx_rx_pkt(struct iwx_softc *sc, struct iwx_rx_data *data, struct mbuf_list *ml)
 void ItlIwx::
 iwx_notif_intr(struct iwx_softc *sc)
 {
-//    XYLog("%s\n", __FUNCTION__);
     struct mbuf_list ml = MBUF_LIST_INITIALIZER();
     uint16_t hw;
     
     //    bus_dmamap_sync(sc->sc_dmat, sc->rxq.stat_dma.map,
     //        0, sc->rxq.stat_dma.size, BUS_DMASYNC_POSTREAD);
     
-    hw = le16toh(sc->rxq.stat->closed_rb_num) & 0xfff;
+    if (sc->sc_device_family >= IWX_DEVICE_FAMILY_22560)
+        hw = le16toh(*(uint16_t *)(sc->rxq.stat)) & 0xfff;
+    else
+        hw = le16toh(((struct iwx_rb_status *)sc->rxq.stat)->closed_rb_num) & 0xfff;
     hw &= (IWX_RX_MQ_RING_COUNT - 1);
+    XYLog("%s hw=%d\n", __FUNCTION__, hw);
     while (sc->rxq.cur != hw) {
         struct iwx_rx_data *data = &sc->rxq.data[sc->rxq.cur];
         iwx_rx_pkt(sc, data, &ml);
         sc->rxq.cur = (sc->rxq.cur + 1) % IWX_RX_MQ_RING_COUNT;
+    }
+    if (sc->sc_device_family >= IWX_DEVICE_FAMILY_22560) {
+        uint16_t *cr_tail = (uint16_t *)sc->rxq.cr_tail_dma.vaddr;
+        *cr_tail = htole16(hw);
     }
     if_input(&sc->sc_ic.ic_if, &ml);
     
@@ -10381,7 +10506,7 @@ const struct iwl_cfg iwlax211_2ax_cfg_so_gf_a0_long = {
 
 const struct iwl_cfg iwlax210_2ax_cfg_ty_gf_a0 = {
     .name = "Intel(R) Wi-Fi 6 AX210 160MHz",
-    .fwname = "iwlwifi-ty-a0-gf-a0-59.ucode",
+    .fwname = "iwlwifi-ty-a0-gf-a0-63.ucode",
     .uhb_supported = 1,
     .device_family = IWX_DEVICE_FAMILY_22560,
     .num_rbds = IWL_NUM_RBDS_AX210_HE,
@@ -10477,7 +10602,7 @@ const struct iwl_cfg iwl_cfg_so_a0_hr_a0 = {
 };
 
 const struct iwl_cfg iwl_cfg_quz_a0_hr_b0 = {
-    .fwname = "iwlwifi-QuZ-a0-hr-b0-48.ucode",
+    .fwname = "iwlwifi-QuZ-a0-hr-b0-63.ucode",
     .device_family = IWX_DEVICE_FAMILY_22000,
     /*
      * This device doesn't support receiving BlockAck with a large bitmap
@@ -10725,7 +10850,7 @@ const struct iwl_cfg iwl_ax201_cfg_qu_hr = {
 
 const struct iwl_cfg iwl_ax201_cfg_quz_hr = {
     .name = "Intel(R) Wi-Fi 6 AX201 160MHz",
-    .fwname = "iwlwifi-QuZ-a0-hr-b0-48.ucode",
+    .fwname = "iwlwifi-QuZ-a0-hr-b0-50.ucode",
     .device_family = IWX_DEVICE_FAMILY_22000,
     .tx_with_siso_diversity = 0,
     .uhb_supported = 0,
@@ -10845,7 +10970,7 @@ const struct iwl_cfg iwl_qu_c0_hr1_b0 = {
 };
 
 const struct iwl_cfg iwl_quz_a0_hr1_b0 = {
-    .fwname = "iwlwifi-QuZ-a0-hr-b0-48.ucode",
+    .fwname = "iwlwifi-QuZ-a0-hr-b0-63.ucode",
     .device_family = IWX_DEVICE_FAMILY_22000,
     .tx_with_siso_diversity = 1,
     .uhb_supported = 0,

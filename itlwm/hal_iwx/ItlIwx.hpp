@@ -352,7 +352,7 @@ public:
     void    iwx_free_resp(struct iwx_softc *, struct iwx_host_cmd *);
     void    iwx_cmd_done(struct iwx_softc *, int, int, int);
     const struct iwx_rate *iwx_tx_fill_cmd(struct iwx_softc *, struct iwx_node *,
-            struct ieee80211_frame *, struct iwx_tx_cmd_gen2 *);
+            struct ieee80211_frame *, uint32_t *, uint32_t *);
     uint32_t iwx_get_tx_ant(struct iwx_softc *sc, struct ieee80211_node *ni,
                             const struct iwx_rate *rinfo, int type, struct ieee80211_frame *wh);
     void    iwx_toggle_tx_ant(struct iwx_softc *sc, uint8_t *ant);

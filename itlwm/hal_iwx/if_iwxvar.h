@@ -143,11 +143,7 @@ struct iwx_tx_radiotap_header {
 	 (1 << IEEE80211_RADIOTAP_RATE) |				\
 	 (1 << IEEE80211_RADIOTAP_CHANNEL))
 
-#define IWX_UCODE_SECT_MAX 1024
-#define IWX_FWDMASEGSZ (192*1024)
-#define IWX_FWDMASEGSZ_8000 (320*1024)
-/* sanity check value */
-#define IWX_FWMAXSIZE (2*1024*1024)
+#define IWX_UCODE_SECT_MAX 60
 
 /*
  * fw_status is used to determine if we've already parsed the firmware file
@@ -291,7 +287,7 @@ struct iwx_rx_ring {
     struct iwx_dma_info tr_tail_dma;
     struct iwx_dma_info cr_tail_dma;
 	void			*desc;
-	struct iwx_rb_status	*stat;
+	void	        *stat;
 	struct iwx_rx_data	data[IWX_RX_MQ_RING_COUNT];
 	int			cur;
 };
