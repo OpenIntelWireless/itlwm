@@ -1561,6 +1561,7 @@ struct iwx_ucode_header {
 #define IWX_UCODE_TLV_UMAC_DEBUG_ADDRS    54
 #define IWX_UCODE_TLV_LMAC_DEBUG_ADDRS    55
 #define IWX_UCODE_TLV_FW_RECOVERY_INFO    57
+#define IWX_UCODE_TLV_HW_TYPE             58
 #define IWX_UCODE_TLV_FW_FMAC_RECOVERY_INFO 59
 #define IWX_UCODE_TLV_FW_FSEQ_VERSION    60
 #define IWX_UCODE_PHY_INTEGRATION_VERSION 61
@@ -2010,7 +2011,7 @@ struct iwx_tx_queue_cfg_rsp {
 #define IWX_NVM_ACCESS_COMPLETE    0x00
 #define IWX_NVM_GET_INFO    0x02
 #define IWX_TAS_CONFIG      0x03
-#define IWX_PNVM_INIT_COMPLETE_NTFY 0x04
+#define IWX_PNVM_INIT_COMPLETE_NTFY 0xFE
 
 /*
  * struct iwx_dqa_enable_cmd

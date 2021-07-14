@@ -133,7 +133,7 @@ OSDefineMetaClassAndStructors(ItlIwx, ItlHalService)
 #ifdef IWX_DEBUG
 #define DPRINTF(x)    do { if (iwx_debug > 0) XYLog x; } while (0)
 #define DPRINTFN(n, x)    do { if (iwx_debug >= (n)) XYLog x; } while (0)
-int iwx_debug = 1;
+int iwx_debug = 10;
 #else
 #define DPRINTF(x)    do { ; } while (0)
 #define DPRINTFN(n, x)    do { ; } while (0)
@@ -588,6 +588,15 @@ iwx_lookup_cmd_ver(struct iwx_softc *sc, uint8_t grp, uint8_t cmd)
     }
     
     return IWX_FW_CMD_VER_UNKNOWN;
+}
+
+uint32_t ItlIwx::
+iwx_lmac_id(struct iwx_softc *sc, ieee80211_channel *chan)
+{
+    if (!isset(sc->sc_enabled_capa, IWX_UCODE_TLV_CAPA_CDB_SUPPORT) ||
+        IEEE80211_IS_CHAN_2GHZ(chan))
+        return IWX_LMAC_24G_INDEX;
+    return IWX_LMAC_5G_INDEX;
 }
 
 int ItlIwx::
@@ -1313,6 +1322,15 @@ iwx_fw_info_free(struct iwx_fw_info *fw)
     memset(fw->fw_sects, 0, sizeof(fw->fw_sects));
 }
 
+void ItlIwx::
+iwx_pnvm_free(struct iwx_fw_info *fw)
+{
+    if (fw->pnvm_rawdata) {
+        ::free(fw->pnvm_rawdata);
+        fw->pnvm_rawsize = 0;
+    }
+}
+
 #define IWX_FW_ADDR_CACHE_CONTROL 0xC0000000
 
 //void ItlIwx::
@@ -1787,6 +1805,272 @@ out:
     OSSafeReleaseNULL(fwData);
     
     return err;
+}
+
+struct iwx_pnvm_section {
+    uint32_t offset;
+    const uint8_t data[];
+} __packed;
+
+int ItlIwx::
+iwx_pnvm_handle_section(struct iwx_softc *sc, const uint8_t *data, size_t len)
+{
+    struct iwx_ucode_tlv *tlv;
+    uint32_t sha1 = 0;
+    uint16_t mac_type = 0, rf_id = 0;
+    uint8_t *pnvm_data = NULL, *tmp;
+    uint32_t size = 0;
+    int err = 0;
+    struct iwx_prph_scratch_ctrl_cfg *prph_sc_ctrl;
+    
+    XYLog("Handling PNVM section\n");
+    
+    while (len >= sizeof(*tlv)) {
+        uint32_t tlv_len, tlv_type;
+        
+        len -= sizeof(*tlv);
+        tlv = (struct iwx_ucode_tlv *)data;
+        
+        tlv_len = le32toh(tlv->length);
+        tlv_type = le32toh(tlv->type);
+        
+        if (len < tlv_len) {
+            XYLog("invalid TLV len: %zd/%u\n",
+                  len, tlv_len);
+            err = -EINVAL;
+            goto out;
+        }
+        
+        data += sizeof(*tlv);
+        
+        switch (tlv_type) {
+            case IWX_UCODE_TLV_PNVM_VERSION:
+                if (tlv_len < sizeof(__le32)) {
+                    XYLog("Invalid size for IWL_UCODE_TLV_PNVM_VERSION (expected %zd, got %d)\n",
+                          sizeof(__le32), tlv_len);
+                    break;
+                }
+                
+                sha1 = le32_to_cpup((__le32 *)data);
+                
+                XYLog("Got IWL_UCODE_TLV_PNVM_VERSION %0x\n",
+                      sha1);
+                break;
+            case IWX_UCODE_TLV_HW_TYPE:
+                if (tlv_len < 2 * sizeof(__le16)) {
+                    XYLog("Invalid size for IWL_UCODE_TLV_HW_TYPE (expected %zd, got %d)\n",
+                          2 * sizeof(__le16), tlv_len);
+                    break;
+                }
+                
+                mac_type = le16_to_cpup((__le16 *)data);
+                rf_id = le16_to_cpup((__le16 *)(data + sizeof(__le16)));
+                
+                XYLog("Got IWL_UCODE_TLV_HW_TYPE mac_type 0x%0x rf_id 0x%0x\n",
+                      mac_type, rf_id);
+                
+                if (mac_type != CSR_HW_REV_TYPE(sc->sc_hw_rev) ||
+                    rf_id != CSR_HW_RFID_TYPE(sc->sc_hw_rf_id)) {
+                    XYLog("HW mismatch, skipping PNVM section, mac_type 0x%0x, rf_id 0x%0x.\n",
+                          CSR_HW_REV_TYPE(sc->sc_hw_rev), sc->sc_hw_rf_id);
+                    err = -ENOENT;
+                    goto out;
+                }
+                
+                break;
+            case IWX_UCODE_TLV_SEC_RT: {
+                struct iwx_pnvm_section *section = (struct iwx_pnvm_section *)data;
+                u32 data_len = tlv_len - sizeof(*section);
+                
+                XYLog("Got IWL_UCODE_TLV_SEC_RT len %d\n",
+                      tlv_len);
+                
+                /* TODO: remove, this is a deprecated separator */
+                if (le32_to_cpup((__le32 *)data) == 0xddddeeee) {
+                    XYLog("Ignoring separator.\n");
+                    break;
+                }
+                
+                XYLog("Adding data (size %d)\n",
+                      data_len);
+                
+                tmp = (uint8_t *)malloc(size + data_len, 0, 0);
+                if (!tmp) {
+                    XYLog("Couldn't allocate (more) pnvm_data\n");
+                    
+                    err = -ENOMEM;
+                    goto out;
+                }
+                if (pnvm_data && size > 0) {
+                    memcpy(tmp, pnvm_data, size);
+                    ::free(pnvm_data);
+                }
+                
+                pnvm_data = tmp;
+                
+                memcpy(pnvm_data + size, section->data, data_len);
+                
+                size += data_len;
+                
+                break;
+            }
+            case IWX_UCODE_TLV_PNVM_SKU:
+                XYLog("New PNVM section started, stop parsing.\n");
+                goto done;
+            default:
+                XYLog("Found TLV 0x%0x, len %d\n",
+                      tlv_type, tlv_len);
+                break;
+        }
+        
+        len -= _ALIGN(tlv_len, 4);
+        data += _ALIGN(tlv_len, 4);
+    }
+    
+done:
+    if (!size) {
+        XYLog("Empty PNVM, skipping.\n");
+        err = -ENOENT;
+        goto out;
+    }
+    
+    XYLog("loaded PNVM version 0x%0x\n", sha1);
+    
+    prph_sc_ctrl = &((struct iwx_prph_scratch *)sc->prph_scratch_dma.vaddr)->ctrl_cfg;
+    
+    iwx_dma_contig_free(&sc->pnvm_dram);
+    err = iwx_dma_contig_alloc(sc->sc_dmat, &sc->pnvm_dram, size, 0);
+    if (err) {
+        XYLog("%s: could not allocate context info DMA memory\n",
+              DEVNAME(sc));
+        goto out;
+    }
+    
+    memcpy(sc->pnvm_dram.vaddr, pnvm_data, size);
+    
+    prph_sc_ctrl->pnvm_cfg.pnvm_base_addr =
+        htole64(sc->pnvm_dram.paddr);
+    prph_sc_ctrl->pnvm_cfg.pnvm_size =
+        htole32(sc->pnvm_dram.size);
+    
+out:
+    ::free(pnvm_data);
+    
+    return err;
+}
+
+int ItlIwx::
+iwx_read_pnvm(struct iwx_softc *sc)
+{
+    int err = 0;
+    OSData *fwData = NULL;
+    struct iwx_fw_info *fw = &sc->sc_fw;
+    char pnvm_name[64];
+    struct iwx_ucode_tlv *tlv;
+    uint8_t *data;
+    size_t len;
+    
+    if (fw->pnvm_rawdata != NULL)
+        iwx_pnvm_free(fw);
+    /*
+     * The prefix unfortunately includes a hyphen at the end, so
+     * don't add the dot here...
+     */
+    snprintf(pnvm_name, sizeof(pnvm_name), "%s.pnvm",
+         "iwlwifi-ty-a0-gf-a0");
+    
+    fwData = getFWDescByName(pnvm_name);
+
+    if (fwData == NULL) {
+        err = EINVAL;
+        XYLog("%s resource load fail.\n", pnvm_name);
+        goto out;
+    }
+    fw->pnvm_rawsize = fwData->getLength() * 4;
+    fw->pnvm_rawdata = malloc(fw->pnvm_rawsize, 1, 1);
+    uncompressFirmware((u_char *)fw->pnvm_rawdata, (uint *)&fw->pnvm_rawsize, (u_char *)fwData->getBytesNoCopy(), fwData->getLength());
+    XYLog("load firmware %s done\n", pnvm_name);
+    
+    XYLog("Parsing PNVM file\n");
+    
+    data = (uint8_t *)fw->pnvm_rawdata;
+    len = fw->pnvm_rawsize;
+    
+    while (len >= sizeof(*tlv)) {
+        uint32_t tlv_len, tlv_type;
+
+        len -= sizeof(*tlv);
+        tlv = (struct iwx_ucode_tlv *)data;
+
+        tlv_len = le32_to_cpu(tlv->length);
+        tlv_type = le32_to_cpu(tlv->type);
+
+        if (len < tlv_len) {
+            XYLog("invalid TLV len: %zd/%u\n",
+                len, tlv_len);
+            err = -EINVAL;
+            goto out;
+        }
+
+        if (tlv_type == IWX_UCODE_TLV_PNVM_SKU) {
+            struct iwx_sku_id *sku_id =
+                (struct iwx_sku_id *)(data + sizeof(*tlv));
+
+            XYLog("Got IWL_UCODE_TLV_PNVM_SKU len %d\n",
+                     tlv_len);
+            XYLog("sku_id 0x%0x 0x%0x 0x%0x\n",
+                     le32_to_cpu(sku_id->data[0]),
+                     le32_to_cpu(sku_id->data[1]),
+                     le32_to_cpu(sku_id->data[2]));
+
+            data += sizeof(*tlv) + _ALIGN(tlv_len, 4);
+            len -= _ALIGN(tlv_len, 4);
+
+            if (sc->sku_id[0] == le32_to_cpu(sku_id->data[0]) &&
+                sc->sku_id[1] == le32_to_cpu(sku_id->data[1]) &&
+                sc->sku_id[2] == le32_to_cpu(sku_id->data[2])) {
+
+                err = iwx_pnvm_handle_section(sc, data, len);
+                if (!err)
+                    goto out;
+            } else {
+                XYLog("SKU ID didn't match!\n");
+            }
+        } else {
+            data += sizeof(*tlv) + _ALIGN(tlv_len, 4);
+            len -= _ALIGN(tlv_len, 4);
+        }
+    }
+    
+    XYLog("PNVM parse done\n");
+    
+out:
+    OSSafeReleaseNULL(fwData);
+    
+    return err;
+}
+
+int ItlIwx::
+iwx_load_pnvm(struct iwx_softc *sc)
+{
+    XYLog("%s\n", __FUNCTION__);
+    /* if the SKU_ID is empty, there's nothing to do */
+    if (!sc->sku_id[0] && !sc->sku_id[1] && !sc->sku_id[2])
+        return 0;
+    
+    if (!iwx_read_pnvm(sc)) {
+        goto out;
+    };
+    
+out:
+    /* kick the doorbell */
+    if (iwx_nic_lock(sc)) {
+        iwx_write_umac_prph(sc, IWX_UREG_DOORBELL_TO_ISR6,
+        IWX_UREG_DOORBELL_TO_ISR6_PNVM);
+        iwx_nic_unlock(sc);
+    }
+    
+    return tsleep_nsec(&sc->sc_init_complete, 0, "iwxinit", SEC_TO_NSEC(2));
 }
 
 static uint32_t iwx_prph_msk(struct iwx_softc *sc)
@@ -5631,6 +5915,13 @@ iwx_get_ctrl_pos(struct ieee80211com *ic, struct ieee80211_channel *c) {
     return ret;
 }
 
+static inline u8 iwx_num_of_ant(u8 mask)
+{
+    return  !!((mask) & IWX_ANT_A) +
+        !!((mask) & IWX_ANT_B) +
+        !!((mask) & IWX_ANT_C);
+}
+
 int ItlIwx::
 iwx_phy_ctxt_cmd_uhb(struct iwx_softc *sc, struct iwx_phy_ctxt *ctxt,
     uint8_t chains_static, uint8_t chains_dynamic, uint32_t action,
@@ -5666,6 +5957,18 @@ iwx_phy_ctxt_cmd_uhb(struct iwx_softc *sc, struct iwx_phy_ctxt *ctxt,
     
     idle_cnt = chains_static;
     active_cnt = chains_dynamic;
+    
+    /* In scenarios where we only ever use a single-stream rates,
+     * i.e. legacy 11b/g/a associations, single-stream APs or even
+     * static SMPS, enable both chains to get diversity, improving
+     * the case where we're far enough from the AP that attenuation
+     * between the two antennas is sufficiently different to impact
+     * performance.
+     */
+    if (active_cnt == 1 && iwx_num_of_ant(iwx_fw_valid_rx_ant(sc)) != 1) {
+        idle_cnt = 2;
+        active_cnt = 2;
+    }
     
     cmd.rxchain_info = htole32(iwx_fw_valid_rx_ant(sc) <<
                                IWX_PHY_RX_CHAIN_VALID_POS);
@@ -9578,7 +9881,7 @@ iwx_nic_umac_error(struct iwx_softc *sc)
     
     base = sc->sc_uc.uc_umac_error_event_table;
     
-    if (base < 0x800000) {
+    if (base < 0x400000) {
         XYLog("%s: Invalid error log pointer 0x%08x\n",
               DEVNAME(sc), base);
         return;
@@ -9671,7 +9974,7 @@ iwx_nic_error(struct iwx_softc *sc)
     
     XYLog("%s: dumping device error log\n", DEVNAME(sc));
     base = sc->sc_uc.uc_lmac_error_event_table[0];
-    if (base < 0x800000) {
+    if (base < 0x400000) {
         XYLog("%s: Invalid error log pointer 0x%08x\n",
               DEVNAME(sc), base);
         return;
@@ -9993,6 +10296,10 @@ iwx_rx_pkt(struct iwx_softc *sc, struct iwx_rx_data *data, struct mbuf_list *ml)
                 memcpy(sc->sc_cmd_resp_pkt[idx], pkt, pkt_len);
                 break;
             }
+                
+            case IWX_WIDE_ID(IWX_REGULATORY_AND_NVM_GROUP, IWX_PNVM_INIT_COMPLETE_NTFY):
+                wakeupOn(&sc->sc_init_complete);
+                break;
                 
             case IWX_INIT_COMPLETE_NOTIF:
                 sc->sc_init_complete |= IWX_INIT_COMPLETE;
@@ -10641,102 +10948,6 @@ static const struct pci_matchid iwx_devices[] = {
     {IWL_PCI_DEVICE(0x2729, PCI_ANY_ID, iwl_ma_trans_cfg)},
     {IWL_PCI_DEVICE(0x7E40, PCI_ANY_ID, iwl_ma_trans_cfg)},
 };
-
-#define IWL_CFG_ANY (~0)
-
-#define IWL_CFG_MAC_TYPE_PU        0x31
-#define IWL_CFG_MAC_TYPE_PNJ        0x32
-#define IWL_CFG_MAC_TYPE_TH        0x32
-#define IWL_CFG_MAC_TYPE_QU        0x33
-#define IWL_CFG_MAC_TYPE_QUZ        0x35
-#define IWL_CFG_MAC_TYPE_QNJ        0x36
-#define IWL_CFG_MAC_TYPE_SO        0x37
-#define IWL_CFG_MAC_TYPE_SNJ        0x42
-#define IWL_CFG_MAC_TYPE_MA        0x44
-
-#define IWL_CFG_RF_TYPE_TH        0x105
-#define IWL_CFG_RF_TYPE_TH1        0x108
-#define IWL_CFG_RF_TYPE_JF2        0x105
-#define IWL_CFG_RF_TYPE_JF1        0x108
-#define IWL_CFG_RF_TYPE_HR2        0x10A
-#define IWL_CFG_RF_TYPE_HR1        0x10C
-#define IWL_CFG_RF_TYPE_GF        0x10D
-#define IWL_CFG_RF_TYPE_MR        0x110
-
-#define IWL_CFG_RF_ID_TH        0x1
-#define IWL_CFG_RF_ID_TH1        0x1
-#define IWL_CFG_RF_ID_JF        0x3
-#define IWL_CFG_RF_ID_JF1        0x6
-#define IWL_CFG_RF_ID_JF1_DIV        0xA
-#define IWL_CFG_RF_ID_HR        0x7
-#define IWL_CFG_RF_ID_HR1        0x4
-
-#define IWL_CFG_NO_160            0x0
-#define IWL_CFG_160            0x1
-
-#define IWL_CFG_CORES_BT        0x0
-#define IWL_CFG_CORES_BT_GNSS        0x5
-
-#define IWL_CFG_NO_CDB            0x0
-#define IWL_CFG_CDB            0x1
-
-#define IWL_SUBDEVICE_RF_ID(subdevice)    ((u16)((subdevice) & 0x00F0) >> 4)
-#define IWL_SUBDEVICE_NO_160(subdevice)    ((u16)((subdevice) & 0x0100) >> 9)
-#define IWL_SUBDEVICE_CORES(subdevice)    ((u16)((subdevice) & 0x1C00) >> 10)
-
-/* HW REV */
-#define CSR_HW_REV_DASH(_val)          (((_val) & 0x0000003) >> 0)
-#define CSR_HW_REV_STEP(_val)          (((_val) & 0x000000C) >> 2)
-#define CSR_HW_REV_TYPE(_val)          (((_val) & 0x000FFF0) >> 4)
-
-/* HW RFID */
-#define CSR_HW_RFID_FLAVOR(_val)       (((_val) & 0x000000F) >> 0)
-#define CSR_HW_RFID_DASH(_val)         (((_val) & 0x00000F0) >> 4)
-#define CSR_HW_RFID_STEP(_val)         (((_val) & 0x0000F00) >> 8)
-#define CSR_HW_RFID_TYPE(_val)         (((_val) & 0x0FFF000) >> 12)
-#define CSR_HW_RFID_IS_CDB(_val)       (((_val) & 0x10000000) >> 28)
-#define CSR_HW_RFID_IS_JACKET(_val)    (((_val) & 0x20000000) >> 29)
-
-#define CSR_HW_REV_TYPE_MSK        (0x000FFF0)
-#define CSR_HW_REV_TYPE_5300        (0x0000020)
-#define CSR_HW_REV_TYPE_5350        (0x0000030)
-#define CSR_HW_REV_TYPE_5100        (0x0000050)
-#define CSR_HW_REV_TYPE_5150        (0x0000040)
-#define CSR_HW_REV_TYPE_1000        (0x0000060)
-#define CSR_HW_REV_TYPE_6x00        (0x0000070)
-#define CSR_HW_REV_TYPE_6x50        (0x0000080)
-#define CSR_HW_REV_TYPE_6150        (0x0000084)
-#define CSR_HW_REV_TYPE_6x05        (0x00000B0)
-#define CSR_HW_REV_TYPE_6x30        CSR_HW_REV_TYPE_6x05
-#define CSR_HW_REV_TYPE_6x35        CSR_HW_REV_TYPE_6x05
-#define CSR_HW_REV_TYPE_2x30        (0x00000C0)
-#define CSR_HW_REV_TYPE_2x00        (0x0000100)
-#define CSR_HW_REV_TYPE_105        (0x0000110)
-#define CSR_HW_REV_TYPE_135        (0x0000120)
-#define CSR_HW_REV_TYPE_7265D        (0x0000210)
-#define CSR_HW_REV_TYPE_NONE        (0x00001F0)
-#define CSR_HW_REV_TYPE_QNJ        (0x0000360)
-#define CSR_HW_REV_TYPE_QNJ_B0        (0x0000364)
-#define CSR_HW_REV_TYPE_QU_B0        (0x0000334)
-#define CSR_HW_REV_TYPE_QU_C0        (0x0000338)
-#define CSR_HW_REV_TYPE_QUZ        (0x0000354)
-#define CSR_HW_REV_TYPE_HR_CDB        (0x0000340)
-#define CSR_HW_REV_TYPE_SO        (0x0000370)
-#define CSR_HW_REV_TYPE_TY        (0x0000420)
-
-/* RF_ID value */
-#define CSR_HW_RF_ID_TYPE_JF        (0x00105100)
-#define CSR_HW_RF_ID_TYPE_HR        (0x0010A000)
-#define CSR_HW_RF_ID_TYPE_HR1        (0x0010c100)
-#define CSR_HW_RF_ID_TYPE_HRCDB        (0x00109F00)
-#define CSR_HW_RF_ID_TYPE_GF        (0x0010D000)
-#define CSR_HW_RF_ID_TYPE_GF4        (0x0010E000)
-
-/* HW_RF CHIP ID  */
-#define CSR_HW_RF_ID_TYPE_CHIP_ID(_val) (((_val) >> 12) & 0xFFF)
-
-/* HW_RF CHIP STEP  */
-#define CSR_HW_RF_STEP(_val) (((_val) >> 8) & 0xF)
 
 struct iwl_dev_info {
     int32_t device;

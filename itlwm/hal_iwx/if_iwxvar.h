@@ -111,6 +111,102 @@
 #include <IOKit/network/IOMbufMemoryCursor.h>
 #include <IOKit/IODMACommand.h>
 
+#define IWL_CFG_ANY (~0)
+
+#define IWL_CFG_MAC_TYPE_PU        0x31
+#define IWL_CFG_MAC_TYPE_PNJ        0x32
+#define IWL_CFG_MAC_TYPE_TH        0x32
+#define IWL_CFG_MAC_TYPE_QU        0x33
+#define IWL_CFG_MAC_TYPE_QUZ        0x35
+#define IWL_CFG_MAC_TYPE_QNJ        0x36
+#define IWL_CFG_MAC_TYPE_SO        0x37
+#define IWL_CFG_MAC_TYPE_SNJ        0x42
+#define IWL_CFG_MAC_TYPE_MA        0x44
+
+#define IWL_CFG_RF_TYPE_TH        0x105
+#define IWL_CFG_RF_TYPE_TH1        0x108
+#define IWL_CFG_RF_TYPE_JF2        0x105
+#define IWL_CFG_RF_TYPE_JF1        0x108
+#define IWL_CFG_RF_TYPE_HR2        0x10A
+#define IWL_CFG_RF_TYPE_HR1        0x10C
+#define IWL_CFG_RF_TYPE_GF        0x10D
+#define IWL_CFG_RF_TYPE_MR        0x110
+
+#define IWL_CFG_RF_ID_TH        0x1
+#define IWL_CFG_RF_ID_TH1        0x1
+#define IWL_CFG_RF_ID_JF        0x3
+#define IWL_CFG_RF_ID_JF1        0x6
+#define IWL_CFG_RF_ID_JF1_DIV        0xA
+#define IWL_CFG_RF_ID_HR        0x7
+#define IWL_CFG_RF_ID_HR1        0x4
+
+#define IWL_CFG_NO_160            0x0
+#define IWL_CFG_160            0x1
+
+#define IWL_CFG_CORES_BT        0x0
+#define IWL_CFG_CORES_BT_GNSS        0x5
+
+#define IWL_CFG_NO_CDB            0x0
+#define IWL_CFG_CDB            0x1
+
+#define IWL_SUBDEVICE_RF_ID(subdevice)    ((u16)((subdevice) & 0x00F0) >> 4)
+#define IWL_SUBDEVICE_NO_160(subdevice)    ((u16)((subdevice) & 0x0100) >> 9)
+#define IWL_SUBDEVICE_CORES(subdevice)    ((u16)((subdevice) & 0x1C00) >> 10)
+
+/* HW REV */
+#define CSR_HW_REV_DASH(_val)          (((_val) & 0x0000003) >> 0)
+#define CSR_HW_REV_STEP(_val)          (((_val) & 0x000000C) >> 2)
+#define CSR_HW_REV_TYPE(_val)          (((_val) & 0x000FFF0) >> 4)
+
+/* HW RFID */
+#define CSR_HW_RFID_FLAVOR(_val)       (((_val) & 0x000000F) >> 0)
+#define CSR_HW_RFID_DASH(_val)         (((_val) & 0x00000F0) >> 4)
+#define CSR_HW_RFID_STEP(_val)         (((_val) & 0x0000F00) >> 8)
+#define CSR_HW_RFID_TYPE(_val)         (((_val) & 0x0FFF000) >> 12)
+#define CSR_HW_RFID_IS_CDB(_val)       (((_val) & 0x10000000) >> 28)
+#define CSR_HW_RFID_IS_JACKET(_val)    (((_val) & 0x20000000) >> 29)
+
+#define CSR_HW_REV_TYPE_MSK        (0x000FFF0)
+#define CSR_HW_REV_TYPE_5300        (0x0000020)
+#define CSR_HW_REV_TYPE_5350        (0x0000030)
+#define CSR_HW_REV_TYPE_5100        (0x0000050)
+#define CSR_HW_REV_TYPE_5150        (0x0000040)
+#define CSR_HW_REV_TYPE_1000        (0x0000060)
+#define CSR_HW_REV_TYPE_6x00        (0x0000070)
+#define CSR_HW_REV_TYPE_6x50        (0x0000080)
+#define CSR_HW_REV_TYPE_6150        (0x0000084)
+#define CSR_HW_REV_TYPE_6x05        (0x00000B0)
+#define CSR_HW_REV_TYPE_6x30        CSR_HW_REV_TYPE_6x05
+#define CSR_HW_REV_TYPE_6x35        CSR_HW_REV_TYPE_6x05
+#define CSR_HW_REV_TYPE_2x30        (0x00000C0)
+#define CSR_HW_REV_TYPE_2x00        (0x0000100)
+#define CSR_HW_REV_TYPE_105        (0x0000110)
+#define CSR_HW_REV_TYPE_135        (0x0000120)
+#define CSR_HW_REV_TYPE_7265D        (0x0000210)
+#define CSR_HW_REV_TYPE_NONE        (0x00001F0)
+#define CSR_HW_REV_TYPE_QNJ        (0x0000360)
+#define CSR_HW_REV_TYPE_QNJ_B0        (0x0000364)
+#define CSR_HW_REV_TYPE_QU_B0        (0x0000334)
+#define CSR_HW_REV_TYPE_QU_C0        (0x0000338)
+#define CSR_HW_REV_TYPE_QUZ        (0x0000354)
+#define CSR_HW_REV_TYPE_HR_CDB        (0x0000340)
+#define CSR_HW_REV_TYPE_SO        (0x0000370)
+#define CSR_HW_REV_TYPE_TY        (0x0000420)
+
+/* RF_ID value */
+#define CSR_HW_RF_ID_TYPE_JF        (0x00105100)
+#define CSR_HW_RF_ID_TYPE_HR        (0x0010A000)
+#define CSR_HW_RF_ID_TYPE_HR1        (0x0010c100)
+#define CSR_HW_RF_ID_TYPE_HRCDB        (0x00109F00)
+#define CSR_HW_RF_ID_TYPE_GF        (0x0010D000)
+#define CSR_HW_RF_ID_TYPE_GF4        (0x0010E000)
+
+/* HW_RF CHIP ID  */
+#define CSR_HW_RF_ID_TYPE_CHIP_ID(_val) (((_val) >> 12) & 0xFFF)
+
+/* HW_RF CHIP STEP  */
+#define CSR_HW_RF_STEP(_val) (((_val) >> 8) & 0xF)
+
 struct iwx_rx_radiotap_header {
 	struct ieee80211_radiotap_header wr_ihdr;
 	uint64_t	wr_tsft;
@@ -177,6 +273,8 @@ struct iwx_fw_sects {
 struct iwx_fw_info {
 	void *fw_rawdata;
 	size_t fw_rawsize;
+    void *pnvm_rawdata;
+    size_t pnvm_rawsize;
 	int fw_status;
 
 	struct iwx_fw_sects fw_sects[IWX_UCODE_TYPE_MAX];
@@ -575,6 +673,7 @@ struct iwx_softc {
     struct iwx_dma_info prph_scratch_dma;
     struct iwx_dma_info prph_info_dma;
     struct iwx_dma_info iml_dma;
+    struct iwx_dma_info pnvm_dram;
 
 	int sc_fw_chunk_done;
 	int sc_init_complete;

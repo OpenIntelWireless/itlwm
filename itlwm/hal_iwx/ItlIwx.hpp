@@ -192,6 +192,7 @@ public:
 //    static void onLoadFW(OSKextRequestTag requestTag, OSReturn result, const void *resourceData, uint32_t resourceDataLength, void *context);
     
     uint8_t    iwx_lookup_cmd_ver(struct iwx_softc *, uint8_t, uint8_t);
+    uint32_t    iwx_lmac_id(struct iwx_softc *, ieee80211_channel *);
     int    iwx_is_mimo_ht_plcp(uint8_t);
     int    iwx_is_mimo_mcs(int);
     int    iwx_store_cscheme(struct iwx_softc *, uint8_t *, size_t);
@@ -212,7 +213,11 @@ public:
             uint8_t *, size_t);
     int    iwx_set_default_calib(struct iwx_softc *, const void *);
     void    iwx_fw_info_free(struct iwx_fw_info *);
+    void    iwx_pnvm_free(struct iwx_fw_info *);
     int    iwx_read_firmware(struct iwx_softc *);
+    int    iwx_read_pnvm(struct iwx_softc *);
+    int     iwx_load_pnvm(struct iwx_softc *);
+    int     iwx_pnvm_handle_section(struct iwx_softc *, const uint8_t *, size_t);
     uint32_t iwx_read_prph_unlocked(struct iwx_softc *, uint32_t);
     uint32_t iwx_read_prph(struct iwx_softc *, uint32_t);
     uint32_t iwx_read_umac_prph(struct iwx_softc *, uint32_t);
