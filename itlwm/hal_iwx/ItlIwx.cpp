@@ -4581,6 +4581,10 @@ iwx_load_ucode_wait_alive(struct iwx_softc *sc)
     if (err)
         return err;
     
+    err = iwx_load_pnvm(sc);
+    if (err)
+        return err;
+    
     iwx_post_alive(sc);
     
     return 0;
