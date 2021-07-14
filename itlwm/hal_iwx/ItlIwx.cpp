@@ -9389,11 +9389,21 @@ iwx_init_hw(struct iwx_softc *sc)
     }
     
     /* Add auxiliary station for scanning */
-    err = iwx_add_aux_sta(sc);
-    if (err) {
-        XYLog("%s: could not add aux station (error %d)\n",
-               DEVNAME(sc), err);
-        goto err;
+    if (iwx_lookup_cmd_ver(sc, IWX_LONG_GROUP, IWX_ADD_STA) < 12) {
+        /*
+         * Add auxiliary station for scanning.
+         * Newer versions of this command implies that the fw uses
+         * internal aux station for all aux activities that don't
+         * requires a dedicated data queue.
+         * In old version the aux station uses mac id like other
+         * station and not lmac id
+         */
+        err = iwx_add_aux_sta(sc);
+        if (err) {
+            XYLog("%s: could not add aux station (error %d)\n",
+                   DEVNAME(sc), err);
+            goto err;
+        }
     }
     
     for (i = 0; i < 1; i++) {
