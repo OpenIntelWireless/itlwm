@@ -3273,6 +3273,9 @@ struct iwx_fw_channel_info {
 /* TODO: fix the value, make it depend on firmware at runtime? */
 #define IWX_NUM_PHY_CTX    3
 
+#define IWX_LMAC_24G_INDEX        0
+#define IWX_LMAC_5G_INDEX        1
+
 /* TODO: complete missing documentation */
 /**
  * struct iwx_phy_context_cmd - config of the PHY context
@@ -3301,13 +3304,11 @@ struct iwx_phy_context_cmd_uhb {
     uint32_t id_and_color;
     uint32_t action;
     /* IWX_PHY_CONTEXT_DATA_API_S_VER_1 */
-    uint32_t apply_time;
-    uint32_t tx_param_color;
     struct iwx_fw_channel_info ci;
-    uint32_t txchain_info;
+    uint32_t lmac_id;
     uint32_t rxchain_info;
-    uint32_t acquisition_data;
     uint32_t dsp_cfg_flags;
+    uint32_t reserved;
 } __packed; /* IWX_PHY_CONTEXT_CMD_API_VER_1 */
 /* This version must be used otherwise: */
 struct iwx_phy_context_cmd {
@@ -6177,7 +6178,7 @@ struct iwx_scan_dwell {
  *                scan_config_channel_flag
  * @channel_array:        default supported channels
  */
-struct iwx_scan_config {
+struct iwx_scan_config_v2 {
     uint32_t flags;
     uint32_t tx_chains;
     uint32_t rx_chains;
@@ -6190,6 +6191,25 @@ struct iwx_scan_config {
     uint8_t channel_flags;
     uint8_t channel_array[];
 } __packed; /* SCAN_CONFIG_DB_CMD_API_S_2 */
+
+/**
+ * struct iwx_scan_config
+ * @enable_cam_mode: whether to enable CAM mode.
+ * @enable_promiscouos_mode: whether to enable promiscouos mode
+ * @bcast_sta_id: the index of the station in the fw. Deprecated starting with
+ *     API version 5.
+ * @reserved: reserved
+ * @tx_chains: valid_tx antenna - ANT_* definitions
+ * @rx_chains: valid_rx antenna - ANT_* definitions
+ */
+struct iwx_scan_config {
+    uint8_t enable_cam_mode;
+    uint8_t enable_promiscouos_mode;
+    uint8_t bcast_sta_id;
+    uint8_t reserved;
+    uint32_t tx_chains;
+    uint32_t rx_chains;
+} __packed; /* SCAN_CONFIG_DB_CMD_API_S_5 */
 
 /**
  * iwx_umac_scan_flags

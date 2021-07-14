@@ -381,6 +381,7 @@ public:
     int iwx_fill_probe_req_v1(struct iwx_softc *sc, struct iwx_scan_probe_req_v1 *preq1);
     int    iwx_fill_probe_req(struct iwx_softc *, struct iwx_scan_probe_req *);
     int    iwx_config_umac_scan(struct iwx_softc *);
+    int    iwx_config_legacy_umac_scan(struct iwx_softc *);
     int iwx_umac_scan_size(struct iwx_softc *sc);
     struct iwx_scan_umac_chan_param *iwx_get_scan_req_umac_chan_param(struct iwx_softc *sc, struct iwx_scan_req_umac *req);
     void *iwx_get_scan_req_umac_data(struct iwx_softc *sc, struct iwx_scan_req_umac *req);

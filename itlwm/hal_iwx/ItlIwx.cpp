@@ -5939,7 +5939,7 @@ iwx_phy_ctxt_cmd_uhb(struct iwx_softc *sc, struct iwx_phy_ctxt *ctxt,
     cmd.id_and_color = htole32(IWX_FW_CMD_ID_AND_COLOR(ctxt->id,
                                                        ctxt->color));
     cmd.action = htole32(action);
-    cmd.apply_time = htole32(apply_time);
+    cmd.lmac_id = htole32(iwx_lmac_id(sc, chan));
     
     cmd.ci.band = IEEE80211_IS_CHAN_2GHZ(chan) ?
     IWX_PHY_BAND_24 : IWX_PHY_BAND_5;
@@ -5979,7 +5979,6 @@ iwx_phy_ctxt_cmd_uhb(struct iwx_softc *sc, struct iwx_phy_ctxt *ctxt,
     cmd.rxchain_info |= htole32(idle_cnt << IWX_PHY_RX_CHAIN_CNT_POS);
     cmd.rxchain_info |= htole32(active_cnt <<
                                 IWX_PHY_RX_CHAIN_MIMO_CNT_POS);
-    cmd.txchain_info = htole32(iwx_fw_valid_tx_ant(sc));
     return iwx_send_cmd_pdu(sc, IWX_PHY_CONTEXT_CMD, 0, sizeof(cmd), &cmd);
 }
 
@@ -6001,7 +6000,7 @@ iwx_phy_ctxt_cmd(struct iwx_softc *sc, struct iwx_phy_ctxt *ctxt,
      * To keep things simple we use a separate function to handle the larger
      * variant of the phy context command.
      */
-    if (isset(sc->sc_enabled_capa, IWX_UCODE_TLV_CAPA_ULTRA_HB_CHANNELS))
+    if (iwx_lookup_cmd_ver(sc, IWX_LONG_GROUP, IWX_PHY_CONTEXT_CMD) == 3)
         return iwx_phy_ctxt_cmd_uhb(sc, ctxt, chains_static,
                                     chains_dynamic, action, apply_time);
     
@@ -7108,11 +7107,49 @@ int ItlIwx::
 iwx_config_umac_scan(struct iwx_softc *sc)
 {
     XYLog("%s\n", __FUNCTION__);
-    struct ieee80211com *ic = &sc->sc_ic;
     struct iwx_scan_config *scan_config;
-    int err, nchan;
+    int err;
     size_t cmd_size;
+    struct iwx_host_cmd hcmd = {
+        .id = iwx_cmd_id(IWX_SCAN_CFG_CMD, IWX_LONG_GROUP, 0),
+        .flags = 0,
+    };
+    
+    if (!isset(sc->sc_enabled_capa, IWX_UCODE_TLV_API_REDUCED_SCAN_CONFIG)) {
+        return iwx_config_legacy_umac_scan(sc);
+    }
+    
+    cmd_size = sizeof(*scan_config);
+    
+    scan_config = (struct iwx_scan_config *)malloc(cmd_size, 0, M_ZERO);
+    if (scan_config == NULL)
+        return ENOMEM;
+    
+    scan_config->tx_chains = htole32(iwx_fw_valid_tx_ant(sc));
+    scan_config->rx_chains = htole32(iwx_fw_valid_rx_ant(sc));
+    
+    if (iwx_lookup_cmd_ver(sc, IWX_LONG_GROUP, IWX_ADD_STA) < 12)
+        scan_config->bcast_sta_id = IWX_AUX_STA_ID;
+    else if (iwx_lookup_cmd_ver(sc, IWX_LONG_GROUP, IWX_SCAN_CFG_CMD) < 5)
+        scan_config->bcast_sta_id = 0xFF;
+    
+    hcmd.data[0] = scan_config;
+    hcmd.len[0] = cmd_size;
+    
+    err = iwx_send_cmd(sc, &hcmd);
+    ::free(scan_config);
+    return err;
+}
+
+int ItlIwx::
+iwx_config_legacy_umac_scan(struct iwx_softc *sc)
+{
+    XYLog("%s\n", __FUNCTION__);
+    struct iwx_scan_config_v2 *scan_config;
+    struct ieee80211com *ic = &sc->sc_ic;
+    int err, nchan;
     struct ieee80211_channel *c;
+    size_t cmd_size;
     struct iwx_host_cmd hcmd = {
         .id = iwx_cmd_id(IWX_SCAN_CFG_CMD, IWX_LONG_GROUP, 0),
         .flags = 0,
@@ -7127,7 +7164,7 @@ iwx_config_umac_scan(struct iwx_softc *sc)
     
     cmd_size = sizeof(*scan_config) + sc->sc_capa_n_scan_channels;
     
-    scan_config = (struct iwx_scan_config*)malloc(cmd_size, 0, M_ZERO);
+    scan_config = (struct iwx_scan_config_v2 *)malloc(cmd_size, 0, M_ZERO);
     if (scan_config == NULL)
         return ENOMEM;
     
@@ -7171,6 +7208,11 @@ iwx_config_umac_scan(struct iwx_softc *sc)
                                  IWX_SCAN_CONFIG_FLAG_SET_CHANNEL_FLAGS|
                                  IWX_SCAN_CONFIG_N_CHANNELS(nchan) |
                                  IWX_SCAN_CONFIG_FLAG_CLEAR_FRAGMENTED);
+    
+    scan_config->channel_flags = IWX_CHANNEL_FLAG_EBS | 
+    IWX_CHANNEL_FLAG_ACCURATE_EBS |
+    IWX_CHANNEL_FLAG_EBS_ADD |
+    IWX_CHANNEL_FLAG_PRE_SCAN_PASSIVE2ACTIVE;
     
     hcmd.data[0] = scan_config;
     hcmd.len[0] = cmd_size;
