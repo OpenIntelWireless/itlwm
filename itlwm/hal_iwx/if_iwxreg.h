@@ -3304,14 +3304,16 @@ struct iwx_phy_context_cmd_uhb {
     uint32_t id_and_color;
     uint32_t action;
     /* IWX_PHY_CONTEXT_DATA_API_S_VER_1 */
+    uint32_t apply_time;
+    uint32_t tx_param_color;
     struct iwx_fw_channel_info ci;
-    uint32_t lmac_id;
+    uint32_t txchain_info;
     uint32_t rxchain_info;
+    uint32_t acquisition_data;
     uint32_t dsp_cfg_flags;
-    uint32_t reserved;
 } __packed; /* IWX_PHY_CONTEXT_CMD_API_VER_1 */
 /* This version must be used otherwise: */
-struct iwx_phy_context_cmd {
+struct iwx_phy_context_cmd_v1 {
     /* COMMON_INDEX_HDR_API_S_VER_1 */
     uint32_t id_and_color;
     uint32_t action;
@@ -3324,6 +3326,29 @@ struct iwx_phy_context_cmd {
     uint32_t acquisition_data;
     uint32_t dsp_cfg_flags;
 } __packed; /* IWX_PHY_CONTEXT_CMD_API_VER_1 */
+
+/**
+ * struct iwx_phy_context_cmd - config of the PHY context
+ * ( PHY_CONTEXT_CMD = 0x8 )
+ * @id_and_color: ID and color of the relevant Binding
+ * @action: action to perform, one of FW_CTXT_ACTION_*
+ * @lmac_id: the lmac id the phy context belongs to
+ * @ci: channel info
+ * @rxchain_info: ???
+ * @dsp_cfg_flags: set to 0
+ * @reserved: reserved to align to 64 bit
+ */
+struct iwx_phy_context_cmd {
+    /* COMMON_INDEX_HDR_API_S_VER_1 */
+    uint32_t id_and_color;
+    uint32_t action;
+    /* PHY_CONTEXT_DATA_API_S_VER_3 */
+    struct iwx_fw_channel_info ci;
+    uint32_t lmac_id;
+    uint32_t rxchain_info;
+    uint32_t dsp_cfg_flags;
+    uint32_t reserved;
+} __packed; /* PHY_CONTEXT_CMD_API_VER_3 */
 
 
 #define IWX_RX_INFO_PHY_CNT 8

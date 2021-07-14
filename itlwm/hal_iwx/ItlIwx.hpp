@@ -345,6 +345,8 @@ public:
     int    iwx_binding_cmd(struct iwx_softc *, struct iwx_node *, uint32_t);
     int    iwx_phy_ctxt_cmd_uhb(struct iwx_softc *, struct iwx_phy_ctxt *, uint8_t,
                                 uint8_t, uint32_t, uint32_t);
+    int    iwx_phy_ctxt_cmd_v3(struct iwx_softc *, struct iwx_phy_ctxt *, uint8_t,
+                                uint8_t, uint32_t, uint32_t);
     int    iwx_phy_ctxt_cmd(struct iwx_softc *, struct iwx_phy_ctxt *, uint8_t,
             uint8_t, uint32_t, uint32_t);
     int    iwx_send_cmd(struct iwx_softc *, struct iwx_host_cmd *);
