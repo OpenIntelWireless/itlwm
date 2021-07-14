@@ -352,6 +352,8 @@ struct iwx_tx_data {
 	bus_addr_t	cmd_paddr;
 	mbuf_t m;
 	struct iwx_node *in;
+    int flags;
+#define IWX_TXDATA_FLAG_CMD_IS_NARROW  0x01
     uint8_t type;
 };
 

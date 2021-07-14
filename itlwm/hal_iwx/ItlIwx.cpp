@@ -6046,9 +6046,6 @@ iwx_send_cmd(struct iwx_softc *sc, struct iwx_host_cmd *hcmd)
     int generation = sc->sc_generation;
     unsigned int max_chunks = 1;
     IOPhysicalSegment seg;
-    unsigned long copy_size;
-    uint16_t tb0_size;
-    uint64_t addr2;
     
     code = hcmd->id;
     async = hcmd->flags & IWX_CMD_ASYNC;
@@ -6083,16 +6080,22 @@ iwx_send_cmd(struct iwx_softc *sc, struct iwx_host_cmd *hcmd)
     desc = &ring->desc[idx];
     txdata = &ring->data[idx];
     
+    /*
+     * XXX Intel inside (tm)
+     * Firmware API versions >= 50 reject old-style commands in
+     * group 0 with a "BAD_COMMAND" firmware error. We must pretend
+     * that such commands were in the LONG_GROUP instead in order
+     * for firmware to accept them.
+     */
+    if (iwx_cmd_groupid(code) == 0) {
+        code = IWX_WIDE_ID(IWX_LONG_GROUP, code);
+        txdata->flags |= IWX_TXDATA_FLAG_CMD_IS_NARROW;
+    } else
+        txdata->flags &= ~IWX_TXDATA_FLAG_CMD_IS_NARROW;
+    
     group_id = iwx_cmd_groupid(code);
-//    hdrlen = sizeof(cmd->hdr_wide);
-//    datasz = sizeof(cmd->data_wide);
-    if (group_id != 0) {
-        hdrlen = sizeof(cmd->hdr_wide);
-        datasz = sizeof(cmd->data_wide);
-    } else {
-        hdrlen = sizeof(cmd->hdr);
-        datasz = sizeof(cmd->data);
-    }
+    hdrlen = sizeof(cmd->hdr_wide);
+    datasz = sizeof(cmd->data_wide);
     
     if (paylen > datasz) {
                 /* Command is too large to fit in pre-allocated space. */
@@ -6128,30 +6131,14 @@ iwx_send_cmd(struct iwx_softc *sc, struct iwx_host_cmd *hcmd)
         paddr = txdata->cmd_paddr;
     }
     
-//    cmd->hdr_wide.cmd = iwx_cmd_opcode(code);
-//    cmd->hdr_wide.group_id = group_id;
-//    cmd->hdr_wide.qid = ring->qid;
-//    cmd->hdr_wide.idx = idx;
-//    cmd->hdr_wide.length = htole16(paylen);
-//    cmd->hdr_wide.reserved = htole16(0);
-//    cmd->hdr_wide.version = iwx_cmd_version(code);
-//    data = cmd->data_wide;
-    if (group_id != 0) {
-        cmd->hdr_wide.cmd = iwx_cmd_opcode(code);
-        cmd->hdr_wide.group_id = group_id;
-        cmd->hdr_wide.qid = ring->qid;
-        cmd->hdr_wide.idx = idx;
-        cmd->hdr_wide.length = htole16(paylen);
-        cmd->hdr_wide.reserved = 0;
-        cmd->hdr_wide.version = iwx_cmd_version(code);
-        data = cmd->data_wide;
-    } else {
-        cmd->hdr.cmd = code;
-        cmd->hdr.group_id = 0;
-        cmd->hdr.qid = ring->qid;
-        cmd->hdr.idx = idx;
-        data = cmd->data;
-    }
+    cmd->hdr_wide.cmd = iwx_cmd_opcode(code);
+    cmd->hdr_wide.group_id = group_id;
+    cmd->hdr_wide.qid = ring->qid;
+    cmd->hdr_wide.idx = idx;
+    cmd->hdr_wide.length = htole16(paylen);
+    cmd->hdr_wide.reserved = htole16(0);
+    cmd->hdr_wide.version = iwx_cmd_version(code);
+    data = cmd->data_wide;
     
     for (i = 0, off = 0; i < nitems(hcmd->data); i++) {
         if (hcmd->len[i] == 0)
@@ -6161,24 +6148,18 @@ iwx_send_cmd(struct iwx_softc *sc, struct iwx_host_cmd *hcmd)
     }
     KASSERT(off == paylen, "off == paylen");
     
-    copy_size = paylen + hdrlen;
-    tb0_size = min(copy_size, 20);
-    desc->tbs[0].tb_len = htole16(tb0_size);
-    addr = htole64((uint64_t)paddr);
+    desc->tbs[0].tb_len = htole16(MIN(hdrlen + paylen, IWX_FIRST_TB_SIZE));
+    addr = htole64(paddr);
     memcpy(&desc->tbs[0].addr, &addr, sizeof(addr));
-    XYLog("%s tb0_size: %d paylen: %d hdrlen: %d\n", __FUNCTION__, tb0_size, paylen, hdrlen);
-    desc->num_tbs = 1;
-    if (copy_size > tb0_size) {
-        XYLog("%s copy_size: %d\n", __FUNCTION__, copy_size);
-        desc->tbs[1].tb_len = htole16(copy_size - tb0_size);
-        addr2 = htole64((uint8_t *)paddr + tb0_size);
-        memcpy(&desc->tbs[1].addr, &addr2, sizeof(addr2));
-        desc->num_tbs++;
-    }
-//    desc->tbs[0].tb_len = htole16(hdrlen + paylen);
-//    addr = htole64((uint64_t)paddr);
-//    memcpy(&desc->tbs[0].addr, &addr, sizeof(addr));
-//    desc->num_tbs = 1;
+    if (hdrlen + paylen > IWX_FIRST_TB_SIZE) {
+        desc->tbs[1].tb_len = htole16(hdrlen + paylen -
+                                      IWX_FIRST_TB_SIZE);
+        addr = htole64(paddr + IWX_FIRST_TB_SIZE);
+        memcpy(&desc->tbs[1].addr, &addr, sizeof(addr));
+        desc->num_tbs = htole16(2);
+    } else
+        desc->num_tbs = htole16(1);
+    
     
     //    if (paylen > datasz) {
     //        bus_dmamap_sync(sc->sc_dmat, txdata->map, 0,
@@ -6192,7 +6173,7 @@ iwx_send_cmd(struct iwx_softc *sc, struct iwx_host_cmd *hcmd)
     //        (char *)(void *)desc - (char *)(void *)ring->desc_dma.vaddr,
     //        sizeof (*desc), BUS_DMASYNC_PREWRITE);
     /* Kick command ring. */
-    DPRINTF(("%s: Sending command (%.2x.%.2x), %d bytes at [%d]:%d\n", __func__, group_id, cmd->hdr_wide.cmd, paylen, idx, ring->qid));
+    DPRINTF(("%s: Sending command (%.2x.%.2x), %d bytes at [%d]:%d ver: %d\n", __func__, group_id, cmd->hdr.cmd, cmd->hdr_wide.length, cmd->hdr.idx, cmd->hdr.qid, cmd->hdr_wide.version));
     ring->queued++;
     ring->cur = (ring->cur + 1) % IWX_TX_RING_COUNT;
     IWX_WRITE(sc, IWX_HBUS_TARG_WRPTR, ring->qid << 16 | ring->cur);
@@ -10115,6 +10096,19 @@ iwx_rx_pkt(struct iwx_softc *sc, struct iwx_rx_data *data, struct mbuf_list *ml)
         
         if (!iwx_rx_pkt_valid(pkt))
             break;
+        
+        /*
+         * XXX Intel inside (tm)
+         * Any commands in the LONG_GROUP could actually be in the
+         * LEGACY group. Firmware API versions >= 50 reject commands
+         * in group 0, forcing us to use this hack.
+         */
+        if (iwx_cmd_groupid(code) == IWX_LONG_GROUP) {
+            struct iwx_tx_ring *ring = &sc->txq[qid];
+            struct iwx_tx_data *txdata = &ring->data[idx];
+            if (txdata->flags & IWX_TXDATA_FLAG_CMD_IS_NARROW)
+                code = iwx_cmd_opcode(code);
+        }
         
         len = sizeof(pkt->len_n_flags) + iwx_rx_packet_len(pkt);
         if (len < sizeof(pkt->hdr) ||
