@@ -133,7 +133,7 @@ OSDefineMetaClassAndStructors(ItlIwx, ItlHalService)
 #ifdef IWX_DEBUG
 #define DPRINTF(x)    do { if (iwx_debug > 0) XYLog x; } while (0)
 #define DPRINTFN(n, x)    do { if (iwx_debug >= (n)) XYLog x; } while (0)
-int iwx_debug = 10;
+int iwx_debug = 1;
 #else
 #define DPRINTF(x)    do { ; } while (0)
 #define DPRINTFN(n, x)    do { ; } while (0)
@@ -6198,7 +6198,7 @@ iwx_send_cmd(struct iwx_softc *sc, struct iwx_host_cmd *hcmd)
             mbuf_freem(m);
             goto out;
         }
-                XYLog("map fw cmd dm_nsegs=%d\n", txdata->map->dm_nsegs);
+//                XYLog("map fw cmd dm_nsegs=%d\n", txdata->map->dm_nsegs);
         txdata->m = m; /* mbuf will be freed in iwm_cmd_done() */
         paddr = seg.location;
     } else {
@@ -10463,7 +10463,7 @@ iwx_rx_pkt(struct iwx_softc *sc, struct iwx_rx_data *data, struct mbuf_list *ml)
         
         code = IWX_WIDE_ID(pkt->hdr.group_id, pkt->hdr.cmd);
         
-        XYLog("%s gid=%d cmd=%d code=0x%02x qid=%d idx=%d packet_len=%d payload_len=%d\n", __FUNCTION__, pkt->hdr.group_id, pkt->hdr.cmd, code, qid, idx, iwx_rx_packet_len(pkt), iwx_rx_packet_payload_len(pkt));
+        DPRINTFN(3, ("%s gid=%d cmd=%d code=0x%02x qid=%d idx=%d packet_len=%d payload_len=%d\n", __FUNCTION__, pkt->hdr.group_id, pkt->hdr.cmd, code, qid, idx, iwx_rx_packet_len(pkt), iwx_rx_packet_payload_len(pkt)));
         
         if (!iwx_rx_pkt_valid(pkt))
             break;
@@ -10836,7 +10836,7 @@ iwx_notif_intr(struct iwx_softc *sc)
     else
         hw = le16toh(((struct iwx_rb_status *)sc->rxq.stat)->closed_rb_num) & 0xfff;
     hw &= (IWX_RX_MQ_RING_COUNT - 1);
-    XYLog("%s hw=%d\n", __FUNCTION__, hw);
+    DPRINTFN(3, ("%s hw=%d\n", __FUNCTION__, hw));
     while (sc->rxq.cur != hw) {
         struct iwx_rx_data *data = &sc->rxq.data[sc->rxq.cur];
         iwx_rx_pkt(sc, data, &ml);
