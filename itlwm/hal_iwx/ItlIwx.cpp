@@ -6538,7 +6538,7 @@ iwx_tx(struct iwx_softc *sc, mbuf_t m, struct ieee80211_node *ni, int ac)
 
     if (tid == IWX_MGMT_TID) {
         DPRINTFN(1, ("%s type=%d qos=%d multicast=%d len=%zu subtype=%d qid=%d using mgmt tid\n", __FUNCTION__, type, hasqos, IEEE80211_IS_MULTICAST(wh->i_addr1), mbuf_len(m), subtype, qid));
-        qid = IWX_QID_MGMT;
+        qid = iwx_lookup_cmd_ver(sc, IWX_LONG_GROUP, IWX_ADD_STA) < 12 ? IWX_QID_MGMT : IWX_QID_MGMT - 1;
     }
 
     if (qid == IWX_INVALID_QUEUE || sc->qfullmsk & (1 << qid)) {
@@ -8271,12 +8271,15 @@ int ItlIwx::
 iwx_enable_data_tx_queues(struct iwx_softc *sc)
 {
     int err;
+    int qid;
 
-    err = iwx_enable_txq(sc, IWX_STATION_ID, IWX_QID_MGMT, IWX_MGMT_TID,
+    qid = iwx_lookup_cmd_ver(sc, IWX_LONG_GROUP, IWX_ADD_STA) < 12 ? IWX_QID_MGMT : IWX_QID_MGMT - 1;
+    err = iwx_enable_txq(sc, IWX_STATION_ID,
+                         qid, IWX_MGMT_TID,
                          IWX_TX_RING_COUNT);
     if (err) {
         XYLog("%s: could not enable MGMT Tx queue %d (error %d)\n",
-              DEVNAME(sc), IWX_QID_MGMT, err);
+              DEVNAME(sc), qid, err);
         return err;
     }
     
