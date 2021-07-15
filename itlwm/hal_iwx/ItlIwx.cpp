@@ -3684,6 +3684,11 @@ uint32_t *channel_profile_v4, int nchan_profile)
         }
 
         channel->ic_freq = ieee80211_ieee2mhz(hw_value, flags);
+        
+        DPRINTFN(3, ("Ch. %d Flags %x [%sGHz] - No traffic\n",
+              hw_value,
+              channel->ic_flags,
+              (!IEEE80211_IS_CHAN_2GHZ(channel)) ? "5.2" : "2.4"));
     }
 }
 
@@ -9218,9 +9223,9 @@ iwx_newstate_task(void *psc)
     
 out:
     if ((sc->sc_flags & IWX_FLAG_SHUTDOWN) == 0) {
-//        if (err)
-//            task_add(systq, &sc->init_task);
-//        else
+        if (err)
+            task_add(systq, &sc->init_task);
+        else
             sc->sc_newstate(ic, nstate, arg);
     }
     //    refcnt_rele_wake(&sc->task_refs);
@@ -9646,6 +9651,7 @@ iwx_init_hw(struct iwx_softc *sc)
         .len = { 0, },
         .resp_pkt_len = sizeof(*pkt) + sizeof(*resp),
     };
+    struct ieee80211_channel *first_chan;
     
     err = iwx_preinit(sc);
     if (err)
@@ -9742,13 +9748,23 @@ iwx_init_hw(struct iwx_softc *sc)
         }
     }
     
+    first_chan = &ic->ic_channels[1];
+    for (i = 0; i < nitems(ic->ic_channels); i++) {
+        first_chan = &ic->ic_channels[i];
+        XYLog("%s chanel: %d flags: %d\n", __FUNCTION__, ieee80211_chan2ieee(ic, first_chan), first_chan->ic_flags);
+        if (IEEE80211_IS_CHAN_2GHZ(first_chan)) {
+            XYLog("%s found channel %d\n", __FUNCTION__, ieee80211_chan2ieee(ic, first_chan));
+            break;
+        }
+    }
+    
     for (i = 0; i < 1; i++) {
         /*
          * The channel used here isn't relevant as it's
          * going to be overwritten in the other flows.
          * For now use the first channel we have.
          */
-        sc->sc_phyctxt[i].channel = &ic->ic_channels[1];
+        sc->sc_phyctxt[i].channel = first_chan;
         err = iwx_phy_ctxt_cmd(sc, &sc->sc_phyctxt[i], 1, 1,
                                IWX_FW_CTXT_ACTION_ADD, 0);
         if (err) {
@@ -10075,8 +10091,8 @@ iwx_watchdog(struct _ifnet *ifp)
 
             that->iwx_nic_error(sc);
 #endif
-//            if ((sc->sc_flags & IWX_FLAG_SHUTDOWN) == 0)
-//                task_add(systq, &sc->init_task);
+            if ((sc->sc_flags & IWX_FLAG_SHUTDOWN) == 0)
+                task_add(systq, &sc->init_task);
             ifp->netStat->outputErrors++;
             return;
         }
@@ -10904,7 +10920,7 @@ iwx_intr(OSObject *object, IOInterruptEventSource* sender, int count)
     if (r1 & IWX_CSR_INT_BIT_RF_KILL) {
         handled |= IWX_CSR_INT_BIT_RF_KILL;
         that->iwx_check_rfkill(sc);
-//        task_add(systq, &sc->init_task);
+        task_add(systq, &sc->init_task);
         rv = 1;
         goto out_ena;
     }
@@ -10929,8 +10945,8 @@ iwx_intr(OSObject *object, IOInterruptEventSource* sender, int count)
 #endif
         
         XYLog("%s: fatal firmware error\n", DEVNAME(sc));
-//        if ((sc->sc_flags & IWX_FLAG_SHUTDOWN) == 0)
-//            task_add(systq, &sc->init_task);
+        if ((sc->sc_flags & IWX_FLAG_SHUTDOWN) == 0)
+            task_add(systq, &sc->init_task);
         rv = 1;
         goto out;
         
@@ -10939,10 +10955,10 @@ iwx_intr(OSObject *object, IOInterruptEventSource* sender, int count)
     if (r1 & IWX_CSR_INT_BIT_HW_ERR) {
         handled |= IWX_CSR_INT_BIT_HW_ERR;
         XYLog("%s: hardware error, stopping device \n", DEVNAME(sc));
-//        if ((sc->sc_flags & IWX_FLAG_SHUTDOWN) == 0) {
-//            sc->sc_flags |= IWX_FLAG_HW_ERR;
-//            task_add(systq, &sc->init_task);
-//        }
+        if ((sc->sc_flags & IWX_FLAG_SHUTDOWN) == 0) {
+            sc->sc_flags |= IWX_FLAG_HW_ERR;
+            task_add(systq, &sc->init_task);
+        }
         rv = 1;
         goto out;
     }
@@ -11041,22 +11057,22 @@ iwx_intr_msix(OSObject *object, IOInterruptEventSource* sender, int count)
 #endif
         
         XYLog("%s: fatal firmware error\n", DEVNAME(sc));
-//        if ((sc->sc_flags & IWX_FLAG_SHUTDOWN) == 0)
-//            task_add(systq, &sc->init_task);
+        if ((sc->sc_flags & IWX_FLAG_SHUTDOWN) == 0)
+            task_add(systq, &sc->init_task);
         return 1;
     }
     
     if (inta_hw & IWX_MSIX_HW_INT_CAUSES_REG_RF_KILL) {
         that->iwx_check_rfkill(sc);
-//        task_add(systq, &sc->init_task);
+        task_add(systq, &sc->init_task);
     }
     
     if (inta_hw & IWX_MSIX_HW_INT_CAUSES_REG_HW_ERR) {
         XYLog("%s: hardware error, stopping device \n", DEVNAME(sc));
-//        if ((sc->sc_flags & IWX_FLAG_SHUTDOWN) == 0) {
-//            sc->sc_flags |= IWX_FLAG_HW_ERR;
-//            task_add(systq, &sc->init_task);
-//        }
+        if ((sc->sc_flags & IWX_FLAG_SHUTDOWN) == 0) {
+            sc->sc_flags |= IWX_FLAG_HW_ERR;
+            task_add(systq, &sc->init_task);
+        }
         return 1;
     }
     
