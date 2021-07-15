@@ -1986,10 +1986,10 @@ iwx_read_pnvm(struct iwx_softc *sc)
         XYLog("%s resource load fail.\n", pnvm_name);
         goto out;
     }
-    fw->pnvm_rawsize = fwData->getLength() * 4;
+    fw->pnvm_rawsize = fwData->getLength() * 8;
     fw->pnvm_rawdata = malloc(fw->pnvm_rawsize, 1, 1);
     uncompressFirmware((u_char *)fw->pnvm_rawdata, (uint *)&fw->pnvm_rawsize, (u_char *)fwData->getBytesNoCopy(), fwData->getLength());
-    XYLog("load firmware %s done\n", pnvm_name);
+    XYLog("load firmware %s done %zu\n", pnvm_name, fw->pnvm_rawsize);
     
     XYLog("Parsing PNVM file\n");
     
