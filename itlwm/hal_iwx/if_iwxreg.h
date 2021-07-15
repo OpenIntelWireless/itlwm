@@ -3134,6 +3134,57 @@ struct iwx_time_event_notif {
     uint32_t status;
 } __packed; /* IWX_MAC_TIME_EVENT_NTFY_API_S_VER_1 */
 
+#define IWX_SESSION_PROTECTION_CMD      0x5
+#define IWX_SESSION_PROTECTION_NOTIF    0xFB
+
+#define IWX_SESSION_PROTECT_CONF_ASSOC  0
+#define IWX_SESSION_PROTECT_CONF_GO_CLIENT_ASSOC    1
+#define IWX_SESSION_PROTECT_CONF_P2P_DEVICE_DISCOV  2
+#define IWX_SESSION_PROTECT_CONF_P2P_GO_NEGOTIATION 3
+#define IWX_SESSION_PROTECT_CONF_MAX_ID             4
+
+/**
+ * struct iwx_session_prot_cmd - configure a session protection
+ * @id_and_color: the id and color of the mac for which this session protection
+ *    is sent
+ * @action: can be either FW_CTXT_ACTION_ADD or FW_CTXT_ACTION_REMOVE
+ * @conf_id: see &enum iwl_mvm_session_prot_conf_id
+ * @duration_tu: the duration of the whole protection in TUs.
+ * @repetition_count: not used
+ * @interval: not used
+ *
+ * Note: the session protection will always be scheduled to start as
+ * early as possible, but the maximum delay is configuration dependent.
+ * The firmware supports only one concurrent session protection per vif.
+ * Adding a new session protection will remove any currently running session.
+ */
+struct iwx_session_prot_cmd {
+    /* COMMON_INDEX_HDR_API_S_VER_1 hdr */
+    uint32_t id_and_color;
+    uint32_t action;
+    uint32_t conf_id;
+    uint32_t duration_tu;
+    uint32_t repetition_count;
+    uint32_t interval;
+} __packed; /* SESSION_PROTECTION_CMD_API_S_VER_1 */
+
+/**
+ * struct iwx_session_prot_notif - session protection started / ended
+ * @mac_id: the mac id for which the session protection started / ended
+ * @status: 1 means success, 0 means failure
+ * @start: 1 means the session protection started, 0 means it ended
+ * @conf_id: see &enum iwl_mvm_session_prot_conf_id
+ *
+ * Note that any session protection will always get two notifications: start
+ * and end even the firmware could not schedule it.
+ */
+struct iwx_session_prot_notif {
+    uint32_t mac_id;
+    uint32_t status;
+    uint32_t start;
+    uint32_t conf_id;
+} __packed; /* SESSION_PROTECTION_NOTIFICATION_API_S_VER_2 */
+
 
 /* Bindings and Time Quota */
 

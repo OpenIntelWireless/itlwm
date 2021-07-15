@@ -3516,6 +3516,28 @@ iwx_protect_session(struct iwx_softc *sc, struct iwx_node *in,
 }
 
 void ItlIwx::
+iwx_schedule_protect_session(struct iwx_softc *sc, struct iwx_node *in,
+                    uint32_t duration)
+{
+    struct iwx_session_prot_cmd cmd = {
+        .id_and_color =
+            htole32(IWX_FW_CMD_ID_AND_COLOR(in->in_id, in->in_color)),
+        .action = htole32(IWX_FW_CTXT_ACTION_ADD),
+        .duration_tu = htole32(duration * 1000 / 1024),
+    };
+    int err;
+    
+    cmd.conf_id = IWX_SESSION_PROTECT_CONF_ASSOC;
+    
+    DPRINTFN(3, ("Add new session protection, duration %d TU\n",
+             htole32(cmd.duration_tu)));
+    
+    err = iwx_send_cmd_pdu(sc, iwx_cmd_id(IWX_SESSION_PROTECTION_CMD, IWX_MAC_CONF_GROUP, 0), 0, sizeof(cmd), &cmd);
+    if (err)
+        XYLog("Couldn't send the SESSION_PROTECTION_CMD %d\n", err);
+}
+
+void ItlIwx::
 iwx_unprotect_session(struct iwx_softc *sc, struct iwx_node *in)
 {
     struct iwx_time_event_cmd time_cmd;
@@ -8669,7 +8691,20 @@ iwx_auth(struct iwx_softc *sc)
         duration = in->in_ni.ni_intval * 2;
     else
         duration = IEEE80211_DUR_TU;
-    iwx_protect_session(sc, in, duration, in->in_ni.ni_intval / 2);
+    
+    /* Try really hard to protect the session and hear a beacon
+     * The new session protection command allows us to protect the
+     * session for a much longer time since the firmware will internally
+     * create two events: a 300TU one with a very high priority that
+     * won't be fragmented which should be enough for 99% of the cases,
+     * and another one (which we configure here to be 900TU long) which
+     * will have a slightly lower priority, but more importantly, can be
+     * fragmented so that it'll allow other activities to run.
+     */
+    if (isset(sc->sc_enabled_capa, IWX_UCODE_TLV_CAPA_SESSION_PROT_CMD))
+        iwx_schedule_protect_session(sc, in, 900);
+    else
+        iwx_protect_session(sc, in, duration, in->in_ni.ni_intval / 2);
     
     return 0;
     
@@ -8701,7 +8736,8 @@ iwx_deauth(struct iwx_softc *sc)
     
     splassert(IPL_NET);
     
-    iwx_unprotect_session(sc, in);
+    if (!isset(sc->sc_enabled_capa, IWX_UCODE_TLV_CAPA_SESSION_PROT_CMD))
+        iwx_unprotect_session(sc, in);
     
     if (sc->sc_flags & IWX_FLAG_STA_ACTIVE) {
         err = iwx_flush_tx_path(sc);
@@ -10586,6 +10622,7 @@ iwx_rx_pkt(struct iwx_softc *sc, struct iwx_rx_data *data, struct mbuf_list *ml)
             case IWX_WIDE_ID(IWX_LONG_GROUP, IWX_SCAN_CFG_CMD):
             case IWX_WIDE_ID(IWX_LONG_GROUP, IWX_SCAN_REQ_UMAC):
             case IWX_WIDE_ID(IWX_LONG_GROUP, IWX_SCAN_ABORT_UMAC):
+            case IWX_WIDE_ID(IWX_MAC_CONF_GROUP, IWX_SESSION_PROTECTION_CMD):
             case IWX_REPLY_BEACON_FILTERING_CMD:
             case IWX_MAC_PM_POWER_TABLE:
             case IWX_TIME_QUOTA_CMD:
@@ -10714,6 +10751,25 @@ iwx_rx_pkt(struct iwx_softc *sc, struct iwx_rx_data *data, struct mbuf_list *ml)
                 SYNC_RESP_STRUCT(notif, pkt, struct iwx_tlc_update_notif *);
                 if (iwx_rx_packet_payload_len(pkt) == sizeof(*notif))
                     iwx_rs_update(sc, notif);
+                break;
+            }
+                
+            case IWX_WIDE_ID(IWX_MAC_CONF_GROUP, IWX_SESSION_PROTECTION_NOTIF): {
+                struct iwx_session_prot_notif *notif;
+                SYNC_RESP_STRUCT(notif, pkt, struct iwx_session_prot_notif *);
+                if (!notif->status) {
+                    XYLog("Session protection failure\n");
+                    sc->sc_flags &= ~IWX_FLAG_TE_ACTIVE;
+                    break;
+                }
+                if (!notif->start) {
+                    /*
+                     * By now, we should have finished association
+                     * and know the dtim period.
+                     */
+                    sc->sc_flags &= ~IWX_FLAG_TE_ACTIVE;
+                    XYLog("%s finish association\n", __FUNCTION__);
+                }
                 break;
             }
                 
