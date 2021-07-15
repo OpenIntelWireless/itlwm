@@ -388,6 +388,8 @@ public:
     struct iwx_scan_umac_chan_param *iwx_get_scan_req_umac_chan_param(struct iwx_softc *sc, struct iwx_scan_req_umac *req);
     void *iwx_get_scan_req_umac_data(struct iwx_softc *sc, struct iwx_scan_req_umac *req);
     int    iwx_umac_scan(struct iwx_softc *, int);
+    int    iwx_umac_scan_v12(struct iwx_softc *, int);
+    int    iwx_umac_scan_v14(struct iwx_softc *, int);
     void    iwx_mcc_update(struct iwx_softc *, struct iwx_mcc_chub_notif *);
     uint8_t    iwx_ridx2rate(struct ieee80211_rateset *, int);
     int    iwx_rval2ridx(int);

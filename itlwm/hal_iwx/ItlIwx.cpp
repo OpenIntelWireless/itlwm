@@ -7037,6 +7037,7 @@ iwx_umac_scan_fill_channels(struct iwx_softc *sc,
 int ItlIwx::
 iwx_fill_probe_req_v1(struct iwx_softc *sc, struct iwx_scan_probe_req_v1 *preq1)
 {
+    XYLog("%s\n", __FUNCTION__);
     struct iwx_scan_probe_req preq2;
     int err, i;
     
@@ -7055,6 +7056,7 @@ iwx_fill_probe_req_v1(struct iwx_softc *sc, struct iwx_scan_probe_req_v1 *preq1)
 int ItlIwx::
 iwx_fill_probe_req(struct iwx_softc *sc, struct iwx_scan_probe_req *preq)
 {
+    XYLog("%s\n", __FUNCTION__);
     struct ieee80211com *ic = &sc->sc_ic;
     struct _ifnet *ifp = IC2IFP(ic);
     struct ieee80211_frame *wh = (struct ieee80211_frame *)preq->buf;
@@ -7276,15 +7278,20 @@ iwx_umac_scan_size(struct iwx_softc *sc)
 {
     int base_size = IWX_SCAN_REQ_UMAC_SIZE_V1;
     int tail_size;
+    uint8_t scan_ver = iwx_lookup_cmd_ver(sc, IWX_LONG_GROUP, IWX_SCAN_REQ_UMAC);
+    
+    if (scan_ver == 12)
+        return sizeof(iwx_scan_req_umac_v12);
+    else if (scan_ver == 14)
+        return sizeof(iwx_scan_req_umac_v14);
     
     if (isset(sc->sc_ucode_api, IWX_UCODE_TLV_API_ADAPTIVE_DWELL_V2))
         base_size = IWX_SCAN_REQ_UMAC_SIZE_V8;
     else if (isset(sc->sc_ucode_api, IWX_UCODE_TLV_API_ADAPTIVE_DWELL))
         base_size = IWX_SCAN_REQ_UMAC_SIZE_V7;
-#ifdef notyet
-    else if (sc->sc_device_family >= IWX_DEVICE_FAMILY_22000)
+    else
         base_size = IWX_SCAN_REQ_UMAC_SIZE_V6;
-#endif
+    
     if (isset(sc->sc_ucode_api, IWX_UCODE_TLV_API_SCAN_EXT_CHAN_VER))
         tail_size = sizeof(struct iwx_scan_req_umac_tail_v2);
     else
@@ -7303,11 +7310,8 @@ iwx_get_scan_req_umac_chan_param(struct iwx_softc *sc,
     
     if (isset(sc->sc_ucode_api, IWX_UCODE_TLV_API_ADAPTIVE_DWELL))
         return &req->v7.channel;
-#ifdef notyet
-    if (sc->sc_device_family >= IWX_DEVICE_FAMILY_22000)
-        return &req->v6.channel;
-#endif
-    return &req->v1.channel;
+
+    return &req->v6.channel;
 }
 
 void *ItlIwx::
@@ -7318,12 +7322,8 @@ iwx_get_scan_req_umac_data(struct iwx_softc *sc, struct iwx_scan_req_umac *req)
     
     if (isset(sc->sc_ucode_api, IWX_UCODE_TLV_API_ADAPTIVE_DWELL))
         return (void *)&req->v7.data;
-#ifdef notyet
-    if (sc->sc_device_family >= IWX_DEVICE_FAMILY_22000)
-        return (void *)&req->v6.data;
-#endif
-    return (void *)&req->v1.data;
     
+    return (void *)&req->v6.data;
 }
 
 #define IWL_SCAN_DWELL_ACTIVE        10
@@ -7343,6 +7343,19 @@ iwx_get_scan_req_umac_data(struct iwx_softc *sc, struct iwx_scan_req_umac *req)
 #define IWX_SCAN_ADWELL_DEFAULT_LB_N_APS 2
 /* adaptive dwell default APs number in social channels (1, 6, 11) */
 #define IWX_SCAN_ADWELL_DEFAULT_N_APS_SOCIAL 10
+/* number of scan channels */
+#define IWX_SCAN_NUM_CHANNELS 112
+/* adaptive dwell number of APs override mask for p2p friendly GO */
+#define IWX_SCAN_ADWELL_N_APS_GO_FRIENDLY_BIT (1 << 20)
+/* adaptive dwell number of APs override mask for social channels */
+#define IWX_SCAN_ADWELL_N_APS_SOCIAL_CHS_BIT (1 << 21)
+/* adaptive dwell number of APs override for p2p friendly GO channels */
+#define IWX_SCAN_ADWELL_N_APS_GO_FRIENDLY 10
+/* adaptive dwell number of APs override for social channels */
+#define IWX_SCAN_ADWELL_N_APS_SOCIAL_CHS 2
+
+/* minimal number of 2GHz and 5GHz channels in the regular scan request */
+#define IWX_MVM_6GHZ_PASSIVE_SCAN_MIN_CHANS 4
 
 int ItlIwx::
 iwx_umac_scan(struct iwx_softc *sc, int bgscan)
@@ -7362,6 +7375,13 @@ iwx_umac_scan(struct iwx_softc *sc, int bgscan)
     struct iwx_scan_umac_chan_param *chanparam;
     size_t req_len;
     int err, async = bgscan;
+    const uint32_t timeout = bgscan ?  htole32(120) : htole32(0);
+    uint8_t scan_ver = iwx_lookup_cmd_ver(sc, IWX_LONG_GROUP, IWX_SCAN_REQ_UMAC);
+    
+    if (scan_ver == 12)
+        return iwx_umac_scan_v12(sc, bgscan);
+    else if (scan_ver == 14)
+        return iwx_umac_scan_v14(sc, bgscan);
     
     req_len = iwx_umac_scan_size(sc);
     if ((req_len < IWX_SCAN_REQ_UMAC_SIZE_V1 +
@@ -7383,6 +7403,9 @@ iwx_umac_scan(struct iwx_softc *sc, int bgscan)
         req->v7.adwell_default_n_aps =
         IWX_SCAN_ADWELL_DEFAULT_LB_N_APS;
         
+        if (isset(sc->sc_ucode_api, IWX_UCODE_TLV_API_ADWELL_HB_DEF_N_AP))
+            req->v9.adwell_default_hb_n_aps = IWX_SCAN_ADWELL_DEFAULT_HB_N_APS;
+        
         if (ic->ic_des_esslen != 0)
             req->v7.adwell_max_budget =
             htole16(IWX_SCAN_ADWELL_MAX_BUDGET_DIRECTED_SCAN);
@@ -7390,14 +7413,27 @@ iwx_umac_scan(struct iwx_softc *sc, int bgscan)
             req->v7.adwell_max_budget =
             htole16(IWX_SCAN_ADWELL_MAX_BUDGET_FULL_SCAN);
         
-        req->v7.scan_priority = htole32(IWX_SCAN_PRIORITY_HIGH);
-        req->v7.max_out_time[IWX_SCAN_LB_LMAC_IDX] = 0;
-        req->v7.suspend_time[IWX_SCAN_LB_LMAC_IDX] = 0;
+        req->v7.scan_priority = htole32(IWX_SCAN_PRIORITY_EXT_6);
+        req->v7.max_out_time[IWX_SCAN_LB_LMAC_IDX] = timeout;
+        req->v7.suspend_time[IWX_SCAN_LB_LMAC_IDX] = timeout;
+        
+        if (isset(sc->sc_enabled_capa, IWX_UCODE_TLV_CAPA_CDB_SUPPORT)) {
+            req->v7.max_out_time[IWX_SCAN_HB_LMAC_IDX] =
+                timeout;
+            req->v7.suspend_time[IWX_SCAN_HB_LMAC_IDX] =
+                timeout;
+        }
         
         if (isset(sc->sc_ucode_api,
                   IWX_UCODE_TLV_API_ADAPTIVE_DWELL_V2)) {
             req->v8.active_dwell[IWX_SCAN_LB_LMAC_IDX] = IWL_SCAN_DWELL_ACTIVE;
             req->v8.passive_dwell[IWX_SCAN_LB_LMAC_IDX] = IWL_SCAN_DWELL_PASSIVE;
+            if (isset(sc->sc_enabled_capa, IWX_UCODE_TLV_CAPA_CDB_SUPPORT)) {
+                req->v8.active_dwell[IWX_SCAN_HB_LMAC_IDX] =
+                    IWL_SCAN_DWELL_ACTIVE;
+                req->v8.passive_dwell[IWX_SCAN_HB_LMAC_IDX] =
+                    IWL_SCAN_DWELL_PASSIVE;
+            }
         } else {
             req->v7.active_dwell = IWL_SCAN_DWELL_ACTIVE;
             req->v7.passive_dwell = IWL_SCAN_DWELL_PASSIVE;
@@ -7410,26 +7446,22 @@ iwx_umac_scan(struct iwx_softc *sc, int bgscan)
         req->v1.fragmented_dwell = IWL_SCAN_DWELL_FRAGMENTED;
         req->v1.extended_dwell = IWL_SCAN_DWELL_EXTENDED;
         
-        req->v1.scan_priority = htole32(IWX_SCAN_PRIORITY_HIGH);
-    }
-    
-    if (bgscan) {
-        const uint32_t timeout = htole32(120);
-        if (isset(sc->sc_ucode_api,
-                  IWX_UCODE_TLV_API_ADAPTIVE_DWELL_V2)) {
-            req->v8.max_out_time[IWX_SCAN_LB_LMAC_IDX] = timeout;
-            req->v8.suspend_time[IWX_SCAN_LB_LMAC_IDX] = timeout;
-        } else if (isset(sc->sc_ucode_api,
-                         IWX_UCODE_TLV_API_ADAPTIVE_DWELL)) {
-            req->v7.max_out_time[IWX_SCAN_LB_LMAC_IDX] = timeout;
-            req->v7.suspend_time[IWX_SCAN_LB_LMAC_IDX] = timeout;
-        } else {
-            req->v1.max_out_time = timeout;
-            req->v1.suspend_time = timeout;
+        if (isset(sc->sc_enabled_capa, IWX_UCODE_TLV_CAPA_CDB_SUPPORT)) {
+            req->v6.max_out_time[IWX_SCAN_HB_LMAC_IDX] =
+                timeout;
+            req->v6.suspend_time[IWX_SCAN_HB_LMAC_IDX] =
+                timeout;
         }
+        
+        req->v6.scan_priority =
+            htole32(IWX_SCAN_PRIORITY_EXT_6);
+        req->v6.max_out_time[IWX_SCAN_LB_LMAC_IDX] =
+            timeout;
+        req->v6.suspend_time[IWX_SCAN_LB_LMAC_IDX] =
+            timeout;
     }
     
-    req->ooc_priority = htole32(IWX_SCAN_PRIORITY_HIGH);
+    req->ooc_priority = htole32(IWX_SCAN_PRIORITY_EXT_6);
     
     cmd_data = iwx_get_scan_req_umac_data(sc, req);
     chanparam = iwx_get_scan_req_umac_chan_param(sc, req);
@@ -7471,8 +7503,8 @@ iwx_umac_scan(struct iwx_softc *sc, int bgscan)
 #endif
         req->general_flags |= htole32(IWX_UMAC_SCAN_GEN_FLAGS_PASSIVE);
     
-    if (isset(sc->sc_enabled_capa,
-              IWX_UCODE_TLV_CAPA_DS_PARAM_SET_IE_SUPPORT))
+    if (isset(sc->sc_enabled_capa, IWX_UCODE_TLV_CAPA_DS_PARAM_SET_IE_SUPPORT) &&
+        isset(sc->sc_enabled_capa, IWX_UCODE_TLV_CAPA_WFA_TPC_REP_IE_SUPPORT))
         req->general_flags |=
         htole32(IWX_UMAC_SCAN_GEN_FLAGS_RRM_ENABLED);
     
@@ -7496,6 +7528,199 @@ iwx_umac_scan(struct iwx_softc *sc, int bgscan)
     /* Specify the scan plan: We'll do one iteration. */
     tail->schedule[0].interval = 0;
     tail->schedule[0].iter_count = 1;
+    
+    err = iwx_send_cmd(sc, &hcmd);
+    ::free(req);
+    return err;
+}
+
+int ItlIwx::
+iwx_umac_scan_v12(struct iwx_softc *sc, int bgscan)
+{
+    XYLog("%s\n", __FUNCTION__);
+    struct ieee80211com *ic = &sc->sc_ic;
+    int err = 0, async = bgscan;
+    struct iwx_scan_req_umac_v12 *req;
+    size_t req_len;
+    uint16_t gen_flags = 0;
+    const uint32_t timeout = bgscan ?  htole32(120) : htole32(0);
+    struct iwx_scan_general_params_v10 *general_params;
+    struct iwx_scan_channel_params_v4 *cp;
+    struct iwx_host_cmd hcmd = {
+        .id = iwx_cmd_id(IWX_SCAN_REQ_UMAC, IWX_LONG_GROUP, 0),
+        .len = { 0, },
+        .data = { NULL, },
+        .flags = 0,
+    };
+    
+    req_len = iwx_umac_scan_size(sc);
+    req = (struct iwx_scan_req_umac_v12 *)malloc(req_len, 0,
+                                             (async ? M_NOWAIT : M_WAITOK) | M_ZERO);
+    if (req == NULL)
+        return ENOMEM;
+    
+    hcmd.len[0] = (uint16_t)req_len;
+    hcmd.data[0] = (void *)req;
+    hcmd.flags |= async ? IWX_CMD_ASYNC : 0;
+    
+    general_params = &req->scan_params.general_params;
+    
+    req->ooc_priority = htole32(IWX_SCAN_PRIORITY_EXT_6);
+    
+    if (ic->ic_des_esslen == 0)
+        gen_flags |= IWX_UMAC_SCAN_GEN_FLAGS_V2_FORCE_PASSIVE;
+    
+    gen_flags |= IWX_UMAC_SCAN_GEN_FLAGS_V2_PASS_ALL |
+    IWX_UMAC_SCAN_GEN_FLAGS_V2_ADAPTIVE_DWELL;
+    
+    req->scan_params.general_params.flags = gen_flags;
+    
+    general_params->adwell_default_social_chn =
+        IWX_SCAN_ADWELL_DEFAULT_N_APS_SOCIAL;
+    general_params->adwell_default_2g = IWX_SCAN_ADWELL_DEFAULT_LB_N_APS;
+    general_params->adwell_default_5g = IWX_SCAN_ADWELL_DEFAULT_HB_N_APS;
+    if (ic->ic_des_esslen != 0)
+        general_params->adwell_max_budget =
+            cpu_to_le16(IWX_SCAN_ADWELL_MAX_BUDGET_DIRECTED_SCAN);
+    else
+        general_params->adwell_max_budget =
+            cpu_to_le16(IWX_SCAN_ADWELL_MAX_BUDGET_FULL_SCAN);
+    
+    general_params->scan_priority = htole32(IWX_SCAN_PRIORITY_EXT_6);
+    general_params->max_out_of_time[IWX_SCAN_LB_LMAC_IDX] =
+        timeout;
+    general_params->suspend_time[IWX_SCAN_LB_LMAC_IDX] =
+        timeout;
+    
+    general_params->max_out_of_time[IWX_SCAN_HB_LMAC_IDX] =
+        timeout;
+    general_params->suspend_time[IWX_SCAN_HB_LMAC_IDX] =
+        timeout;
+
+    general_params->active_dwell[IWX_SCAN_LB_LMAC_IDX] = IWL_SCAN_DWELL_ACTIVE;
+    general_params->passive_dwell[IWX_SCAN_LB_LMAC_IDX] = IWL_SCAN_DWELL_PASSIVE;
+    general_params->active_dwell[IWX_SCAN_HB_LMAC_IDX] = IWL_SCAN_DWELL_ACTIVE;
+    general_params->passive_dwell[IWX_SCAN_HB_LMAC_IDX] = IWL_SCAN_DWELL_PASSIVE;
+    
+    /* Specify the scan plan: We'll do one iteration. */
+    req->scan_params.periodic_params.schedule[0].interval = 0;
+    req->scan_params.periodic_params.schedule[0].iter_count = 1;
+    
+    err = iwx_fill_probe_req(sc, &req->scan_params.probe_params.preq);
+    if (err)
+        return err;
+    if (ic->ic_des_esslen != 0) {
+        req->scan_params.probe_params.ssid_num = 1;
+        req->scan_params.probe_params.direct_scan[0].id = IEEE80211_ELEMID_SSID;
+        req->scan_params.probe_params.direct_scan[0].len = ic->ic_des_esslen;
+        memcpy(req->scan_params.probe_params.direct_scan[0].ssid, ic->ic_des_essid,
+               ic->ic_des_esslen);
+    } else
+        req->scan_params.probe_params.ssid_num = 0;
+    
+    cp = &req->scan_params.channel_params;
+    
+    cp->flags = IWX_SCAN_CHANNEL_FLAG_ENABLE_CHAN_ORDER;
+    cp->count = iwx_umac_scan_fill_channels(sc,
+                                            (struct iwx_scan_channel_cfg_umac *)cp->channel_config,
+                                            ic->ic_des_esslen != 0, bgscan);
+    cp->num_of_aps_override = IWX_SCAN_ADWELL_N_APS_GO_FRIENDLY;
+    
+    err = iwx_send_cmd(sc, &hcmd);
+    ::free(req);
+    return err;
+}
+
+int ItlIwx::
+iwx_umac_scan_v14(struct iwx_softc *sc, int bgscan)
+{
+    XYLog("%s\n", __FUNCTION__);
+    struct ieee80211com *ic = &sc->sc_ic;
+    int err = 0, async = bgscan;
+    struct iwx_scan_req_umac_v14 *req;
+    size_t req_len;
+    uint16_t gen_flags = 0;
+    struct iwx_scan_general_params_v10 *general_params;
+    struct iwx_scan_channel_params_v6 *cp;
+    const uint32_t timeout = bgscan ?  htole32(120) : htole32(0);
+    struct iwx_host_cmd hcmd = {
+        .id = iwx_cmd_id(IWX_SCAN_REQ_UMAC, IWX_LONG_GROUP, 0),
+        .len = { 0, },
+        .data = { NULL, },
+        .flags = 0,
+    };
+    
+    req_len = iwx_umac_scan_size(sc);
+    req = (struct iwx_scan_req_umac_v14 *)malloc(req_len, 0,
+                                             (async ? M_NOWAIT : M_WAITOK) | M_ZERO);
+    if (req == NULL)
+        return ENOMEM;
+    
+    hcmd.len[0] = (uint16_t)req_len;
+    hcmd.data[0] = (void *)req;
+    hcmd.flags |= async ? IWX_CMD_ASYNC : 0;
+    
+    general_params = &req->scan_params.general_params;
+    
+    req->ooc_priority = htole32(IWX_SCAN_PRIORITY_EXT_6);
+    
+    if (ic->ic_des_esslen == 0)
+        gen_flags |= IWX_UMAC_SCAN_GEN_FLAGS_V2_FORCE_PASSIVE;
+    
+    gen_flags |= IWX_UMAC_SCAN_GEN_FLAGS_V2_PASS_ALL |
+    IWX_UMAC_SCAN_GEN_FLAGS_V2_ADAPTIVE_DWELL;
+    
+    req->scan_params.general_params.flags = gen_flags;
+    
+    general_params->adwell_default_social_chn =
+        IWX_SCAN_ADWELL_DEFAULT_N_APS_SOCIAL;
+    general_params->adwell_default_2g = IWX_SCAN_ADWELL_DEFAULT_LB_N_APS;
+    general_params->adwell_default_5g = IWX_SCAN_ADWELL_DEFAULT_HB_N_APS;
+    if (ic->ic_des_esslen != 0)
+        general_params->adwell_max_budget =
+            cpu_to_le16(IWX_SCAN_ADWELL_MAX_BUDGET_DIRECTED_SCAN);
+    else
+        general_params->adwell_max_budget =
+            cpu_to_le16(IWX_SCAN_ADWELL_MAX_BUDGET_FULL_SCAN);
+    
+    general_params->scan_priority = htole32(IWX_SCAN_PRIORITY_EXT_6);
+    general_params->max_out_of_time[IWX_SCAN_LB_LMAC_IDX] =
+        timeout;
+    general_params->suspend_time[IWX_SCAN_LB_LMAC_IDX] =
+        timeout;
+    
+    general_params->max_out_of_time[IWX_SCAN_HB_LMAC_IDX] =
+        timeout;
+    general_params->suspend_time[IWX_SCAN_HB_LMAC_IDX] =
+        timeout;
+
+    general_params->active_dwell[IWX_SCAN_LB_LMAC_IDX] = IWL_SCAN_DWELL_ACTIVE;
+    general_params->passive_dwell[IWX_SCAN_LB_LMAC_IDX] = IWL_SCAN_DWELL_PASSIVE;
+    general_params->active_dwell[IWX_SCAN_HB_LMAC_IDX] = IWL_SCAN_DWELL_ACTIVE;
+    general_params->passive_dwell[IWX_SCAN_HB_LMAC_IDX] = IWL_SCAN_DWELL_PASSIVE;
+    
+    /* Specify the scan plan: We'll do one iteration. */
+    req->scan_params.periodic_params.schedule[0].interval = 0;
+    req->scan_params.periodic_params.schedule[0].iter_count = 1;
+    
+    err = iwx_fill_probe_req(sc, &req->scan_params.probe_params.preq);
+    if (err)
+        return err;
+    if (ic->ic_des_esslen != 0) {
+        req->scan_params.probe_params.direct_scan[0].id = IEEE80211_ELEMID_SSID;
+        req->scan_params.probe_params.direct_scan[0].len = ic->ic_des_esslen;
+        memcpy(req->scan_params.probe_params.direct_scan[0].ssid, ic->ic_des_essid,
+               ic->ic_des_esslen);
+    }
+    
+    cp = &req->scan_params.channel_params;
+    
+    cp->flags = IWX_SCAN_CHANNEL_FLAG_ENABLE_CHAN_ORDER;
+    cp->count = iwx_umac_scan_fill_channels(sc,
+                                            (struct iwx_scan_channel_cfg_umac *)cp->channel_config,
+                                            ic->ic_des_esslen != 0, bgscan);
+    cp->n_aps_override[0] = IWX_SCAN_ADWELL_N_APS_GO_FRIENDLY;
+    cp->n_aps_override[1] = IWX_SCAN_ADWELL_N_APS_SOCIAL_CHS;
     
     err = iwx_send_cmd(sc, &hcmd);
     ::free(req);
@@ -8954,9 +9179,9 @@ iwx_newstate_task(void *psc)
     
 out:
     if ((sc->sc_flags & IWX_FLAG_SHUTDOWN) == 0) {
-        if (err)
-            task_add(systq, &sc->init_task);
-        else
+//        if (err)
+//            task_add(systq, &sc->init_task);
+//        else
             sc->sc_newstate(ic, nstate, arg);
     }
     //    refcnt_rele_wake(&sc->task_refs);
@@ -9811,8 +10036,8 @@ iwx_watchdog(struct _ifnet *ifp)
 
             that->iwx_nic_error(sc);
 #endif
-            if ((sc->sc_flags & IWX_FLAG_SHUTDOWN) == 0)
-                task_add(systq, &sc->init_task);
+//            if ((sc->sc_flags & IWX_FLAG_SHUTDOWN) == 0)
+//                task_add(systq, &sc->init_task);
             ifp->netStat->outputErrors++;
             return;
         }
@@ -10620,7 +10845,7 @@ iwx_intr(OSObject *object, IOInterruptEventSource* sender, int count)
     if (r1 & IWX_CSR_INT_BIT_RF_KILL) {
         handled |= IWX_CSR_INT_BIT_RF_KILL;
         that->iwx_check_rfkill(sc);
-        task_add(systq, &sc->init_task);
+//        task_add(systq, &sc->init_task);
         rv = 1;
         goto out_ena;
     }
@@ -10645,8 +10870,8 @@ iwx_intr(OSObject *object, IOInterruptEventSource* sender, int count)
 #endif
         
         XYLog("%s: fatal firmware error\n", DEVNAME(sc));
-        if ((sc->sc_flags & IWX_FLAG_SHUTDOWN) == 0)
-            task_add(systq, &sc->init_task);
+//        if ((sc->sc_flags & IWX_FLAG_SHUTDOWN) == 0)
+//            task_add(systq, &sc->init_task);
         rv = 1;
         goto out;
         
@@ -10655,10 +10880,10 @@ iwx_intr(OSObject *object, IOInterruptEventSource* sender, int count)
     if (r1 & IWX_CSR_INT_BIT_HW_ERR) {
         handled |= IWX_CSR_INT_BIT_HW_ERR;
         XYLog("%s: hardware error, stopping device \n", DEVNAME(sc));
-        if ((sc->sc_flags & IWX_FLAG_SHUTDOWN) == 0) {
-            sc->sc_flags |= IWX_FLAG_HW_ERR;
-            task_add(systq, &sc->init_task);
-        }
+//        if ((sc->sc_flags & IWX_FLAG_SHUTDOWN) == 0) {
+//            sc->sc_flags |= IWX_FLAG_HW_ERR;
+//            task_add(systq, &sc->init_task);
+//        }
         rv = 1;
         goto out;
     }
@@ -10757,22 +10982,22 @@ iwx_intr_msix(OSObject *object, IOInterruptEventSource* sender, int count)
 #endif
         
         XYLog("%s: fatal firmware error\n", DEVNAME(sc));
-        if ((sc->sc_flags & IWX_FLAG_SHUTDOWN) == 0)
-            task_add(systq, &sc->init_task);
+//        if ((sc->sc_flags & IWX_FLAG_SHUTDOWN) == 0)
+//            task_add(systq, &sc->init_task);
         return 1;
     }
     
     if (inta_hw & IWX_MSIX_HW_INT_CAUSES_REG_RF_KILL) {
         that->iwx_check_rfkill(sc);
-        task_add(systq, &sc->init_task);
+//        task_add(systq, &sc->init_task);
     }
     
     if (inta_hw & IWX_MSIX_HW_INT_CAUSES_REG_HW_ERR) {
         XYLog("%s: hardware error, stopping device \n", DEVNAME(sc));
-        if ((sc->sc_flags & IWX_FLAG_SHUTDOWN) == 0) {
-            sc->sc_flags |= IWX_FLAG_HW_ERR;
-            task_add(systq, &sc->init_task);
-        }
+//        if ((sc->sc_flags & IWX_FLAG_SHUTDOWN) == 0) {
+//            sc->sc_flags |= IWX_FLAG_HW_ERR;
+//            task_add(systq, &sc->init_task);
+//        }
         return 1;
     }
     
@@ -11160,7 +11385,7 @@ const struct iwl_cfg iwl_ax201_cfg_qu_hr = {
 
 const struct iwl_cfg iwl_ax201_cfg_quz_hr = {
     .name = "Intel(R) Wi-Fi 6 AX201 160MHz",
-    .fwname = "iwlwifi-QuZ-a0-hr-b0-50.ucode",
+    .fwname = "iwlwifi-QuZ-a0-hr-b0-63.ucode",
     .device_family = IWX_DEVICE_FAMILY_22000,
     .tx_with_siso_diversity = 0,
     .uhb_supported = 0,
