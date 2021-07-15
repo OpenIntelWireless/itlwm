@@ -919,7 +919,7 @@ iwx_set_ltr(struct iwx_softc *sc)
      * initialize the LTR to ~250 usec (see ltr_val above).
      * The firmware initializes this again later (to a smaller value).
      */
-    if ((sc->sc_device_family == IWX_DEVICE_FAMILY_22560 ||
+    if ((sc->sc_device_family == IWX_DEVICE_FAMILY_AX210 ||
          sc->sc_device_family == IWX_DEVICE_FAMILY_22000) &&
         !sc->sc_integrated) {
         IWX_WRITE(sc, IWX_CSR_LTR_LONG_VAL_AD, ltr_val);
@@ -1213,7 +1213,7 @@ iwx_clear_persistence_bit(struct iwx_softc *sc)
 {
     uint32_t hpm, wprot;
     
-    if (sc->sc_device_family >= IWX_DEVICE_FAMILY_22560)
+    if (sc->sc_device_family >= IWX_DEVICE_FAMILY_AX210)
         return;
     
     wprot = IWX_PREG_PRPH_WPROT_22000;
@@ -2075,7 +2075,7 @@ out:
 
 static uint32_t iwx_prph_msk(struct iwx_softc *sc)
 {
-    if (sc->sc_device_family >= IWX_DEVICE_FAMILY_22560)
+    if (sc->sc_device_family >= IWX_DEVICE_FAMILY_AX210)
         return 0x00FFFFFF;
     else
         return 0x000FFFFF;
@@ -2101,7 +2101,7 @@ uint32_t ItlIwx::
 iwx_read_umac_prph(struct iwx_softc *sc, uint32_t addr)
 {
     int off = 0;
-    if (sc->sc_device_family >= IWX_DEVICE_FAMILY_22560)
+    if (sc->sc_device_family >= IWX_DEVICE_FAMILY_AX210)
         off = GEN3_UMAC_PRPH_OFFSET;
     return iwx_read_prph(sc, off + addr);
 }
@@ -2119,7 +2119,7 @@ void ItlIwx::
 iwx_write_umac_prph(struct iwx_softc *sc, uint32_t addr, uint32_t val)
 {
     int off = 0;
-    if (sc->sc_device_family >= IWX_DEVICE_FAMILY_22560)
+    if (sc->sc_device_family >= IWX_DEVICE_FAMILY_AX210)
         off = GEN3_UMAC_PRPH_OFFSET;
     iwx_write_prph(sc, off + addr, val);
 }
@@ -2355,13 +2355,13 @@ iwx_alloc_rx_ring(struct iwx_softc *sc, struct iwx_rx_ring *ring)
 {
     bus_size_t size;
     int i, err;
-    int rb_stts_size = sc->sc_device_family >= IWX_DEVICE_FAMILY_22560 ? sizeof(uint16_t) : sizeof(iwx_rb_status);
-    int rb_stts_align = sc->sc_device_family >= IWX_DEVICE_FAMILY_22560 ? 0 : 16;
+    int rb_stts_size = sc->sc_device_family >= IWX_DEVICE_FAMILY_AX210 ? sizeof(uint16_t) : sizeof(iwx_rb_status);
+    int rb_stts_align = sc->sc_device_family >= IWX_DEVICE_FAMILY_AX210 ? 0 : 16;
     
     ring->cur = 0;
     
     /* Allocate RX descriptors (256-byte aligned). */
-    size = IWX_RX_MQ_RING_COUNT * (sc->sc_device_family >= IWX_DEVICE_FAMILY_22560 ? sizeof(struct iwx_rx_transfer_desc) : sizeof(uint64_t));
+    size = IWX_RX_MQ_RING_COUNT * (sc->sc_device_family >= IWX_DEVICE_FAMILY_AX210 ? sizeof(struct iwx_rx_transfer_desc) : sizeof(uint64_t));
     err = iwx_dma_contig_alloc(sc->sc_dmat, &ring->free_desc_dma, size, 256);
     if (err) {
         XYLog("%s: could not allocate RX ring DMA memory\n",
@@ -2394,7 +2394,7 @@ iwx_alloc_rx_ring(struct iwx_softc *sc, struct iwx_rx_ring *ring)
     }
     ring->stat = ring->stat_dma.vaddr;
     
-    size = IWX_RX_MQ_RING_COUNT * (sc->sc_device_family >= IWX_DEVICE_FAMILY_22560 ? sizeof(struct iwx_rx_completion_desc) : sizeof(uint32_t));
+    size = IWX_RX_MQ_RING_COUNT * (sc->sc_device_family >= IWX_DEVICE_FAMILY_AX210 ? sizeof(struct iwx_rx_completion_desc) : sizeof(uint32_t));
     err = iwx_dma_contig_alloc(sc->sc_dmat, &ring->used_desc_dma,
                                size, 256);
     if (err) {
@@ -2432,7 +2432,7 @@ iwx_disable_rx_dma(struct iwx_softc *sc)
     int ntries;
     
     if (iwx_nic_lock(sc)) {
-        if (sc->sc_device_family >= IWX_DEVICE_FAMILY_22560) {
+        if (sc->sc_device_family >= IWX_DEVICE_FAMILY_AX210) {
             iwx_write_umac_prph(sc, IWX_RFH_RXF_DMA_CFG_GEN3, 0);
             for (ntries = 0; ntries < 1000; ntries++) {
                 if (iwx_read_umac_prph(sc, IWX_RFH_GEN_STATUS_GEN3) &
@@ -2459,7 +2459,7 @@ iwx_reset_rx_ring(struct iwx_softc *sc, struct iwx_rx_ring *ring)
     ring->cur = 0;
     //    bus_dmamap_sync(sc->sc_dmat, ring->stat_dma.map, 0,
     //        ring->stat_dma.size, BUS_DMASYNC_PREWRITE);
-    if (sc->sc_device_family >= IWX_DEVICE_FAMILY_22560)
+    if (sc->sc_device_family >= IWX_DEVICE_FAMILY_AX210)
         memset(ring->stat, 0, sizeof(uint16_t));
     else
         memset(ring->stat, 0, sizeof(struct iwx_rb_status));
@@ -2522,7 +2522,7 @@ iwx_alloc_tx_ring(struct iwx_softc *sc, struct iwx_tx_ring *ring, int qid)
     }
     ring->desc = (struct iwx_tfh_tfd*)ring->desc_dma.vaddr;
 
-    if (sc->sc_device_family >= IWX_DEVICE_FAMILY_22560)
+    if (sc->sc_device_family >= IWX_DEVICE_FAMILY_AX210)
         err = iwx_dma_contig_alloc(sc->sc_dmat, &ring->bc_tbl,
                                    sizeof(struct iwx_gen3_bc_tbl), 0);
     else
@@ -3335,7 +3335,7 @@ iwx_tvqm_enable_txq(struct iwx_softc *sc, int tid, int ssn)
         goto fail;
     }
     ring.desc = (struct iwx_tfh_tfd*)ring.desc_dma.vaddr;
-    if (sc->sc_device_family >= IWX_DEVICE_FAMILY_22560)
+    if (sc->sc_device_family >= IWX_DEVICE_FAMILY_AX210)
         err = iwx_dma_contig_alloc(sc->sc_dmat, &ring.bc_tbl,
                                    sizeof(struct iwx_gen3_bc_tbl), 0);
     else
@@ -4472,7 +4472,7 @@ iwx_load_firmware(struct iwx_softc *sc)
     sc->sc_uc.uc_intr = 0;
     
     fws = &sc->sc_fw.fw_sects[IWX_UCODE_TYPE_REGULAR];
-    if (sc->sc_device_family >= IWX_DEVICE_FAMILY_22560)
+    if (sc->sc_device_family >= IWX_DEVICE_FAMILY_AX210)
         err = iwx_ctxt_info_gen3_init(sc, fws);
     else
         err = iwx_ctxt_info_init(sc, fws);
@@ -4698,7 +4698,7 @@ iwx_update_rx_desc(struct iwx_softc *sc, struct iwx_rx_ring *ring, int idx)
 {
     struct iwx_rx_data *data = &ring->data[idx];
     
-    if (sc->sc_device_family >= IWX_DEVICE_FAMILY_22560) {
+    if (sc->sc_device_family >= IWX_DEVICE_FAMILY_AX210) {
         struct iwx_rx_transfer_desc *bd = (struct iwx_rx_transfer_desc *)ring->desc;
         
         bd[idx].addr = htole64(data->map->dm_segs[0].location);
@@ -4771,7 +4771,7 @@ iwx_rxmq_get_signal_strength(struct iwx_softc *sc,
 {
     int energy_a, energy_b;
     
-    if (sc->sc_device_family >= IWX_DEVICE_FAMILY_22560) {
+    if (sc->sc_device_family >= IWX_DEVICE_FAMILY_AX210) {
         energy_a = desc->v3.energy_a;
         energy_b = desc->v3.energy_b;
     } else {
@@ -5424,7 +5424,7 @@ iwx_rx_mpdu_mq(struct iwx_softc *sc, mbuf_t m, void *pktdata,
     memset(&rxi, 0, sizeof(rxi));
     
     desc = (struct iwx_rx_mpdu_desc *)pktdata;
-    if (sc->sc_device_family >= IWX_DEVICE_FAMILY_22560)
+    if (sc->sc_device_family >= IWX_DEVICE_FAMILY_AX210)
         desc_size = sizeof(struct iwx_rx_mpdu_desc);
     else
         desc_size = IWX_RX_DESC_SIZE_V1;
@@ -5549,7 +5549,7 @@ iwx_rx_mpdu_mq(struct iwx_softc *sc, mbuf_t m, void *pktdata,
     rxi.rxi_rssi = rssi;
     
     phy_info = le16toh(desc->phy_info);
-    if (sc->sc_device_family >= IWX_DEVICE_FAMILY_22560) {
+    if (sc->sc_device_family >= IWX_DEVICE_FAMILY_AX210) {
         rate_n_flags = le32toh(desc->v3.rate_n_flags);
         chanidx = desc->v3.channel;
         device_timestamp = desc->v3.gp2_on_air_rise;
@@ -6469,7 +6469,7 @@ iwx_tx_update_byte_tbl(struct iwx_softc *sc, struct iwx_tx_ring *txq, int idx, u
      */
     num_fetch_chunks = howmany(filled_tfd_size, 64) - 1;
     
-    if (sc->sc_device_family >= IWX_DEVICE_FAMILY_22560) {
+    if (sc->sc_device_family >= IWX_DEVICE_FAMILY_AX210) {
         struct iwx_gen3_bc_tbl *scd_bc_tbl_gen3 = (struct iwx_gen3_bc_tbl *)txq->bc_tbl.vaddr;
         
         /* Starting from AX210, the HW expects bytes */
@@ -6608,7 +6608,7 @@ iwx_tx(struct iwx_softc *sc, mbuf_t m, struct ieee80211_node *ni, int ac)
     if (hdrlen % 4)
         offload_assist |= IWX_TX_CMD_OFFLD_PAD;
     
-    if (sc->sc_device_family >= IWX_DEVICE_FAMILY_22560) {
+    if (sc->sc_device_family >= IWX_DEVICE_FAMILY_AX210) {
         tx_gen3 = (struct iwx_tx_cmd_gen3 *)cmd->data;
         
         cmd_size = sizeof(*tx_gen3);
@@ -10798,7 +10798,7 @@ iwx_rx_pkt(struct iwx_softc *sc, struct iwx_rx_data *data, struct mbuf_list *ml)
         
         offset += roundup(len, IWX_FH_RSCSR_FRAME_ALIGN);
         
-        if (sc->sc_device_family >= IWX_DEVICE_FAMILY_22560)
+        if (sc->sc_device_family >= IWX_DEVICE_FAMILY_AX210)
             break;
     }
     
@@ -10815,7 +10815,7 @@ iwx_notif_intr(struct iwx_softc *sc)
     //    bus_dmamap_sync(sc->sc_dmat, sc->rxq.stat_dma.map,
     //        0, sc->rxq.stat_dma.size, BUS_DMASYNC_POSTREAD);
     
-    if (sc->sc_device_family >= IWX_DEVICE_FAMILY_22560)
+    if (sc->sc_device_family >= IWX_DEVICE_FAMILY_AX210)
         hw = le16toh(*(uint16_t *)(sc->rxq.stat)) & 0xfff;
     else
         hw = le16toh(((struct iwx_rb_status *)sc->rxq.stat)->closed_rb_num) & 0xfff;
@@ -10826,7 +10826,7 @@ iwx_notif_intr(struct iwx_softc *sc)
         iwx_rx_pkt(sc, data, &ml);
         sc->rxq.cur = (sc->rxq.cur + 1) % IWX_RX_MQ_RING_COUNT;
     }
-    if (sc->sc_device_family >= IWX_DEVICE_FAMILY_22560) {
+    if (sc->sc_device_family >= IWX_DEVICE_FAMILY_AX210) {
         uint16_t *cr_tail = (uint16_t *)sc->rxq.cr_tail_dma.vaddr;
         *cr_tail = htole16(hw);
     }
@@ -11135,25 +11135,25 @@ const struct iwl_cfg_trans_params iwl_qnj_trans_cfg = {
 };
 
 const struct iwl_cfg_trans_params iwl_snj_trans_cfg = {
-    .device_family = IWX_DEVICE_FAMILY_22560,
+    .device_family = IWX_DEVICE_FAMILY_AX210,
 };
 
 const struct iwl_cfg_trans_params iwl_so_trans_cfg = {
-    .device_family = IWX_DEVICE_FAMILY_22560,
+    .device_family = IWX_DEVICE_FAMILY_AX210,
     .integrated = 1,
     .xtal_latency = 500,
     .ltr_delay = IWX_SOC_FLAGS_LTR_APPLY_DELAY_200,
 };
 
 const struct iwl_cfg_trans_params iwl_so_long_latency_trans_cfg = {
-    .device_family = IWX_DEVICE_FAMILY_22560,
+    .device_family = IWX_DEVICE_FAMILY_AX210,
     .integrated = 1,
     .xtal_latency = 12000,
     .ltr_delay = IWX_SOC_FLAGS_LTR_APPLY_DELAY_2500,
 };
 
 const struct iwl_cfg_trans_params iwl_ma_trans_cfg = {
-    .device_family = IWX_DEVICE_FAMILY_22560,
+    .device_family = IWX_DEVICE_FAMILY_AX210,
     .integrated = 1,
 };
 
@@ -11165,14 +11165,14 @@ const struct iwl_cfg_trans_params iwl_ax200_trans_cfg = {
 const struct iwl_cfg iwlax210_2ax_cfg_so_jf_a0 = {
     .name = "Intel(R) Wireless-AC 9560 160MHz",
     .fwname = "iwlwifi-so-a0-jf-b0-59.ucode",
-    .device_family = IWX_DEVICE_FAMILY_22560,
+    .device_family = IWX_DEVICE_FAMILY_AX210,
     .num_rbds = IWL_NUM_RBDS_NON_HE,
 };
 
 const struct iwl_cfg iwlax210_2ax_cfg_so_hr_a0 = {
     .name = "Intel(R) Wi-Fi 6 AX210 160MHz",
     .fwname = "iwlwifi-so-a0-hr-b0-59.ucode",
-    .device_family = IWX_DEVICE_FAMILY_22560,
+    .device_family = IWX_DEVICE_FAMILY_AX210,
     .num_rbds = IWL_NUM_RBDS_NON_HE,
 };
 
@@ -11180,7 +11180,7 @@ const struct iwl_cfg iwlax211_2ax_cfg_so_gf_a0 = {
     .name = "Intel(R) Wi-Fi 6 AX211 160MHz",
     .fwname = "iwlwifi-so-a0-gf-a0-59.ucode",
     .uhb_supported = 1,
-    .device_family = IWX_DEVICE_FAMILY_22560,
+    .device_family = IWX_DEVICE_FAMILY_AX210,
     .num_rbds = IWL_NUM_RBDS_AX210_HE,
 };
 
@@ -11188,7 +11188,7 @@ const struct iwl_cfg iwlax211_2ax_cfg_so_gf_a0_long = {
     .name = "Intel(R) Wi-Fi 6 AX211 160MHz",
     .fwname = "iwlwifi-so-a0-gf-a0-59.ucode",
     .uhb_supported = 1,
-    .device_family = IWX_DEVICE_FAMILY_22560,
+    .device_family = IWX_DEVICE_FAMILY_AX210,
     .trans.xtal_latency = 12000,
     .trans.low_latency_xtal = 1,
     .num_rbds = IWL_NUM_RBDS_AX210_HE,
@@ -11198,7 +11198,7 @@ const struct iwl_cfg iwlax210_2ax_cfg_ty_gf_a0 = {
     .name = "Intel(R) Wi-Fi 6 AX210 160MHz",
     .fwname = "iwlwifi-ty-a0-gf-a0-63.ucode",
     .uhb_supported = 1,
-    .device_family = IWX_DEVICE_FAMILY_22560,
+    .device_family = IWX_DEVICE_FAMILY_AX210,
     .num_rbds = IWL_NUM_RBDS_AX210_HE,
 };
 
@@ -11206,7 +11206,7 @@ const struct iwl_cfg iwlax411_2ax_cfg_so_gf4_a0 = {
     .name = "Intel(R) Wi-Fi 6 AX411 160MHz",
     .fwname = "iwlwifi-so-a0-gf4-a0-59.ucode",
     .uhb_supported = 1,
-    .device_family = IWX_DEVICE_FAMILY_22560,
+    .device_family = IWX_DEVICE_FAMILY_AX210,
     .num_rbds = IWL_NUM_RBDS_AX210_HE,
 };
 
@@ -11214,7 +11214,7 @@ const struct iwl_cfg iwlax411_2ax_cfg_so_gf4_a0_long = {
     .name = "Intel(R) Wi-Fi 6 AX411 160MHz",
     .fwname = "iwlwifi-so-a0-gf4-a0-59.ucode",
     .uhb_supported = 1,
-    .device_family = IWX_DEVICE_FAMILY_22560,
+    .device_family = IWX_DEVICE_FAMILY_AX210,
     .trans.xtal_latency = 12000,
     .trans.low_latency_xtal = 1,
     .num_rbds = IWL_NUM_RBDS_AX210_HE,
@@ -11224,7 +11224,7 @@ const struct iwl_cfg iwlax411_2ax_cfg_sosnj_gf4_a0 = {
     .name = "Intel(R) Wi-Fi 6 AX411 160MHz",
     .fwname = "iwlwifi-SoSnj-a0-gf4-a0-59.ucode",
     .uhb_supported = 1,
-    .device_family = IWX_DEVICE_FAMILY_22560,
+    .device_family = IWX_DEVICE_FAMILY_AX210,
     .num_rbds = IWL_NUM_RBDS_AX210_HE,
 };
 
@@ -11232,62 +11232,62 @@ const struct iwl_cfg iwlax211_cfg_snj_gf_a0 = {
     .name = "Intel(R) Wi-Fi 6 AX211 160MHz",
     .fwname = "iwlwifi-SoSnj-a0-gf-a0-59.ucode",
     .uhb_supported = 1,
-    .device_family = IWX_DEVICE_FAMILY_22560,
+    .device_family = IWX_DEVICE_FAMILY_AX210,
     .num_rbds = IWL_NUM_RBDS_AX210_HE,
 };
 
 const struct iwl_cfg iwl_cfg_snj_hr_b0 = {
     .fwname = "iwlwifi-SoSnj-a0-hr-b0-59.ucode",
     .uhb_supported = 1,
-    .device_family = IWX_DEVICE_FAMILY_22560,
+    .device_family = IWX_DEVICE_FAMILY_AX210,
     .num_rbds = IWL_NUM_RBDS_AX210_HE,
 };
 
 const struct iwl_cfg iwl_cfg_snj_a0_jf_b0 = {
     .fwname = "iwlwifi-SoSnj-a0-jf-b0-59.ucode",
     .uhb_supported = 1,
-    .device_family = IWX_DEVICE_FAMILY_22560,
+    .device_family = IWX_DEVICE_FAMILY_AX210,
     .num_rbds = IWL_NUM_RBDS_AX210_HE,
 };
 
 const struct iwl_cfg iwl_cfg_ma_a0_hr_b0 = {
     .fwname = "iwlwifi-ma-a0-hr-b0-59.ucode",
     .uhb_supported = 1,
-    .device_family = IWX_DEVICE_FAMILY_22560,
+    .device_family = IWX_DEVICE_FAMILY_AX210,
     .num_rbds = IWL_NUM_RBDS_AX210_HE,
 };
 
 const struct iwl_cfg iwl_cfg_ma_a0_gf_a0 = {
     .fwname = "iwlwifi-ma-a0-gf-a0-59.ucode",
     .uhb_supported = 1,
-    .device_family = IWX_DEVICE_FAMILY_22560,
+    .device_family = IWX_DEVICE_FAMILY_AX210,
     .num_rbds = IWL_NUM_RBDS_AX210_HE,
 };
 
 const struct iwl_cfg iwl_cfg_ma_a0_gf4_a0 = {
     .fwname = "iwlwifi-ma-a0-gf4-a0-59.ucode",
     .uhb_supported = 1,
-    .device_family = IWX_DEVICE_FAMILY_22560,
+    .device_family = IWX_DEVICE_FAMILY_AX210,
     .num_rbds = IWL_NUM_RBDS_AX210_HE,
 };
 
 const struct iwl_cfg iwl_cfg_ma_a0_mr_a0 = {
     .fwname = "iwlwifi-ma-a0-mr-a0-59.ucode",
     .uhb_supported = 1,
-    .device_family = IWX_DEVICE_FAMILY_22560,
+    .device_family = IWX_DEVICE_FAMILY_AX210,
     .num_rbds = IWL_NUM_RBDS_AX210_HE,
 };
 
 const struct iwl_cfg iwl_cfg_snj_a0_mr_a0 = {
     .fwname = "iwlwifi-SoSnj-a0-mr-a0-59.ucode",
     .uhb_supported = 1,
-    .device_family = IWX_DEVICE_FAMILY_22560,
+    .device_family = IWX_DEVICE_FAMILY_AX210,
     .num_rbds = IWL_NUM_RBDS_AX210_HE,
 };
 
 const struct iwl_cfg iwl_cfg_so_a0_hr_a0 = {
     .fwname = "iwlwifi-so-a0-hr-b0-59.ucode",
-    .device_family = IWX_DEVICE_FAMILY_22560,
+    .device_family = IWX_DEVICE_FAMILY_AX210,
     .num_rbds = IWL_NUM_RBDS_AX210_HE,
 };
 
@@ -12377,7 +12377,7 @@ iwx_attach(struct iwx_softc *sc, struct pci_attach_args *pa)
     }
     
     /* Allocate DMA memory for loading firmware. */
-    if (sc->sc_device_family >= IWX_DEVICE_FAMILY_22560)
+    if (sc->sc_device_family >= IWX_DEVICE_FAMILY_AX210)
         err = iwx_dma_contig_alloc(sc->sc_dmat, &sc->ctxt_info_dma,
                                    sizeof(struct iwx_context_info_gen3), 0);
     else
@@ -12398,7 +12398,7 @@ iwx_attach(struct iwx_softc *sc, struct pci_attach_args *pa)
     }
     
     /* TX scheduler rings must be aligned on a 1KB boundary. */
-    if (sc->sc_device_family >= IWX_DEVICE_FAMILY_22560)
+    if (sc->sc_device_family >= IWX_DEVICE_FAMILY_AX210)
         err = iwx_dma_contig_alloc(sc->sc_dmat, &sc->sched_dma,
                                    nitems(sc->txq) * sizeof(struct iwx_gen3_bc_tbl), 1024);
     else

@@ -667,7 +667,7 @@ struct iwx_softc {
     const struct iwl_cfg *sc_cfg;
 	int sc_device_family;
 #define IWX_DEVICE_FAMILY_22000	1
-#define IWX_DEVICE_FAMILY_22560	2
+#define IWX_DEVICE_FAMILY_AX210	2
 
 	struct iwx_dma_info ctxt_info_dma;
 	struct iwx_self_init_dram init_dram;
