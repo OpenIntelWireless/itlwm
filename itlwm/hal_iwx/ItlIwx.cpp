@@ -10790,6 +10790,45 @@ iwx_rx_pkt(struct iwx_softc *sc, struct iwx_rx_data *data, struct mbuf_list *ml)
                 }
                 break;
             }
+            
+            case IWX_WIDE_ID(IWX_LEGACY_GROUP, IWX_BAR_FRAME_RELEASE): {
+                struct iwx_bar_frame_release *release;
+                SYNC_RESP_STRUCT(release, pkt, struct iwx_bar_frame_release *);
+                unsigned int baid = le32_get_bits(release->ba_info,
+                                  IWX_BAR_FRAME_RELEASE_BAID_MASK);
+                unsigned int nssn = le32_get_bits(release->ba_info,
+                                  IWX_BAR_FRAME_RELEASE_NSSN_MASK);
+                unsigned int sta_id = le32_get_bits(release->sta_tid,
+                                    IWX_BAR_FRAME_RELEASE_STA_MASK);
+                unsigned int tid = le32_get_bits(release->sta_tid,
+                                 IWX_BAR_FRAME_RELEASE_TID_MASK);
+                struct iwx_rxba_data *baid_data;
+                
+                if (iwx_rx_packet_payload_len(pkt) < sizeof(*release))
+                    break;
+                
+                if (baid == IWX_RX_REORDER_DATA_INVALID_BAID || baid >= IWX_MAX_BAID)
+                    break;
+                
+                baid_data = &sc->sc_rxba_data[baid];
+                
+                if (!baid_data) {
+                    DPRINTFN(1, ("Got valid BAID %d but not allocated, invalid BAR release!\n",
+                     baid));
+                    break;
+                }
+                
+                if (tid != baid_data->tid || sta_id != baid_data->sta_id) {
+                    DPRINTFN(1, ("baid 0x%x is mapped to sta:%d tid:%d, but BAR release received for sta:%d tid:%d\n",
+                                 baid, baid_data->sta_id, baid_data->tid, sta_id,
+                                 tid));
+                    break;
+                }
+                
+                iwx_release_frames(sc, sc->sc_ic.ic_bss, baid_data, &baid_data->reorder_buf, nssn, ml);
+                
+                break;
+            }
                 
             default:
                 handled = 0;

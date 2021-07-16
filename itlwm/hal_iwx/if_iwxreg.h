@@ -1926,6 +1926,7 @@ struct iwx_tx_queue_cfg_rsp {
 
 #define IWX_REPLY_RX_PHY_CMD    0xc0
 #define IWX_REPLY_RX_MPDU_CMD    0xc1
+#define IWX_BAR_FRAME_RELEASE   0xc2
 #define IWX_BA_NOTIF        0xc5
 
 /* Location Aware Regulatory */
@@ -3772,6 +3773,81 @@ struct iwx_rx_mpdu_desc {
 } __packed; /* RX_MPDU_RES_START_API_S_VER_3 */
 
 #define IWX_RX_DESC_SIZE_V1 offsetofend(struct iwx_rx_mpdu_desc, v1)
+
+#define IWX_RX_NO_DATA_CHAIN_A_POS        0
+#define IWX_RX_NO_DATA_CHAIN_A_MSK        (0xff << IWX_RX_NO_DATA_CHAIN_A_POS)
+#define IWX_RX_NO_DATA_CHAIN_B_POS        8
+#define IWX_RX_NO_DATA_CHAIN_B_MSK        (0xff << IWX_RX_NO_DATA_CHAIN_B_POS)
+#define IWX_RX_NO_DATA_CHANNEL_POS        16
+#define IWX_RX_NO_DATA_CHANNEL_MSK        (0xff << IWX_RX_NO_DATA_CHANNEL_POS)
+
+#define IWX_RX_NO_DATA_INFO_TYPE_POS    0
+#define IWX_RX_NO_DATA_INFO_TYPE_MSK    (0xff << IWX_RX_NO_DATA_INFO_TYPE_POS)
+#define IWX_RX_NO_DATA_INFO_TYPE_NONE    0
+#define IWX_RX_NO_DATA_INFO_TYPE_RX_ERR    1
+#define IWX_RX_NO_DATA_INFO_TYPE_NDP    2
+#define IWX_RX_NO_DATA_INFO_TYPE_MU_UNMATCHED    3
+#define IWX_RX_NO_DATA_INFO_TYPE_HE_TB_UNMATCHED    4
+
+#define IWX_RX_NO_DATA_INFO_ERR_POS        8
+#define IWX_RX_NO_DATA_INFO_ERR_MSK        (0xff << IWX_RX_NO_DATA_INFO_ERR_POS)
+#define IWX_RX_NO_DATA_INFO_ERR_NONE    0
+#define IWX_RX_NO_DATA_INFO_ERR_BAD_PLCP    1
+#define IWX_RX_NO_DATA_INFO_ERR_UNSUPPORTED_RATE    2
+#define IWX_RX_NO_DATA_INFO_ERR_NO_DELIM        3
+#define IWX_RX_NO_DATA_INFO_ERR_BAD_MAC_HDR    4
+
+#define IWX_RX_NO_DATA_FRAME_TIME_POS    0
+#define IWX_RX_NO_DATA_FRAME_TIME_MSK    (0xfffff << IWX_RX_NO_DATA_FRAME_TIME_POS)
+
+#define IWX_RX_NO_DATA_RX_VEC0_HE_NSTS_MSK    0x03800000
+#define IWX_RX_NO_DATA_RX_VEC0_VHT_NSTS_MSK    0x38000000
+
+/**
+ * struct iwx_rx_no_data - RX no data descriptor
+ * @info: 7:0 frame type, 15:8 RX error type
+ * @rssi: 7:0 energy chain-A,
+ *    15:8 chain-B, measured at FINA time (FINA_ENERGY), 16:23 channel
+ * @on_air_rise_time: GP2 during on air rise
+ * @fr_time: frame time
+ * @rate: rate/mcs of frame
+ * @phy_info: &enum iwl_rx_phy_data0 and &enum iwl_rx_phy_info_type
+ * @rx_vec: DW-12:9 raw RX vectors from DSP according to modulation type.
+ *    for VHT: OFDM_RX_VECTOR_SIGA1_OUT, OFDM_RX_VECTOR_SIGA2_OUT
+ *    for HE: OFDM_RX_VECTOR_HE_SIGA1_OUT, OFDM_RX_VECTOR_HE_SIGA2_OUT
+ */
+struct iwx_rx_no_data {
+    uint32_t info;
+    uint32_t rssi;
+    uint32_t on_air_rise_time;
+    uint32_t fr_time;
+    uint32_t rate;
+    uint32_t phy_info[2];
+    uint32_t rx_vec[2];
+} __packed; /* RX_NO_DATA_NTFY_API_S_VER_1 */
+
+struct iwx_frame_release {
+    uint8_t baid;
+    uint8_t reserved;
+    uint16_t nssn;
+};
+
+#define IWX_BAR_FRAME_RELEASE_TID_MASK      0x0000000f
+#define IWX_BAR_FRAME_RELEASE_STA_MASK      0x000001f0
+
+#define IWX_BAR_FRAME_RELEASE_NSSN_MASK     0x00000fff
+#define IWX_BAR_FRAME_RELEASE_SN_MASK       0x00fff000
+#define IWX_BAR_FRAME_RELEASE_BAID_MASK     0x3f000000
+
+/**
+ * struct iwx_bar_frame_release - frame release from BAR info
+ * @sta_tid: STA & TID information, see &enum iwl_bar_frame_release_sta_tid.
+ * @ba_info: BA information, see &enum iwl_bar_frame_release_ba_info.
+ */
+struct iwx_bar_frame_release {
+    uint32_t sta_tid;
+    uint32_t ba_info;
+} __packed; /* RX_BAR_TO_FRAME_RELEASE_API_S_VER_1 */
 
 /**
  * struct iwx_radio_version_notif - information on the radio version
