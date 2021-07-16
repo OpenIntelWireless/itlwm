@@ -637,7 +637,7 @@ ieee80211_michael_mic_failure(struct ieee80211com *ic, u_int64_t tsc)
 		    IEEE80211_FC0_SUBTYPE_DEAUTH,
 		    IEEE80211_REASON_MIC_FAILURE);
 		/* ..and find another one */
-		(void)ieee80211_new_state(ic, IEEE80211_S_SCAN, -1);
+		ieee80211_new_state(ic, IEEE80211_S_SCAN, -1);
 		break;
 	default:
 		break;

@@ -124,8 +124,11 @@ extern	int ieee80211_send_eapol_key_req(struct ieee80211com *,
 		struct ieee80211_node *, u_int16_t, u_int64_t);
 extern	int ieee80211_pwrsave(struct ieee80211com *, mbuf_t,
 		struct ieee80211_node *);
-#define	ieee80211_new_state(_ic, _nstate, _arg) \
-(((_ic)->ic_newstate)((_ic), (_nstate), (_arg))); XYLog("%s %d nstate=%d\n", __FUNCTION__, __LINE__, (_nstate));
+#define    ieee80211_new_state(_ic, _nstate, _arg) \
+do {    \
+XYLog("%s %d nstate=%d\n", __FUNCTION__, __LINE__, (_nstate));  \
+(((_ic)->ic_newstate)((_ic), (_nstate), (_arg)));   \
+} while (0)
 extern	enum ieee80211_edca_ac ieee80211_up_to_ac(struct ieee80211com *, int);
 extern	u_int8_t *ieee80211_add_capinfo(u_int8_t *, struct ieee80211com *,
 		const struct ieee80211_node *);
