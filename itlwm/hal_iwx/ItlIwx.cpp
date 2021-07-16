@@ -7193,9 +7193,8 @@ iwx_config_umac_scan(struct iwx_softc *sc)
         .flags = 0,
     };
     
-    if (!isset(sc->sc_enabled_capa, IWX_UCODE_TLV_API_REDUCED_SCAN_CONFIG)) {
+    if (!isset(sc->sc_ucode_api, IWX_UCODE_TLV_API_REDUCED_SCAN_CONFIG))
         return iwx_config_legacy_umac_scan(sc);
-    }
     
     cmd_size = sizeof(*scan_config);
     
