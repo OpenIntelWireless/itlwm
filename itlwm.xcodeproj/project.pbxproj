@@ -333,12 +333,12 @@
 		F897ECBF266EFF93005EE8F7 /* apple80211_var.h in Headers */ = {isa = PBXBuildFile; fileRef = F89B6BC425021DEC000F77FF /* apple80211_var.h */; };
 		F897ECC0266EFF93005EE8F7 /* AirportItlwmInterface.hpp in Headers */ = {isa = PBXBuildFile; fileRef = F8CA44A225091AF60036119A /* AirportItlwmInterface.hpp */; };
 		F897ECC1266EFF93005EE8F7 /* IO80211Interface.h in Headers */ = {isa = PBXBuildFile; fileRef = F8F7EA38252D834500520FD4 /* IO80211Interface.h */; };
-		F897ECC2266EFF93005EE8F7 /* IOEventLock.hpp in Headers */ = {isa = PBXBuildFile; fileRef = F826EF50264E1F8F00B6D54A /* IOEventLock.hpp */; };
+		F897ECC2266EFF93005EE8F7 /* (null) in Headers */ = {isa = PBXBuildFile; };
 		F897ECC3266EFF93005EE8F7 /* IO80211SkywalkInterface.h in Headers */ = {isa = PBXBuildFile; fileRef = F8F7EA37252D834500520FD4 /* IO80211SkywalkInterface.h */; };
 		F897ECC4266EFF93005EE8F7 /* AirportItlwm.hpp in Headers */ = {isa = PBXBuildFile; fileRef = F89B6BBB25021C9C000F77FF /* AirportItlwm.hpp */; };
 		F897ECC5266EFF93005EE8F7 /* IO80211VirtualInterface.h in Headers */ = {isa = PBXBuildFile; fileRef = F8F7EA34252D834500520FD4 /* IO80211VirtualInterface.h */; };
 		F897ECC6266EFF93005EE8F7 /* IO80211Controller.h in Headers */ = {isa = PBXBuildFile; fileRef = F8F7EA35252D834500520FD4 /* IO80211Controller.h */; };
-		F897ECC7266EFF93005EE8F7 /* _rwlock.h in Headers */ = {isa = PBXBuildFile; fileRef = F85D4C94264E11B800F45B55 /* _rwlock.h */; };
+		F897ECC7266EFF93005EE8F7 /* (null) in Headers */ = {isa = PBXBuildFile; };
 		F897ECC8266EFF93005EE8F7 /* ieee80211_ra.h in Headers */ = {isa = PBXBuildFile; fileRef = F8C594D225FD935B0007D19C /* ieee80211_ra.h */; };
 		F897ECC9266EFF93005EE8F7 /* apple80211_wps.h in Headers */ = {isa = PBXBuildFile; fileRef = F89B6BC325021DEC000F77FF /* apple80211_wps.h */; };
 		F897ECCB266EFF93005EE8F7 /* _mbuf.cpp in Sources */ = {isa = PBXBuildFile; fileRef = F8D257732495A33500872E4F /* _mbuf.cpp */; };
@@ -380,7 +380,7 @@
 		F897ECEF266EFF93005EE8F7 /* cmac.c in Sources */ = {isa = PBXBuildFile; fileRef = 024A07DD23FCBC6C009FBA6C /* cmac.c */; };
 		F897ECF0266EFF93005EE8F7 /* ecb_enc.c in Sources */ = {isa = PBXBuildFile; fileRef = 024A07E423FCBC6C009FBA6C /* ecb_enc.c */; };
 		F897ECF1266EFF93005EE8F7 /* chachapoly.c in Sources */ = {isa = PBXBuildFile; fileRef = 024A07E923FCBC6C009FBA6C /* chachapoly.c */; };
-		F897ECF2266EFF93005EE8F7 /* IOEventLock.cpp in Sources */ = {isa = PBXBuildFile; fileRef = F826EF4F264E1F8F00B6D54A /* IOEventLock.cpp */; };
+		F897ECF2266EFF93005EE8F7 /* (null) in Sources */ = {isa = PBXBuildFile; };
 		F897ECF3266EFF93005EE8F7 /* md5.c in Sources */ = {isa = PBXBuildFile; fileRef = 024A07EA23FCBC6C009FBA6C /* md5.c */; };
 		F897ECF4266EFF93005EE8F7 /* arc4.c in Sources */ = {isa = PBXBuildFile; fileRef = 024A07EB23FCBC6C009FBA6C /* arc4.c */; };
 		F897ECF5266EFF93005EE8F7 /* blf.c in Sources */ = {isa = PBXBuildFile; fileRef = 024A07EC23FCBC6C009FBA6C /* blf.c */; };
@@ -810,7 +810,6 @@
 		F8C4BF8A2420FAEC007F410E /* iwm-3168-29 */ = {isa = PBXFileReference; lastKnownFileType = text; path = "iwm-3168-29"; sourceTree = "<group>"; };
 		F8C4BF8B2420FAED007F410E /* iwm-9260-34 */ = {isa = PBXFileReference; lastKnownFileType = text; path = "iwm-9260-34"; sourceTree = "<group>"; };
 		F8C4BF8C2420FAED007F410E /* iwm-7265-17 */ = {isa = PBXFileReference; lastKnownFileType = text; path = "iwm-7265-17"; sourceTree = "<group>"; };
-		F8C4BF8E2420FAED007F410E /* iwm-7260-16 */ = {isa = PBXFileReference; lastKnownFileType = text; path = "iwm-7260-16"; sourceTree = "<group>"; };
 		F8C4BF8F2420FAED007F410E /* iwm-7260-17 */ = {isa = PBXFileReference; lastKnownFileType = text; path = "iwm-7260-17"; sourceTree = "<group>"; };
 		F8C594D125FD935B0007D19C /* ieee80211_ra.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = ieee80211_ra.c; sourceTree = "<group>"; };
 		F8C594D225FD935B0007D19C /* ieee80211_ra.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ieee80211_ra.h; sourceTree = "<group>"; };
@@ -1018,7 +1017,6 @@
 			children = (
 				F8C4BF822420FAEB007F410E /* iwm-3160-17 */,
 				F8C4BF8A2420FAEC007F410E /* iwm-3168-29 */,
-				F8C4BF8E2420FAED007F410E /* iwm-7260-16 */,
 				F8C4BF8F2420FAED007F410E /* iwm-7260-17 */,
 				F8C4BF8C2420FAED007F410E /* iwm-7265-17 */,
 				F8C4BF842420FAEB007F410E /* iwm-8000C-34 */,
@@ -1421,12 +1419,12 @@
 				F897ECBF266EFF93005EE8F7 /* apple80211_var.h in Headers */,
 				F897ECC0266EFF93005EE8F7 /* AirportItlwmInterface.hpp in Headers */,
 				F897ECC1266EFF93005EE8F7 /* IO80211Interface.h in Headers */,
-				F897ECC2266EFF93005EE8F7 /* IOEventLock.hpp in Headers */,
+				F897ECC2266EFF93005EE8F7 /* (null) in Headers */,
 				F897ECC3266EFF93005EE8F7 /* IO80211SkywalkInterface.h in Headers */,
 				F897ECC4266EFF93005EE8F7 /* AirportItlwm.hpp in Headers */,
 				F897ECC5266EFF93005EE8F7 /* IO80211VirtualInterface.h in Headers */,
 				F897ECC6266EFF93005EE8F7 /* IO80211Controller.h in Headers */,
-				F897ECC7266EFF93005EE8F7 /* _rwlock.h in Headers */,
+				F897ECC7266EFF93005EE8F7 /* (null) in Headers */,
 				F897ECC8266EFF93005EE8F7 /* ieee80211_ra.h in Headers */,
 				F897ECC9266EFF93005EE8F7 /* apple80211_wps.h in Headers */,
 			);
@@ -2048,7 +2046,7 @@
 				F897ECEF266EFF93005EE8F7 /* cmac.c in Sources */,
 				F897ECF0266EFF93005EE8F7 /* ecb_enc.c in Sources */,
 				F897ECF1266EFF93005EE8F7 /* chachapoly.c in Sources */,
-				F897ECF2266EFF93005EE8F7 /* IOEventLock.cpp in Sources */,
+				F897ECF2266EFF93005EE8F7 /* (null) in Sources */,
 				F897ECF3266EFF93005EE8F7 /* md5.c in Sources */,
 				F897ECF4266EFF93005EE8F7 /* arc4.c in Sources */,
 				F897ECF5266EFF93005EE8F7 /* blf.c in Sources */,
