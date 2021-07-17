@@ -181,7 +181,7 @@ getFirmwareName()
 UInt32 ItlIwn::
 supportedFeatures()
 {
-    return 0;
+    return kIONetworkFeatureMultiPages;
 }
 
 const char *ItlIwn::
