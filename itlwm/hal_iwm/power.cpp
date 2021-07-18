@@ -318,24 +318,31 @@ iwm_add_sta_cmd(struct iwm_softc *sc, struct iwm_node *in, int update, unsigned 
         add_sta_cmd.station_flags_msk
         |= htole32(IWM_STA_FLG_MAX_AGG_SIZE_MSK |
                    IWM_STA_FLG_AGG_MPDU_DENS_MSK);
-        if (iwm_mimo_enabled(sc)) {
-            if (in->in_ni.ni_rxmcs[1] != 0) {
-                add_sta_cmd.station_flags |=
-                htole32(IWM_STA_FLG_MIMO_EN_MIMO2);
-            }
-            if (in->in_ni.ni_rxmcs[2] != 0) {
-                add_sta_cmd.station_flags |=
-                htole32(IWM_STA_FLG_MIMO_EN_MIMO3);
+        
+        if (ic->ic_state >= IEEE80211_S_ASSOC) {
+            switch (in->in_ni.ni_chw) {
+                case IEEE80211_CHAN_WIDTH_80P80:
+                case IEEE80211_CHAN_WIDTH_160:
+                    add_sta_cmd.station_flags |= htole32(IWM_STA_FLG_FAT_EN_160MHZ);
+                case IEEE80211_CHAN_WIDTH_80:
+                    add_sta_cmd.station_flags |= htole32(IWM_STA_FLG_FAT_EN_80MHZ);
+                case IEEE80211_CHAN_WIDTH_40:
+                    add_sta_cmd.station_flags |= htole32(IWM_STA_FLG_FAT_EN_40MHZ);
+                case IEEE80211_CHAN_WIDTH_20:
+                default:
+                    add_sta_cmd.station_flags |= htole32(IWM_STA_FLG_FAT_EN_20MHZ);
+                    break;
             }
         }
         
-        add_sta_cmd.station_flags
-        |= htole32(IWM_STA_FLG_MAX_AGG_SIZE_64K);
-        add_sta_cmd.station_flags
-        |= htole32(IWM_STA_FLG_FAT_EN_20MHZ);
-        if (in->in_ni.ni_chw == IEEE80211_CHAN_WIDTH_40 && ic->ic_state >= IEEE80211_S_ASSOC) {
-            add_sta_cmd.station_flags |= htole32(IWM_STA_FLG_FAT_EN_40MHZ);
-        }
+        if (iwm_mimo_enabled(sc) && ic->ic_bss->ni_rx_nss > 1)
+            add_sta_cmd.station_flags |= htole32(IWM_STA_FLG_MIMO_EN_MIMO2);
+        
+        if (in->in_ni.ni_flags & IEEE80211_NODE_VHT)
+            add_sta_cmd.station_flags |= htole32(((ic->ic_vhtcaps & IEEE80211_VHTCAP_MAX_A_MPDU_LENGTH_EXPONENT_MASK) >> IEEE80211_VHTCAP_MAX_A_MPDU_LENGTH_EXPONENT_SHIFT) << IWM_STA_FLG_MAX_AGG_SIZE_SHIFT);
+        else if (in->in_ni.ni_flags & IEEE80211_NODE_HT)
+            add_sta_cmd.station_flags |= htole32(IWM_STA_FLG_MAX_AGG_SIZE_64K);
+        
         switch (ic->ic_ampdu_params & IEEE80211_AMPDU_PARAM_SS) {
             case IEEE80211_AMPDU_PARAM_SS_2:
                 add_sta_cmd.station_flags
