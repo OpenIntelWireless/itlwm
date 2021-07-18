@@ -243,6 +243,7 @@ public:
     void    iwx_disable_rx_dma(struct iwx_softc *);
     void    iwx_reset_rx_ring(struct iwx_softc *, struct iwx_rx_ring *);
     void    iwx_free_rx_ring(struct iwx_softc *, struct iwx_rx_ring *);
+    void    iwx_tx_ring_init(struct iwx_softc *, struct iwx_tx_ring *, bool);
     int    iwx_alloc_tx_ring(struct iwx_softc *, struct iwx_tx_ring *, int);
     void    iwx_reset_tx_ring(struct iwx_softc *, struct iwx_tx_ring *);
     void    iwx_free_tx_ring(struct iwx_softc *, struct iwx_tx_ring *);

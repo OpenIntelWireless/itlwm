@@ -343,10 +343,6 @@ struct iwx_dma_info {
     IODMACommand *cmd;
 };
 
-#define IWX_TX_RING_COUNT	IWX_DEFAULT_QUEUE_SIZE
-#define IWX_TX_RING_LOMARK	192
-#define IWX_TX_RING_HIMARK	224
-
 struct iwx_tx_data {
 	bus_dmamap_t	map;
 	bus_addr_t	cmd_paddr;
@@ -363,7 +359,10 @@ struct iwx_tx_ring {
 	struct iwx_dma_info	bc_tbl;
 	struct iwx_tfh_tfd	*desc;
 	struct iwx_device_cmd	*cmd;
-	struct iwx_tx_data	data[IWX_TX_RING_COUNT];
+	struct iwx_tx_data	data[IWX_TFD_QUEUE_SIZE_MAX_GEN3];
+    unsigned int    ring_count;
+    unsigned int    hi_mark;
+    unsigned int    low_mark;
 	int			qid;
 	int			queued;
 	int			cur;
@@ -648,6 +647,7 @@ struct iwx_softc {
 	struct iwx_tx_ring txq[IWX_MAX_TVQM_QUEUES];
 	struct iwx_rx_ring rxq;
 	int qfullmsk;
+    struct iwx_tx_ring sc_tvqm_ring;
 
 	int sc_sf_state;
 
@@ -736,8 +736,8 @@ struct iwx_softc {
 	int sc_staid;
 	int sc_nodecolor;
 
-	uint8_t *sc_cmd_resp_pkt[IWX_TX_RING_COUNT];
-	size_t sc_cmd_resp_len[IWX_TX_RING_COUNT];
+	uint8_t *sc_cmd_resp_pkt[IWX_TFD_QUEUE_SIZE_MAX_GEN3];
+	size_t sc_cmd_resp_len[IWX_TFD_QUEUE_SIZE_MAX_GEN3];
 	int sc_nic_locks;
 
 	struct taskq *sc_nswq;

@@ -1670,7 +1670,8 @@ struct iwx_rx_completion_desc {
 #define IWX_TFD_QUEUE_SIZE_BC_DUP    (64)
 #define IWX_TFD_QUEUE_BC_SIZE        (IWX_TFD_QUEUE_SIZE_MAX + \
                     IWX_TFD_QUEUE_SIZE_BC_DUP)
-#define IWX_TFD_QUEUE_BC_SIZE_GEN3    1024
+#define IWX_TFD_QUEUE_BC_SIZE_GEN3    (IWX_TFD_QUEUE_SIZE_MAX_GEN3 + \
+                    IWX_TFD_QUEUE_SIZE_BC_DUP)
 #define IWX_TFH_NUM_TBS        25
 
 /**
@@ -5574,7 +5575,7 @@ struct iwx_tx_cmd_gen3 {
 } __packed; /* TX_CMD_API_S_VER_8 */
 
 /* For aggregation queues, index must be aligned to frame sequence number. */
-#define IWX_AGG_SSN_TO_TXQ_IDX(x)    ((x) & (IWX_TX_RING_COUNT - 1))
+#define IWX_AGG_SSN_TO_TXQ_IDX(x, a)    ((x) & ((a) - 1))
 
 /*
  * TX response related data
@@ -5910,8 +5911,8 @@ struct iwx_compressed_ba_notif {
     __le32 tx_rate;
     __le16 tfd_cnt;
     __le16 ra_tid_cnt;
-    struct iwx_compressed_ba_tfd tfd[0];
     struct iwx_compressed_ba_ratid ra_tid[0];
+    struct iwx_compressed_ba_tfd tfd[];
 } __packed; /* COMPRESSED_BA_RES_API_S_VER_4 */
 
 struct iwx_beacon_notif {
