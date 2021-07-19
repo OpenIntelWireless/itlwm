@@ -4351,131 +4351,152 @@ iwx_ampdu_tx_stop(struct ieee80211com *ic, struct ieee80211_node *ni, uint8_t ti
     ic->ic_stats.is_ht_tx_ba_agreements--;
 }
 
-/* Read the mac address from WFMP registers. */
 int ItlIwx::
 iwx_set_mac_addr_from_csr(struct iwx_softc *sc, struct iwx_nvm_data *data)
 {
-   const uint8_t *hw_addr;
-   uint32_t mac_addr0, mac_addr1;
-
-   if (!iwx_nic_lock(sc))
-       return EBUSY;
-
-   mac_addr0 = htole32(iwx_read_prph(sc, IWX_WFMP_MAC_ADDR_0));
-   mac_addr1 = htole32(iwx_read_prph(sc, IWX_WFMP_MAC_ADDR_1));
-
-   hw_addr = (const uint8_t *)&mac_addr0;
-   data->hw_addr[0] = hw_addr[3];
-   data->hw_addr[1] = hw_addr[2];
-   data->hw_addr[2] = hw_addr[1];
-   data->hw_addr[3] = hw_addr[0];
-
-   hw_addr = (const uint8_t *)&mac_addr1;
-   data->hw_addr[4] = hw_addr[1];
-   data->hw_addr[5] = hw_addr[0];
-
-   iwx_nic_unlock(sc);
-   return 0;
+    const uint8_t *hw_addr;
+    uint32_t mac_addr0, mac_addr1;
+    
+    if (!iwx_nic_lock(sc))
+        return EBUSY;
+    
+    mac_addr0 = htole32(IWX_READ(sc, IWX_CSR_MAC_ADDR0_STRAP));
+    mac_addr1 = htole32(IWX_READ(sc, IWX_CSR_MAC_ADDR1_STRAP));
+    
+    hw_addr = (const uint8_t *)&mac_addr0;
+    data->hw_addr[0] = hw_addr[3];
+    data->hw_addr[1] = hw_addr[2];
+    data->hw_addr[2] = hw_addr[1];
+    data->hw_addr[3] = hw_addr[0];
+    
+    hw_addr = (const uint8_t *)&mac_addr1;
+    data->hw_addr[4] = hw_addr[1];
+    data->hw_addr[5] = hw_addr[0];
+    
+    /*
+     * If the OEM fused a valid address, use it instead of the one in the
+     * OTP
+     */
+    if (iwx_is_valid_mac_addr(data->hw_addr))
+        goto done;
+    
+    mac_addr0 = htole32(IWX_READ(sc, IWX_CSR_MAC_ADDR0_OTP));
+    mac_addr1 = htole32(IWX_READ(sc, IWX_CSR_MAC_ADDR1_OTP));
+    
+    hw_addr = (const uint8_t *)&mac_addr0;
+    data->hw_addr[0] = hw_addr[3];
+    data->hw_addr[1] = hw_addr[2];
+    data->hw_addr[2] = hw_addr[1];
+    data->hw_addr[3] = hw_addr[0];
+    
+    hw_addr = (const uint8_t *)&mac_addr1;
+    data->hw_addr[4] = hw_addr[1];
+    data->hw_addr[5] = hw_addr[0];
+    
+done:
+    
+    iwx_nic_unlock(sc);
+    return 0;
 }
 
 int ItlIwx::
 iwx_is_valid_mac_addr(const uint8_t *addr)
 {
-   static const uint8_t reserved_mac[] = {
-       0x02, 0xcc, 0xaa, 0xff, 0xee, 0x00
-   };
-
-   return (memcmp(reserved_mac, addr, ETHER_ADDR_LEN) != 0 &&
-       memcmp(etherbroadcastaddr, addr, sizeof(etherbroadcastaddr)) != 0 &&
-       memcmp(etheranyaddr, addr, sizeof(etheranyaddr)) != 0 &&
-       !ETHER_IS_MULTICAST(addr));
+    static const uint8_t reserved_mac[] = {
+        0x02, 0xcc, 0xaa, 0xff, 0xee, 0x00
+    };
+    
+    return (memcmp(reserved_mac, addr, ETHER_ADDR_LEN) != 0 &&
+            memcmp(etherbroadcastaddr, addr, sizeof(etherbroadcastaddr)) != 0 &&
+            memcmp(etheranyaddr, addr, sizeof(etheranyaddr)) != 0 &&
+            !ETHER_IS_MULTICAST(addr));
 }
 
 int ItlIwx::
 iwx_nvm_get(struct iwx_softc *sc)
 {
-   struct iwx_nvm_get_info cmd = {};
-   struct iwx_nvm_data *nvm = &sc->sc_nvm;
-   struct iwx_host_cmd hcmd = {
-       .flags = IWX_CMD_WANT_RESP | IWX_CMD_SEND_IN_RFKILL,
-       .data = { &cmd, },
-       .len = { sizeof(cmd) },
-       .id = IWX_WIDE_ID(IWX_REGULATORY_AND_NVM_GROUP,
-           IWX_NVM_GET_INFO)
-   };
-   int err;
-   uint32_t mac_flags;
-   /*
-    * All the values in iwx_nvm_get_info_rsp v4 are the same as
-    * in v3, except for the channel profile part of the
-    * regulatory.  So we can just access the new struct, with the
-    * exception of the latter.
-    */
-   struct iwx_nvm_get_info_rsp *rsp;
-   struct iwx_nvm_get_info_rsp_v3 *rsp_v3;
-   int v4 = isset(sc->sc_ucode_api, IWX_UCODE_TLV_API_REGULATORY_NVM_INFO);
-   size_t resp_len = v4 ? sizeof(*rsp) : sizeof(*rsp_v3);
-
-   hcmd.resp_pkt_len = sizeof(struct iwx_rx_packet) + resp_len;
-   err = iwx_send_cmd(sc, &hcmd);
-   if (err)
-       return err;
-
-   if (iwx_rx_packet_payload_len(hcmd.resp_pkt) != resp_len) {
-       err = EIO;
-       goto out;
-   }
-
-   memset(nvm, 0, sizeof(*nvm));
-
-   iwx_set_mac_addr_from_csr(sc, nvm);
-   if (!iwx_is_valid_mac_addr(nvm->hw_addr)) {
-       XYLog("%s: no valid mac address was found\n", DEVNAME(sc));
-       err = EINVAL;
-       goto out;
-   }
-
-   rsp = (struct iwx_nvm_get_info_rsp *)hcmd.resp_pkt->data;
-
-   /* Initialize general data */
-   nvm->nvm_version = le16toh(rsp->general.nvm_version);
-   nvm->n_hw_addrs = rsp->general.n_hw_addrs;
-
-   /* Initialize MAC sku data */
-   mac_flags = le32toh(rsp->mac_sku.mac_sku_flags);
-   nvm->sku_cap_11ac_enable =
-       !!(mac_flags & IWX_NVM_MAC_SKU_FLAGS_802_11AC_ENABLED);
-   nvm->sku_cap_11n_enable =
-       !!(mac_flags & IWX_NVM_MAC_SKU_FLAGS_802_11N_ENABLED);
-   nvm->sku_cap_11ax_enable =
-       !!(mac_flags & IWX_NVM_MAC_SKU_FLAGS_802_11AX_ENABLED);
-   nvm->sku_cap_band_24GHz_enable =
-       !!(mac_flags & IWX_NVM_MAC_SKU_FLAGS_BAND_2_4_ENABLED);
-   nvm->sku_cap_band_52GHz_enable =
-       !!(mac_flags & IWX_NVM_MAC_SKU_FLAGS_BAND_5_2_ENABLED);
-   nvm->sku_cap_mimo_disable =
-       !!(mac_flags & IWX_NVM_MAC_SKU_FLAGS_MIMO_DISABLED);
-
-   /* Initialize PHY sku data */
-   nvm->valid_tx_ant = (uint8_t)le32toh(rsp->phy_sku.tx_chains);
-   nvm->valid_rx_ant = (uint8_t)le32toh(rsp->phy_sku.rx_chains);
-
-   if (le32toh(rsp->regulatory.lar_enabled) &&
-       isset(sc->sc_enabled_capa, IWX_UCODE_TLV_CAPA_LAR_SUPPORT)) {
-       nvm->lar_enabled = 1;
-   }
-
-   if (v4) {
-       iwx_init_channel_map(sc, NULL,
-           rsp->regulatory.channel_profile, IWX_NUM_CHANNELS);
-   } else {
-       rsp_v3 = (struct iwx_nvm_get_info_rsp_v3 *)rsp;
-       iwx_init_channel_map(sc, rsp_v3->regulatory.channel_profile,
-           NULL, IWX_NUM_CHANNELS_V1);
-   }
+    struct iwx_nvm_get_info cmd = {};
+    struct iwx_nvm_data *nvm = &sc->sc_nvm;
+    struct iwx_host_cmd hcmd = {
+        .flags = IWX_CMD_WANT_RESP | IWX_CMD_SEND_IN_RFKILL,
+        .data = { &cmd, },
+        .len = { sizeof(cmd) },
+        .id = IWX_WIDE_ID(IWX_REGULATORY_AND_NVM_GROUP,
+                          IWX_NVM_GET_INFO)
+    };
+    int err;
+    uint32_t mac_flags;
+    /*
+     * All the values in iwx_nvm_get_info_rsp v4 are the same as
+     * in v3, except for the channel profile part of the
+     * regulatory.  So we can just access the new struct, with the
+     * exception of the latter.
+     */
+    struct iwx_nvm_get_info_rsp *rsp;
+    struct iwx_nvm_get_info_rsp_v3 *rsp_v3;
+    int v4 = isset(sc->sc_ucode_api, IWX_UCODE_TLV_API_REGULATORY_NVM_INFO);
+    size_t resp_len = v4 ? sizeof(*rsp) : sizeof(*rsp_v3);
+    
+    hcmd.resp_pkt_len = sizeof(struct iwx_rx_packet) + resp_len;
+    err = iwx_send_cmd(sc, &hcmd);
+    if (err)
+        return err;
+    
+    if (iwx_rx_packet_payload_len(hcmd.resp_pkt) != resp_len) {
+        err = EIO;
+        goto out;
+    }
+    
+    memset(nvm, 0, sizeof(*nvm));
+    
+    iwx_set_mac_addr_from_csr(sc, nvm);
+    if (!iwx_is_valid_mac_addr(nvm->hw_addr)) {
+        XYLog("%s: no valid mac address was found\n", DEVNAME(sc));
+        err = EINVAL;
+        goto out;
+    }
+    
+    rsp = (struct iwx_nvm_get_info_rsp *)hcmd.resp_pkt->data;
+    
+    /* Initialize general data */
+    nvm->nvm_version = le16toh(rsp->general.nvm_version);
+    nvm->n_hw_addrs = rsp->general.n_hw_addrs;
+    
+    /* Initialize MAC sku data */
+    mac_flags = le32toh(rsp->mac_sku.mac_sku_flags);
+    nvm->sku_cap_11ac_enable =
+    !!(mac_flags & IWX_NVM_MAC_SKU_FLAGS_802_11AC_ENABLED);
+    nvm->sku_cap_11n_enable =
+    !!(mac_flags & IWX_NVM_MAC_SKU_FLAGS_802_11N_ENABLED);
+    nvm->sku_cap_11ax_enable =
+    !!(mac_flags & IWX_NVM_MAC_SKU_FLAGS_802_11AX_ENABLED);
+    nvm->sku_cap_band_24GHz_enable =
+    !!(mac_flags & IWX_NVM_MAC_SKU_FLAGS_BAND_2_4_ENABLED);
+    nvm->sku_cap_band_52GHz_enable =
+    !!(mac_flags & IWX_NVM_MAC_SKU_FLAGS_BAND_5_2_ENABLED);
+    nvm->sku_cap_mimo_disable =
+    !!(mac_flags & IWX_NVM_MAC_SKU_FLAGS_MIMO_DISABLED);
+    
+    /* Initialize PHY sku data */
+    nvm->valid_tx_ant = (uint8_t)le32toh(rsp->phy_sku.tx_chains);
+    nvm->valid_rx_ant = (uint8_t)le32toh(rsp->phy_sku.rx_chains);
+    
+    if (le32toh(rsp->regulatory.lar_enabled) &&
+        isset(sc->sc_enabled_capa, IWX_UCODE_TLV_CAPA_LAR_SUPPORT)) {
+        nvm->lar_enabled = 1;
+    }
+    
+    if (v4) {
+        iwx_init_channel_map(sc, NULL,
+                             rsp->regulatory.channel_profile, IWX_NUM_CHANNELS);
+    } else {
+        rsp_v3 = (struct iwx_nvm_get_info_rsp_v3 *)rsp;
+        iwx_init_channel_map(sc, rsp_v3->regulatory.channel_profile,
+                             NULL, IWX_NUM_CHANNELS_V1);
+    }
 out:
-   iwx_free_resp(sc, &hcmd);
-   return err;
+    iwx_free_resp(sc, &hcmd);
+    return err;
 }
 
 #define UMAG_SB_CPU_1_STATUS        0xA038C0

@@ -1187,6 +1187,16 @@ enum iwx_msix_ivar_for_cause {
 #define IWX_MSIX_AUTO_CLEAR_CAUSE        (0 << 7)
 #define IWX_MSIX_NON_AUTO_CLEAR_CAUSE        (1 << 7)
 
+/*****************************************************************************
+ *                     HW address related registers                          *
+ *****************************************************************************/
+
+#define IWX_CSR_ADDR_BASE            (0x380)
+#define IWX_CSR_MAC_ADDR0_OTP        (IWX_CSR_ADDR_BASE)
+#define IWX_CSR_MAC_ADDR1_OTP        (IWX_CSR_ADDR_BASE + 4)
+#define IWX_CSR_MAC_ADDR0_STRAP        (IWX_CSR_ADDR_BASE + 8)
+#define IWX_CSR_MAC_ADDR1_STRAP        (IWX_CSR_ADDR_BASE + 0xC)
+
 /**
  * uCode API flags
  * @IWX_UCODE_TLV_FLAGS_PAN: This is PAN capable microcode; this previously
