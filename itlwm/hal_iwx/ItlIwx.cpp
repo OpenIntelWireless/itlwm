@@ -345,11 +345,13 @@ static const uint8_t iwx_nvm_channels_uhb[] = {
    36, 40, 44, 48, 52, 56, 60, 64, 68, 72, 76, 80, 84, 88, 92,
    96, 100, 104, 108, 112, 116, 120, 124, 128, 132, 136, 140, 144,
    149, 153, 157, 161, 165, 169, 173, 177, 181,
+#ifdef notyet
    /* 6-7 GHz */
    1, 5, 9, 13, 17, 21, 25, 29, 33, 37, 41, 45, 49, 53, 57, 61, 65, 69,
    73, 77, 81, 85, 89, 93, 97, 101, 105, 109, 113, 117, 121, 125, 129,
    133, 137, 141, 145, 149, 153, 157, 161, 165, 169, 173, 177, 181, 185,
    189, 193, 197, 201, 205, 209, 213, 217, 221, 225, 229, 233
+#endif
 };
 
 #define IWX_NUM_2GHZ_CHANNELS    14
@@ -9681,15 +9683,6 @@ iwx_init_hw(struct iwx_softc *sc)
     XYLog("%s\n", __FUNCTION__);
     struct ieee80211com *ic = &sc->sc_ic;
     int err, i;
-    struct iwx_rx_packet *pkt;
-    struct iwl_shared_mem_cfg *resp;
-    struct iwx_host_cmd cmd {
-        .flags = IWX_CMD_WANT_RESP,
-        .data = { NULL, },
-        .len = { 0, },
-        .resp_pkt_len = sizeof(*pkt) + sizeof(*resp),
-    };
-    struct ieee80211_channel *first_chan;
     
     err = iwx_preinit(sc);
     if (err)
@@ -9707,23 +9700,6 @@ iwx_init_hw(struct iwx_softc *sc)
     
     if (!iwx_nic_lock(sc))
         return EBUSY;
-    
-    if (isset(sc->sc_enabled_capa, IWX_UCODE_TLV_CAPA_EXTEND_SHARED_MEM_CFG)) {
-        cmd.id = iwx_cmd_id(IWX_SHARED_MEM_CFG_CMD, IWX_SYSTEM_GROUP, 0);
-    } else {
-        cmd.id = IWX_SHARED_MEM_CFG;
-    }
-    
-    err = iwx_send_cmd(sc, &cmd);
-    
-    if (err) {
-        XYLog("%s: could not get SHARE MEM\n", DEVNAME(sc));
-        return err;
-    }
-    pkt = cmd.resp_pkt;
-    struct iwl_shared_mem_cfg *mem_cfg = (struct iwl_shared_mem_cfg *)pkt->data;
-    
-    XYLog("%s lmac_num=%d num_txfifo_entries=%lu rxfifo2_size=%d\n", __FUNCTION__, le32toh(mem_cfg->lmac_num), ARRAY_SIZE(mem_cfg->lmac_smem[0].txfifo_size), le32toh(mem_cfg->rxfifo2_size));
     
 //    err = iwx_sf_config(sc, IWX_SF_INIT_OFF);
 //    if (err) {
@@ -9786,23 +9762,13 @@ iwx_init_hw(struct iwx_softc *sc)
         }
     }
     
-    first_chan = &ic->ic_channels[1];
-    for (i = 0; i < nitems(ic->ic_channels); i++) {
-        first_chan = &ic->ic_channels[i];
-        XYLog("%s chanel: %d flags: %d\n", __FUNCTION__, ieee80211_chan2ieee(ic, first_chan), first_chan->ic_flags);
-        if (IEEE80211_IS_CHAN_2GHZ(first_chan)) {
-            XYLog("%s found channel %d\n", __FUNCTION__, ieee80211_chan2ieee(ic, first_chan));
-            break;
-        }
-    }
-    
     for (i = 0; i < 1; i++) {
         /*
          * The channel used here isn't relevant as it's
          * going to be overwritten in the other flows.
          * For now use the first channel we have.
          */
-        sc->sc_phyctxt[i].channel = first_chan;
+        sc->sc_phyctxt[i].channel = &ic->ic_channels[1];
         err = iwx_phy_ctxt_cmd(sc, &sc->sc_phyctxt[i], 1, 1,
                                IWX_FW_CTXT_ACTION_ADD, 0);
         if (err) {
