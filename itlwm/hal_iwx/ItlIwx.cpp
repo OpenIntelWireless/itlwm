@@ -4402,12 +4402,7 @@ done:
 int ItlIwx::
 iwx_is_valid_mac_addr(const uint8_t *addr)
 {
-    static const uint8_t reserved_mac[] = {
-        0x02, 0xcc, 0xaa, 0xff, 0xee, 0x00
-    };
-    
-    return (memcmp(reserved_mac, addr, ETHER_ADDR_LEN) != 0 &&
-            memcmp(etherbroadcastaddr, addr, sizeof(etherbroadcastaddr)) != 0 &&
+    return (memcmp(etherbroadcastaddr, addr, sizeof(etherbroadcastaddr)) != 0 &&
             memcmp(etheranyaddr, addr, sizeof(etheranyaddr)) != 0 &&
             !ETHER_IS_MULTICAST(addr));
 }
