@@ -4353,10 +4353,24 @@ iwx_ampdu_tx_stop(struct ieee80211com *ic, struct ieee80211_node *ni, uint8_t ti
     ic->ic_stats.is_ht_tx_ba_agreements--;
 }
 
+static void iwx_flip_hw_address(uint32_t mac_addr0, uint32_t mac_addr1, uint8_t *dest)
+{
+    const u8 *hw_addr;
+
+    hw_addr = (const u8 *)&mac_addr0;
+    dest[0] = hw_addr[3];
+    dest[1] = hw_addr[2];
+    dest[2] = hw_addr[1];
+    dest[3] = hw_addr[0];
+
+    hw_addr = (const u8 *)&mac_addr1;
+    dest[4] = hw_addr[1];
+    dest[5] = hw_addr[0];
+}
+
 int ItlIwx::
 iwx_set_mac_addr_from_csr(struct iwx_softc *sc, struct iwx_nvm_data *data)
 {
-    const uint8_t *hw_addr;
     uint32_t mac_addr0, mac_addr1;
     
     if (!iwx_nic_lock(sc))
@@ -4365,15 +4379,7 @@ iwx_set_mac_addr_from_csr(struct iwx_softc *sc, struct iwx_nvm_data *data)
     mac_addr0 = htole32(IWX_READ(sc, IWX_CSR_MAC_ADDR0_STRAP));
     mac_addr1 = htole32(IWX_READ(sc, IWX_CSR_MAC_ADDR1_STRAP));
     
-    hw_addr = (const uint8_t *)&mac_addr0;
-    data->hw_addr[0] = hw_addr[3];
-    data->hw_addr[1] = hw_addr[2];
-    data->hw_addr[2] = hw_addr[1];
-    data->hw_addr[3] = hw_addr[0];
-    
-    hw_addr = (const uint8_t *)&mac_addr1;
-    data->hw_addr[4] = hw_addr[1];
-    data->hw_addr[5] = hw_addr[0];
+    iwx_flip_hw_address(mac_addr0, mac_addr1, data->hw_addr);
     
     /*
      * If the OEM fused a valid address, use it instead of the one in the
@@ -4385,15 +4391,7 @@ iwx_set_mac_addr_from_csr(struct iwx_softc *sc, struct iwx_nvm_data *data)
     mac_addr0 = htole32(IWX_READ(sc, IWX_CSR_MAC_ADDR0_OTP));
     mac_addr1 = htole32(IWX_READ(sc, IWX_CSR_MAC_ADDR1_OTP));
     
-    hw_addr = (const uint8_t *)&mac_addr0;
-    data->hw_addr[0] = hw_addr[3];
-    data->hw_addr[1] = hw_addr[2];
-    data->hw_addr[2] = hw_addr[1];
-    data->hw_addr[3] = hw_addr[0];
-    
-    hw_addr = (const uint8_t *)&mac_addr1;
-    data->hw_addr[4] = hw_addr[1];
-    data->hw_addr[5] = hw_addr[0];
+    iwx_flip_hw_address(mac_addr0, mac_addr1, data->hw_addr);
     
 done:
     
