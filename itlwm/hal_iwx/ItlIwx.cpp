@@ -3448,9 +3448,10 @@ iwx_update_chw(struct ieee80211com *ic)
     ItlIwx *that = container_of(sc, ItlIwx, com);
     struct iwx_node *in = (struct iwx_node *)ic->ic_bss;
     int err = 0;
+    int chains = that->iwx_mimo_enabled(sc) ? 2 : 1;
     
     err = that->iwx_phy_ctxt_cmd(sc, &sc->sc_phyctxt[0],
-                                 2, 2, IWX_FW_CTXT_ACTION_MODIFY, 0);
+                                 chains, chains, IWX_FW_CTXT_ACTION_MODIFY, 0);
     if (err) {
         XYLog("%s: failed to update PHY\n",
               __FUNCTION__);
@@ -7741,6 +7742,7 @@ iwx_run(struct iwx_softc *sc)
     struct ieee80211com *ic = &sc->sc_ic;
     struct iwx_node *in = (struct iwx_node *)ic->ic_bss;
     int err;
+    int chains = iwx_mimo_enabled(sc) ? 2 : 1;
     
     splassert(IPL_NET);
     
@@ -7753,10 +7755,11 @@ iwx_run(struct iwx_softc *sc)
     
     /* Configure Rx chains for MIMO. */
     if ((ic->ic_opmode == IEEE80211_M_MONITOR ||
-         (in->in_ni.ni_flags & IEEE80211_NODE_HT)) &&
-        iwx_mimo_enabled(sc)) {
+         (in->in_ni.ni_flags & IEEE80211_NODE_HT) ||
+         (in->in_ni.ni_flags & IEEE80211_NODE_VHT) ||
+         (in->in_ni.ni_flags & IEEE80211_NODE_HE))) {
         err = iwx_phy_ctxt_cmd(sc, &sc->sc_phyctxt[0],
-                               2, 2, IWX_FW_CTXT_ACTION_MODIFY, 0);
+                               chains, chains, IWX_FW_CTXT_ACTION_MODIFY, 0);
         if (err) {
             XYLog("%s: failed to update PHY\n",
                   DEVNAME(sc));
