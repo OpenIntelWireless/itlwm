@@ -8318,7 +8318,8 @@ iwx_send_soc_conf(struct iwx_softc *sc)
                IWX_SOC_FLAGS_LTR_APPLY_DELAY_MASK);
        scan_cmd_ver = iwx_lookup_cmd_ver(sc, IWX_LONG_GROUP,
            IWX_SCAN_REQ_UMAC);
-       if (scan_cmd_ver >= 2 && sc->sc_low_latency_xtal)
+       if (scan_cmd_ver != IWX_FW_CMD_VER_UNKNOWN &&
+           scan_cmd_ver >= 2 && sc->sc_low_latency_xtal)
            flags |= IWX_SOC_CONFIG_CMD_FLAGS_LOW_LATENCY;
    }
    cmd.flags = htole32(flags);
