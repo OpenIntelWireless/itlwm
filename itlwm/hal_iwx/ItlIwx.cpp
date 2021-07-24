@@ -8628,8 +8628,10 @@ iwx_init(struct _ifnet *ifp)
             SEC_TO_NSEC(1));
         if (generation != sc->sc_generation)
             return ENXIO;
-        if (err)
+        if (err) {
+            iwx_stop(ifp);
             return err;
+        }
     } while (ic->ic_state != IEEE80211_S_SCAN);
     
     return 0;
