@@ -4686,11 +4686,7 @@ iwm_attach(struct iwm_softc *sc, struct pci_attach_args *pa)
             break;
         case PCI_PRODUCT_INTEL_WL_7265_1:
         case PCI_PRODUCT_INTEL_WL_7265_2:
-            if ((sc->sc_hw_rev & IWM_CSR_HW_REV_TYPE_MSK) ==
-                IWM_CSR_HW_REV_TYPE_7265D)
-                sc->sc_fwname = "iwm-7265D-29";
-            else
-                sc->sc_fwname = "iwm-7265-17";
+            sc->sc_fwname = "iwm-7265-17";
             sc->host_interrupt_operation_mode = 0;
             sc->sc_device_family = IWM_DEVICE_FAMILY_7000;
             sc->sc_fwdmasegsz = IWM_FWDMASEGSZ;
