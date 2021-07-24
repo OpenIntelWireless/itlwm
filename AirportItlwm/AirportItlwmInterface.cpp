@@ -36,9 +36,11 @@ init(IO80211Controller *controller, ItlHalService *halService)
 UInt32 AirportItlwmInterface::
 inputPacket(mbuf_t packet, UInt32 length, IOOptionBits options, void *param)
 {
-    uint16_t ether_type;
+    ether_header_t *eh;
     size_t len = mbuf_len(packet);
-    if (len >= 14 && mbuf_copydata(packet, 12, 2, &ether_type) == 0 && ether_type == _OSSwapInt16(ETHERTYPE_PAE)) { // EAPOL packet
+    
+    eh = (ether_header_t *)mbuf_data(packet);
+    if (len >= sizeof(ether_header_t) && eh->ether_type == htons(ETHERTYPE_PAE)) { // EAPOL packet
         const char* dump = hexdump((uint8_t*)mbuf_data(packet), len);
         IOLog("itlwm: input EAPOL packet, len: %zu, data: %s\n", len, dump ? dump : "Failed to allocate memory");
         if (dump)
