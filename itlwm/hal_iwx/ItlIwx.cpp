@@ -8660,6 +8660,47 @@ iwx_rs_update(struct iwx_softc *sc, struct iwx_tlc_update_notif *notif)
 }
 
 int ItlIwx::
+iwx_phy_ctxt_update(struct iwx_softc *sc, struct iwx_phy_ctxt *phyctxt,
+                    struct ieee80211_channel *chan, uint8_t chains_static,
+                    uint8_t chains_dynamic, uint32_t apply_time)
+{
+    uint16_t band_flags = (IEEE80211_CHAN_2GHZ | IEEE80211_CHAN_5GHZ);
+    int err;
+    
+    if (isset(sc->sc_enabled_capa,
+              IWX_UCODE_TLV_CAPA_BINDING_CDB_SUPPORT) &&
+        (phyctxt->channel->ic_flags & band_flags) !=
+        (chan->ic_flags & band_flags)) {
+        err = iwx_phy_ctxt_cmd(sc, phyctxt, chains_static,
+                               chains_dynamic, IWX_FW_CTXT_ACTION_REMOVE, apply_time);
+        if (err) {
+            printf("%s: could not remove PHY context "
+                   "(error %d)\n", DEVNAME(sc), err);
+            return err;
+        }
+        phyctxt->channel = chan;
+        err = iwx_phy_ctxt_cmd(sc, phyctxt, chains_static,
+                               chains_dynamic, IWX_FW_CTXT_ACTION_ADD, apply_time);
+        if (err) {
+            printf("%s: could not remove PHY context "
+                   "(error %d)\n", DEVNAME(sc), err);
+            return err;
+        }
+    } else {
+        phyctxt->channel = chan;
+        err = iwx_phy_ctxt_cmd(sc, phyctxt, chains_static,
+                               chains_dynamic, IWX_FW_CTXT_ACTION_MODIFY, apply_time);
+        if (err) {
+            printf("%s: could not update PHY context (error %d)\n",
+                   DEVNAME(sc), err);
+            return err;
+        }
+    }
+    
+    return 0;
+}
+
+int ItlIwx::
 iwx_auth(struct iwx_softc *sc)
 {
     XYLog("%s\n", __FUNCTION__);
@@ -8670,16 +8711,16 @@ iwx_auth(struct iwx_softc *sc)
     
     splassert(IPL_NET);
     
-    if (ic->ic_opmode == IEEE80211_M_MONITOR)
-        sc->sc_phyctxt[0].channel = ic->ic_ibss_chan;
-    else
-        sc->sc_phyctxt[0].channel = in->in_ni.ni_chan;
-    err = iwx_phy_ctxt_cmd(sc, &sc->sc_phyctxt[0], 1, 1,
-                           IWX_FW_CTXT_ACTION_MODIFY, 0);
-    if (err) {
-        XYLog("%s: could not update PHY context (error %d)\n",
-              DEVNAME(sc), err);
-        return err;
+    if (ic->ic_opmode == IEEE80211_M_MONITOR) {
+        err = iwx_phy_ctxt_update(sc, &sc->sc_phyctxt[0],
+                                  ic->ic_ibss_chan, 1, 1, 0);
+        if (err)
+            return err;
+    } else {
+        err = iwx_phy_ctxt_update(sc, &sc->sc_phyctxt[0],
+                                  in->in_ni.ni_chan, 1, 1, 0);
+        if (err)
+            return err;
     }
     in->in_phyctxt = &sc->sc_phyctxt[0];
     
@@ -8819,6 +8860,12 @@ iwx_deauth(struct iwx_softc *sc)
         sc->sc_flags &= ~IWX_FLAG_MAC_ACTIVE;
     }
     
+    /* Move unused PHY context to a default channel. */
+    err = iwx_phy_ctxt_update(sc, &sc->sc_phyctxt[0],
+                              &ic->ic_channels[1], 1, 1, 0);
+    if (err)
+        return err;
+    
     return 0;
 }
 
@@ -8922,8 +8969,8 @@ iwx_run(struct iwx_softc *sc)
     if ((ic->ic_opmode == IEEE80211_M_MONITOR ||
          (in->in_ni.ni_flags & IEEE80211_NODE_HT)) &&
         iwx_mimo_enabled(sc)) {
-        err = iwx_phy_ctxt_cmd(sc, &sc->sc_phyctxt[0],
-                               2, 2, IWX_FW_CTXT_ACTION_MODIFY, 0);
+        err = iwx_phy_ctxt_update(sc, &sc->sc_phyctxt[0],
+                                  in->in_ni.ni_chan, 2, 2, 0);
         if (err) {
             XYLog("%s: failed to update PHY\n",
                   DEVNAME(sc));
@@ -9048,8 +9095,8 @@ iwx_run_stop(struct iwx_softc *sc)
     /* Reset Tx chains in case MIMO was enabled. */
     if ((in->in_ni.ni_flags & IEEE80211_NODE_HT) &&
         iwx_mimo_enabled(sc)) {
-        err = iwx_phy_ctxt_cmd(sc, &sc->sc_phyctxt[0], 1, 1,
-                               IWX_FW_CTXT_ACTION_MODIFY, 0);
+        err = iwx_phy_ctxt_update(sc, &sc->sc_phyctxt[0],
+                                  in->in_ni.ni_chan, 1, 1, 0);
         if (err) {
             XYLog("%s: failed to update PHY\n", DEVNAME(sc));
             return err;
@@ -9755,12 +9802,13 @@ iwx_init_hw(struct iwx_softc *sc)
         }
     }
     
-    for (i = 0; i < 1; i++) {
+    for (i = 0; i < IWX_NUM_PHY_CTX; i++) {
         /*
          * The channel used here isn't relevant as it's
          * going to be overwritten in the other flows.
          * For now use the first channel we have.
          */
+        sc->sc_phyctxt[i].id = i;
         sc->sc_phyctxt[i].channel = &ic->ic_channels[1];
         err = iwx_phy_ctxt_cmd(sc, &sc->sc_phyctxt[i], 1, 1,
                                IWX_FW_CTXT_ACTION_ADD, 0);
