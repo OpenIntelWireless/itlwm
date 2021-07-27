@@ -548,7 +548,11 @@ IOReturn AirportItlwm::
 setLinkStateGated(OSObject *target, void *arg0, void *arg1, void *arg2, void *arg3)
 {
     AirportItlwm *that = OSDynamicCast(AirportItlwm, target);
-    return that->getNetworkInterface()->setLinkState((IO80211LinkState)(uint64_t)arg0, (unsigned int)(uint64_t)arg1);
+    IOReturn ret = that->getNetworkInterface()->setLinkState((IO80211LinkState)(uint64_t)arg0, (unsigned int)(uint64_t)arg1);
+    if (that->fAWDLInterface) {
+        that->fAWDLInterface->setLinkState((IO80211LinkState)(uint64_t)arg0, (unsigned int)(uint64_t)arg1);
+    }
+    return ret;
 }
 
 void AirportItlwm::releaseAll()
@@ -909,7 +913,7 @@ void AirportItlwm::setPowerStateOn()
 int AirportItlwm::
 outputRaw80211Packet(IO80211Interface *interface, mbuf_t m)
 {
-    XYLog("%s len=%d\n", __FUNCTION__, mbuf_len(m));
+    XYLog("%s len=%zu\n", __FUNCTION__, mbuf_len(m));
     freePacket(m);
     return kIOReturnOutputDropped;
 }
@@ -963,7 +967,7 @@ bpfOutput80211Radio(OSObject *object, mbuf_t m)
 SInt32 AirportItlwm::
 enableVirtualInterface(IO80211VirtualInterface *interface)
 {
-    XYLog("%s interface=%s role=%d", __FUNCTION__, interface->getBSDName(), interface->getInterfaceRole());
+    XYLog("%s interface=%s role=%d\n", __FUNCTION__, interface->getBSDName(), interface->getInterfaceRole());
     SInt32 ret = super::enableVirtualInterface(interface);
     if (!ret) {
         interface->setLinkState(kIO80211NetworkLinkUp, 0);
@@ -976,7 +980,7 @@ enableVirtualInterface(IO80211VirtualInterface *interface)
 SInt32 AirportItlwm::
 disableVirtualInterface(IO80211VirtualInterface *interface)
 {
-    XYLog("%s interface=%s role=%d", __FUNCTION__, interface->getBSDName(), interface->getInterfaceRole());
+    XYLog("%s interface=%s role=%d\n", __FUNCTION__, interface->getBSDName(), interface->getInterfaceRole());
     SInt32 ret = super::disableVirtualInterface(interface);
     if (!ret) {
         interface->setLinkState(kIO80211NetworkLinkDown, 0);
