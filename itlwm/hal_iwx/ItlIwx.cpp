@@ -5713,7 +5713,7 @@ iwx_tx(struct iwx_softc *sc, mbuf_t m, struct ieee80211_node *ni, int ac)
     }
 
     if (tid == IWX_MGMT_TID) {
-        DPRINTFN(1, ("%s type=%d qos=%d multicast=%d len=%zu subtype=%d qid=%d using mgmt tid\n", __FUNCTION__, type, hasqos, IEEE80211_IS_MULTICAST(wh->i_addr1), mbuf_len(m), subtype, qid));
+        DPRINTFN(3, ("%s type=%d qos=%d multicast=%d len=%zu subtype=%d qid=%d using mgmt tid\n", __FUNCTION__, type, hasqos, IEEE80211_IS_MULTICAST(wh->i_addr1), mbuf_len(m), subtype, qid));
         qid = IWX_QID_MGMT;
     }
 
