@@ -8860,12 +8860,6 @@ iwx_deauth(struct iwx_softc *sc)
         sc->sc_flags &= ~IWX_FLAG_MAC_ACTIVE;
     }
     
-    /* Move unused PHY context to a default channel. */
-    err = iwx_phy_ctxt_update(sc, &sc->sc_phyctxt[0],
-                              &ic->ic_channels[1], 1, 1, 0);
-    if (err)
-        return err;
-    
     return 0;
 }
 
