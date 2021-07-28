@@ -2255,6 +2255,7 @@ iwm_auth(struct iwm_softc *sc)
         sc->sc_phyctxt[0].channel = ic->ic_ibss_chan;
     else
         sc->sc_phyctxt[0].channel = in->in_ni.ni_chan;
+    in->in_ni.ni_chw = IEEE80211_CHAN_WIDTH_20_NOHT;
     err = iwm_phy_ctxt_cmd(sc, &sc->sc_phyctxt[0], 1, 1,
                            IWM_FW_CTXT_ACTION_MODIFY, 0);
     if (err) {
@@ -3772,6 +3773,7 @@ iwm_stop(struct _ifnet *ifp)
     ifq_clr_oactive(&ifp->if_snd);
     
     in->in_phyctxt = NULL;
+    in->in_ni.ni_chw = IEEE80211_CHAN_WIDTH_20_NOHT;
     
     sc->sc_flags &= ~(IWM_FLAG_SCANNING | IWM_FLAG_BGSCAN);
     sc->sc_flags &= ~IWM_FLAG_MAC_ACTIVE;
