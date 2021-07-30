@@ -664,7 +664,8 @@ iwm_rx_reorder(struct iwm_softc *sc, mbuf_t m, int chanidx,
     
     baid = (reorder_data & IWM_RX_MPDU_REORDER_BAID_MASK) >>
     IWM_RX_MPDU_REORDER_BAID_SHIFT;
-    if (baid == IWM_RX_REORDER_DATA_INVALID_BAID)
+    if (baid == IWM_RX_REORDER_DATA_INVALID_BAID ||
+        baid >= nitems(sc->sc_rxba_data))
         return 0;
     
     rxba = &sc->sc_rxba_data[baid];
@@ -823,7 +824,7 @@ iwm_rx_mpdu_mq(struct iwm_softc *sc, mbuf_t m, void *pktdata,
     memset(&rxi, 0, sizeof(rxi));
     
     desc = (struct iwm_rx_mpdu_desc *)pktdata;
-
+    
     if (!(desc->status & htole16(IWM_RX_MPDU_RES_STATUS_CRC_OK)) ||
         !(desc->status & htole16(IWM_RX_MPDU_RES_STATUS_OVERRUN_OK))) {
         mbuf_freem(m);
@@ -878,10 +879,10 @@ iwm_rx_mpdu_mq(struct iwm_softc *sc, mbuf_t m, void *pktdata,
         
         if ((le16toh(desc->status) &
              IWM_RX_MPDU_RES_STATUS_SEC_ENC_MSK) ==
-             IWM_RX_MPDU_RES_STATUS_SEC_CCM_ENC) {
-             /* Padding is inserted after the IV. */
-             hdrlen += IEEE80211_CCMP_HDRLEN;
-         }
+            IWM_RX_MPDU_RES_STATUS_SEC_CCM_ENC) {
+            /* Padding is inserted after the IV. */
+            hdrlen += IEEE80211_CCMP_HDRLEN;
+        }
         
         memmove((uint8_t*)mbuf_data(m) + 2, mbuf_data(m), hdrlen);
         mbuf_adj(m, 2);
@@ -940,11 +941,11 @@ iwm_rx_mpdu_mq(struct iwm_softc *sc, mbuf_t m, void *pktdata,
     rate_n_flags = le32toh(desc->v1.rate_n_flags);
     chanidx = desc->v1.channel;
     device_timestamp = desc->v1.gp2_on_air_rise;
-
+    
     rssi = iwm_rxmq_get_signal_strength(sc, desc);
     rssi = (0 - IWM_MIN_DBM) + rssi;    /* normalize */
     rssi = MIN(rssi, ic->ic_max_rssi);    /* clip to max. 100% */
-
+    
     rxi.rxi_rssi = rssi;
     rxi.rxi_tstamp = le64toh(desc->v1.tsf_on_air_rise);
     
@@ -952,10 +953,10 @@ iwm_rx_mpdu_mq(struct iwm_softc *sc, mbuf_t m, void *pktdata,
                        (phy_info & IWM_RX_MPDU_PHY_SHORT_PREAMBLE),
                        rate_n_flags, device_timestamp, &rxi, ml))
         return;
-
+    
     iwm_rx_frame(sc, m, chanidx, le16toh(desc->status),
-        (phy_info & IWM_RX_MPDU_PHY_SHORT_PREAMBLE),
-        rate_n_flags, device_timestamp, &rxi, ml);
+                 (phy_info & IWM_RX_MPDU_PHY_SHORT_PREAMBLE),
+                 rate_n_flags, device_timestamp, &rxi, ml);
 }
 
 int ItlIwm::

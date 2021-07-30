@@ -232,7 +232,6 @@ public:
     int    iwm_run_init_mvm_ucode(struct iwm_softc *, int);
     int    iwm_config_ltr(struct iwm_softc *);
     int    iwm_rx_addbuf(struct iwm_softc *, int, int);
-    int    iwm_calc_rssi(struct iwm_softc *, struct iwm_rx_phy_info *);
     int    iwm_get_signal_strength(struct iwm_softc *, struct iwm_rx_phy_info *);
     int    iwm_rxmq_get_signal_strength(struct iwm_softc *, struct iwm_rx_mpdu_desc *);
     void    iwm_rx_rx_phy_cmd(struct iwm_softc *, struct iwm_rx_packet *,

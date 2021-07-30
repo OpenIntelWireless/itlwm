@@ -424,8 +424,7 @@ iwm_reorder_timer_expired(void *arg)
     } else {
         /*
          * If no frame expired and there are stored frames, index is now
-         * pointing to the first unexpired frame - modify reorder
-         timeout
+         * pointing to the first unexpired frame - modify reorder timeout
          * accordingly.
          */
         timeout_add_usec(&buf->reorder_timer,
@@ -698,33 +697,6 @@ out:
     memset(data->hw_addr, 0, sizeof(data->hw_addr));
 }
 
-#define IWM_RSSI_OFFSET 50
-int ItlIwm::
-iwm_calc_rssi(struct iwm_softc *sc, struct iwm_rx_phy_info *phy_info)
-{
-    int rssi_a, rssi_b, rssi_a_dbm, rssi_b_dbm, max_rssi_dbm;
-    uint32_t agc_a, agc_b;
-    uint32_t val;
-    
-    val = le32toh(phy_info->non_cfg_phy[IWM_RX_INFO_AGC_IDX]);
-    agc_a = (val & IWM_OFDM_AGC_A_MSK) >> IWM_OFDM_AGC_A_POS;
-    agc_b = (val & IWM_OFDM_AGC_B_MSK) >> IWM_OFDM_AGC_B_POS;
-    
-    val = le32toh(phy_info->non_cfg_phy[IWM_RX_INFO_RSSI_AB_IDX]);
-    rssi_a = (val & IWM_OFDM_RSSI_INBAND_A_MSK) >> IWM_OFDM_RSSI_A_POS;
-    rssi_b = (val & IWM_OFDM_RSSI_INBAND_B_MSK) >> IWM_OFDM_RSSI_B_POS;
-    
-    /*
-     * dBm = rssi dB - agc dB - constant.
-     * Higher AGC (higher radio gain) means lower signal.
-     */
-    rssi_a_dbm = rssi_a - IWM_RSSI_OFFSET - agc_a;
-    rssi_b_dbm = rssi_b - IWM_RSSI_OFFSET - agc_b;
-    max_rssi_dbm = MAX(rssi_a_dbm, rssi_b_dbm);
-    
-    return max_rssi_dbm;
-}
-
 /*
  * RSSI values are reported by the FW as positive values - need to negate
  * to obtain their dBM.  Account for missing antennas by replacing 0
@@ -790,53 +762,53 @@ int ItlIwm::
 iwm_ccmp_decap(struct iwm_softc *sc, mbuf_t m, struct ieee80211_node *ni,
                struct ieee80211_rxinfo *rxi)
 {
-   struct ieee80211com *ic = &sc->sc_ic;
-   struct ieee80211_key *k = &ni->ni_pairwise_key;
-   struct ieee80211_frame *wh;
-   uint64_t pn, *prsc;
-   uint8_t *ivp;
-   uint8_t tid;
-   int hdrlen, hasqos;
-
-   wh = mtod(m, struct ieee80211_frame *);
-   hdrlen = ieee80211_get_hdrlen(wh);
-   ivp = (uint8_t *)wh + hdrlen;
-
-   /* Check that ExtIV bit is be set. */
-   if (!(ivp[3] & IEEE80211_WEP_EXTIV))
-       return 1;
-
-   hasqos = ieee80211_has_qos(wh);
-   tid = hasqos ? ieee80211_get_qos(wh) & IEEE80211_QOS_TID : 0;
-   prsc = &k->k_rsc[tid];
-
-   /* Extract the 48-bit PN from the CCMP header. */
-   pn = (uint64_t)ivp[0]       |
-        (uint64_t)ivp[1] <<  8 |
-        (uint64_t)ivp[4] << 16 |
-        (uint64_t)ivp[5] << 24 |
-        (uint64_t)ivp[6] << 32 |
-        (uint64_t)ivp[7] << 40;
+    struct ieee80211com *ic = &sc->sc_ic;
+    struct ieee80211_key *k = &ni->ni_pairwise_key;
+    struct ieee80211_frame *wh;
+    uint64_t pn, *prsc;
+    uint8_t *ivp;
+    uint8_t tid;
+    int hdrlen, hasqos;
+    
+    wh = mtod(m, struct ieee80211_frame *);
+    hdrlen = ieee80211_get_hdrlen(wh);
+    ivp = (uint8_t *)wh + hdrlen;
+    
+    /* Check that ExtIV bit is set. */
+    if (!(ivp[3] & IEEE80211_WEP_EXTIV))
+        return 1;
+    
+    hasqos = ieee80211_has_qos(wh);
+    tid = hasqos ? ieee80211_get_qos(wh) & IEEE80211_QOS_TID : 0;
+    prsc = &k->k_rsc[tid];
+    
+    /* Extract the 48-bit PN from the CCMP header. */
+    pn = (uint64_t)ivp[0]       |
+    (uint64_t)ivp[1] <<  8 |
+    (uint64_t)ivp[4] << 16 |
+    (uint64_t)ivp[5] << 24 |
+    (uint64_t)ivp[6] << 32 |
+    (uint64_t)ivp[7] << 40;
     if (rxi->rxi_flags & IEEE80211_RXI_HWDEC_SAME_PN) {
         if (pn < *prsc) {
             ic->ic_stats.is_ccmp_replays++;
             return 1;
         }
     } else if (pn <= *prsc) {
-       ic->ic_stats.is_ccmp_replays++;
-       return 1;
-   }
-   /* Last seen packet number is updated in ieee80211_inputm(). */
-
-   /*
-    * Some firmware versions strip the MIC, and some don't. It is not
-    * clear which of the capability flags could tell us what to expect.
-    * For now, keep things simple and just leave the MIC in place if
-    * it is present.
-    *
-    * The IV will be stripped by ieee80211_inputm().
-    */
-   return 0;
+        ic->ic_stats.is_ccmp_replays++;
+        return 1;
+    }
+    /* Last seen packet number is updated in ieee80211_inputm(). */
+    
+    /*
+     * Some firmware versions strip the MIC, and some don't. It is not
+     * clear which of the capability flags could tell us what to expect.
+     * For now, keep things simple and just leave the MIC in place if
+     * it is present.
+     *
+     * The IV will be stripped by ieee80211_inputm().
+     */
+    return 0;
 }
 
 int ItlIwm::
@@ -923,7 +895,8 @@ iwm_rx_frame(struct iwm_softc *sc, mbuf_t m, int chanidx,
     
     if ((rxi->rxi_flags & IEEE80211_RXI_HWDEC) &&
         iwm_ccmp_decap(sc, m, ni, rxi) != 0) {
-        ifp->if_ierrors++;
+        if (ifp->netStat)
+            ifp->netStat->inputErrors++;
         mbuf_freem(m);
         ieee80211_release_node(ic, ni);
         return;
@@ -983,9 +956,8 @@ iwm_rx_frame(struct iwm_softc *sc, mbuf_t m, int chanidx,
      * ieee80211_inputm() might have changed our BSS.
      * Restore ic_bss's channel if we are still in the same BSS.
      */
-    if (ni == ic->ic_bss && IEEE80211_ADDR_EQ(saved_bssid, ni->ni_macaddr)) {
+    if (ni == ic->ic_bss && IEEE80211_ADDR_EQ(saved_bssid, ni->ni_macaddr))
         ni->ni_chan = bss_chan;
-    }
     ieee80211_release_node(ic, ni);
 }
 
@@ -4159,9 +4131,6 @@ iwm_notif_intr(struct iwm_softc *sc)
     
     hw = le16toh(sc->rxq.stat->closed_rb_num) & 0xfff;
     hw &= (count - 1);
-    if (sc->rxq.cur == hw) {
-        
-    }
     while (sc->rxq.cur != hw) {
         struct iwm_rx_data *data = &sc->rxq.data[sc->rxq.cur];
         iwm_rx_pkt(sc, data, &ml);
