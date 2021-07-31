@@ -394,6 +394,20 @@ ieee80211_inputm(struct _ifnet *ifp, mbuf_t m, struct ieee80211_node *ni,
         }
     }
     
+    /*
+     * We do not yet support fragments. Drop any fragmented packets.
+     * Counter-measure against attacks where an arbitrary packet is
+     * injected via a fragment with attacker-controlled content.
+     * See https://papers.mathyvanhoef.com/usenix2021.pdf
+     * Section 6.8 "Treating fragments as full frames"
+     */
+    if (ieee80211_has_seq(wh)) {
+        uint16_t rxseq = letoh16(*(const u_int16_t *)wh->i_seq);
+        if ((wh->i_fc[1] & IEEE80211_FC1_MORE_FRAG) ||
+            (rxseq & IEEE80211_SEQ_FRAG_MASK))
+            goto err;
+    }
+    
     /* duplicate detection (see 9.2.9) */
     if (ieee80211_has_seq(wh) &&
         ic->ic_state != IEEE80211_S_SCAN) {
