@@ -1266,12 +1266,12 @@ getSCAN_RESULT(OSObject *object, struct apple80211_scan_result **sr)
     apple80211_scan_result* result = (apple80211_scan_result* )fNextNodeToSend->verb;
     bzero(result, sizeof(*result));
     result->version = APPLE80211_VERSION;
-    if (fNextNodeToSend->ni_rsnie_tlv) {
+    if (fNextNodeToSend->ni_rsnie_tlv && fNextNodeToSend->ni_rsnie_tlv_len > 0) {
         result->asr_ie_len = fNextNodeToSend->ni_rsnie_tlv_len;
 #if __IO80211_TARGET < __MAC_12_0
         result->asr_ie_data = fNextNodeToSend->ni_rsnie_tlv;
 #else
-        memcpy(result->asr_ie_data, fNextNodeToSend->ni_rsnie_tlv, result->asr_ie_len);
+        memcpy(result->asr_ie_data, fNextNodeToSend->ni_rsnie_tlv, MIN(result->asr_ie_len, sizeof(result->asr_ie_data)));
 #endif
     } else {
         result->asr_ie_len = 0;
