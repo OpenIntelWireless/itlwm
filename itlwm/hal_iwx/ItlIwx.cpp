@@ -4170,12 +4170,11 @@ iwx_rx_hwdecrypt(struct iwx_softc *sc, mbuf_t m, uint32_t rx_pkt_status,
     if (ieee80211_has_qos(wh) && (subtype & IEEE80211_FC0_SUBTYPE_NODATA))
         return 0;
     
-    if (!(wh->i_fc[1] & IEEE80211_FC1_PROTECTED))
-        return 0;
-    
     ni = ieee80211_find_rxnode(ic, wh);
     /* Handle hardware decryption. */
-    if ((ni->ni_flags & IEEE80211_NODE_RXPROT) &&
+    if (((wh->i_fc[0] & IEEE80211_FC0_TYPE_MASK) != IEEE80211_FC0_TYPE_CTL)
+        && (wh->i_fc[1] & IEEE80211_FC1_PROTECTED) &&
+        (ni->ni_flags & IEEE80211_NODE_RXPROT) &&
         ((!IEEE80211_IS_MULTICAST(wh->i_addr1) &&
           ni->ni_rsncipher == IEEE80211_CIPHER_CCMP) ||
          (IEEE80211_IS_MULTICAST(wh->i_addr1) &&
@@ -4235,8 +4234,8 @@ iwx_rx_frame(struct iwx_softc *sc, mbuf_t m, int chanidx,
     
     if ((rxi->rxi_flags & IEEE80211_RXI_HWDEC) &&
         iwx_ccmp_decap(sc, m, ni, rxi) != 0) {
-        ifp->if_ierrors++;
-        m_freem(m);
+        ifp->netStat->inputErrors++;
+        mbuf_freem(m);
         ieee80211_release_node(ic, ni);
         return;
     }
@@ -4538,8 +4537,9 @@ iwx_rx_reorder(struct iwx_softc *sc, mbuf_t m, int chanidx,
     }
 
     baid = (reorder_data & IWX_RX_MPDU_REORDER_BAID_MASK) >>
-        IWX_RX_MPDU_REORDER_BAID_SHIFT;
-    if (baid == IWX_RX_REORDER_DATA_INVALID_BAID)
+    IWX_RX_MPDU_REORDER_BAID_SHIFT;
+    if (baid == IWX_RX_REORDER_DATA_INVALID_BAID ||
+        baid >= nitems(sc->sc_rxba_data))
         return 0;
 
     rxba = &sc->sc_rxba_data[baid];
@@ -4695,8 +4695,6 @@ iwx_rx_mpdu_mq(struct iwx_softc *sc, mbuf_t m, void *pktdata,
     uint8_t chanidx;
     uint16_t phy_info;
     
-    memset(&rxi, 0, sizeof(rxi));
-    
     desc = (struct iwx_rx_mpdu_desc *)pktdata;
     
     if (!(desc->status & htole16(IWX_RX_MPDU_RES_STATUS_CRC_OK)) ||
@@ -4763,10 +4761,17 @@ iwx_rx_mpdu_mq(struct iwx_softc *sc, mbuf_t m, void *pktdata,
         mbuf_adj(m, 2);
     }
     
+    memset(&rxi, 0, sizeof(rxi));
+    
     /*
      * Hardware de-aggregates A-MSDUs and copies the same MAC header
      * in place for each subframe. But it leaves the 'A-MSDU present'
      * bit set in the frame header. We need to clear this bit ourselves.
+     * (XXX This workaround is not required on AX200/AX201 devices that
+     * have been tested by me, but it's unclear when this problem was
+     * fixed in the hardware. It definitely affects the 9k generation.
+     * Leaving this in place for now since some 9k/AX200 hybrids seem
+     * to exist that we may eventually add support for.)
      *
      * And we must allow the same CCMP PN for subframes following the
      * first subframe. Otherwise they would be discarded as replays.
@@ -4782,18 +4787,11 @@ iwx_rx_mpdu_mq(struct iwx_softc *sc, mbuf_t m, void *pktdata,
             struct ieee80211_qosframe_addr4 *qwh4 = mtod(m,
                                                          struct ieee80211_qosframe_addr4 *);
             qwh4->i_qos[0] &= htole16(~IEEE80211_QOS_AMSDU);
-            
-            /* HW reverses addr3 and addr4. */
-            iwx_flip_address(qwh4->i_addr3);
-            iwx_flip_address(qwh4->i_addr4);
         } else if (ieee80211_has_qos(wh) &&
                    mbuf_len(m) >= sizeof(struct ieee80211_qosframe)) {
             struct ieee80211_qosframe *qwh = mtod(m,
                                                   struct ieee80211_qosframe *);
             qwh->i_qos[0] &= htole16(~IEEE80211_QOS_AMSDU);
-            
-            /* HW reverses addr3. */
-            iwx_flip_address(qwh->i_addr3);
         }    
     }
     
