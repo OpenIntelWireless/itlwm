@@ -582,7 +582,7 @@ struct apple80211_scan_multiple_data
     uint32_t                  version;
     uint32_t                  ap_mode; // apple80211_apmode
     uint32_t                  ssid_count;
-    apple80211_ssid_data      ssids[16];
+    apple80211_ssid_data      ssids[10];
     uint32_t                  bssid_count;
     ether_addr                bssids[16];
     uint32_t                  scan_type;
@@ -593,6 +593,8 @@ struct apple80211_scan_multiple_data
     struct apple80211_channel channels[APPLE80211_MAX_CHANNELS];
     uint16_t                  unk_2;
 };
+
+static_assert(__offsetof(struct apple80211_scan_multiple_data, bssid_count) == 0x19c, "zxystd: BSSID offset invalid");
 
 struct apple80211_link_changed_event_data
 {
