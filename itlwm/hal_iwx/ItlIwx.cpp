@@ -3543,7 +3543,7 @@ iwx_schedule_protect_session(struct iwx_softc *sc, struct iwx_node *in,
         .id_and_color =
             htole32(IWX_FW_CMD_ID_AND_COLOR(in->in_id, in->in_color)),
         .action = htole32(IWX_FW_CTXT_ACTION_ADD),
-        .duration_tu = htole32(duration * 1000 / 1024),
+        .duration_tu = htole32(duration * IEEE80211_DUR_TU),
     };
     int err;
     
@@ -8784,7 +8784,7 @@ iwx_auth(struct iwx_softc *sc)
      * fragmented so that it'll allow other activities to run.
      */
     if (isset(sc->sc_enabled_capa, IWX_UCODE_TLV_CAPA_SESSION_PROT_CMD))
-        iwx_schedule_protect_session(sc, in, 900);
+        iwx_schedule_protect_session(sc, in, duration);
     else
         iwx_protect_session(sc, in, duration, in->in_ni.ni_intval / 2);
     
