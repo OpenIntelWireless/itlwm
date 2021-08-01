@@ -1817,6 +1817,8 @@ enum iwx_gen2_tx_fifo {
 #define IWX_TX_QUEUE_CFG_TFD_SHORT_FORMAT    (1 << 1)
 
 #define IWX_DEFAULT_QUEUE_SIZE IWX_TFD_QUEUE_SIZE_MAX
+#define IWX_CMD_QUEUE_SIZE  32
+#define IWX_CMD_QUEUE_SIZE_GEN3 128
 
 /**
  * struct iwx_tx_queue_cfg_cmd - txq hw scheduler config command

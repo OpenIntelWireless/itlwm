@@ -1039,7 +1039,7 @@ iwx_ctxt_info_init(struct iwx_softc *sc, const struct iwx_fw_sects *fws)
     ctxt_info->hcmd_cfg.cmd_queue_addr =
     htole64(sc->txq[IWX_DQA_CMD_QUEUE].desc_dma.paddr);
     ctxt_info->hcmd_cfg.cmd_queue_size =
-    IWX_TFD_QUEUE_CB_SIZE(IWX_DEFAULT_QUEUE_SIZE);
+    IWX_TFD_QUEUE_CB_SIZE(IWX_CMD_QUEUE_SIZE);
     
     /* allocate ucode sections in dram and set addresses */
     err = iwx_init_fw_sec(sc, fws, &ctxt_info->dram);
@@ -1152,7 +1152,7 @@ iwx_ctxt_info_gen3_init(struct iwx_softc *sc, const struct iwx_fw_sects *fws)
     ctxt_info_gen3->mcr_base_addr =
         htole64(sc->rxq.used_desc_dma.paddr);
     ctxt_info_gen3->mtr_size =
-        htole16(IWX_TFD_QUEUE_CB_SIZE(IWX_DEFAULT_QUEUE_SIZE));
+        htole16(IWX_TFD_QUEUE_CB_SIZE(sc->sc_device_family >= IWX_DEVICE_FAMILY_AX210 ? IWX_CMD_QUEUE_SIZE_GEN3 : IWX_CMD_QUEUE_SIZE));
     ctxt_info_gen3->mcr_size =
         htole16(IWX_RX_QUEUE_CB_SIZE(IWX_RX_MQ_RING_COUNT));
     
@@ -2498,10 +2498,18 @@ iwx_free_rx_ring(struct iwx_softc *sc, struct iwx_rx_ring *ring)
 void ItlIwx::
 iwx_tx_ring_init(struct iwx_softc *sc, struct iwx_tx_ring *ring, bool cmd_queue)
 {
-    if (sc->sc_device_family >= IWX_DEVICE_FAMILY_AX210 && !cmd_queue)
-        ring->ring_count = IWX_TFD_QUEUE_SIZE_MAX_GEN3;
-    else
-        ring->ring_count = IWX_DEFAULT_QUEUE_SIZE;
+    if (sc->sc_device_family >= IWX_DEVICE_FAMILY_AX210) {
+        if (cmd_queue)
+            ring->ring_count = IWX_CMD_QUEUE_SIZE_GEN3;
+        else
+            ring->ring_count = IWX_TFD_QUEUE_SIZE_MAX_GEN3;
+    }
+    else {
+        if (cmd_queue)
+            ring->ring_count = IWX_CMD_QUEUE_SIZE;
+        else
+            ring->ring_count = IWX_DEFAULT_QUEUE_SIZE;
+    }
     ring->low_mark = ring->ring_count / 4;
     if (ring->low_mark < 4)
         ring->low_mark = 4;
@@ -6158,7 +6166,7 @@ iwx_send_cmd(struct iwx_softc *sc, struct iwx_host_cmd *hcmd)
     
     code = hcmd->id;
     async = hcmd->flags & IWX_CMD_ASYNC;
-    idx = ring->cur;
+    idx = (ring->cur & (ring->ring_count - 1));
     
     for (i = 0, paylen = 0; i < nitems(hcmd->len); i++) {
         paylen += hcmd->len[i];
@@ -6284,7 +6292,7 @@ iwx_send_cmd(struct iwx_softc *sc, struct iwx_host_cmd *hcmd)
     /* Kick command ring. */
     DPRINTF(("%s: Sending command (%.2x.%.2x), %d bytes at [%d]:%d ver: %d\n", __func__, group_id, cmd->hdr.cmd, cmd->hdr_wide.length, cmd->hdr.idx, cmd->hdr.qid, cmd->hdr_wide.version));
     ring->queued++;
-    ring->cur = (ring->cur + 1) % ring->ring_count;
+    ring->cur = (ring->cur + 1) % getTxQueueSize();
     IWX_WRITE(sc, IWX_HBUS_TARG_WRPTR, ring->qid << 16 | ring->cur);
     
     if (!async) {
@@ -8682,7 +8690,7 @@ iwx_phy_ctxt_update(struct iwx_softc *sc, struct iwx_phy_ctxt *phyctxt,
         err = iwx_phy_ctxt_cmd(sc, phyctxt, chains_static,
                                chains_dynamic, IWX_FW_CTXT_ACTION_ADD, apply_time);
         if (err) {
-            printf("%s: could not remove PHY context "
+            printf("%s: could not add PHY context "
                    "(error %d)\n", DEVNAME(sc), err);
             return err;
         }
