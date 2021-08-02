@@ -29,6 +29,7 @@ bool AirportItlwm::init(OSDictionary *properties)
     bool ret = super::init(properties);
     awdlSyncEnable = true;
     power_state = 0;
+    memset(geo_location_cc, 0, sizeof(geo_location_cc));
     return ret;
 }
 

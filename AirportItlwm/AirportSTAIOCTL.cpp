@@ -132,7 +132,7 @@ SInt32 AirportItlwm::apple80211Request(unsigned int request_type,
             IOCTL_GET(request_type, ASSOCIATION_STATUS, apple80211_assoc_status_data);
             break;
         case APPLE80211_IOC_COUNTRY_CODE:  // 51
-            IOCTL_GET(request_type, COUNTRY_CODE, apple80211_country_code_data);
+            IOCTL(request_type, COUNTRY_CODE, apple80211_country_code_data);
             break;
         case APPLE80211_IOC_RADIO_INFO:
             IOCTL_GET(request_type, RADIO_INFO, apple80211_radio_info_data);
@@ -1139,11 +1139,25 @@ IOReturn AirportItlwm::
 getCOUNTRY_CODE(OSObject *object,
                                 struct apple80211_country_code_data *cd)
 {
-    char cc[3];
+    char user_override_cc[3];
+    const char *cc_fw = fHalService->getDriverInfo()->getFirmwareCountryCode();
+    
     cd->version = APPLE80211_VERSION;
-    memset(cc, 0, sizeof(cc));
-    PE_parse_boot_argn("itlwm_cc", cc, 3);
-    strncpy((char*)cd->cc, cc[0] == 0 ? fHalService->getDriverInfo()->getFirmwareCountryCode() : cc, sizeof(cd->cc));
+    memset(user_override_cc, 0, sizeof(user_override_cc));
+    PE_parse_boot_argn("itlwm_cc", user_override_cc, 3);
+    /* user_override_cc > firmware_cc > geo_location_cc */
+    strncpy((char*)cd->cc, user_override_cc[0] ? user_override_cc : ((cc_fw[0] == 'Z' && cc_fw[1] == 'Z' && geo_location_cc[0]) ? geo_location_cc : cc_fw), sizeof(cd->cc));
+    return kIOReturnSuccess;
+}
+
+IOReturn AirportItlwm::
+setCOUNTRY_CODE(OSObject *object, struct apple80211_country_code_data *data)
+{
+    XYLog("%s cc=%s\n", __FUNCTION__, data->cc);
+    if (data->cc[0] != 120 && data->cc[0] != 88) {
+        memcpy(geo_location_cc, data->cc, sizeof(geo_location_cc));
+        fNetIf->postMessage(APPLE80211_M_COUNTRY_CODE_CHANGED);
+    }
     return kIOReturnSuccess;
 }
 

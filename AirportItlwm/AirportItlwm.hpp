@@ -169,7 +169,7 @@ public:
     FUNC_IOCTL_GET(AP_IE_LIST, apple80211_ap_ie_data)
     FUNC_IOCTL_GET(LINK_CHANGED_EVENT_DATA, apple80211_link_changed_event_data)
     FUNC_IOCTL_GET(ASSOCIATION_STATUS, apple80211_assoc_status_data)
-    FUNC_IOCTL_GET(COUNTRY_CODE, apple80211_country_code_data)
+    FUNC_IOCTL(COUNTRY_CODE, apple80211_country_code_data)
     FUNC_IOCTL_GET(RADIO_INFO, apple80211_radio_info_data)
     FUNC_IOCTL_GET(MCS, apple80211_mcs_data)
     FUNC_IOCTL_SET(VIRTUAL_IF_CREATE, apple80211_virt_if_create_data)
@@ -260,6 +260,7 @@ public:
     UInt64 currentSpeed;
     UInt32 currentStatus;
     bool disassocIsVoluntary;
+    char geo_location_cc[3];
     
     IO80211P2PInterface *fP2PDISCInterface;
     IO80211P2PInterface *fP2PGOInterface;
