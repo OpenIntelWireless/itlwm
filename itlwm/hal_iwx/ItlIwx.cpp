@@ -1074,9 +1074,6 @@ iwx_ctxt_info_init(struct iwx_softc *sc, const struct iwx_fw_sects *fws)
     return 0;
 }
 
-#define IWL_NUM_OF_COMPLETION_RINGS    31
-#define IWL_NUM_OF_TRANSFER_RINGS    527
-
 int ItlIwx::
 iwx_ctxt_info_gen3_init(struct iwx_softc *sc, const struct iwx_fw_sects *fws)
 {
@@ -1123,7 +1120,7 @@ iwx_ctxt_info_gen3_init(struct iwx_softc *sc, const struct iwx_fw_sects *fws)
     
     /* Allocate prph information. */
     err = iwx_dma_contig_alloc(sc->sc_dmat, &sc->prph_info_dma,
-                               sizeof(struct iwx_prph_info), 0);
+                               PAGE_SIZE, 0);
     if (err) {
         XYLog("%s: could not allocate prph information\n", DEVNAME(sc));
         goto fail0;
@@ -1140,13 +1137,9 @@ iwx_ctxt_info_gen3_init(struct iwx_softc *sc, const struct iwx_fw_sects *fws)
     ctxt_info_gen3->cr_head_idx_arr_base_addr =
         htole64(sc->rxq.stat_dma.paddr);
     ctxt_info_gen3->tr_tail_idx_arr_base_addr =
-        htole64(sc->rxq.tr_tail_dma.paddr);
+        htole64((uint8_t *)sc->prph_info_dma.paddr + PAGE_SIZE / 2);
     ctxt_info_gen3->cr_tail_idx_arr_base_addr =
-        htole64(sc->rxq.cr_tail_dma.paddr);
-    ctxt_info_gen3->cr_idx_arr_size =
-        htole16(IWL_NUM_OF_COMPLETION_RINGS);
-    ctxt_info_gen3->tr_idx_arr_size =
-        htole16(IWL_NUM_OF_TRANSFER_RINGS);
+        htole64((uint8_t *)sc->prph_info_dma.paddr + 3 * PAGE_SIZE / 4);
     ctxt_info_gen3->mtr_base_addr =
         htole64(sc->txq[IWX_DQA_CMD_QUEUE].desc_dma.paddr);
     ctxt_info_gen3->mcr_base_addr =
@@ -2371,20 +2364,6 @@ iwx_alloc_rx_ring(struct iwx_softc *sc, struct iwx_rx_ring *ring)
     }
     ring->desc = ring->free_desc_dma.vaddr;
     
-    err = iwx_dma_contig_alloc(sc->sc_dmat, &ring->tr_tail_dma, sizeof(uint16_t), 0);
-    if (err) {
-        XYLog("%s: could not allocate RX ring TR tail DMA memory\n",
-              DEVNAME(sc));
-        goto fail;
-    }
-    
-    err = iwx_dma_contig_alloc(sc->sc_dmat, &ring->cr_tail_dma, sizeof(uint16_t), 0);
-    if (err) {
-        XYLog("%s: could not allocate RX ring CR tail DMA memory\n",
-              DEVNAME(sc));
-        goto fail;
-    }
-    
     /* Allocate RX status area (16-byte aligned). */
     err = iwx_dma_contig_alloc(sc->sc_dmat, &ring->stat_dma,
                                rb_stts_size, rb_stts_align);
@@ -2477,8 +2456,6 @@ iwx_free_rx_ring(struct iwx_softc *sc, struct iwx_rx_ring *ring)
     iwx_dma_contig_free(&ring->free_desc_dma);
     iwx_dma_contig_free(&ring->stat_dma);
     iwx_dma_contig_free(&ring->used_desc_dma);
-    iwx_dma_contig_free(&ring->cr_tail_dma);
-    iwx_dma_contig_free(&ring->tr_tail_dma);
     
     for (i = 0; i < IWX_RX_MQ_RING_COUNT; i++) {
         struct iwx_rx_data *data = &ring->data[i];
@@ -5741,7 +5718,7 @@ iwx_rx_tx_ba_notif(struct iwx_softc *sc, struct iwx_rx_packet *pkt, struct iwx_r
 
         qid = le16toh(ba_tfd->q_num);
         ring = &sc->txq[qid];
-        iwx_ampdu_txq_advance(sc, ring, le16toh(ba_tfd->tfd_index));
+        iwx_ampdu_txq_advance(sc, ring, IWX_AGG_SSN_TO_TXQ_IDX(le16toh(ba_tfd->tfd_index), ring->ring_count));
         iwx_clear_oactive(sc, ring);
     }
 }
@@ -10927,10 +10904,6 @@ iwx_notif_intr(struct iwx_softc *sc)
         struct iwx_rx_data *data = &sc->rxq.data[sc->rxq.cur];
         iwx_rx_pkt(sc, data, &ml);
         sc->rxq.cur = (sc->rxq.cur + 1) % IWX_RX_MQ_RING_COUNT;
-    }
-    if (sc->sc_device_family >= IWX_DEVICE_FAMILY_AX210) {
-        uint16_t *cr_tail = (uint16_t *)sc->rxq.cr_tail_dma.vaddr;
-        *cr_tail = htole16(hw);
     }
     if_input(&sc->sc_ic.ic_if, &ml);
     
