@@ -277,7 +277,7 @@ public:
                             const struct iwx_time_event_cmd *cmd);
     void    iwx_protect_session(struct iwx_softc *, struct iwx_node *, uint32_t,
             uint32_t);
-    void    iwx_schedule_protect_session(struct iwx_softc *, struct iwx_node *, uint32_t);
+    int    iwx_schedule_protect_session(struct iwx_softc *, struct iwx_node *, uint32_t);
     void    iwx_unprotect_session(struct iwx_softc *, struct iwx_node *);
     uint8_t iwx_fw_valid_tx_ant(struct iwx_softc *sc);
     uint8_t iwx_fw_valid_rx_ant(struct iwx_softc *sc);

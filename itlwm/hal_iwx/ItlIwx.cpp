@@ -3529,7 +3529,7 @@ iwx_protect_session(struct iwx_softc *sc, struct iwx_node *in,
     DELAY(100);
 }
 
-void ItlIwx::
+int ItlIwx::
 iwx_schedule_protect_session(struct iwx_softc *sc, struct iwx_node *in,
                     uint32_t duration)
 {
@@ -3537,7 +3537,7 @@ iwx_schedule_protect_session(struct iwx_softc *sc, struct iwx_node *in,
         .id_and_color =
             htole32(IWX_FW_CMD_ID_AND_COLOR(in->in_id, in->in_color)),
         .action = htole32(IWX_FW_CTXT_ACTION_ADD),
-        .duration_tu = htole32(duration * IEEE80211_DUR_TU),
+        .duration_tu = htole32(duration * 1000 / IEEE80211_DUR_TU),
     };
     int err;
     
@@ -3549,6 +3549,7 @@ iwx_schedule_protect_session(struct iwx_softc *sc, struct iwx_node *in,
     err = iwx_send_cmd_pdu(sc, iwx_cmd_id(IWX_SESSION_PROTECTION_CMD, IWX_MAC_CONF_GROUP, 0), 0, sizeof(cmd), &cmd);
     if (err)
         XYLog("Couldn't send the SESSION_PROTECTION_CMD %d\n", err);
+    return err;
 }
 
 void ItlIwx::
@@ -8703,7 +8704,7 @@ iwx_auth(struct iwx_softc *sc)
     struct ieee80211com *ic = &sc->sc_ic;
     struct iwx_node *in = (struct iwx_node *)ic->ic_bss;
     uint32_t duration;
-    int generation = sc->sc_generation, err;
+    int generation = sc->sc_generation, err = 0;
     
     splassert(IPL_NET);
     
@@ -8780,11 +8781,11 @@ iwx_auth(struct iwx_softc *sc)
      * fragmented so that it'll allow other activities to run.
      */
     if (isset(sc->sc_enabled_capa, IWX_UCODE_TLV_CAPA_SESSION_PROT_CMD))
-        iwx_schedule_protect_session(sc, in, duration);
+        err = iwx_schedule_protect_session(sc, in, 900);
     else
         iwx_protect_session(sc, in, duration, in->in_ni.ni_intval / 2);
     
-    return 0;
+    return err;
     
 rm_sta:
     if (generation == sc->sc_generation) {
