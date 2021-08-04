@@ -359,7 +359,7 @@ struct iwx_tx_ring {
 	struct iwx_dma_info	bc_tbl;
 	struct iwx_tfh_tfd	*desc;
 	struct iwx_device_cmd	*cmd;
-	struct iwx_tx_data	data[IWX_TFD_QUEUE_SIZE_MAX_GEN3];
+	struct iwx_tx_data	data[IWX_MIN_256_BA_QUEUE_SIZE_GEN3];
     unsigned int    ring_count;
     unsigned int    hi_mark;
     unsigned int    low_mark;

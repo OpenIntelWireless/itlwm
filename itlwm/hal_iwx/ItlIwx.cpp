@@ -2473,20 +2473,9 @@ iwx_free_rx_ring(struct iwx_softc *sc, struct iwx_rx_ring *ring)
 }
 
 void ItlIwx::
-iwx_tx_ring_init(struct iwx_softc *sc, struct iwx_tx_ring *ring, bool cmd_queue)
+iwx_tx_ring_init(struct iwx_softc *sc, struct iwx_tx_ring *ring, int size)
 {
-    if (sc->sc_device_family >= IWX_DEVICE_FAMILY_AX210) {
-        if (cmd_queue)
-            ring->ring_count = IWX_CMD_QUEUE_SIZE_GEN3;
-        else
-            ring->ring_count = IWX_TFD_QUEUE_SIZE_MAX_GEN3;
-    }
-    else {
-        if (cmd_queue)
-            ring->ring_count = IWX_CMD_QUEUE_SIZE;
-        else
-            ring->ring_count = IWX_DEFAULT_QUEUE_SIZE;
-    }
+    ring->ring_count = size;
     ring->low_mark = ring->ring_count / 4;
     if (ring->low_mark < 4)
         ring->low_mark = 4;
@@ -2512,7 +2501,19 @@ iwx_alloc_tx_ring(struct iwx_softc *sc, struct iwx_tx_ring *ring, int qid)
         return 0;
     }
     
-    iwx_tx_ring_init(sc, ring, qid == IWX_DQA_CMD_QUEUE);
+    if (sc->sc_device_family >= IWX_DEVICE_FAMILY_AX210) {
+        if (qid == IWX_DQA_CMD_QUEUE)
+            size = IWX_CMD_QUEUE_SIZE_GEN3;
+        else
+            size = IWX_MIN_256_BA_QUEUE_SIZE_GEN3;
+    }
+    else {
+        if (qid == IWX_DQA_CMD_QUEUE)
+            size = IWX_CMD_QUEUE_SIZE;
+        else
+            size = IWX_DEFAULT_QUEUE_SIZE;
+    }
+    iwx_tx_ring_init(sc, ring, size);
     ring->qid = qid;
     /* Allocate TX descriptors (256-byte aligned). */
     size = ring->ring_count * sizeof (struct iwx_tfh_tfd);
@@ -3297,17 +3298,25 @@ out:
 int ItlIwx::
 iwx_tvqm_alloc_txq(struct iwx_softc *sc, int tid, int ssn)
 {
-    int queue = -1;
-    queue = iwx_tvqm_enable_txq(sc, tid, ssn);
-    if (queue < 0) {
+    int queue;
+    int size = sc->sc_device_family >= IWX_DEVICE_FAMILY_AX210 ? IWX_DEFAULT_QUEUE_SIZE : IWX_MIN_256_BA_QUEUE_SIZE_GEN3;
+    
+    do {
+        queue = iwx_tvqm_enable_txq(sc, tid, ssn, size);
+        if (queue < 0)
+            XYLog("Failed allocating TXQ of size %d for sta %d tid %d, ret: %d\n",
+                  size, IWX_STATION_ID, tid, queue);
+        size /= 2;
+    } while (queue < 0 && size >= 16);
+    
+    if (queue < 0)
         return queue;
-    }
     sc->sc_tid_data[tid].qid = queue;
     return queue;
 }
 
 int ItlIwx::
-iwx_tvqm_enable_txq(struct iwx_softc *sc, int tid, int ssn)
+iwx_tvqm_enable_txq(struct iwx_softc *sc, int tid, int ssn, uint32_t size)
 {
     int err = -1;
     int i = 0;
@@ -3330,13 +3339,13 @@ iwx_tvqm_enable_txq(struct iwx_softc *sc, int tid, int ssn)
     struct iwx_tx_ring *ring = &sc->sc_tvqm_ring;
     
     memset(ring, 0, sizeof(*ring));
-    iwx_tx_ring_init(sc, ring, false);
+    iwx_tx_ring_init(sc, ring, size);
     /* Allocate TX descriptors (256-byte aligned). */
     err = iwx_dma_contig_alloc(sc->sc_dmat, &ring->desc_dma, ring->ring_count * sizeof (struct iwx_tfh_tfd), 256);
     if (err) {
         XYLog("%s: could not allocate TX ring DMA memory\n",
               DEVNAME(sc));
-        err = EIO;
+        err = -EIO;
         goto fail;
     }
     ring->desc = (struct iwx_tfh_tfd*)ring->desc_dma.vaddr;
@@ -3349,14 +3358,14 @@ iwx_tvqm_enable_txq(struct iwx_softc *sc, int tid, int ssn)
     if (err) {
         XYLog("%s: could not allocate byte count table DMA memory\n",
               DEVNAME(sc));
-        err = EIO;
+        err = -EIO;
         goto fail;
     }
 
     err = iwx_dma_contig_alloc(sc->sc_dmat, &ring->cmd_dma, ring->ring_count * sizeof(struct iwx_device_cmd), IWX_FIRST_TB_SIZE_ALIGN);
     if (err) {
         XYLog("%s: could not allocate cmd DMA memory\n", DEVNAME(sc));
-        err = EIO;
+        err = -EIO;
         goto fail;
     }
     ring->cmd = (struct iwx_device_cmd*)ring->cmd_dma.vaddr;
@@ -3373,7 +3382,7 @@ iwx_tvqm_enable_txq(struct iwx_softc *sc, int tid, int ssn)
         if (err) {
             XYLog("%s: could not create TX buf DMA map\n",
                   DEVNAME(sc));
-            err = EIO;
+            err = -EIO;
             goto fail;
         }
     }
@@ -3391,14 +3400,14 @@ iwx_tvqm_enable_txq(struct iwx_softc *sc, int tid, int ssn)
     pkt = hcmd.resp_pkt;
     if (!pkt || (pkt->hdr.group_id & IWX_CMD_FAILED_MSK)) {
         XYLog("SCD_QUEUE_CFG command failed\n");
-        err = EIO;
+        err = -EIO;
         goto fail;
     }
 
     resp_len = iwx_rx_packet_payload_len(pkt);
     if (resp_len != sizeof(*resp)) {
         XYLog("SCD_QUEUE_CFG returned %zu bytes, expected %zu bytes\n", resp_len, sizeof(*resp));
-        err = EIO;
+        err = -EIO;
         goto fail;
     }
 
@@ -3407,10 +3416,10 @@ iwx_tvqm_enable_txq(struct iwx_softc *sc, int tid, int ssn)
     wr_idx = le16toh(resp->write_pointer);
     if (fwqid >= ARRAY_SIZE(sc->txq)) {
         XYLog("queue index %d unsupported", fwqid);
-        err = EIO;
+        err = -EIO;
         goto fail;
     }
-    wr_idx &= (IWX_DEFAULT_QUEUE_SIZE - 1);
+    wr_idx &= (ring->ring_count - 1);
     ring->cur = max(IWX_AGG_SSN_TO_TXQ_IDX(wr_idx, ring->ring_count), IWX_AGG_SSN_TO_TXQ_IDX(ssn, ring->ring_count));
     ring->qid = fwqid;
     iwx_reset_tx_ring(sc, &sc->txq[fwqid]);
@@ -6537,6 +6546,7 @@ iwx_tx(struct iwx_softc *sc, mbuf_t m, struct ieee80211_node *ni, int ac)
     int i, totlen, hasqos = 0;
     int qid = IWX_INVALID_QUEUE;
     uint16_t qos;
+    int idx;
 
     wh = mtod(m, struct ieee80211_frame *);
     type = wh->i_fc[0] & IEEE80211_FC0_TYPE_MASK;
@@ -6573,15 +6583,16 @@ iwx_tx(struct iwx_softc *sc, mbuf_t m, struct ieee80211_node *ni, int ac)
 
     ring = &sc->txq[qid];
 
-    desc = &ring->desc[ring->cur];
+    idx = (ring->cur & (ring->ring_count - 1));
+    desc = &ring->desc[idx];
     memset(desc, 0, sizeof(*desc));
-    data = &ring->data[ring->cur];
+    data = &ring->data[idx];
     
-    cmd = &ring->cmd[ring->cur];
+    cmd = &ring->cmd[idx];
     cmd->hdr.cmd = IWX_TX_CMD;
     cmd->hdr.group_id = 0;
     cmd->hdr.qid = ring->qid;
-    cmd->hdr.idx = ring->cur;
+    cmd->hdr.idx = idx;
     
     rinfo = iwx_tx_fill_cmd(sc, in, wh, &flags, &rate_n_flags);
     
@@ -6712,10 +6723,10 @@ iwx_tx(struct iwx_softc *sc, mbuf_t m, struct ieee80211_node *ni, int ac)
     //        (char *)(void *)desc - (char *)(void *)ring->desc_dma.vaddr,
     //        sizeof (*desc), BUS_DMASYNC_PREWRITE);
     
-    iwx_tx_update_byte_tbl(sc, ring, ring->cur, totlen, num_tbs);
+    iwx_tx_update_byte_tbl(sc, ring, idx, totlen, num_tbs);
     
     /* Kick TX ring. */
-    ring->cur = (ring->cur + 1) % ring->ring_count;
+    ring->cur = (ring->cur + 1) % getTxQueueSize();
     IWX_WRITE(sc, IWX_HBUS_TARG_WRPTR, ring->qid << 16 | ring->cur);
     
     /* Mark TX ring as full if we reach a certain threshold. */
