@@ -637,10 +637,6 @@ struct iwx_softc {
 	IOInterruptEventSource *sc_ih;
 	int sc_msix;
 
-	/* TX scheduler rings. */
-	struct iwx_dma_info		sched_dma;
-	uint32_t			sched_base;
-
 	/* TX/RX rings. */
 	struct iwx_tx_ring txq[IWX_MAX_TVQM_QUEUES];
 	struct iwx_rx_ring rxq;
