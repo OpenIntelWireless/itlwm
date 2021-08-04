@@ -3148,6 +3148,10 @@ iwx_stop_device(struct iwx_softc *sc)
     iwx_prepare_card_hw(sc);
     
     iwx_ctxt_info_free_paging(sc);
+    /* free gen3 devices related firmware DMA resource */
+    iwx_dma_contig_free(&sc->prph_info_dma);
+    iwx_dma_contig_free(&sc->prph_scratch_dma);
+    iwx_dma_contig_free(&sc->iml_dma);
 }
 
 void ItlIwx::
