@@ -2678,7 +2678,7 @@ iwx_tvqm_enable_txq(struct iwx_softc *sc, int tid, int ssn)
     if (err) {
         XYLog("%s: could not allocate TX ring DMA memory\n",
               DEVNAME(sc));
-        err = EIO;
+        err = -ENOMEM;
         goto fail;
     }
     ring.desc = (struct iwx_tfh_tfd*)ring.desc_dma.vaddr;
@@ -2687,14 +2687,14 @@ iwx_tvqm_enable_txq(struct iwx_softc *sc, int tid, int ssn)
     if (err) {
         XYLog("%s: could not allocate byte count table DMA memory\n",
               DEVNAME(sc));
-        err = EIO;
+        err = -ENOMEM;
         goto fail;
     }
 
     err = iwx_dma_contig_alloc(sc->sc_dmat, &ring.cmd_dma, num_slots * sizeof(struct iwx_device_cmd), IWX_FIRST_TB_SIZE_ALIGN);
     if (err) {
         XYLog("%s: could not allocate cmd DMA memory\n", DEVNAME(sc));
-        err = EIO;
+        err = -ENOMEM;
         goto fail;
     }
     ring.cmd = (struct iwx_device_cmd*)ring.cmd_dma.vaddr;
@@ -2711,7 +2711,7 @@ iwx_tvqm_enable_txq(struct iwx_softc *sc, int tid, int ssn)
         if (err) {
             XYLog("%s: could not create TX buf DMA map\n",
                   DEVNAME(sc));
-            err = EIO;
+            err = -EIO;
             goto fail;
         }
     }
@@ -2729,14 +2729,14 @@ iwx_tvqm_enable_txq(struct iwx_softc *sc, int tid, int ssn)
     pkt = hcmd.resp_pkt;
     if (!pkt || (pkt->hdr.flags & IWX_CMD_FAILED_MSK)) {
         XYLog("SCD_QUEUE_CFG command failed\n");
-        err = EIO;
+        err = -EIO;
         goto fail;
     }
 
     resp_len = iwx_rx_packet_payload_len(pkt);
     if (resp_len != sizeof(*resp)) {
         XYLog("SCD_QUEUE_CFG returned %zu bytes, expected %zu bytes\n", resp_len, sizeof(*resp));
-        err = EIO;
+        err = -EIO;
         goto fail;
     }
 
@@ -2745,7 +2745,7 @@ iwx_tvqm_enable_txq(struct iwx_softc *sc, int tid, int ssn)
     wr_idx = le16toh(resp->write_pointer);
     if (fwqid >= ARRAY_SIZE(sc->txq)) {
         XYLog("queue index %d unsupported", fwqid);
-        err = EIO;
+        err = -EIO;
         goto fail;
     }
     wr_idx &= (IWX_DEFAULT_QUEUE_SIZE - 1);
