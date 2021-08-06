@@ -1928,7 +1928,7 @@ done:
         goto out;
     }
     
-    XYLog("loaded PNVM version 0x%0x\n", sha1);
+    XYLog("loaded PNVM version %08x\n", sha1);
     
     prph_sc_ctrl = &((struct iwx_prph_scratch *)sc->prph_scratch_dma.vaddr)->ctrl_cfg;
     
@@ -3547,7 +3547,7 @@ iwx_schedule_protect_session(struct iwx_softc *sc, struct iwx_node *in,
     
     cmd.conf_id = IWX_SESSION_PROTECT_CONF_ASSOC;
     
-    DPRINTFN(3, ("Add new session protection, duration %d TU\n",
+    DPRINTFN(1, ("Add new session protection, duration %d TU\n",
              htole32(cmd.duration_tu)));
     
     err = iwx_send_cmd_pdu(sc, iwx_cmd_id(IWX_SESSION_PROTECTION_CMD, IWX_MAC_CONF_GROUP, 0), 0, sizeof(cmd), &cmd);
