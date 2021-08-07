@@ -3303,7 +3303,7 @@ int ItlIwx::
 iwx_tvqm_alloc_txq(struct iwx_softc *sc, int tid, int ssn)
 {
     int queue;
-    int size = sc->sc_device_family >= IWX_DEVICE_FAMILY_AX210 ? IWX_DEFAULT_QUEUE_SIZE : IWX_MIN_256_BA_QUEUE_SIZE_GEN3;
+    int size = sc->sc_device_family >= IWX_DEVICE_FAMILY_AX210 ? IWX_MIN_256_BA_QUEUE_SIZE_GEN3 : IWX_DEFAULT_QUEUE_SIZE;
     
     do {
         queue = iwx_tvqm_enable_txq(sc, tid, ssn, size);
