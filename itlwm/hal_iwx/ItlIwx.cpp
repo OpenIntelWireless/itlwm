@@ -3371,6 +3371,8 @@ iwx_tvqm_enable_txq(struct iwx_softc *sc, int tid, int ssn, uint32_t size)
     memcpy(&sc->txq[fwqid], ring, sizeof(*ring));
     return fwqid;
 fail:
+    iwx_reset_tx_ring(sc, ring);
+    iwx_free_tx_ring(sc, ring);
     return err;
 }
 
