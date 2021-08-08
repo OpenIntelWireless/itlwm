@@ -642,6 +642,7 @@ struct iwx_softc {
 	struct iwx_rx_ring rxq;
 	int qfullmsk;
     struct iwx_tx_ring sc_tvqm_ring;
+    int first_data_qid;
 
 	int sc_sf_state;
 

@@ -6516,7 +6516,7 @@ iwx_tx(struct iwx_softc *sc, mbuf_t m, struct ieee80211_node *ni, int ac)
 
     if (tid == IWX_MGMT_TID) {
         DPRINTFN(3, ("%s type=%d qos=%d multicast=%d len=%zu subtype=%d qid=%d using mgmt tid\n", __FUNCTION__, type, hasqos, IEEE80211_IS_MULTICAST(wh->i_addr1), mbuf_len(m), subtype, qid));
-        qid = iwx_lookup_cmd_ver(sc, IWX_LONG_GROUP, IWX_ADD_STA) < 12 ? IWX_QID_MGMT : IWX_QID_MGMT - 1;
+        qid = sc->first_data_qid;
     }
 
     if (qid == IWX_INVALID_QUEUE || sc->qfullmsk & (1 << qid)) {
@@ -6950,6 +6950,19 @@ iwx_add_aux_sta(struct iwx_softc *sc)
     struct iwx_add_sta_cmd cmd;
     int err, qid = IWX_DQA_AUX_QUEUE;
     uint32_t status;
+    uint8_t cmdver;
+    
+    /*
+     * Add auxiliary station for scanning.
+     * Newer versions of this command implies that the fw uses
+     * internal aux station for all aux activities that don't
+     * requires a dedicated data queue.
+     * In old version the aux station uses mac id like other
+     * station and not lmac id
+     */
+    cmdver = iwx_lookup_cmd_ver(sc, IWX_LONG_GROUP, IWX_ADD_STA);
+    if (cmdver != IWX_FW_CMD_VER_UNKNOWN && cmdver >= 12)
+        return 0;
     
     memset(&cmd, 0, sizeof(cmd));
     cmd.sta_id = IWX_AUX_STA_ID;
@@ -7165,6 +7178,7 @@ iwx_config_umac_scan(struct iwx_softc *sc)
         .id = iwx_cmd_id(IWX_SCAN_CFG_CMD, IWX_LONG_GROUP, 0),
         .flags = 0,
     };
+    uint8_t cmdver;
     
     if (!isset(sc->sc_ucode_api, IWX_UCODE_TLV_API_REDUCED_SCAN_CONFIG))
         return iwx_config_legacy_umac_scan(sc);
@@ -7178,9 +7192,10 @@ iwx_config_umac_scan(struct iwx_softc *sc)
     scan_config->tx_chains = htole32(iwx_fw_valid_tx_ant(sc));
     scan_config->rx_chains = htole32(iwx_fw_valid_rx_ant(sc));
     
-    if (iwx_lookup_cmd_ver(sc, IWX_LONG_GROUP, IWX_ADD_STA) < 12)
+    cmdver = iwx_lookup_cmd_ver(sc, IWX_LONG_GROUP, IWX_ADD_STA);
+    if (cmdver == IWX_FW_CMD_VER_UNKNOWN || cmdver < 12)
         scan_config->bcast_sta_id = IWX_AUX_STA_ID;
-    else if (iwx_lookup_cmd_ver(sc, IWX_LONG_GROUP, IWX_SCAN_CFG_CMD) < 5)
+    else if (cmdver == IWX_FW_CMD_VER_UNKNOWN || cmdver < 5)
         scan_config->bcast_sta_id = 0xFF;
     
     hcmd.data[0] = scan_config;
@@ -8248,15 +8263,19 @@ int ItlIwx::
 iwx_enable_data_tx_queues(struct iwx_softc *sc)
 {
     int err;
-    int qid;
+    int cmdver;
 
-    qid = iwx_lookup_cmd_ver(sc, IWX_LONG_GROUP, IWX_ADD_STA) < 12 ? IWX_QID_MGMT : IWX_QID_MGMT - 1;
+    cmdver = iwx_lookup_cmd_ver(sc, IWX_LONG_GROUP, IWX_ADD_STA);
+    if (cmdver != IWX_FW_CMD_VER_UNKNOWN && cmdver >= 12)
+        sc->first_data_qid = IWX_QID_MGMT - 1;
+    else
+        sc->first_data_qid = IWX_QID_MGMT;
     err = iwx_enable_txq(sc, IWX_STATION_ID,
-                         qid, IWX_MGMT_TID,
-                         sc->txq[qid].ring_count);
+                         sc->first_data_qid, IWX_MGMT_TID,
+                         sc->txq[sc->first_data_qid].ring_count);
     if (err) {
         XYLog("%s: could not enable MGMT Tx queue %d (error %d)\n",
-              DEVNAME(sc), qid, err);
+              DEVNAME(sc), sc->first_data_qid, err);
         return err;
     }
     
@@ -9628,21 +9647,11 @@ iwx_init_hw(struct iwx_softc *sc)
     }
     
     /* Add auxiliary station for scanning */
-    if (iwx_lookup_cmd_ver(sc, IWX_LONG_GROUP, IWX_ADD_STA) < 12) {
-        /*
-         * Add auxiliary station for scanning.
-         * Newer versions of this command implies that the fw uses
-         * internal aux station for all aux activities that don't
-         * requires a dedicated data queue.
-         * In old version the aux station uses mac id like other
-         * station and not lmac id
-         */
-        err = iwx_add_aux_sta(sc);
-        if (err) {
-            XYLog("%s: could not add aux station (error %d)\n",
-                   DEVNAME(sc), err);
-            goto err;
-        }
+    err = iwx_add_aux_sta(sc);
+    if (err) {
+        XYLog("%s: could not add aux station (error %d)\n",
+              DEVNAME(sc), err);
+        goto err;
     }
     
     for (i = 0; i < IWX_NUM_PHY_CTX; i++) {
