@@ -199,7 +199,6 @@ public:
     int    iwx_alloc_fw_monitor_block(struct iwx_softc *, uint8_t, uint8_t);
     int    iwx_alloc_fw_monitor(struct iwx_softc *, uint8_t);
     int    iwx_apply_debug_destination(struct iwx_softc *);
-    int    iwx_ctxt_info_dbg_enable(struct iwx_softc *, struct iwx_prph_scratch_hwm_cfg *, uint32_t *);
     int    iwx_ctxt_info_init(struct iwx_softc *, const struct iwx_fw_sects *);
     int    iwx_ctxt_info_gen3_init(struct iwx_softc *, const struct iwx_fw_sects *);
     void iwx_ctxt_info_free_fw_img(struct iwx_softc *sc);
@@ -438,7 +437,6 @@ public:
     int    iwx_send_soc_conf(struct iwx_softc *);
     int    iwx_send_update_mcc_cmd(struct iwx_softc *, const char *);
     int    iwx_send_temp_report_ths_cmd(struct iwx_softc *);
-    int    iwx_start_dbg_conf(struct iwx_softc *, uint8_t conf_id);
     int    iwx_init_hw(struct iwx_softc *);
     int    iwx_init(struct _ifnet *);
     static void    iwx_start(struct _ifnet *);

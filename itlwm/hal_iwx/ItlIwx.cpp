@@ -935,74 +935,6 @@ iwx_set_ltr(struct iwx_softc *sc)
     }
 }
 
-static inline bool iwl_trans_dbg_ini_valid(struct iwx_softc *sc)
-{
-    return false;
-}
-
-int ItlIwx::
-iwx_ctxt_info_dbg_enable(struct iwx_softc *sc, struct iwx_prph_scratch_hwm_cfg *dbg_cfg, uint32_t *control_flags)
-{
-    enum iwx_fw_ini_allocation_id alloc_id = IWX_FW_INI_ALLOCATION_ID_DBGC1;
-    struct iwx_fw_ini_allocation_tlv *fw_mon_cfg;
-    uint32_t dbg_flags = 0;
-    
-    if (!iwl_trans_dbg_ini_valid(sc)) {
-        struct iwx_dma_info *fw_mon = &sc->fw_mon;
-
-        iwx_alloc_fw_monitor(sc, 0);
-
-        if (fw_mon->size) {
-            dbg_flags |= IWX_PRPH_SCRATCH_EDBG_DEST_DRAM;
-
-            XYLog("WRT: Applying DRAM buffer destination\n");
-
-            dbg_cfg->hwm_base_addr = htole64(fw_mon->paddr);
-            dbg_cfg->hwm_size = htole32(fw_mon->size);
-        }
-
-        goto out;
-    }
-    
-    /*test*/
-    dbg_flags |= IWX_PRPH_SCRATCH_EDBG_DEST_INTERNAL;
-    /**/
-    
-//    fw_mon_cfg = &trans->dbg.fw_mon_cfg[alloc_id];
-//    
-//    switch (le32toh(fw_mon_cfg->buf_location)) {
-//        case IWX_FW_INI_LOCATION_SRAM_PATH:
-//            dbg_flags |= IWX_PRPH_SCRATCH_EDBG_DEST_INTERNAL;
-//            XYLog("WRT: Applying SMEM buffer destination\n");
-//            break;
-//            
-//        case IWX_FW_INI_LOCATION_NPK_PATH:
-//            dbg_flags |= IWX_PRPH_SCRATCH_EDBG_DEST_TB22DTF;
-//            XYLog("WRT: Applying NPK buffer destination\n");
-//            break;
-//            
-//        case IWX_FW_INI_LOCATION_DRAM_PATH:
-//            if (trans->dbg.fw_mon_ini[alloc_id].num_frags) {
-//                struct iwx_dram_data *frag =
-//                &trans->dbg.fw_mon_ini[alloc_id].frags[0];
-//                dbg_flags |= IWX_PRPH_SCRATCH_EDBG_DEST_DRAM;
-//                dbg_cfg->hwm_base_addr = cpu_to_le64(frag->physical);
-//                dbg_cfg->hwm_size = cpu_to_le32(frag->size);
-//                XYLog("WRT: Applying DRAM destination (alloc_id=%u, num_frags=%u)\n",
-//                      alloc_id,
-//                      trans->dbg.fw_mon_ini[alloc_id].num_frags);
-//            }
-//            break;
-//        default:
-//            XYLog("WRT: Invalid buffer destination\n");
-//    }
-out:
-    if (dbg_flags)
-        *control_flags |= IWX_PRPH_SCRATCH_EARLY_DEBUG_EN | dbg_flags;
-    
-    return 0;
-}
-
 int ItlIwx::
 iwx_ctxt_info_init(struct iwx_softc *sc, const struct iwx_fw_sects *fws)
 {
@@ -1106,8 +1038,6 @@ iwx_ctxt_info_gen3_init(struct iwx_softc *sc, const struct iwx_fw_sects *fws)
     /* initialize RX default queue */
     prph_sc_ctrl->rbd_cfg.free_rbd_addr =
         htole64(sc->rxq.free_desc_dma.paddr);
-    
-//    iwx_ctxt_info_dbg_enable(sc, &prph_sc_ctrl->hwm_cfg, &control_flags);
     
     prph_sc_ctrl->control.control_flags = htole32(control_flags);
     
@@ -9628,92 +9558,6 @@ iwx_send_temp_report_ths_cmd(struct iwx_softc *sc)
 #define RX_FIFO_MAX_NUM            2
 #define TX_FIFO_INTERNAL_MAX_NUM    6
 
-/**
- * struct iwl_shared_mem_lmac_cfg - LMAC shared memory configuration
- *
- * @txfifo_addr: start addr of TXF0 (excluding the context table 0.5KB)
- * @txfifo_size: size of TX FIFOs
- * @rxfifo1_addr: RXF1 addr
- * @rxfifo1_size: RXF1 size
- */
-struct iwl_shared_mem_lmac_cfg {
-    __le32 txfifo_addr;
-    __le32 txfifo_size[TX_FIFO_MAX_NUM];
-    __le32 rxfifo1_addr;
-    __le32 rxfifo1_size;
-
-} __packed; /* SHARED_MEM_ALLOC_LMAC_API_S_VER_1 */
-
-/**
- * struct iwl_shared_mem_cfg - Shared memory configuration information
- *
- * @shared_mem_addr: shared memory address
- * @shared_mem_size: shared memory size
- * @sample_buff_addr: internal sample (mon/adc) buff addr
- * @sample_buff_size: internal sample buff size
- * @rxfifo2_addr: start addr of RXF2
- * @rxfifo2_size: size of RXF2
- * @page_buff_addr: used by UMAC and performance debug (page miss analysis),
- *    when paging is not supported this should be 0
- * @page_buff_size: size of %page_buff_addr
- * @lmac_num: number of LMACs (1 or 2)
- * @lmac_smem: per - LMAC smem data
- * @rxfifo2_control_addr: start addr of RXF2C
- * @rxfifo2_control_size: size of RXF2C
- */
-struct iwl_shared_mem_cfg {
-    __le32 shared_mem_addr;
-    __le32 shared_mem_size;
-    __le32 sample_buff_addr;
-    __le32 sample_buff_size;
-    __le32 rxfifo2_addr;
-    __le32 rxfifo2_size;
-    __le32 page_buff_addr;
-    __le32 page_buff_size;
-    __le32 lmac_num;
-    struct iwl_shared_mem_lmac_cfg lmac_smem[3];
-    __le32 rxfifo2_control_addr;
-    __le32 rxfifo2_control_size;
-} __packed; /* SHARED_MEM_ALLOC_API_S_VER_4 */
-
-int ItlIwx::
-iwx_start_dbg_conf(struct iwx_softc *sc, uint8_t conf_id)
-{
-    struct iwx_fw_info *fw = &sc->sc_fw;
-    uint8_t *ptr;
-    int i;
-    int err;
-    
-    if (conf_id >= nitems(fw->dbg_conf_tlv)) {
-        XYLog("Invalid configuration %d\n", conf_id);
-        return -EINVAL;
-    }
-    
-    /* EARLY START - firmware's configuration is hard coded */
-    if ((!fw->dbg_conf_tlv[conf_id] ||
-         !fw->dbg_conf_tlv[conf_id]->num_of_hcmds) &&
-        conf_id == IWX_FW_DBG_START_FROM_ALIVE)
-        return 0;
-    
-    if (!fw->dbg_conf_tlv[conf_id])
-        return -EINVAL;
-    
-    /* Send all HCMDs for configuring the FW debug */
-    ptr = (uint8_t *)&fw->dbg_conf_tlv[conf_id]->hcmd;
-    for (i = 0; i < fw->dbg_conf_tlv[conf_id]->num_of_hcmds; i++) {
-        struct iwx_fw_dbg_conf_hcmd *cmd = (struct iwx_fw_dbg_conf_hcmd *)ptr;
-
-        err = iwx_send_cmd_pdu(sc, cmd->id, 0, le16toh(cmd->len), cmd->data);
-        if (err)
-            return err;
-
-        ptr += sizeof(*cmd);
-        ptr += le16toh(cmd->len);
-    }
-    
-    return 0;
-}
-
 int ItlIwx::
 iwx_init_hw(struct iwx_softc *sc)
 {
@@ -9737,14 +9581,6 @@ iwx_init_hw(struct iwx_softc *sc)
     
     if (!iwx_nic_lock(sc))
         return EBUSY;
-    
-//    err = iwx_sf_config(sc, IWX_SF_INIT_OFF);
-//    if (err) {
-//        XYLog("%s: Failed to initialize Smart Fifo\n", DEVNAME(sc));
-//        return err;
-//    }
-//    
-//    iwx_start_dbg_conf(sc, IWX_FW_DBG_START_FROM_ALIVE);
     
     err = iwx_send_tx_ant_cfg(sc, iwx_fw_valid_tx_ant(sc));
     if (err) {
