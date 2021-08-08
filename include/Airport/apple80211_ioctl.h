@@ -1033,18 +1033,261 @@ struct apple80211_awdl_oob_request {
     uint8_t     data[1782];         // 48
 } __attribute__((packed));
 
+//Roam: <airport[565]> DISABLED, 2.4GHz on awdl0 => {
+//    "ROAM_PROF" =     (
+//                {
+//            "ROAM_PROF_BACKOFF_MULTIPLIER" = 10;
+//            "ROAM_PROF_FULLSCAN_PERIOD" = 3000;
+//            "ROAM_PROF_INIT_SCAN_PERIOD" = 600;
+//            "ROAM_PROF_MAX_SCAN_PERIOD" = 60000;
+//            "ROAM_PROF_NFSCAN" = 1;
+//            "ROAM_PROF_ROAM_DELTA" = 50;
+//            "ROAM_PROF_ROAM_FLAGS" = 0;
+//            "ROAM_PROF_ROAM_TRIGGER" = "-120";
+//            "ROAM_PROF_RSSI_BOOST_DELTA" = 55;
+//            "ROAM_PROF_RSSI_BOOST_THRESH" = "-68";
+//            "ROAM_PROF_RSSI_LOWER" = "-128";
+//        }
+//    );
+//    "ROAM_PROF_BAND" = 4;
+//    "ROAM_PROF_NUM" = 1;
+//}
+//Roam: <airport[565]> SINGLE-BAND, SINGLE-AP, 2.4GHz on awdl0 => {
+//    "ROAM_PROF" =     (
+//                {
+//            "ROAM_PROF_BACKOFF_MULTIPLIER" = 2;
+//            "ROAM_PROF_FULLSCAN_PERIOD" = 3600;
+//            "ROAM_PROF_INIT_SCAN_PERIOD" = 60;
+//            "ROAM_PROF_MAX_SCAN_PERIOD" = 1200;
+//            "ROAM_PROF_NFSCAN" = 1;
+//            "ROAM_PROF_ROAM_DELTA" = 12;
+//            "ROAM_PROF_ROAM_FLAGS" = 0;
+//            "ROAM_PROF_ROAM_TRIGGER" = "-80";
+//            "ROAM_PROF_RSSI_BOOST_DELTA" = 55;
+//            "ROAM_PROF_RSSI_BOOST_THRESH" = "-68";
+//            "ROAM_PROF_RSSI_LOWER" = "-128";
+//        }
+//    );
+//    "ROAM_PROF_BAND" = 4;
+//    "ROAM_PROF_NUM" = 1;
+//}
+//Roam: <airport[565]> DUAL-BAND, SINGLE-AP, 2.4GHz on awdl0 => {
+//    "ROAM_PROF" =     (
+//                {
+//            "ROAM_PROF_BACKOFF_MULTIPLIER" = 2;
+//            "ROAM_PROF_FULLSCAN_PERIOD" = 300;
+//            "ROAM_PROF_INIT_SCAN_PERIOD" = 180;
+//            "ROAM_PROF_MAX_SCAN_PERIOD" = 180;
+//            "ROAM_PROF_NFSCAN" = 2;
+//            "ROAM_PROF_ROAM_DELTA" = 16;
+//            "ROAM_PROF_ROAM_FLAGS" = 1;
+//            "ROAM_PROF_ROAM_TRIGGER" = "-10";
+//            "ROAM_PROF_RSSI_BOOST_DELTA" = 55;
+//            "ROAM_PROF_RSSI_BOOST_THRESH" = "-68";
+//            "ROAM_PROF_RSSI_LOWER" = "-75";
+//        },
+//                {
+//            "ROAM_PROF_BACKOFF_MULTIPLIER" = 2;
+//            "ROAM_PROF_FULLSCAN_PERIOD" = 120;
+//            "ROAM_PROF_INIT_SCAN_PERIOD" = 20;
+//            "ROAM_PROF_MAX_SCAN_PERIOD" = 90;
+//            "ROAM_PROF_NFSCAN" = 2;
+//            "ROAM_PROF_ROAM_DELTA" = 12;
+//            "ROAM_PROF_ROAM_FLAGS" = 0;
+//            "ROAM_PROF_ROAM_TRIGGER" = "-75";
+//            "ROAM_PROF_RSSI_BOOST_DELTA" = 55;
+//            "ROAM_PROF_RSSI_BOOST_THRESH" = "-68";
+//            "ROAM_PROF_RSSI_LOWER" = "-128";
+//        }
+//    );
+//    "ROAM_PROF_BAND" = 4;
+//    "ROAM_PROF_NUM" = 2;
+//}
+//Roam: <airport[565]> MULTI-AP, 2.4GHz on awdl0 => {
+//    "ROAM_PROF" =     (
+//                {
+//            "ROAM_PROF_BACKOFF_MULTIPLIER" = 2;
+//            "ROAM_PROF_FULLSCAN_PERIOD" = 1200;
+//            "ROAM_PROF_INIT_SCAN_PERIOD" = 180;
+//            "ROAM_PROF_MAX_SCAN_PERIOD" = 600;
+//            "ROAM_PROF_NFSCAN" = 2;
+//            "ROAM_PROF_ROAM_DELTA" = 20;
+//            "ROAM_PROF_ROAM_FLAGS" = 1;
+//            "ROAM_PROF_ROAM_TRIGGER" = "-10";
+//            "ROAM_PROF_RSSI_BOOST_DELTA" = 55;
+//            "ROAM_PROF_RSSI_BOOST_THRESH" = "-68";
+//            "ROAM_PROF_RSSI_LOWER" = "-50";
+//        },
+//                {
+//            "ROAM_PROF_BACKOFF_MULTIPLIER" = 2;
+//            "ROAM_PROF_FULLSCAN_PERIOD" = 600;
+//            "ROAM_PROF_INIT_SCAN_PERIOD" = 180;
+//            "ROAM_PROF_MAX_SCAN_PERIOD" = 180;
+//            "ROAM_PROF_NFSCAN" = 2;
+//            "ROAM_PROF_ROAM_DELTA" = 16;
+//            "ROAM_PROF_ROAM_FLAGS" = 1;
+//            "ROAM_PROF_ROAM_TRIGGER" = "-50";
+//            "ROAM_PROF_RSSI_BOOST_DELTA" = 55;
+//            "ROAM_PROF_RSSI_BOOST_THRESH" = "-68";
+//            "ROAM_PROF_RSSI_LOWER" = "-75";
+//        },
+//                {
+//            "ROAM_PROF_BACKOFF_MULTIPLIER" = 1;
+//            "ROAM_PROF_FULLSCAN_PERIOD" = 120;
+//            "ROAM_PROF_INIT_SCAN_PERIOD" = 20;
+//            "ROAM_PROF_MAX_SCAN_PERIOD" = 90;
+//            "ROAM_PROF_NFSCAN" = 2;
+//            "ROAM_PROF_ROAM_DELTA" = 12;
+//            "ROAM_PROF_ROAM_FLAGS" = 0;
+//            "ROAM_PROF_ROAM_TRIGGER" = "-75";
+//            "ROAM_PROF_RSSI_BOOST_DELTA" = 55;
+//            "ROAM_PROF_RSSI_BOOST_THRESH" = "-68";
+//            "ROAM_PROF_RSSI_LOWER" = "-128";
+//        }
+//    );
+//    "ROAM_PROF_BAND" = 4;
+//    "ROAM_PROF_NUM" = 3;
+//}
+//Roam: <airport[565]> AC POWER, 2.4GHz on awdl0 => {
+//    "ROAM_PROF" =     (
+//                {
+//            "ROAM_PROF_BACKOFF_MULTIPLIER" = 2;
+//            "ROAM_PROF_FULLSCAN_PERIOD" = 120;
+//            "ROAM_PROF_INIT_SCAN_PERIOD" = 20;
+//            "ROAM_PROF_MAX_SCAN_PERIOD" = 90;
+//            "ROAM_PROF_NFSCAN" = 2;
+//            "ROAM_PROF_ROAM_DELTA" = 16;
+//            "ROAM_PROF_ROAM_FLAGS" = 1;
+//            "ROAM_PROF_ROAM_TRIGGER" = "-10";
+//            "ROAM_PROF_RSSI_BOOST_DELTA" = 55;
+//            "ROAM_PROF_RSSI_BOOST_THRESH" = "-68";
+//            "ROAM_PROF_RSSI_LOWER" = "-75";
+//        },
+//                {
+//            "ROAM_PROF_BACKOFF_MULTIPLIER" = 2;
+//            "ROAM_PROF_FULLSCAN_PERIOD" = 120;
+//            "ROAM_PROF_INIT_SCAN_PERIOD" = 20;
+//            "ROAM_PROF_MAX_SCAN_PERIOD" = 90;
+//            "ROAM_PROF_NFSCAN" = 2;
+//            "ROAM_PROF_ROAM_DELTA" = 12;
+//            "ROAM_PROF_ROAM_FLAGS" = 0;
+//            "ROAM_PROF_ROAM_TRIGGER" = "-75";
+//            "ROAM_PROF_RSSI_BOOST_DELTA" = 55;
+//            "ROAM_PROF_RSSI_BOOST_THRESH" = "-68";
+//            "ROAM_PROF_RSSI_LOWER" = "-128";
+//        }
+//    );
+//    "ROAM_PROF_BAND" = 4;
+//    "ROAM_PROF_NUM" = 2;
+//}
+//Roam: <airport[565]> DISABLED, 5GHz on awdl0 => {
+//    "ROAM_PROF" =     (
+//                {
+//            "ROAM_PROF_BACKOFF_MULTIPLIER" = 10;
+//            "ROAM_PROF_FULLSCAN_PERIOD" = 3000;
+//            "ROAM_PROF_INIT_SCAN_PERIOD" = 600;
+//            "ROAM_PROF_MAX_SCAN_PERIOD" = 60000;
+//            "ROAM_PROF_NFSCAN" = 1;
+//            "ROAM_PROF_ROAM_DELTA" = 50;
+//            "ROAM_PROF_ROAM_FLAGS" = 0;
+//            "ROAM_PROF_ROAM_TRIGGER" = "-120";
+//            "ROAM_PROF_RSSI_BOOST_DELTA" = 0;
+//            "ROAM_PROF_RSSI_BOOST_THRESH" = 0;
+//            "ROAM_PROF_RSSI_LOWER" = "-128";
+//        }
+//    );
+//    "ROAM_PROF_BAND" = 2;
+//    "ROAM_PROF_NUM" = 1;
+//}
+//Roam: <airport[565]> SINGLE-BAND, SINGLE-AP, 5GHz on awdl0 => {
+//    "ROAM_PROF" =     (
+//                {
+//            "ROAM_PROF_BACKOFF_MULTIPLIER" = 2;
+//            "ROAM_PROF_FULLSCAN_PERIOD" = 3600;
+//            "ROAM_PROF_INIT_SCAN_PERIOD" = 60;
+//            "ROAM_PROF_MAX_SCAN_PERIOD" = 1200;
+//            "ROAM_PROF_NFSCAN" = 1;
+//            "ROAM_PROF_ROAM_DELTA" = 12;
+//            "ROAM_PROF_ROAM_FLAGS" = 0;
+//            "ROAM_PROF_ROAM_TRIGGER" = "-80";
+//            "ROAM_PROF_RSSI_BOOST_DELTA" = 0;
+//            "ROAM_PROF_RSSI_BOOST_THRESH" = 0;
+//            "ROAM_PROF_RSSI_LOWER" = "-128";
+//        }
+//    );
+//    "ROAM_PROF_BAND" = 2;
+//    "ROAM_PROF_NUM" = 1;
+//}
+//Roam: <airport[565]> DUAL-BAND, SINGLE-AP, 5GHz on awdl0 => {
+//    "ROAM_PROF" =     (
+//                {
+//            "ROAM_PROF_BACKOFF_MULTIPLIER" = 2;
+//            "ROAM_PROF_FULLSCAN_PERIOD" = 120;
+//            "ROAM_PROF_INIT_SCAN_PERIOD" = 20;
+//            "ROAM_PROF_MAX_SCAN_PERIOD" = 90;
+//            "ROAM_PROF_NFSCAN" = 2;
+//            "ROAM_PROF_ROAM_DELTA" = 12;
+//            "ROAM_PROF_ROAM_FLAGS" = 0;
+//            "ROAM_PROF_ROAM_TRIGGER" = "-75";
+//            "ROAM_PROF_RSSI_BOOST_DELTA" = 0;
+//            "ROAM_PROF_RSSI_BOOST_THRESH" = 0;
+//            "ROAM_PROF_RSSI_LOWER" = "-128";
+//        }
+//    );
+//    "ROAM_PROF_BAND" = 2;
+//    "ROAM_PROF_NUM" = 1;
+//}
+//Roam: <airport[565]> MULTI-AP, 5GHz on awdl0 => {
+//    "ROAM_PROF" =     (
+//                {
+//            "ROAM_PROF_BACKOFF_MULTIPLIER" = 2;
+//            "ROAM_PROF_FULLSCAN_PERIOD" = 120;
+//            "ROAM_PROF_INIT_SCAN_PERIOD" = 20;
+//            "ROAM_PROF_MAX_SCAN_PERIOD" = 90;
+//            "ROAM_PROF_NFSCAN" = 2;
+//            "ROAM_PROF_ROAM_DELTA" = 12;
+//            "ROAM_PROF_ROAM_FLAGS" = 0;
+//            "ROAM_PROF_ROAM_TRIGGER" = "-75";
+//            "ROAM_PROF_RSSI_BOOST_DELTA" = 0;
+//            "ROAM_PROF_RSSI_BOOST_THRESH" = 0;
+//            "ROAM_PROF_RSSI_LOWER" = "-128";
+//        }
+//    );
+//    "ROAM_PROF_BAND" = 2;
+//    "ROAM_PROF_NUM" = 1;
+//}
+//Roam: <airport[565]> AC POWER, 5GHz on awdl0 => {
+//    "ROAM_PROF" =     (
+//                {
+//            "ROAM_PROF_BACKOFF_MULTIPLIER" = 2;
+//            "ROAM_PROF_FULLSCAN_PERIOD" = 120;
+//            "ROAM_PROF_INIT_SCAN_PERIOD" = 20;
+//            "ROAM_PROF_MAX_SCAN_PERIOD" = 90;
+//            "ROAM_PROF_NFSCAN" = 2;
+//            "ROAM_PROF_ROAM_DELTA" = 12;
+//            "ROAM_PROF_ROAM_FLAGS" = 0;
+//            "ROAM_PROF_ROAM_TRIGGER" = "-75";
+//            "ROAM_PROF_RSSI_BOOST_DELTA" = 0;
+//            "ROAM_PROF_RSSI_BOOST_THRESH" = 0;
+//            "ROAM_PROF_RSSI_LOWER" = "-128";
+//        }
+//    );
+//    "ROAM_PROF_BAND" = 2;
+//    "ROAM_PROF_NUM" = 1;
+//}
+
 struct apple80211_roam_profile {
-    uint8_t     unk1;
-    uint8_t     unk2;
-    uint8_t     unk3;
-    uint8_t     unk4;
-    uint8_t     unk5;
-    uint8_t     unk6;
-    uint16_t    unk7;
-    uint16_t    unk8;
-    uint16_t    unk9;
-    uint16_t    unk10;
-    uint16_t    unk11;
+    int8_t      flags;
+    int8_t      trigger;
+    int8_t      rssi_lower;
+    int8_t      rssi_boost_delta;
+    int8_t      rssi_boost_thresh;
+    int8_t      delta;
+    uint16_t    backoff_multiplier;
+    uint16_t    full_scan_period;
+    uint16_t    init_scan_period;
+    uint16_t    nfscan;
+    uint16_t    max_scan_period;
 } __attribute__((packed));
 
 struct apple80211_roam_profile_band_data {
