@@ -88,6 +88,20 @@ static inline int fls64(UInt64 x)
     return bitpos + 1;
 }
 
+static inline const char *reverse_strchr(const char *s, int c)
+{
+    char *find = NULL;
+    const char *ss = s;
+    
+    while (*ss != '\0' && (find = strchr(ss, c))) {
+        ss = ++find;
+    }
+    return ss;
+}
+
+#ifndef strrchr
+#define strrchr(x, y) reverse_strchr((x), (y))
+#endif
 
 /*
  * Runtime evaluation of get_order()

@@ -1889,10 +1889,12 @@ iwx_read_pnvm(struct iwx_softc *sc)
     int err = 0;
     OSData *fwData = NULL;
     struct iwx_fw_info *fw = &sc->sc_fw;
+    char fwname_copy[64];
     char pnvm_name[64];
     struct iwx_ucode_tlv *tlv;
     uint8_t *data;
     size_t len;
+    const char *find;
     
     if (fw->pnvm_rawdata != NULL)
         iwx_pnvm_free(fw);
@@ -1900,8 +1902,16 @@ iwx_read_pnvm(struct iwx_softc *sc)
      * The prefix unfortunately includes a hyphen at the end, so
      * don't add the dot here...
      */
+    memcpy(fwname_copy, sc->sc_fwname, sizeof(fwname_copy));
+    find = strrchr(sc->sc_fwname, '-');
+    if (!find)
+        goto out;
+    if (find - sc->sc_fwname - 1 <= 0)
+        goto out;
+    fwname_copy[find - sc->sc_fwname - 1] = '\0';
+    
     snprintf(pnvm_name, sizeof(pnvm_name), "%s.pnvm",
-         "iwlwifi-ty-a0-gf-a0");
+         fwname_copy);
     
     fwData = getFWDescByName(pnvm_name);
 
