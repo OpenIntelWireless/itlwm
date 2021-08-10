@@ -11129,7 +11129,7 @@ const struct iwl_cfg iwlax210_2ax_cfg_so_hr_a0 = {
     .name = "Intel(R) Wi-Fi 6 AX210 160MHz",
     .fwname = "iwlwifi-so-a0-hr-b0-63.ucode",
     .device_family = IWX_DEVICE_FAMILY_AX210,
-    .num_rbds = IWL_NUM_RBDS_NON_HE,
+    .num_rbds = IWL_NUM_RBDS_AX210_HE,
 };
 
 const struct iwl_cfg iwlax211_2ax_cfg_so_gf_a0 = {
