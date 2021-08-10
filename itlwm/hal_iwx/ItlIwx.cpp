@@ -8520,6 +8520,13 @@ iwx_rs_init(struct iwx_softc *sc, struct iwx_node *in, bool update)
     struct iwx_tlc_config_cmd cfg_cmd;
     uint32_t cmd_id;
     int i;
+    uint16_t cmd_size = sizeof(cfg_cmd);
+    uint8_t cmdver;
+    
+    /* In old versions of the API the struct is 4 bytes smaller */
+    cmdver = iwx_lookup_cmd_ver(sc, IWX_DATA_PATH_GROUP, IWX_TLC_MNG_CONFIG_CMD);
+    if (cmdver == IWX_FW_CMD_VER_UNKNOWN || cmdver < 3)
+        cmd_size -= 4;
 
     memset(&cfg_cmd, 0, sizeof(cfg_cmd));
 
@@ -8569,7 +8576,7 @@ iwx_rs_init(struct iwx_softc *sc, struct iwx_node *in, bool update)
     }
 
     cmd_id = iwx_cmd_id(IWX_TLC_MNG_CONFIG_CMD, IWX_DATA_PATH_GROUP, 0);
-    return iwx_send_cmd_pdu(sc, cmd_id, IWX_CMD_ASYNC, sizeof(cfg_cmd),
+    return iwx_send_cmd_pdu(sc, cmd_id, IWX_CMD_ASYNC, cmd_size,
                             &cfg_cmd);
 }
 
