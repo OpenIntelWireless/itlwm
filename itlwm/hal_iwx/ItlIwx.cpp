@@ -1075,7 +1075,7 @@ iwx_ctxt_info_gen3_init(struct iwx_softc *sc, const struct iwx_fw_sects *fws)
     ctxt_info_gen3->mcr_base_addr =
         htole64(sc->rxq.used_desc_dma.paddr);
     ctxt_info_gen3->mtr_size =
-        htole16(IWX_TFD_QUEUE_CB_SIZE(sc->sc_device_family >= IWX_DEVICE_FAMILY_AX210 ? IWX_CMD_QUEUE_SIZE_GEN3 : IWX_CMD_QUEUE_SIZE));
+        htole16(IWX_TFD_QUEUE_CB_SIZE(IWX_CMD_QUEUE_SIZE_GEN3));
     ctxt_info_gen3->mcr_size =
         htole16(IWX_RX_QUEUE_CB_SIZE(IWX_RX_MQ_RING_COUNT));
     
