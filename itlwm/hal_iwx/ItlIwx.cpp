@@ -1251,6 +1251,7 @@ iwx_pnvm_free(struct iwx_fw_info *fw)
 {
     if (fw->pnvm_rawdata) {
         ::free(fw->pnvm_rawdata);
+        fw->pnvm_rawdata = NULL;
         fw->pnvm_rawsize = 0;
     }
 }
@@ -1988,6 +1989,8 @@ int ItlIwx::
 iwx_load_pnvm(struct iwx_softc *sc)
 {
     XYLog("%s\n", __FUNCTION__);
+    int err;
+    
     /* if the SKU_ID is empty, there's nothing to do */
     if (!sc->sku_id[0] && !sc->sku_id[1] && !sc->sku_id[2])
         return 0;
@@ -2004,7 +2007,11 @@ out:
         iwx_nic_unlock(sc);
     }
     
-    return tsleep_nsec(&sc->sc_init_complete, 0, "iwxinit", SEC_TO_NSEC(2));
+    err = tsleep_nsec(&sc->sc_init_complete, 0, "iwxinit", SEC_TO_NSEC(2));
+    
+    iwx_pnvm_free(&sc->sc_fw);
+    
+    return err;
 }
 
 static uint32_t iwx_prph_msk(struct iwx_softc *sc)
@@ -3092,6 +3099,7 @@ iwx_stop_device(struct iwx_softc *sc)
     iwx_dma_contig_free(&sc->prph_info_dma);
     iwx_dma_contig_free(&sc->prph_scratch_dma);
     iwx_dma_contig_free(&sc->iml_dma);
+    iwx_dma_contig_free(&sc->pnvm_dram);
 }
 
 void ItlIwx::
@@ -4484,6 +4492,8 @@ iwx_load_firmware(struct iwx_softc *sc)
     }
     
     iwx_ctxt_info_free_fw_img(sc);
+    
+    iwx_dma_contig_free(&sc->iml_dma);
     
     if (!sc->sc_uc.uc_ok)
         return EINVAL;
