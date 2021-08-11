@@ -1680,8 +1680,7 @@ struct iwx_rx_completion_desc {
 #define IWX_TFD_QUEUE_SIZE_BC_DUP    (64)
 #define IWX_TFD_QUEUE_BC_SIZE        (IWX_TFD_QUEUE_SIZE_MAX + \
                     IWX_TFD_QUEUE_SIZE_BC_DUP)
-#define IWX_TFD_QUEUE_BC_SIZE_GEN3    (IWX_TFD_QUEUE_SIZE_MAX_GEN3 + \
-                    IWX_TFD_QUEUE_SIZE_BC_DUP)
+#define IWX_TFD_QUEUE_BC_SIZE_GEN3    1024
 #define IWX_TFH_NUM_TBS        25
 
 /**
