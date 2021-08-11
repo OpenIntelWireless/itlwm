@@ -691,7 +691,7 @@ struct iwx_softc {
 	int n_cmd_versions;
     char sc_fw_mcc[3];
     uint16_t sc_fw_mcc_int;
-#define IWX_IML_MAX_LEN 4096*10
+#define IWX_IML_MAX_LEN 2048*10
     uint32_t sc_iml_len;
     uint8_t sc_iml[IWX_IML_MAX_LEN];
 
