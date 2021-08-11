@@ -747,7 +747,6 @@ struct iwx_softc {
 	/* phy contexts.  we only use the first one */
 	struct iwx_phy_ctxt sc_phyctxt[IWX_NUM_PHY_CTX];
 
-	struct iwx_notif_statistics sc_stats;
 	int sc_noise;
 
     int sc_pm_support;

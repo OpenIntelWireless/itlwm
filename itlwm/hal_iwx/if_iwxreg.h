@@ -3968,7 +3968,7 @@ struct iwx_statistics_dbg {
     uint32_t burst_check;
     uint32_t burst_count;
     uint32_t wait_for_silence_timeout_cnt;
-    uint32_t reserved[3];
+    uint8_t reserved[12];
 } __packed; /* IWX_STATISTICS_DEBUG_API_S_VER_2 */
 
 struct iwx_statistics_div {
@@ -3980,81 +3980,99 @@ struct iwx_statistics_div {
     uint32_t reserved2;
 } __packed; /* IWX_STATISTICS_SLOW_DIV_API_S_VER_2 */
 
-struct iwx_statistics_bt_activity {
-    uint32_t hi_priority_tx_req_cnt;
-    uint32_t hi_priority_tx_denied_cnt;
-    uint32_t lo_priority_tx_req_cnt;
-    uint32_t lo_priority_tx_denied_cnt;
-    uint32_t hi_priority_rx_req_cnt;
-    uint32_t hi_priority_rx_denied_cnt;
-    uint32_t lo_priority_rx_req_cnt;
-    uint32_t lo_priority_rx_denied_cnt;
-} __packed;  /* IWX_STATISTICS_BT_ACTIVITY_API_S_VER_1 */
-
-struct iwx_statistics_general_common {
-    uint32_t radio_temperature;
-    struct iwx_statistics_dbg dbg;
-    uint32_t sleep_time;
-    uint32_t slots_out;
-    uint32_t slots_idle;
-    uint32_t ttl_timestamp;
-    struct iwx_statistics_div slow_div;
-    uint32_t rx_enable_counter;
-    /*
-     * num_of_sos_states:
-     *  count the number of times we have to re-tune
-     *  in order to get out of bad PHY status
-     */
-    uint32_t num_of_sos_states;
-    uint32_t beacon_filtered;
-    uint32_t missed_beacons;
-    uint8_t beacon_filter_average_energy;
-    uint8_t beacon_filter_reason;
-    uint8_t beacon_filter_current_energy;
-    uint8_t beacon_filter_reserved;
-    uint32_t beacon_filter_delta_time;
-    struct iwx_statistics_bt_activity bt_activity;
-    uint64_t rx_time;
-    uint64_t on_time_rf;
-    uint64_t on_time_scan;
-    uint64_t tx_time;
-} __packed; /* STATISTICS_GENERAL_API_S_VER_10 */
-
+/**
+ * struct mvm_statistics_rx_non_phy
+ * @bogus_cts: CTS received when not expecting CTS
+ * @bogus_ack: ACK received when not expecting ACK
+ * @non_channel_beacons: beacons with our bss id but not on our serving channel
+ * @channel_beacons: beacons with our bss id and in our serving channel
+ * @num_missed_bcon: number of missed beacons
+ * @adc_rx_saturation_time: count in 0.8us units the time the ADC was in
+ *    saturation
+ * @ina_detection_search_time: total time (in 0.8us) searched for INA
+ * @beacon_silence_rssi_a: RSSI silence after beacon frame
+ * @beacon_silence_rssi_b: RSSI silence after beacon frame
+ * @beacon_silence_rssi_c: RSSI silence after beacon frame
+ * @interference_data_flag: flag for interference data availability. 1 when data
+ *    is available.
+ * @channel_load: counts RX Enable time in uSec
+ * @beacon_rssi_a: beacon RSSI on anntena A
+ * @beacon_rssi_b: beacon RSSI on antenna B
+ * @beacon_rssi_c: beacon RSSI on antenna C
+ * @beacon_energy_a: beacon energy on antenna A
+ * @beacon_energy_b: beacon energy on antenna B
+ * @beacon_energy_c: beacon energy on antenna C
+ * @num_bt_kills: number of BT "kills" (frame TX aborts)
+ * @mac_id: mac ID
+ */
 struct iwx_statistics_rx_non_phy {
-    uint32_t bogus_cts;    /* CTS received when not expecting CTS */
-    uint32_t bogus_ack;    /* ACK received when not expecting ACK */
-    uint32_t non_bssid_frames;    /* number of frames with BSSID that
+    __le32 bogus_cts;
+    __le32 bogus_ack;
+    __le32 non_channel_beacons;
+    __le32 channel_beacons;
+    __le32 num_missed_bcon;
+    __le32 adc_rx_saturation_time;
+    __le32 ina_detection_search_time;
+    __le32 beacon_silence_rssi_a;
+    __le32 beacon_silence_rssi_b;
+    __le32 beacon_silence_rssi_c;
+    __le32 interference_data_flag;
+    __le32 channel_load;
+    __le32 beacon_rssi_a;
+    __le32 beacon_rssi_b;
+    __le32 beacon_rssi_c;
+    __le32 beacon_energy_a;
+    __le32 beacon_energy_b;
+    __le32 beacon_energy_c;
+    __le32 num_bt_kills;
+    __le32 mac_id;
+} __packed; /* STATISTICS_RX_NON_PHY_API_S_VER_4 */
+
+struct iwx_statistics_rx_non_phy_v3 {
+    __le32 bogus_cts;    /* CTS received when not expecting CTS */
+    __le32 bogus_ack;    /* ACK received when not expecting ACK */
+    __le32 non_bssid_frames;    /* number of frames with BSSID that
                      * doesn't belong to the STA BSSID */
-    uint32_t filtered_frames;    /* count frames that were dumped in the
+    __le32 filtered_frames;    /* count frames that were dumped in the
                  * filtering process */
-    uint32_t non_channel_beacons;    /* beacons with our bss id but not on
+    __le32 non_channel_beacons;    /* beacons with our bss id but not on
                      * our serving channel */
-    uint32_t channel_beacons;    /* beacons with our bss id and in our
+    __le32 channel_beacons;    /* beacons with our bss id and in our
                  * serving channel */
-    uint32_t num_missed_bcon;    /* number of missed beacons */
-    uint32_t adc_rx_saturation_time;    /* count in 0.8us units the time the
+    __le32 num_missed_bcon;    /* number of missed beacons */
+    __le32 adc_rx_saturation_time;    /* count in 0.8us units the time the
                      * ADC was in saturation */
-    uint32_t ina_detection_search_time;/* total time (in 0.8us) searched
+    __le32 ina_detection_search_time;/* total time (in 0.8us) searched
                       * for INA */
-    uint32_t beacon_silence_rssi[3];/* RSSI silence after beacon frame */
-    uint32_t interference_data_flag;    /* flag for interference data
+    __le32 beacon_silence_rssi_a;    /* RSSI silence after beacon frame */
+    __le32 beacon_silence_rssi_b;    /* RSSI silence after beacon frame */
+    __le32 beacon_silence_rssi_c;    /* RSSI silence after beacon frame */
+    __le32 interference_data_flag;    /* flag for interference data
                      * availability. 1 when data is
                      * available. */
-    uint32_t channel_load;        /* counts RX Enable time in uSec */
-    uint32_t dsp_false_alarms;    /* DSP false alarm (both OFDM
+    __le32 channel_load;        /* counts RX Enable time in uSec */
+    __le32 dsp_false_alarms;    /* DSP false alarm (both OFDM
                      * and CCK) counter */
-    uint32_t beacon_rssi_a;
-    uint32_t beacon_rssi_b;
-    uint32_t beacon_rssi_c;
-    uint32_t beacon_energy_a;
-    uint32_t beacon_energy_b;
-    uint32_t beacon_energy_c;
-    uint32_t num_bt_kills;
-    uint32_t mac_id;
-    uint32_t directed_data_mpdu;
-} __packed; /* IWX_STATISTICS_RX_NON_PHY_API_S_VER_3 */
+    __le32 beacon_rssi_a;
+    __le32 beacon_rssi_b;
+    __le32 beacon_rssi_c;
+    __le32 beacon_energy_a;
+    __le32 beacon_energy_b;
+    __le32 beacon_energy_c;
+    __le32 num_bt_kills;
+    __le32 mac_id;
+    __le32 directed_data_mpdu;
+} __packed; /* STATISTICS_RX_NON_PHY_API_S_VER_3 */
 
 struct iwx_statistics_rx_phy {
+    __le32 unresponded_rts;
+    __le32 rxe_frame_lmt_overrun;
+    __le32 sent_ba_rsp_cnt;
+    __le32 dsp_self_kill;
+    __le32 reserved;
+} __packed; /* STATISTICS_RX_PHY_API_S_VER_3 */
+
+struct iwx_statistics_rx_phy_v2 {
     uint32_t ina_cnt;
     uint32_t fina_cnt;
     uint32_t plcp_err;
@@ -4077,7 +4095,7 @@ struct iwx_statistics_rx_phy {
     uint32_t reserved;
 } __packed; /* IWX_STATISTICS_RX_PHY_API_S_VER_2 */
 
-struct iwx_statistics_rx_ht_phy {
+struct iwx_statistics_rx_ht_phy_v1 {
     uint32_t plcp_err;
     uint32_t overrun_err;
     uint32_t early_overrun_err;
@@ -4090,6 +4108,13 @@ struct iwx_statistics_rx_ht_phy {
     uint32_t unsupport_mcs;
 } __packed;  /* IWX_STATISTICS_HT_RX_PHY_API_S_VER_1 */
 
+struct iwx_statistics_rx_ht_phy {
+    __le32 mh_format_err;
+    __le32 agg_mpdu_cnt;
+    __le32 agg_cnt;
+    __le32 unsupport_mcs;
+} __packed;  /* STATISTICS_HT_RX_PHY_API_S_VER_2 */
+
 /*
  * The first MAC indices (starting from 0)
  * are available to the driver, AUX follows
@@ -4097,8 +4122,40 @@ struct iwx_statistics_rx_ht_phy {
 #define IWX_MAC_INDEX_AUX        4
 #define IWX_MAC_INDEX_MIN_DRIVER    0
 #define IWX_NUM_MAC_INDEX_DRIVER    IWX_MAC_INDEX_AUX
+#define IWX_NUM_MAC_INDEX        (IWX_NUM_MAC_INDEX_DRIVER + 1)
+#define IWX_NUM_MAC_INDEX_CDB    (IWX_NUM_MAC_INDEX_DRIVER + 2)
 
 #define IWX_STATION_COUNT    16
+
+struct iwx_statistics_tx_non_phy_v3 {
+    __le32 preamble_cnt;
+    __le32 rx_detected_cnt;
+    __le32 bt_prio_defer_cnt;
+    __le32 bt_prio_kill_cnt;
+    __le32 few_bytes_cnt;
+    __le32 cts_timeout;
+    __le32 ack_timeout;
+    __le32 expected_ack_cnt;
+    __le32 actual_ack_cnt;
+    __le32 dump_msdu_cnt;
+    __le32 burst_abort_next_frame_mismatch_cnt;
+    __le32 burst_abort_missing_next_frame_cnt;
+    __le32 cts_timeout_collision;
+    __le32 ack_or_ba_timeout_collision;
+} __packed; /* STATISTICS_TX_NON_PHY_API_S_VER_3 */
+
+struct iwx_statistics_tx_non_phy {
+    __le32 bt_prio_defer_cnt;
+    __le32 bt_prio_kill_cnt;
+    __le32 few_bytes_cnt;
+    __le32 cts_timeout;
+    __le32 ack_timeout;
+    __le32 dump_msdu_cnt;
+    __le32 burst_abort_next_frame_mismatch_cnt;
+    __le32 burst_abort_missing_next_frame_cnt;
+    __le32 cts_timeout_collision;
+    __le32 ack_or_ba_timeout_collision;
+} __packed; /* STATISTICS_TX_NON_PHY_API_S_VER_4 */
 
 #define IWX_MAX_CHAINS 3
 
@@ -4129,24 +4186,94 @@ struct iwx_statistics_tx_channel_width {
     uint32_t fail_per_ch_width[4];
 }; /* IWX_STATISTICS_TX_CHANNEL_WIDTH_API_S_VER_1 */
 
-struct iwx_statistics_tx {
-    uint32_t preamble_cnt;
-    uint32_t rx_detected_cnt;
-    uint32_t bt_prio_defer_cnt;
-    uint32_t bt_prio_kill_cnt;
-    uint32_t few_bytes_cnt;
-    uint32_t cts_timeout;
-    uint32_t ack_timeout;
-    uint32_t expected_ack_cnt;
-    uint32_t actual_ack_cnt;
-    uint32_t dump_msdu_cnt;
-    uint32_t burst_abort_next_frame_mismatch_cnt;
-    uint32_t burst_abort_missing_next_frame_cnt;
-    uint32_t cts_timeout_collision;
-    uint32_t ack_or_ba_timeout_collision;
+struct iwx_statistics_tx_v4 {
+    struct iwx_statistics_tx_non_phy_v3 general;
     struct iwx_statistics_tx_non_phy_agg agg;
     struct iwx_statistics_tx_channel_width channel_width;
-} __packed; /* IWX_STATISTICS_TX_API_S_VER_4 */
+} __packed; /* STATISTICS_TX_API_S_VER_4 */
+
+struct iwx_statistics_tx {
+    struct iwx_statistics_tx_non_phy general;
+    struct iwx_statistics_tx_non_phy_agg agg;
+    struct iwx_statistics_tx_channel_width channel_width;
+} __packed; /* STATISTICS_TX_API_S_VER_5 */
+
+struct iwx_statistics_bt_activity {
+    __le32 hi_priority_tx_req_cnt;
+    __le32 hi_priority_tx_denied_cnt;
+    __le32 lo_priority_tx_req_cnt;
+    __le32 lo_priority_tx_denied_cnt;
+    __le32 hi_priority_rx_req_cnt;
+    __le32 hi_priority_rx_denied_cnt;
+    __le32 lo_priority_rx_req_cnt;
+    __le32 lo_priority_rx_denied_cnt;
+} __packed;  /* STATISTICS_BT_ACTIVITY_API_S_VER_1 */
+
+struct iwx_statistics_general_common_v19 {
+    __le32 radio_temperature;
+    __le32 radio_voltage;
+    struct iwx_statistics_dbg dbg;
+    __le32 sleep_time;
+    __le32 slots_out;
+    __le32 slots_idle;
+    __le32 ttl_timestamp;
+    struct iwx_statistics_div slow_div;
+    __le32 rx_enable_counter;
+    /*
+     * num_of_sos_states:
+     *  count the number of times we have to re-tune
+     *  in order to get out of bad PHY status
+     */
+    __le32 num_of_sos_states;
+    __le32 beacon_filtered;
+    __le32 missed_beacons;
+    u8 beacon_filter_average_energy;
+    u8 beacon_filter_reason;
+    u8 beacon_filter_current_energy;
+    u8 beacon_filter_reserved;
+    __le32 beacon_filter_delta_time;
+    struct iwx_statistics_bt_activity bt_activity;
+    __le64 rx_time;
+    __le64 on_time_rf;
+    __le64 on_time_scan;
+    __le64 tx_time;
+} __packed;
+
+struct iwx_statistics_general_common {
+    __le32 radio_temperature;
+    struct iwx_statistics_dbg dbg;
+    __le32 sleep_time;
+    __le32 slots_out;
+    __le32 slots_idle;
+    __le32 ttl_timestamp;
+    struct iwx_statistics_div slow_div;
+    __le32 rx_enable_counter;
+    /*
+     * num_of_sos_states:
+     *  count the number of times we have to re-tune
+     *  in order to get out of bad PHY status
+     */
+    __le32 num_of_sos_states;
+    __le32 beacon_filtered;
+    __le32 missed_beacons;
+    u8 beacon_filter_average_energy;
+    u8 beacon_filter_reason;
+    u8 beacon_filter_current_energy;
+    u8 beacon_filter_reserved;
+    __le32 beacon_filter_delta_time;
+    struct iwx_statistics_bt_activity bt_activity;
+    __le64 rx_time;
+    __le64 on_time_rf;
+    __le64 on_time_scan;
+    __le64 tx_time;
+} __packed; /* STATISTICS_GENERAL_API_S_VER_10 */
+
+struct iwx_statistics_general_v8 {
+    struct iwx_statistics_general_common_v19 common;
+    __le32 beacon_counter[IWX_NUM_MAC_INDEX];
+    u8 beacon_average_energy[IWX_NUM_MAC_INDEX];
+    u8 reserved[4 - (IWX_NUM_MAC_INDEX % 4)];
+} __packed; /* STATISTICS_GENERAL_API_S_VER_8 */
 
 struct iwx_statistics_general {
     struct iwx_statistics_general_common common;
@@ -4160,6 +4287,13 @@ struct iwx_statistics_rx {
     struct iwx_statistics_rx_phy cck;
     struct iwx_statistics_rx_non_phy general;
     struct iwx_statistics_rx_ht_phy ofdm_ht;
+} __packed; /* IWX_STATISTICS_RX_API_S_VER_4 */
+
+struct iwx_statistics_rx_v3 {
+    struct iwx_statistics_rx_phy_v2 ofdm;
+    struct iwx_statistics_rx_phy_v2 cck;
+    struct iwx_statistics_rx_non_phy_v3 general;
+    struct iwx_statistics_rx_ht_phy_v1 ofdm_ht;
 } __packed; /* IWX_STATISTICS_RX_API_S_VER_3 */
 
 /*
@@ -4190,7 +4324,14 @@ struct iwx_statistics_load {
     uint32_t byte_count[IWX_MAC_INDEX_AUX];
     uint32_t pkt_count[IWX_MAC_INDEX_AUX];
     uint8_t avg_energy[IWX_STATION_COUNT];
-} __packed; /* STATISTICS_RX_MAC_STATION_S_VER_3 */
+} __packed; /* STATISTICS_RX_MAC_STATION_S_VER_4 */
+
+struct iwx_statistics_load_v1 {
+    uint32_t air_time[IWX_MAC_INDEX_AUX];
+    uint32_t byte_count[IWX_MAC_INDEX_AUX];
+    uint32_t pkt_count[IWX_MAC_INDEX_AUX];
+    uint8_t avg_energy[IWX_STATION_COUNT];
+} __packed; /* STATISTICS_RX_MAC_STATION_S_VER_1 */
 
 struct iwx_notif_statistics {
     uint32_t flag;
@@ -4200,6 +4341,13 @@ struct iwx_notif_statistics {
     struct iwx_statistics_load load_stats;
 } __packed; /* STATISTICS_NTFY_API_S_VER_13 */
 
+struct iwx_notif_statistics_v11 {
+    __le32 flag;
+    struct iwx_statistics_rx_v3 rx;
+    struct iwx_statistics_tx_v4 tx;
+    struct iwx_statistics_general_v8 general;
+    struct iwx_statistics_load_v1 load_stats;
+} __packed; /* STATISTICS_NTFY_API_S_VER_11 */
 
 /**
  * flags used in statistics notification

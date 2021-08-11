@@ -324,7 +324,7 @@ public:
     int    iwx_rxmq_get_signal_strength(struct iwx_softc *, struct iwx_rx_mpdu_desc *);
     void    iwx_rx_rx_phy_cmd(struct iwx_softc *, struct iwx_rx_packet *,
             struct iwx_rx_data *);
-    int    iwx_get_noise(const struct iwx_statistics_rx_non_phy *);
+    int    iwx_get_noise(const uint8_t *);
     int    iwx_rx_hwdecrypt(struct iwx_softc *, mbuf_t, uint32_t,
             struct ieee80211_rxinfo *);
     int    iwx_ccmp_decap(struct iwx_softc *, mbuf_t,

@@ -4790,13 +4790,13 @@ iwx_rx_rx_phy_cmd(struct iwx_softc *sc, struct iwx_rx_packet *pkt,
  * Retrieve the average noise (in dBm) among receivers.
  */
 int ItlIwx::
-iwx_get_noise(const struct iwx_statistics_rx_non_phy *stats)
+iwx_get_noise(const uint8_t *beacon_silence_rssi)
 {
     int i, total, nbant, noise;
     
     total = nbant = noise = 0;
     for (i = 0; i < 3; i++) {
-        noise = letoh32(stats->beacon_silence_rssi[i]) & 0xff;
+        noise = letoh32(beacon_silence_rssi[i]) & 0xff;
         if (noise) {
             total += noise;
             nbant++;
@@ -10516,9 +10516,14 @@ iwx_rx_pkt(struct iwx_softc *sc, struct iwx_rx_data *data, struct mbuf_list *ml)
                 
             case IWX_STATISTICS_NOTIFICATION: {
                 struct iwx_notif_statistics *stats;
-                SYNC_RESP_STRUCT(stats, pkt, struct iwx_notif_statistics *);
-                memcpy(&sc->sc_stats, stats, sizeof(sc->sc_stats));
-                sc->sc_noise = iwx_get_noise(&stats->rx.general);
+                struct iwx_notif_statistics_v11 *stats_v11;
+                if (isset(sc->sc_ucode_api, IWX_UCODE_TLV_API_NEW_RX_STATS)) {
+                    SYNC_RESP_STRUCT(stats, pkt, struct iwx_notif_statistics *);
+                    sc->sc_noise = iwx_get_noise((uint8_t *)&stats->rx.general.beacon_silence_rssi_a);
+                } else {
+                    SYNC_RESP_STRUCT(stats_v11, pkt, struct iwx_notif_statistics_v11 *);
+                    sc->sc_noise = iwx_get_noise((uint8_t *)&stats_v11->rx.general.beacon_silence_rssi_a);
+                }
                 break;
             }
                 
