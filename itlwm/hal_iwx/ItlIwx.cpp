@@ -2223,7 +2223,12 @@ bool allocDmaMemory2(struct iwx_dma_info *dma, size_t size, int alignment)
         return false;
     }
     
-    bmd->prepare();
+    if (bmd->prepare() != kIOReturnSuccess) {
+        XYLog("%s prepare DMA memory failed.\n", __FUNCTION__);
+        bmd->release();
+        bmd = NULL;
+        return false;
+    }
     IODMACommand *cmd = IODMACommand::withSpecification(kIODMACommandOutputHost64, 64, 0, IODMACommand::kMapped, 0, alignment);
     
     if (cmd == NULL) {
@@ -2232,10 +2237,9 @@ bool allocDmaMemory2(struct iwx_dma_info *dma, size_t size, int alignment)
         bmd->release();
         return false;
     }
-    
-    cmd->setMemoryDescriptor(bmd);
 
-    if (cmd->gen64IOVMSegments(&ofs, &seg, &numSegs) != kIOReturnSuccess) {
+    if (cmd->setMemoryDescriptor(bmd) != kIOReturnSuccess
+        || cmd->gen64IOVMSegments(&ofs, &seg, &numSegs) != kIOReturnSuccess) {
         cmd->release();
         cmd = NULL;
         bmd->complete();
