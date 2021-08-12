@@ -4555,7 +4555,8 @@ int ItlIwx::
 iwx_send_phy_cfg_cmd(struct iwx_softc *sc)
 {
     XYLog("%s\n", __FUNCTION__);
-    struct iwx_phy_cfg_cmd phy_cfg_cmd;
+    struct iwx_phy_cfg_cmd_v3 phy_cfg_cmd;
+    uint8_t cmdver;
     
     phy_cfg_cmd.phy_cfg = htole32(sc->sc_fw_phy_config);
     phy_cfg_cmd.calib_control.event_trigger =
@@ -4563,8 +4564,11 @@ iwx_send_phy_cfg_cmd(struct iwx_softc *sc)
     phy_cfg_cmd.calib_control.flow_trigger =
     sc->sc_default_calib[IWX_UCODE_TYPE_REGULAR].flow_trigger;
     
+    cmdver = iwx_lookup_cmd_ver(sc, IWX_LONG_GROUP, IWX_PHY_CONFIGURATION_CMD);
+    
     return iwx_send_cmd_pdu(sc, IWX_PHY_CONFIGURATION_CMD, 0,
-                            sizeof(phy_cfg_cmd), &phy_cfg_cmd);
+                            (cmdver == 3) ? sizeof(struct iwx_phy_cfg_cmd_v3) :
+                            sizeof(struct iwx_phy_cfg_cmd_v1), &phy_cfg_cmd);
 }
 
 int ItlIwx::

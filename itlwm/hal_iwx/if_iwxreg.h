@@ -2091,13 +2091,48 @@ struct iwx_calib_ctrl {
 #define IWX_CALIB_CFG_ABS_IDX            (1 << 17)
 #define IWX_CALIB_CFG_AGC_IDX            (1 << 18)
 
-/*
- * Phy configuration command.
+/**
+ * struct iwx_phy_specific_cfg - specific PHY filter configuration
+ *
+ * Sent as part of the phy configuration command (v3) to configure specific FW
+ * defined PHY filters that can be applied to each antenna.
+ *
+ * @filter_cfg_chain_a: filter config id for LMAC1 chain A
+ * @filter_cfg_chain_b: filter config id for LMAC1 chain B
+ * @filter_cfg_chain_c: filter config id for LMAC2 chain A
+ * @filter_cfg_chain_d: filter config id for LMAC2 chain B
+ * values: 0 - no filter; 0xffffffff - reserved; otherwise - filter id
  */
-struct iwx_phy_cfg_cmd {
+struct iwx_phy_specific_cfg {
+    uint32_t filter_cfg_chain_a;
+    uint32_t filter_cfg_chain_b;
+    uint32_t filter_cfg_chain_c;
+    uint32_t filter_cfg_chain_d;
+} __packed; /* PHY_SPECIFIC_CONFIGURATION_API_VER_1*/
+
+/**
+ * struct iwx_phy_cfg_cmd - Phy configuration command
+ *
+ * @phy_cfg: PHY configuration value, uses &enum iwx_fw_phy_cfg
+ * @calib_control: calibration control data
+ */
+struct iwx_phy_cfg_cmd_v1 {
     uint32_t    phy_cfg;
     struct iwx_calib_ctrl calib_control;
 } __packed;
+
+/**
+ * struct iwx_phy_cfg_cmd_v3 - Phy configuration command (v3)
+ *
+ * @phy_cfg: PHY configuration value, uses &enum iwx_fw_phy_cfg
+ * @calib_control: calibration control data
+ * @phy_specific_cfg: configure predefined PHY filters
+ */
+struct iwx_phy_cfg_cmd_v3 {
+    uint32_t    phy_cfg;
+    struct iwx_calib_ctrl calib_control;
+    struct iwx_phy_specific_cfg phy_specific_cfg;
+} __packed; /* PHY_CONFIGURATION_CMD_API_S_VER_3 */
 
 #define IWX_PHY_CFG_RADIO_TYPE    ((1 << 0) | (1 << 1))
 #define IWX_PHY_CFG_RADIO_STEP    ((1 << 2) | (1 << 3))
