@@ -155,6 +155,13 @@ void ItlIwx::
 detach(IOPCIDevice *device)
 {
     struct _ifnet *ifp = &com.sc_ic.ic_ac.ac_if;
+    struct iwx_softc *sc = &com;
+    
+    for (int txq_i = 0; txq_i < nitems(sc->txq); txq_i++)
+        iwx_free_tx_ring(sc, &sc->txq[txq_i]);
+    iwx_free_rx_ring(sc, &sc->rxq);
+    iwx_dma_contig_free(&sc->ict_dma);
+    iwx_dma_contig_free(&com.ctxt_info_dma);
     ieee80211_ifdetach(ifp);
     taskq_destroy(systq);
     taskq_destroy(com.sc_nswq);

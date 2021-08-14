@@ -90,6 +90,15 @@ void ItlIwn::
 detach(IOPCIDevice *device)
 {
     struct _ifnet *ifp = &com.sc_ic.ic_ac.ac_if;
+    struct iwn_softc *sc = &com;
+    
+    for (int txq_i = 0; txq_i < nitems(sc->txq); txq_i++)
+        iwn_free_tx_ring(sc, &sc->txq[txq_i]);
+    iwn_free_rx_ring(sc, &sc->rxq);
+    iwn_free_sched(sc);
+    iwn_free_ict(sc);
+    iwn_free_kw(sc);
+    iwn_free_fwmem(sc);
     ieee80211_ifdetach(ifp);
     taskq_destroy(systq);
     releaseAll();
