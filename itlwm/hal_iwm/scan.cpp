@@ -526,10 +526,6 @@ iwm_umac_scan_size(struct iwm_softc *sc)
         base_size = IWM_SCAN_REQ_UMAC_SIZE_V8;
     else if (isset(sc->sc_ucode_api, IWM_UCODE_TLV_API_ADAPTIVE_DWELL))
         base_size = IWM_SCAN_REQ_UMAC_SIZE_V7;
-#ifdef notyet
-    else if (sc->sc_device_family >= IWM_DEVICE_FAMILY_22000)
-        base_size = IWM_SCAN_REQ_UMAC_SIZE_V6;
-#endif
     if (isset(sc->sc_ucode_api, IWM_UCODE_TLV_API_SCAN_EXT_CHAN_VER))
         tail_size = sizeof(struct iwm_scan_req_umac_tail_v2);
     else
@@ -548,10 +544,6 @@ iwm_get_scan_req_umac_chan_param(struct iwm_softc *sc,
     
     if (isset(sc->sc_ucode_api, IWM_UCODE_TLV_API_ADAPTIVE_DWELL))
         return &req->v7.channel;
-#ifdef notyet
-    if (sc->sc_device_family >= IWM_DEVICE_FAMILY_22000)
-        return &req->v6.channel;
-#endif
     return &req->v1.channel;
 }
 
@@ -563,10 +555,6 @@ iwm_get_scan_req_umac_data(struct iwm_softc *sc, struct iwm_scan_req_umac *req)
     
     if (isset(sc->sc_ucode_api, IWM_UCODE_TLV_API_ADAPTIVE_DWELL))
         return (void *)&req->v7.data;
-#ifdef notyet
-    if (sc->sc_device_family >= IWM_DEVICE_FAMILY_22000)
-        return (void *)&req->v6.data;
-#endif
     return (void *)&req->v1.data;
     
 }
