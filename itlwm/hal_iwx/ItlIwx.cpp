@@ -3522,6 +3522,25 @@ iwx_schedule_protect_session(struct iwx_softc *sc, struct iwx_node *in,
     return err;
 }
 
+int ItlIwx::
+iwx_cancel_session_protection(struct iwx_softc *sc, struct iwx_node *in)
+{
+    struct iwx_session_prot_cmd cmd = {
+        .id_and_color =
+            htole32(IWX_FW_CMD_ID_AND_COLOR(in->in_id, in->in_color)),
+        .action = htole32(IWX_FW_CTXT_ACTION_REMOVE),
+        .conf_id = IWX_SESSION_PROTECT_CONF_ASSOC,
+    };
+    int err;
+    
+    DPRINTFN(1, ("Remove new session protection\n"));
+    
+    err = iwx_send_cmd_pdu(sc, iwx_cmd_id(IWX_SESSION_PROTECTION_CMD, IWX_MAC_CONF_GROUP, 0), 0, sizeof(cmd), &cmd);
+    if (err)
+        XYLog("Couldn't send the Cancel SESSION_PROTECTION_CMD %d\n", err);
+    return err;
+}
+
 void ItlIwx::
 iwx_unprotect_session(struct iwx_softc *sc, struct iwx_node *in)
 {
@@ -8818,6 +8837,8 @@ iwx_deauth(struct iwx_softc *sc)
     
     if (!isset(sc->sc_enabled_capa, IWX_UCODE_TLV_CAPA_SESSION_PROT_CMD))
         iwx_unprotect_session(sc, in);
+    else
+        iwx_cancel_session_protection(sc, in);
     
     if (sc->sc_flags & IWX_FLAG_STA_ACTIVE) {
         err = iwx_flush_tx_path(sc);

@@ -277,6 +277,7 @@ public:
     void    iwx_protect_session(struct iwx_softc *, struct iwx_node *, uint32_t,
             uint32_t);
     int    iwx_schedule_protect_session(struct iwx_softc *, struct iwx_node *, uint32_t);
+    int     iwx_cancel_session_protection(struct iwx_softc *, struct iwx_node *);
     void    iwx_unprotect_session(struct iwx_softc *, struct iwx_node *);
     uint8_t iwx_fw_valid_tx_ant(struct iwx_softc *sc);
     uint8_t iwx_fw_valid_rx_ant(struct iwx_softc *sc);
