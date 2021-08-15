@@ -987,6 +987,8 @@ iwx_ctxt_info_init(struct iwx_softc *sc, const struct iwx_fw_sects *fws)
         return err;
     }
     
+    //zxystd: I don't know if it is necessary, but it is also works without the debug info, comment it to avoid DMA memory leak
+#if 0
     /* Configure debug, if exists */
     if (sc->sc_fw.dbg_dest_tlv_v1) {
         err = iwx_apply_debug_destination(sc);
@@ -995,6 +997,7 @@ iwx_ctxt_info_init(struct iwx_softc *sc, const struct iwx_fw_sects *fws)
             return err;
         }
     }
+#endif
     
     iwx_enable_fwload_interrupt(sc);
     
