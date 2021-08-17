@@ -12357,44 +12357,6 @@ iwx_attach(struct iwx_softc *sc, struct pci_attach_args *pa)
     sc->sc_tx_with_siso_diversity = sc->sc_cfg->tx_with_siso_diversity;
     sc->sc_uhb_supported = sc->sc_cfg->uhb_supported;
     
-    if (iwx_prepare_card_hw(sc) != 0) {
-        XYLog("%s: could not initialize hardware\n",
-              DEVNAME(sc));
-        return false;
-    }
-    
-    /*
-     * In order to recognize C step the driver should read the
-     * chip version id located at the AUX bus MISC address.
-     */
-    IWX_SETBITS(sc, IWX_CSR_GP_CNTRL,
-                IWX_CSR_GP_CNTRL_REG_FLAG_INIT_DONE);
-    DELAY(2);
-    
-    err = iwx_poll_bit(sc, IWX_CSR_GP_CNTRL,
-                       IWX_CSR_GP_CNTRL_REG_FLAG_MAC_CLOCK_READY,
-                       IWX_CSR_GP_CNTRL_REG_FLAG_MAC_CLOCK_READY,
-                       25000);
-    if (!err) {
-        XYLog("%s: Failed to wake up the nic\n", DEVNAME(sc));
-        return false;
-    }
-    
-    if (iwx_nic_lock(sc)) {
-        uint32_t hw_step = iwx_read_prph(sc, IWX_WFPM_CTRL_REG);
-        hw_step |= IWX_ENABLE_WFPM;
-        iwx_write_prph(sc, IWX_WFPM_CTRL_REG, hw_step);
-        hw_step = iwx_read_prph(sc, IWX_AUX_MISC_REG);
-        hw_step = (hw_step >> IWX_HW_STEP_LOCATION_BITS) & 0xF;
-        if (hw_step == 0x3)
-            sc->sc_hw_rev = (sc->sc_hw_rev & 0xFFFFFFF3) |
-            (IWX_SILICON_C_STEP << 2);
-        iwx_nic_unlock(sc);
-    } else {
-        XYLog("%s: Failed to lock the nic\n", DEVNAME(sc));
-        return false;
-    }
-    
     /* Allocate DMA memory for loading firmware. */
     if (sc->sc_device_family >= IWX_DEVICE_FAMILY_AX210)
         err = iwx_dma_contig_alloc(sc->sc_dmat, &sc->ctxt_info_dma,

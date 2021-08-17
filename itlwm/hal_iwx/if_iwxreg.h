@@ -1055,9 +1055,6 @@ enum iwx_fw_ini_allocation_id {
 #define IWX_WFPM_AUX_CTL_AUX_IF_MAC_OWNER_MSK    0x08000000
 #define IWX_ENABLE_WFPM                0x80000000
 
-#define IWX_AUX_MISC_REG            0xa200b0
-#define IWX_HW_STEP_LOCATION_BITS        24
-
 #define IWX_AUX_MISC_MASTER1_EN            0xa20818
 #define IWX_AUX_MISC_MASTER1_EN_SBE_MSK        0x1
 #define IWX_AUX_MISC_MASTER1_SMPHR_STATUS    0xa20800
