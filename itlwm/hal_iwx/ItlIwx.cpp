@@ -2428,8 +2428,10 @@ iwx_free_rx_ring(struct iwx_softc *sc, struct iwx_rx_ring *ring)
             mbuf_freem(data->m);
             data->m = NULL;
         }
-        if (data->map != NULL)
+        if (data->map != NULL) {
             bus_dmamap_destroy(sc->sc_dmat, data->map);
+            data->map = NULL;
+        }
     }
 }
 
@@ -2590,8 +2592,10 @@ iwx_free_tx_ring(struct iwx_softc *sc, struct iwx_tx_ring *ring)
             mbuf_freem(data->m);
             data->m = NULL;
         }
-        if (data->map != NULL)
+        if (data->map != NULL) {
             bus_dmamap_destroy(sc->sc_dmat, data->map);
+            data->map = NULL;
+        }
     }
     ring->qid = IWX_INVALID_QUEUE;
     ring->hi_mark = 0;

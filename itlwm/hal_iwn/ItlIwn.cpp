@@ -1294,9 +1294,12 @@ iwn_free_rx_ring(struct iwn_softc *sc, struct iwn_rx_ring *ring)
 //                data->map->dm_mapsize, BUS_DMASYNC_POSTREAD);
 //            bus_dmamap_unload(sc->sc_dmat, data->map);
             mbuf_freem(data->m);
+            data->m = NULL;
         }
-        if (data->map != NULL)
+        if (data->map != NULL) {
             bus_dmamap_destroy(sc->sc_dmat, data->map);
+            data->map = NULL;
+        }
     }
 }
 
@@ -1394,9 +1397,12 @@ iwn_free_tx_ring(struct iwn_softc *sc, struct iwn_tx_ring *ring)
 //                data->map->dm_mapsize, BUS_DMASYNC_POSTWRITE);
 //            bus_dmamap_unload(sc->sc_dmat, data->map);
             mbuf_freem(data->m);
+            data->m = NULL;
         }
-        if (data->map != NULL)
+        if (data->map != NULL) {
             bus_dmamap_destroy(sc->sc_dmat, data->map);
+            data->map = NULL;
+        }
     }
 }
 

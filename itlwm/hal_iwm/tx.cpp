@@ -134,9 +134,12 @@ iwm_free_tx_ring(iwm_softc *sc, struct iwm_tx_ring *ring)
         
         if (data->m != NULL) {
             mbuf_freem(data->m);
+            data->m = NULL;
         }
-        if (data->map != NULL)
+        if (data->map != NULL) {
             bus_dmamap_destroy(sc->sc_dmat, data->map);
+            data->map = NULL;
+        }
     }
 }
 
