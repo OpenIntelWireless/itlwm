@@ -1042,6 +1042,7 @@ iwx_ctxt_info_gen3_init(struct iwx_softc *sc, const struct iwx_fw_sects *fws)
         htole16((uint16_t)IWX_READ(sc, IWX_CSR_HW_REV));
     prph_sc_ctrl->version.size = htole16(sizeof(*prph_scratch) / 4);
     
+    control_flags = IWX_PRPH_SCRATCH_RB_SIZE_4K;
     control_flags |= IWX_PRPH_SCRATCH_MTR_MODE;
     control_flags |= IWX_PRPH_MTR_FORMAT_256B & IWX_PRPH_SCRATCH_MTR_FORMAT;
     
