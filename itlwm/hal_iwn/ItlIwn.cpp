@@ -780,11 +780,23 @@ iwn_activate(struct iwn_softc *sc, int act)
             iwn_stop(ifp);
         break;
     case DVACT_WAKEUP:
-        task_add(systq, &sc->init_task);
+        iwn_wakeup(sc);
         break;
     }
 
     return 0;
+}
+
+void ItlIwn::
+iwn_wakeup(struct iwn_softc *sc)
+{
+    pcireg_t reg;
+
+    /* Clear device-specific "PCI retry timeout" register (41h). */
+    reg = pci_conf_read(sc->sc_pct, sc->sc_pcitag, 0x40);
+    if (reg & 0xff00)
+        pci_conf_write(sc->sc_pct, sc->sc_pcitag, 0x40, reg & ~0xff00);
+    task_add(systq, &sc->init_task);
 }
 
 void ItlIwn::

@@ -126,6 +126,7 @@ public:
     void        iwn_radiotap_attach(struct iwn_softc *);
     #endif
     int        iwn_activate(struct iwn_softc *sc, int);
+    void       iwn_wakeup(struct iwn_softc *);
     static void        iwn_init_task(void *);
     int        iwn_eeprom_lock(struct iwn_softc *);
     int        iwn_init_otprom(struct iwn_softc *);
