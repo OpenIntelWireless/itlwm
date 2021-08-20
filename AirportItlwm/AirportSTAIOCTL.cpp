@@ -896,8 +896,7 @@ setPOWER(OSObject *object,
                          struct apple80211_power_data *pd)
 {
     if (pd->num_radios > 0) {
-        bool isRunning = (fHalService->get80211Controller()->ic_ac.ac_if.if_flags & (IFF_UP | IFF_RUNNING)) ==
-        (IFF_UP | IFF_RUNNING);
+        bool isRunning = (fHalService->get80211Controller()->ic_ac.ac_if.if_flags & (IFF_UP | IFF_RUNNING)) != 0;
         if (pd->power_state[0] == 0) {
             if (isRunning) {
                 net80211_ifstats(fHalService->get80211Controller());

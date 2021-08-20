@@ -212,8 +212,7 @@ sPOWER(OSObject* target, void* data, bool isSet)
     } else {
         memset(ip, 0, sizeof(*ip));
         ip->version = IOCTL_VERSION;
-        ip->enabled = (that->fIfp->if_flags & (IFF_UP | IFF_RUNNING)) ==
-        (IFF_UP | IFF_RUNNING) ? 1 : 0;
+        ip->enabled = (that->fIfp->if_flags & (IFF_UP | IFF_RUNNING)) != 0;
     }
     return kIOReturnSuccess;
 }
