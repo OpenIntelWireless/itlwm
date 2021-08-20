@@ -8745,6 +8745,14 @@ iwx_auth(struct iwx_softc *sc)
     splassert(IPL_NET);
     
     in->in_ni.ni_chw = IEEE80211_CHAN_WIDTH_20_NOHT;
+    in->in_ni.ni_flags &= ~(IEEE80211_NODE_HT |
+                            IEEE80211_NODE_QOS |
+                            IEEE80211_NODE_HT_SGI20 |
+                            IEEE80211_NODE_HT_SGI40 |
+                            IEEE80211_NODE_VHT |
+                            IEEE80211_NODE_VHT_SGI80 |
+                            IEEE80211_NODE_VHT_SGI160 |
+                            IEEE80211_NODE_HE);
     if (ic->ic_opmode == IEEE80211_M_MONITOR) {
         err = iwx_phy_ctxt_update(sc, &sc->sc_phyctxt[0],
                                   ic->ic_ibss_chan, 1, 1, 0);

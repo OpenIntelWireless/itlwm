@@ -2228,6 +2228,13 @@ iwm_auth(struct iwm_softc *sc)
     else
         sc->sc_phyctxt[0].channel = in->in_ni.ni_chan;
     in->in_ni.ni_chw = IEEE80211_CHAN_WIDTH_20_NOHT;
+    in->in_ni.ni_flags &= ~(IEEE80211_NODE_HT |
+                            IEEE80211_NODE_QOS |
+                            IEEE80211_NODE_HT_SGI20 |
+                            IEEE80211_NODE_HT_SGI40 |
+                            IEEE80211_NODE_VHT |
+                            IEEE80211_NODE_VHT_SGI80 |
+                            IEEE80211_NODE_VHT_SGI160);
     err = iwm_phy_ctxt_cmd(sc, &sc->sc_phyctxt[0], 1, 1,
                            IWM_FW_CTXT_ACTION_MODIFY, 0);
     if (err) {
