@@ -3515,7 +3515,7 @@ iwx_schedule_protect_session(struct iwx_softc *sc, struct iwx_node *in,
         .id_and_color =
             htole32(IWX_FW_CMD_ID_AND_COLOR(in->in_id, in->in_color)),
         .action = htole32(IWX_FW_CTXT_ACTION_ADD),
-        .duration_tu = htole32(duration * 1000 / IEEE80211_DUR_TU),
+        .duration_tu = htole32(duration * IEEE80211_DUR_TU),
     };
     int err;
     
@@ -3541,7 +3541,7 @@ iwx_cancel_session_protection(struct iwx_softc *sc, struct iwx_node *in)
     };
     int err;
     
-    DPRINTFN(1, ("Remove new session protection\n"));
+    DPRINTFN(1, ("Remove session protection\n"));
     
     err = iwx_send_cmd_pdu(sc, iwx_cmd_id(IWX_SESSION_PROTECTION_CMD, IWX_MAC_CONF_GROUP, 0), 0, sizeof(cmd), &cmd);
     if (err)
@@ -8814,7 +8814,7 @@ iwx_auth(struct iwx_softc *sc)
      * fragmented so that it'll allow other activities to run.
      */
     if (isset(sc->sc_enabled_capa, IWX_UCODE_TLV_CAPA_SESSION_PROT_CMD))
-        err = iwx_schedule_protect_session(sc, in, 900);
+        err = iwx_schedule_protect_session(sc, in, duration);
     else
         iwx_protect_session(sc, in, duration, in->in_ni.ni_intval / 2);
     
