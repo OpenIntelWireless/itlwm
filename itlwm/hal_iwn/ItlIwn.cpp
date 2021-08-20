@@ -150,6 +150,7 @@ IOReturn ItlIwn::enable(IONetworkInterface *netif)
     XYLog("%s\n", __FUNCTION__);
     struct _ifnet *ifp = &com.sc_ic.ic_ac.ac_if;
     ifp->if_flags |= IFF_UP;
+    iwn_activate(&com, DVACT_RESUME);
     iwn_activate(&com, DVACT_WAKEUP);
     return kIOReturnSuccess;
 }

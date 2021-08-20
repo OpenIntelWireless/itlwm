@@ -92,6 +92,7 @@ enable(IONetworkInterface *netif)
 {
     struct _ifnet *ifp = &com.sc_ic.ic_ac.ac_if;
     ifp->if_flags |= IFF_UP;
+    iwm_activate(&com, DVACT_RESUME);
     iwm_activate(&com, DVACT_WAKEUP);
     return kIOReturnSuccess;
 }
