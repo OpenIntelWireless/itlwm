@@ -1699,6 +1699,9 @@ iwx_read_firmware(struct iwx_softc *sc)
             case 0x1000004:
                 break;
                 
+            case 0x100000a:
+                break;
+                
                 /* undocumented TLVs found in iwx-cc-a0-48 image */
             case 0x1000000:
             case 0x1000002:
