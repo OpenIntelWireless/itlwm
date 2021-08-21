@@ -1433,7 +1433,6 @@ iwm_rx_tx_cmd(struct iwm_softc *sc, struct iwm_rx_packet *pkt,
     int qid = cmd_hdr->qid;
     struct iwm_tx_ring *ring = &sc->txq[qid];
     struct iwm_tx_data *txd = &ring->data[idx];
-    struct iwm_node *in = txd->in;
     struct iwm_tx_resp *tx_resp = (struct iwm_tx_resp *)pkt->data;
     uint32_t ssn;
     uint32_t len = iwm_rx_packet_len(pkt);

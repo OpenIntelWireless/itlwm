@@ -154,9 +154,6 @@ extern int iwm_debug;
 #define M_WAIT 3
 #define DELAY IODelay
 
-//pci
-#define PCI_PCIE_LCSR_ASPM_L1    0x00000002
-
 #define    INFSLP    UINT64_MAX
 
 #define IC2IFP(_ic_) (&(_ic_)->ic_if)

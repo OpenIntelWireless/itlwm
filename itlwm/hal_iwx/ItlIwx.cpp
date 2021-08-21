@@ -5620,9 +5620,6 @@ iwx_rx_tx_cmd_single(struct iwx_softc *sc, struct iwx_rx_packet *pkt,
     struct iwx_tx_resp *tx_resp = (struct iwx_tx_resp *)pkt->data;
     int status = le16toh(tx_resp->status.status) & IWX_TX_STATUS_MSK;
     int txfail;
-    int antenna;
-    uint32_t rate_n_flags;
-    uint8_t bw, sgi, ht, ht_mcs;
     
     KASSERT(tx_resp->frame_count == 1, "tx_resp->frame_count == 1");
     
@@ -5639,29 +5636,6 @@ iwx_rx_tx_cmd_single(struct iwx_softc *sc, struct iwx_rx_packet *pkt,
             iwx_toggle_tx_ant(sc, &sc->sc_tx_ant);
         }
     }
-#if 0
-    rate_n_flags = le32_to_cpu(tx_resp->initial_rate);
-    antenna = ((rate_n_flags & IWX_RATE_MCS_ANT_ABC_MSK) >> IWX_RATE_MCS_ANT_POS);
-    bw = 20;
-    switch (rate_n_flags & IWX_RATE_MCS_CHAN_WIDTH_MSK) {
-        case IWX_RATE_MCS_CHAN_WIDTH_20:
-            bw = 20;
-            break;
-        case IWX_RATE_MCS_CHAN_WIDTH_40:
-            bw = 40;
-            break;
-        case IWX_RATE_MCS_CHAN_WIDTH_80:
-            bw = 80;
-            break;
-        case IWX_RATE_MCS_CHAN_WIDTH_160:
-            bw = 160;
-            break;
-    }
-    sgi = (rate_n_flags & IWX_RATE_MCS_SGI_MSK);
-    ht = (rate_n_flags & IWX_RATE_MCS_HT_MSK);
-    ht_mcs = (rate_n_flags & IWX_RATE_HT_MCS_INDEX_MSK);
-    XYLog("%s antenna=%d bw=%d sgi=%d ht=%d mcs=%d\n", __FUNCTION__, antenna, bw, sgi, ht, ht_mcs);
-#endif
 }
 
 void ItlIwx::

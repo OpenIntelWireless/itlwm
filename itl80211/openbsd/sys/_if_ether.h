@@ -75,9 +75,6 @@
       (addr)[3] | (addr)[4] | (addr)[5]) == 0x00)
 #define    ETHER_IS_EQ(a1, a2)    (memcmp((a1), (a2), ETHER_ADDR_LEN) == 0)
 
-#define    ETHERMTU    (ETHER_MAX_LEN - ETHER_HDR_LEN - ETHER_CRC_LEN)
-#define    ETHERMIN    (ETHER_MIN_LEN - ETHER_HDR_LEN - ETHER_CRC_LEN)
-
 #define ETHER_ADDR_LEN 6
 
 /*

@@ -823,8 +823,6 @@
 		F8D257772495DEFC00872E4F /* IoctlId.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = IoctlId.h; sourceTree = "<group>"; };
 		F8D364F624F93AFD0029340B /* ItlHalService.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ItlHalService.cpp; sourceTree = "<group>"; };
 		F8D364F724F93AFD0029340B /* ItlHalService.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = ItlHalService.hpp; sourceTree = "<group>"; };
-		F8D6CD502442E0D100D2A454 /* itl80211.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = itl80211.hpp; sourceTree = "<group>"; };
-		F8D6CD522442E0D100D2A454 /* itl80211.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = itl80211.cpp; sourceTree = "<group>"; };
 		F8D6CD542442E0D100D2A454 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		F8D6CD622442E8F200D2A454 /* ItlIwx.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = ItlIwx.hpp; sourceTree = "<group>"; };
 		F8D6CD642442E8F200D2A454 /* ItlIwx.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ItlIwx.cpp; sourceTree = "<group>"; };
@@ -1250,8 +1248,6 @@
 				024A082123FCBC6C009FBA6C /* compat.h */,
 				F8FA0EEB2501E7EE00B1822E /* zutil.h */,
 				F8FA0EED2501E8C100B1822E /* zutil.c */,
-				F8D6CD502442E0D100D2A454 /* itl80211.hpp */,
-				F8D6CD522442E0D100D2A454 /* itl80211.cpp */,
 				F8D6CD542442E0D100D2A454 /* Info.plist */,
 			);
 			path = itl80211;

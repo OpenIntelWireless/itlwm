@@ -598,22 +598,6 @@ ieee80211_findrate(struct ieee80211com *ic, enum ieee80211_phymode mode,
 #undef IEEERATE
 }
 
-static struct ieee80211_channel *
-findchannel(struct ieee80211_channel chans[], int nchans, uint16_t freq,
-    uint32_t flags)
-{
-    struct ieee80211_channel *c;
-    int i;
-    
-    for (i = 0; i < nchans; i++) {
-        c = &chans[i];
-        if (c->ic_freq == freq &&
-            c->ic_flags == flags)
-            return c;
-    }
-    return NULL;
-}
-
 /*
  * Handle a media change request.
  */
