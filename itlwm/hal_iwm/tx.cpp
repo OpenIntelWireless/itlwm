@@ -297,18 +297,6 @@ iwm_enable_txq(struct iwm_softc *sc, int sta_id, int qid, int fifo, int ssn, int
     
     iwm_nic_assert_locked(sc);
     
-    memset(&cmd, 0, sizeof(cmd));
-    cmd.scd_queue = qid;
-    cmd.enable = IWM_SCD_CFG_ENABLE_QUEUE;
-    cmd.window = IWM_FRAME_LIMIT;
-    cmd.sta_id = sta_id;
-    cmd.ssn = ssn;
-    cmd.tx_fifo = fifo;
-    cmd.aggregate = agg;
-    cmd.tid = tid;
-
-    iwm_nic_assert_locked(sc);
-    
     /*
      * If we need to move the SCD write pointer by steps of
      * 0x40, 0x80 or 0xc0, it gets stuck. Avoids this and let
@@ -323,13 +311,23 @@ iwm_enable_txq(struct iwm_softc *sc, int sta_id, int qid, int fifo, int ssn, int
     scd_bug = !sc->sc_mqrx_supported &&
     !((ssn - ring->cur) & 0x3f) &&
     (ssn != ring->cur);
-    if (scd_bug) {
+    if (scd_bug)
         ssn = (ssn + 1) & 0xfff;
-    }
     
     idx = IWM_AGG_SSN_TO_TXQ_IDX(ssn);
     ring->cur = ring->read = idx;
+    ring->tail = idx;
     IWM_WRITE(sc, IWM_HBUS_TARG_WRPTR, (qid << 8) | idx);
+    
+    memset(&cmd, 0, sizeof(cmd));
+    cmd.scd_queue = qid;
+    cmd.enable = IWM_SCD_CFG_ENABLE_QUEUE;
+    cmd.window = IWM_FRAME_LIMIT;
+    cmd.sta_id = sta_id;
+    cmd.ssn = htole16(ssn);
+    cmd.tx_fifo = fifo;
+    cmd.aggregate = agg;
+    cmd.tid = tid;
 
     iwm_write_prph(sc, IWM_SCD_QUEUE_RDPTR(qid), ssn);
 
