@@ -11303,7 +11303,7 @@ const struct iwl_cfg iwl_cfg_so_a0_hr_a0 = {
 };
 
 const struct iwl_cfg iwl_cfg_quz_a0_hr_b0 = {
-    .fwname = "iwlwifi-QuZ-a0-hr-b0-63.ucode",
+    .fwname = "iwlwifi-QuZ-a0-hr-b0-48.ucode",
     .device_family = IWX_DEVICE_FAMILY_22000,
     /*
      * This device doesn't support receiving BlockAck with a large bitmap
@@ -11408,7 +11408,7 @@ const char iwl_ax201_killer_1650i_name[] =
     "Killer(R) Wi-Fi 6 AX1650i 160MHz Wireless Network Adapter (201NGW)";
 
 const struct iwl_cfg iwl_ax200_cfg_cc = {
-    .fwname = "iwlwifi-cc-a0-63.ucode",
+    .fwname = "iwlwifi-cc-a0-48.ucode",
     .device_family = IWX_DEVICE_FAMILY_22000,
     .tx_with_siso_diversity = 0,
     .uhb_supported = 0,
@@ -11422,7 +11422,7 @@ const struct iwl_cfg iwl_ax200_cfg_cc = {
 };
 
 const struct iwl_cfg iwl_qnj_b0_hr_b0_cfg = {
-    .fwname = "iwlwifi-QuQnj-b0-hr-b0-63.ucode",
+    .fwname = "iwlwifi-QuQnj-b0-hr-b0-48.ucode",
     .device_family = IWX_DEVICE_FAMILY_22000,
     .tx_with_siso_diversity = 0,
     .uhb_supported = 0,
@@ -11437,7 +11437,7 @@ const struct iwl_cfg iwl_qnj_b0_hr_b0_cfg = {
 
 const struct iwl_cfg iwl_ax201_cfg_qu_hr = {
     .name = "Intel(R) Wi-Fi 6 AX201 160MHz",
-    .fwname = "iwlwifi-Qu-b0-hr-b0-63.ucode",
+    .fwname = "iwlwifi-Qu-b0-hr-b0-48.ucode",
     .device_family = IWX_DEVICE_FAMILY_22000,
     .tx_with_siso_diversity = 0,
     .uhb_supported = 0,
@@ -11455,7 +11455,7 @@ const struct iwl_cfg iwl_ax201_cfg_qu_hr = {
 
 const struct iwl_cfg iwl_ax201_cfg_quz_hr = {
     .name = "Intel(R) Wi-Fi 6 AX201 160MHz",
-    .fwname = "iwlwifi-QuZ-a0-hr-b0-63.ucode",
+    .fwname = "iwlwifi-QuZ-a0-hr-b0-48.ucode",
     .device_family = IWX_DEVICE_FAMILY_22000,
     .tx_with_siso_diversity = 0,
     .uhb_supported = 0,
@@ -11477,7 +11477,7 @@ const struct iwl_cfg iwl_ax201_cfg_quz_hr = {
 * 9560 nevertheless.
 */
 const struct iwl_cfg iwl9560_qu_b0_jf_b0_cfg = {
-    .fwname = "iwlwifi-Qu-b0-jf-b0-63.ucode",
+    .fwname = "iwlwifi-Qu-b0-jf-b0-48.ucode",
     .device_family = IWX_DEVICE_FAMILY_22000,
     .tx_with_siso_diversity = 0,
     .uhb_supported = 0,
@@ -11485,7 +11485,7 @@ const struct iwl_cfg iwl9560_qu_b0_jf_b0_cfg = {
 };
 
 const struct iwl_cfg iwl9560_qu_c0_jf_b0_cfg = {
-    .fwname = "iwlwifi-Qu-c0-jf-b0-63.ucode",
+    .fwname = "iwlwifi-Qu-c0-jf-b0-48.ucode",
     .device_family = IWX_DEVICE_FAMILY_22000,
     .tx_with_siso_diversity = 0,
     .uhb_supported = 0,
@@ -11493,7 +11493,7 @@ const struct iwl_cfg iwl9560_qu_c0_jf_b0_cfg = {
 };
 
 const struct iwl_cfg iwl9560_quz_a0_jf_b0_cfg = {
-    .fwname = "iwlwifi-QuZ-a0-jf-b0-63.ucode",
+    .fwname = "iwlwifi-QuZ-a0-jf-b0-48.ucode",
     .device_family = IWX_DEVICE_FAMILY_22000,
     .tx_with_siso_diversity = 0,
     .uhb_supported = 0,
@@ -11507,7 +11507,7 @@ const struct iwl_cfg iwl9560_quz_a0_jf_b0_cfg = {
 };
 
 const struct iwl_cfg iwl9560_qnj_b0_jf_b0_cfg = {
-    .fwname = "iwlwifi-QuQnj-b0-jf-b0-63.ucode",
+    .fwname = "iwlwifi-QuQnj-b0-jf-b0-48.ucode",
     .device_family = IWX_DEVICE_FAMILY_22000,
     .tx_with_siso_diversity = 0,
     .uhb_supported = 0,
@@ -11521,7 +11521,7 @@ const struct iwl_cfg iwl9560_qnj_b0_jf_b0_cfg = {
 };
 
 const struct iwl_cfg iwl_qu_b0_hr1_b0 = {
-    .fwname = "iwlwifi-Qu-b0-hr-b0-63.ucode",
+    .fwname = "iwlwifi-Qu-b0-hr-b0-48.ucode",
     .device_family = IWX_DEVICE_FAMILY_22000,
     .tx_with_siso_diversity = 1,
     .uhb_supported = 0,
@@ -11535,7 +11535,7 @@ const struct iwl_cfg iwl_qu_b0_hr1_b0 = {
 };
 
 const struct iwl_cfg iwl_qu_b0_hr_b0 = {
-    .fwname = "iwlwifi-Qu-b0-hr-b0-63.ucode",
+    .fwname = "iwlwifi-Qu-b0-hr-b0-48.ucode",
     .device_family = IWX_DEVICE_FAMILY_22000,
     .uhb_supported = 0,
     /*
@@ -11548,7 +11548,7 @@ const struct iwl_cfg iwl_qu_b0_hr_b0 = {
 };
 
 const struct iwl_cfg iwl_qu_c0_hr_b0 = {
-    .fwname = "iwlwifi-Qu-b0-hr-b0-63.ucode",
+    .fwname = "iwlwifi-Qu-b0-hr-b0-48.ucode",
     .device_family = IWX_DEVICE_FAMILY_22000,
     .uhb_supported = 0,
     /*
@@ -11561,7 +11561,7 @@ const struct iwl_cfg iwl_qu_c0_hr_b0 = {
 };
 
 const struct iwl_cfg iwl_qu_c0_hr1_b0 = {
-    .fwname = "iwlwifi-Qu-c0-hr-b0-63.ucode",
+    .fwname = "iwlwifi-Qu-c0-hr-b0-48.ucode",
     .device_family = IWX_DEVICE_FAMILY_22000,
     .tx_with_siso_diversity = 1,
     .uhb_supported = 0,
@@ -11575,7 +11575,7 @@ const struct iwl_cfg iwl_qu_c0_hr1_b0 = {
 };
 
 const struct iwl_cfg iwl_quz_a0_hr1_b0 = {
-    .fwname = "iwlwifi-QuZ-a0-hr-b0-63.ucode",
+    .fwname = "iwlwifi-QuZ-a0-hr-b0-48.ucode",
     .device_family = IWX_DEVICE_FAMILY_22000,
     .tx_with_siso_diversity = 1,
     .uhb_supported = 0,
@@ -11590,7 +11590,7 @@ const struct iwl_cfg iwl_quz_a0_hr1_b0 = {
 
 const struct iwl_cfg iwl_ax201_cfg_qu_c0_hr_b0 = {
     .name = "Intel(R) Wi-Fi 6 AX201 160MHz",
-    .fwname = "iwlwifi-Qu-c0-hr-b0-63.ucode",
+    .fwname = "iwlwifi-Qu-c0-hr-b0-48.ucode",
     .device_family = IWX_DEVICE_FAMILY_22000,
     .tx_with_siso_diversity = 0,
     .uhb_supported = 0,
@@ -11605,7 +11605,7 @@ const struct iwl_cfg iwl_ax201_cfg_qu_c0_hr_b0 = {
 
 const struct iwl_cfg killer1650s_2ax_cfg_qu_c0_hr_b0 = {
     .name = "Killer(R) Wi-Fi 6 AX1650i 160MHz Wireless Network Adapter (201NGW)",
-    .fwname = "iwlwifi-Qu-c0-hr-b0-63.ucode",
+    .fwname = "iwlwifi-Qu-c0-hr-b0-48.ucode",
     .device_family = IWX_DEVICE_FAMILY_22000,
     .tx_with_siso_diversity = 0,
     .uhb_supported = 0,
@@ -11620,7 +11620,7 @@ const struct iwl_cfg killer1650s_2ax_cfg_qu_c0_hr_b0 = {
 
 const struct iwl_cfg killer1650i_2ax_cfg_qu_c0_hr_b0 = {
     .name = "Killer(R) Wi-Fi 6 AX1650s 160MHz Wireless Network Adapter (201D2W)",
-    .fwname = "iwlwifi-Qu-c0-hr-b0-63.ucode",
+    .fwname = "iwlwifi-Qu-c0-hr-b0-48.ucode",
     .device_family = IWX_DEVICE_FAMILY_22000,
     .tx_with_siso_diversity = 0,
     .uhb_supported = 0,
