@@ -6880,7 +6880,7 @@ struct iwx_scan_probe_params_v3 {
     uint8_t reserved;
     struct iwx_ssid_ie direct_scan[IWX_PROBE_OPTION_MAX];
     uint32_t short_ssid[IWX_SCAN_SHORT_SSID_MAX_SIZE];
-    uint8_t bssid_array[ETHER_ADDR_LEN][IWX_SCAN_BSSID_MAX_SIZE];
+    uint8_t bssid_array[IWX_SCAN_BSSID_MAX_SIZE][ETHER_ADDR_LEN];
 } __packed; /* SCAN_PROBE_PARAMS_API_S_VER_3 */
 
 /**
@@ -6900,7 +6900,7 @@ struct iwx_scan_probe_params_v4 {
     uint16_t reserved;
     struct iwx_ssid_ie direct_scan[IWX_PROBE_OPTION_MAX];
     uint32_t short_ssid[IWX_SCAN_SHORT_SSID_MAX_SIZE];
-    u8 bssid_array[ETHER_ADDR_LEN][IWX_SCAN_BSSID_MAX_SIZE];
+    u8 bssid_array[IWX_SCAN_BSSID_MAX_SIZE][ETHER_ADDR_LEN];
 } __packed; /* SCAN_PROBE_PARAMS_API_S_VER_4 */
 
 #define IWX_SCAN_MAX_NUM_CHANS_V3 67
