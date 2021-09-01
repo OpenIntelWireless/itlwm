@@ -665,7 +665,7 @@ iwx_ctxt_info_free_paging(struct iwx_softc *sc)
     
     /* free paging*/
     for (i = 0; i < dram->paging_cnt; i++)
-        iwx_dma_contig_free(dram->paging);
+        iwx_dma_contig_free(&dram->paging[i]);
     
     IOFree(dram->paging, dram->paging_cnt * sizeof(*dram->paging));
     dram->paging_cnt = 0;
