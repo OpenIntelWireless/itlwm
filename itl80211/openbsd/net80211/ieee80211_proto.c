@@ -675,6 +675,9 @@ ieee80211_vht_negotiate(struct ieee80211com *ic, struct ieee80211_node *ni)
     if ((ic->ic_flags & IEEE80211_F_VHTON) == 0)
         return;
     
+    if (!IEEE80211_IS_CHAN_5GHZ(ni->ni_chan))
+        return;
+    
     if (!ieee80211_node_supports_vht(ni)) {
         ic->ic_stats.is_vht_nego_no_mandatory_mcs++;
         return;

@@ -555,8 +555,7 @@ ieee80211_node_supports_ht(struct ieee80211_node *ni)
 static inline int
 ieee80211_node_supports_vht(struct ieee80211_node *ni)
 {
-    return ((ni->ni_flags & IEEE80211_NODE_VHTCAP) &&
-        ni->ni_vht_mcsinfo.rx_mcs_map & 0xff);
+    return ((ni->ni_flags & IEEE80211_NODE_VHTCAP));
 }
 
 /* Check if the peer supports HT short guard interval (SGI) on 20 MHz. */
