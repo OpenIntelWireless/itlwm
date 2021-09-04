@@ -4852,7 +4852,8 @@ iwm_attach(struct iwm_softc *sc, struct pci_attach_args *pa)
     IEEE80211_C_SCANALLBAND |    /* device scans all bands at once */
     IEEE80211_C_MONITOR |    /* monitor mode supported */
     IEEE80211_C_SHSLOT |    /* short slot time supported */
-    IEEE80211_C_SHPREAMBLE;    /* short preamble supported */
+    IEEE80211_C_SHPREAMBLE |    /* short preamble supported */
+    IEEE80211_C_MFP;    /* management frame protection 11w supported */
     
     ic->ic_htcaps = IEEE80211_HTCAP_SGI20;
     ic->ic_htcaps |=
