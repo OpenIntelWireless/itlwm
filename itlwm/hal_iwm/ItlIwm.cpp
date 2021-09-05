@@ -25,6 +25,7 @@ detach(IOPCIDevice *device)
     
     for (int txq_i = 0; txq_i < nitems(sc->txq); txq_i++)
         iwm_free_tx_ring(sc, &sc->txq[txq_i]);
+    iwm_rs_free(sc);
     iwm_free_rx_ring(sc, &sc->rxq);
     iwm_dma_contig_free(&sc->ict_dma);
     iwm_dma_contig_free(&sc->kw_dma);
