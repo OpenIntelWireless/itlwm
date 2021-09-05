@@ -933,6 +933,7 @@ enum iwm_msix_ivar_for_cause {
 #define IWM_UCODE_TLV_CAPA_BINDING_CDB_SUPPORT        39
 #define IWM_UCODE_TLV_CAPA_CDB_SUPPORT            40
 #define IWM_UCODE_TLV_CAPA_DYNAMIC_QUOTA                44
+#define IWM_UCODE_TLV_CAPA_COEX_SCHEMA_2            45
 #define IWM_UCODE_TLV_CAPA_ULTRA_HB_CHANNELS        48
 #define IWM_UCODE_TLV_CAPA_EXTENDED_DTS_MEASURE        64
 #define IWM_UCODE_TLV_CAPA_SHORT_PM_TIMEOUTS        65
@@ -4719,11 +4720,11 @@ enum {
  *    2 - 0x3f: maximal number of frames (up to 3f == 63)
  * @rs_table: array of rates for each TX try, each is rate_n_flags,
  *    meaning it is a combination of IWM_RATE_MCS_* and IWM_RATE_*_PLCP
- * @bf_params: beam forming params, currently not used
+ * @ss_params: single stream features. declare whether STBC or BFER are allowed.
  */
 struct iwm_lq_cmd {
     uint8_t sta_id;
-    uint8_t reserved1;
+    uint8_t reduced_tpc;
     uint16_t control;
     /* LINK_QUAL_GENERAL_PARAMS_API_S_VER_1 */
     uint8_t flags;
@@ -4737,7 +4738,7 @@ struct iwm_lq_cmd {
     uint8_t agg_frame_cnt_limit;
     uint32_t reserved2;
     uint32_t rs_table[IWM_LQ_MAX_RETRY_NUM];
-    uint32_t bf_params;
+    uint32_t ss_params;
 }; /* LINK_QUALITY_CMD_API_S_VER_1 */
 
 /**
@@ -5137,7 +5138,8 @@ struct iwm_tx_resp {
     uint8_t pa_integ_res_b[3];
     uint8_t pa_integ_res_c[3];
     uint16_t measurement_req_id;
-    uint16_t reserved;
+    uint8_t reduced_tpc;
+    uint8_t reserved;
 
     uint32_t tfd_info;
     uint16_t seq_ctl;
@@ -5145,8 +5147,7 @@ struct iwm_tx_resp {
     uint8_t tlc_info;
     uint8_t ra_tid;
     uint16_t frame_ctrl;
-
-    struct iwm_agg_tx_status status;
+    struct iwm_agg_tx_status status[];
 } __packed; /* IWM_TX_RSP_API_S_VER_3 */
 
 /**

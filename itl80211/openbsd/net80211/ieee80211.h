@@ -356,24 +356,35 @@ ieee80211_get_qos(const struct ieee80211_frame *wh)
 }
 
 static __inline int
-ieee80211_is_ctl(const struct ieee80211_frame *wh)
+ieee80211_is_ctl(uint16_t fc)
 {
-    return (wh->i_fc[0] & IEEE80211_FC0_TYPE_MASK) ==
-           IEEE80211_FC0_TYPE_CTL;
+    return (fc & htole16(IEEE80211_FC0_TYPE_MASK)) ==
+            htole16(IEEE80211_FC0_TYPE_CTL);
 }
 
 static __inline int
-ieee80211_is_data(const struct ieee80211_frame *wh)
+ieee80211_is_data(uint16_t fc)
 {
-    return (wh->i_fc[0] & IEEE80211_FC0_TYPE_MASK) ==
-           IEEE80211_FC0_TYPE_DATA;
+    return (fc & htole16(IEEE80211_FC0_TYPE_MASK)) ==
+            htole16(IEEE80211_FC0_TYPE_DATA);
 }
 
 static __inline int
-ieee80211_is_mgmt(const struct ieee80211_frame *wh)
+ieee80211_is_mgmt(uint16_t fc)
 {
-    return (wh->i_fc[0] & IEEE80211_FC0_TYPE_MASK) ==
-           IEEE80211_FC0_TYPE_MGT;
+    return (fc & htole16(IEEE80211_FC0_TYPE_MASK)) ==
+           htole16(IEEE80211_FC0_TYPE_MGT);
+}
+
+static __inline int
+ieee80211_is_data_qos(uint16_t fc)
+{
+    /*
+     * mask with QOS_DATA rather than IEEE80211_FCTL_STYPE as we just need
+     * to check the one bit
+     */
+    return (fc & htole16(IEEE80211_FC0_TYPE_MASK | IEEE80211_FC0_SUBTYPE_QOS)) ==
+           htole16(IEEE80211_FC0_TYPE_DATA | IEEE80211_FC0_SUBTYPE_QOS);
 }
 
 static __inline int

@@ -44,12 +44,99 @@
 ({                                \
 ((typeof(_mask))(_val) << __bf_shf(_mask)) & (_mask);    \
 })
+
+static inline int
+find_first_zero_bit(volatile void *p, int max)
+{
+    int b;
+    volatile u_int *ptr = (volatile u_int *)p;
+
+    for (b = 0; b < max; b += 32) {
+        if (ptr[b >> 5] != ~0) {
+            for (;;) {
+                if ((ptr[b >> 5] & (1 << (b & 0x1f))) == 0)
+                    return b;
+                b++;
+            }
+        }
+    }
+    return max;
+}
+
+static inline int
+find_next_zero_bit(volatile void *p, int max, int b)
+{
+    volatile u_int *ptr = (volatile u_int *)p;
+
+    for (; b < max; b += 32) {
+        if (ptr[b >> 5] != ~0) {
+            for (;;) {
+                if ((ptr[b >> 5] & (1 << (b & 0x1f))) == 0)
+                    return b;
+                b++;
+            }
+        }
+    }
+    return max;
+}
+
+static inline int
+find_first_bit(volatile void *p, int max)
+{
+    int b;
+    volatile u_int *ptr = (volatile u_int *)p;
+
+    for (b = 0; b < max; b += 32) {
+        if (ptr[b >> 5] != 0) {
+            for (;;) {
+                if (ptr[b >> 5] & (1 << (b & 0x1f)))
+                    return b;
+                b++;
+            }
+        }
+    }
+    return max;
+}
+
+static inline int
+find_next_bit(volatile void *p, int max, int b)
+{
+    volatile u_int *ptr = (volatile u_int *)p;
+
+    for (; b < max; b+= 32) {
+        if (ptr[b >> 5] != 0) {
+            for (;;) {
+                if (ptr[b >> 5] & (1 << (b & 0x1f)))
+                    return b;
+                b++;
+            }
+        }
+    }
+    return max;
+}
+
+static inline int
+find_last_bit(volatile void *p, int max)
+{
+    int b;
+    volatile u_int *ptr = (volatile u_int *)p;
+
+    for (b = max; b > 0; b -= 32) {
+        if (ptr[b >> 5] != 0) {
+            for (;;) {
+                if (ptr[b >> 5] & (1 << (b & 0x1f)))
+                    return b;
+                b--;
+            }
+        }
+    }
+    return max;
+}
+
 #define for_each_set_bit(bit, addr, size) \
         for ((bit) = find_first_bit((addr), (size));        \
             (bit) < (size);                    \
             (bit) = find_next_bit((addr), (size), (bit) + 1))
-
-#define find_first_bit(addr, size) find_next_bit((addr), (size), 0)
 
 #define GENMASK(h, l) \
     (((~(0UL)) - ((1UL) << (l)) + 1) & \
