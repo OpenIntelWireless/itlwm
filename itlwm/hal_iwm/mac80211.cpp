@@ -2948,7 +2948,7 @@ iwm_ampdu_tx_start(struct ieee80211com *ic, struct ieee80211_node *ni, uint8_t t
     ItlIwm *that = container_of(sc, ItlIwm, com);
     int qid = sc->first_agg_txq + tid;
     
-    if ((sc->agg_queue_mask & (1 << qid)) || qid < IWM_FIRST_AGG_TX_QUEUE || qid > IWM_LAST_AGG_TX_QUEUE) {
+    if (qid < IWM_FIRST_AGG_TX_QUEUE || qid > IWM_LAST_AGG_TX_QUEUE) {
         XYLog("%s tx agg refused. qid=%d tid=%d\n", __FUNCTION__, qid, tid);
         return ENOSPC;
     }
