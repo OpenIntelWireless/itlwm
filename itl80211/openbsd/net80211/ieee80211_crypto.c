@@ -312,10 +312,12 @@ ieee80211_decrypt(struct ieee80211com *ic, mbuf_t m0,
 	/* find key for decryption */
     k = ieee80211_get_rxkey(ic, m0, ni);
     if (k == NULL || (k->k_flags & IEEE80211_KEY_SWCRYPTO) == 0) {
+        XYLog("%s: BUG! key unset for sw crypto. k_id: %d k_cipher: %d k_flags: %d\n",
+              __FUNCTION__, k ? k->k_id : -1, k ? k->k_cipher : -1, k ? k->k_flags : -1);
         mbuf_freem(m0);
         return NULL;
     }
-
+    
     switch (k->k_cipher) {
     case IEEE80211_CIPHER_WEP40:
     case IEEE80211_CIPHER_WEP104:
