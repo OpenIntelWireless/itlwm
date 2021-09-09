@@ -278,6 +278,7 @@ iwm_prepare_card_hw(struct iwm_softc *sc)
 {
     XYLog("%s\n", __FUNCTION__);
     int t = 0;
+    int ntries;
     
     if (iwm_set_hw_ready(sc))
         return 0;
@@ -286,17 +287,18 @@ iwm_prepare_card_hw(struct iwm_softc *sc)
                 IWM_CSR_RESET_LINK_PWR_MGMT_DISABLED);
     DELAY(1000);
     
-    
-    /* If HW is not ready, prepare the conditions to check again */
-    IWM_SETBITS(sc, IWM_CSR_HW_IF_CONFIG_REG,
-                IWM_CSR_HW_IF_CONFIG_REG_PREPARE);
-    
-    do {
-        if (iwm_set_hw_ready(sc))
-            return 0;
-        DELAY(200);
-        t += 200;
-    } while (t < 150000);
+    for (ntries = 0; ntries < 10; ntries++) {
+        /* If HW is not ready, prepare the conditions to check again */
+        IWM_SETBITS(sc, IWM_CSR_HW_IF_CONFIG_REG,
+                    IWM_CSR_HW_IF_CONFIG_REG_PREPARE);
+        do {
+            if (iwm_set_hw_ready(sc))
+                return 0;
+            DELAY(200);
+            t += 200;
+        } while (t < 150000);
+        DELAY(25000);
+    }
     
     return ETIMEDOUT;
 }
