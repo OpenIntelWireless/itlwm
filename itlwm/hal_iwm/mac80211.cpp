@@ -5116,13 +5116,19 @@ iwm_resume(struct iwm_softc *sc)
     reg = pci_conf_read(sc->sc_pct, sc->sc_pcitag, 0x40);
     pci_conf_write(sc->sc_pct, sc->sc_pcitag, 0x40, reg & ~0xff00);
     
-    /* reconfigure the MSI-X mapping to get the correct IRQ for rfkill */
-    iwm_conf_msix_hw(sc, 0);
+    if (!sc->sc_msix) {
+        /* Hardware bug workaround. */
+        reg = pci_conf_read(sc->sc_pct, sc->sc_pcitag,
+                            PCI_COMMAND_STATUS_REG);
+        if (reg & PCI_COMMAND_INTERRUPT_DISABLE)
+            reg &= ~PCI_COMMAND_INTERRUPT_DISABLE;
+        pci_conf_write(sc->sc_pct, sc->sc_pcitag,
+                       PCI_COMMAND_STATUS_REG, reg);
+    }
     
-    iwm_enable_rfkill_int(sc);
-    iwm_check_rfkill(sc);
+    iwm_disable_interrupts(sc);
     
-    return iwm_prepare_card_hw(sc);
+    return iwm_start_hw(sc);
 }
 
 void ItlIwm::
