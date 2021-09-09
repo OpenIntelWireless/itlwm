@@ -1153,20 +1153,16 @@ iwx_clear_persistence_bit(struct iwx_softc *sc)
         return;
     
     wprot = IWX_PREG_PRPH_WPROT_22000;
-    if (iwx_nic_lock(sc)) {
-        hpm = iwx_read_umac_prph(sc, IWX_HPM_DEBUG);
-        if (hpm != 0xa5a5a5a0 && (hpm & IWX_PERSISTENCE_BIT)) {
-            uint32_t wprot_val = iwx_read_umac_prph(sc, wprot);
-            
-            if (wprot_val & IWX_PREG_WFPM_ACCESS) {
-                XYLog("Error, can not clear persistence bit\n");
-                iwx_nic_unlock(sc);
-                return;
-            }
-            iwx_write_umac_prph(sc, IWX_HPM_DEBUG,
-                                hpm & ~IWX_PERSISTENCE_BIT);
+    hpm = iwx_read_prph_unlocked(sc, IWX_HPM_DEBUG);
+    if (hpm != 0xa5a5a5a0 && (hpm & IWX_PERSISTENCE_BIT)) {
+        uint32_t wprot_val = iwx_read_prph_unlocked(sc, wprot);
+        
+        if (wprot_val & IWX_PREG_WFPM_ACCESS) {
+            XYLog("Error, can not clear persistence bit\n");
+            return;
         }
-        iwx_nic_unlock(sc);
+        iwx_write_prph_unlocked(sc, IWX_HPM_DEBUG,
+                                hpm & ~IWX_PERSISTENCE_BIT);
     }
 }
 
