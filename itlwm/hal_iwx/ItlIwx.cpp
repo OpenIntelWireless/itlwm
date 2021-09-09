@@ -1007,8 +1007,10 @@ iwx_ctxt_info_init(struct iwx_softc *sc, const struct iwx_fw_sects *fws)
     iwx_set_ltr(sc);
     
     /* kick FW self load */
-    if (!iwx_nic_lock(sc))
+    if (!iwx_nic_lock(sc)) {
+        iwx_ctxt_info_free_fw_img(sc);
         return EBUSY;
+    }
     iwx_write_prph(sc, IWX_UREG_CPU_INIT_RUN, 1);
     iwx_nic_unlock(sc);
     
@@ -4523,6 +4525,7 @@ iwx_load_firmware(struct iwx_softc *sc)
                                      UREG_LMAC1_CURRENT_PC));
             iwx_nic_unlock(sc);
         }
+        iwx_ctxt_info_free_paging(sc);
         XYLog("%s: could not load firmware\n", DEVNAME(sc));
     }
     
