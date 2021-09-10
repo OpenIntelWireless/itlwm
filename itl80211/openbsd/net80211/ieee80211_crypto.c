@@ -317,7 +317,7 @@ ieee80211_decrypt(struct ieee80211com *ic, mbuf_t m0,
         mbuf_freem(m0);
         return NULL;
     }
-    
+
     switch (k->k_cipher) {
     case IEEE80211_CIPHER_WEP40:
     case IEEE80211_CIPHER_WEP104:
@@ -386,7 +386,7 @@ ieee80211_kdf(const u_int8_t *key, size_t key_len, const u_int8_t *label,
         HMAC_SHA256_Init(&ctx, key, key_len);
         iter = htole16(i);
         HMAC_SHA256_Update(&ctx, (u_int8_t *)&iter, sizeof iter);
-        HMAC_SHA256_Update(&ctx, label, label_len);
+        HMAC_SHA256_Update(&ctx, label, strlen((const char*)label));
         HMAC_SHA256_Update(&ctx, context, context_len);
         HMAC_SHA256_Update(&ctx, (u_int8_t *)&length, sizeof length);
         if (len < SHA256_DIGEST_LENGTH) {
@@ -426,7 +426,7 @@ ieee80211_derive_ptk(enum ieee80211_akm akm, const u_int8_t *pmk,
 
     kdf = ieee80211_is_sha256_akm(akm) ? ieee80211_kdf : ieee80211_prf;
     (*kdf)(pmk, IEEE80211_PMK_LEN, (const u_int8_t *)"Pairwise key expansion", 23,
-        buf, sizeof buf, (u_int8_t *)ptk, sizeof(*ptk));
+           buf, sizeof buf, (u_int8_t *)ptk, kdf ? 48 : sizeof(*ptk));
 }
 
 static void
