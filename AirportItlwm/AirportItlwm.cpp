@@ -351,7 +351,8 @@ void AirportItlwm::setIGTK(const u_int8_t *igtk, size_t key_len, u_int8_t kid, u
         }
         
         /* use MFP if we both support it */
-        if (ic->ic_caps & IEEE80211_C_MFP) {
+        if ((ic->ic_caps & IEEE80211_C_MFP) &&
+            (ni->ni_rsncaps & IEEE80211_RSNCAP_MFPC)) {
             ni->ni_flags |= IEEE80211_NODE_MFP;
             ni->ni_flags |= IEEE80211_NODE_TXMGMTPROT;
             ni->ni_flags |= IEEE80211_NODE_RXMGMTPROT;

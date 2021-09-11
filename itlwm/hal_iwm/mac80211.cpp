@@ -1736,7 +1736,6 @@ iwm_tx(struct iwm_softc *sc, mbuf_t m, struct ieee80211_node *ni, int ac)
         if ((k->k_flags & IEEE80211_KEY_GROUP) ||
             (k->k_flags & IEEE80211_KEY_IGTK) ||
             (k->k_cipher != IEEE80211_CIPHER_CCMP)) {
-            XYLog("%s %d k_flags=%d k_cipher=%d\n", __FUNCTION__, __LINE__, k->k_flags, k->k_cipher);
             if ((m = ieee80211_encrypt(ic, m, k)) == NULL)
                 return ENOBUFS;
             /* 802.11 header may have moved. */
@@ -2610,7 +2609,7 @@ iwm_set_key(struct ieee80211com *ic, struct ieee80211_node *ni,
         /* Fallback to software crypto for other ciphers. */
         return (ieee80211_set_key(ic, ni, k));
     }
-
+    
     if (!isset(sc->sc_ucode_api, IWM_UCODE_TLV_API_TKIP_MIC_KEYS))
         return that->iwm_set_key_v1(ic, ni, k);
     

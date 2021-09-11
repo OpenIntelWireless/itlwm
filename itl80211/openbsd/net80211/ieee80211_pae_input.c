@@ -965,6 +965,9 @@ ieee80211_recv_rsn_group_msg1(struct ieee80211com *ic,
                     reason = IEEE80211_REASON_AUTH_LEAVE;
                     goto deauth;
             }
+            ni->ni_flags |= IEEE80211_NODE_TXMGMTPROT;
+            ni->ni_flags |= IEEE80211_NODE_RXMGMTPROT;
+            ic->ic_igtk_kid = kid;
         }
     }
     if (info & EAPOL_KEY_SECURE) {
