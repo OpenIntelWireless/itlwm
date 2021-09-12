@@ -79,6 +79,11 @@ struct ioctl_nw_id {
     char nwid[NWID_LEN];
 };
 
+struct ioctl_nw_bssid {
+    unsigned int version;
+    char bssid[ETHER_ADDR_LEN];
+};
+
 struct ioctl_wpa_key {
     unsigned int version;
     unsigned int len;

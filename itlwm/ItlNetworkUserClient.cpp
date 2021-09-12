@@ -31,6 +31,7 @@ const IOControlMethodAction ItlNetworkUserClient::sMethods[IOCTL_ID_MAX] {
     sSCAN,
     sSCAN_RESULT,
     sTX_POWER_LEVEL,
+    sNW_BSSID,
 };
 
 bool ItlNetworkUserClient::initWithTask(task_t owningTask, void *securityID, UInt32 type, OSDictionary *properties)
@@ -232,8 +233,85 @@ sSTATE(OSObject* target, void* data, bool isSet)
 }
 
 IOReturn ItlNetworkUserClient::
+sNW_BSSID(OSObject* target, void* data, bool isSet)
+{
+    ItlNetworkUserClient *that = OSDynamicCast(ItlNetworkUserClient, target);
+    struct ioctl_nw_bssid *nwid = (struct ioctl_nw_bssid *)data;
+    struct ieee80211com *ic = that->fDriver->fHalService->get80211Controller();
+    
+    if (isSet) {
+        if (IEEE80211_ADDR_EQ(nwid->bssid, etheranyaddr))
+            ic->ic_flags &= ~IEEE80211_F_DESBSSID;
+        else {
+            ic->ic_flags |= IEEE80211_F_DESBSSID;
+            IEEE80211_ADDR_COPY(ic->ic_des_bssid, nwid->bssid);
+        }
+        return kIOReturnSuccess;
+    }
+    memset(nwid, 0, sizeof(*nwid));
+    nwid->version = IOCTL_VERSION;
+    switch (ic->ic_state) {
+        case IEEE80211_S_INIT:
+        case IEEE80211_S_SCAN:
+#ifndef IEEE80211_STA_ONLY
+            if (ic->ic_opmode == IEEE80211_M_HOSTAP)
+                IEEE80211_ADDR_COPY(nwid->bssid,
+                                    ic->ic_myaddr);
+            else
+#endif
+                if (ic->ic_flags & IEEE80211_F_DESBSSID)
+                    IEEE80211_ADDR_COPY(nwid->bssid,
+                                        ic->ic_des_bssid);
+                else
+                    memset(nwid->bssid, 0, IEEE80211_ADDR_LEN);
+            break;
+        default:
+            IEEE80211_ADDR_COPY(nwid->bssid,
+                                ic->ic_bss->ni_bssid);
+            break;
+    }
+    return kIOReturnSuccess;
+}
+
+IOReturn ItlNetworkUserClient::
 sNW_ID(OSObject* target, void* data, bool isSet)
 {
+    ItlNetworkUserClient *that = OSDynamicCast(ItlNetworkUserClient, target);
+    struct ioctl_nw_id *nwid = (struct ioctl_nw_id *)data;
+    struct ieee80211com *ic = that->fDriver->fHalService->get80211Controller();
+    
+    if (isSet) {
+        if (nwid->len > IEEE80211_NWID_LEN) {
+            return kIOReturnError;
+        }
+        memset(ic->ic_des_essid, 0, IEEE80211_NWID_LEN);
+        ic->ic_des_esslen = nwid->len;
+        memcpy(ic->ic_des_essid, nwid->nwid, nwid->len);
+        if (ic->ic_des_esslen > 0) {
+            /* 'nwid' disables auto-join magic */
+            ic->ic_flags &= ~IEEE80211_F_AUTO_JOIN;
+        } else if (!TAILQ_EMPTY(&ic->ic_ess)) {
+            /* '-nwid' re-enables auto-join */
+            ic->ic_flags |= IEEE80211_F_AUTO_JOIN;
+        }
+        /* disable WPA/WEP */
+        ieee80211_disable_rsn(ic);
+        ieee80211_disable_wep(ic);
+        return kIOReturnSuccess;
+    }
+    memset(nwid, 0, sizeof(*nwid));
+    nwid->version = IOCTL_VERSION;
+    switch (ic->ic_state) {
+    case IEEE80211_S_INIT:
+    case IEEE80211_S_SCAN:
+        nwid->len = ic->ic_des_esslen;
+        memcpy(nwid->nwid, ic->ic_des_essid, nwid->len);
+        break;
+    default:
+        nwid->len = ic->ic_bss->ni_esslen;
+        memcpy(nwid->nwid, ic->ic_bss->ni_essid, nwid->len);
+        break;
+    }
     return kIOReturnSuccess;
 }
 
