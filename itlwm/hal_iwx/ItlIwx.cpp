@@ -6898,9 +6898,6 @@ iwx_add_sta_cmd(struct iwx_softc *sc, struct iwx_node *in, int update)
     add_sta_cmd.station_flags_msk
     |= htole32(IWX_STA_FLG_FAT_EN_MSK | IWX_STA_FLG_MIMO_EN_MSK);
     add_sta_cmd.tid_disable_tx = htole16(0xffff);
-
-    if (ic->ic_state >= IEEE80211_S_ASSOC && ic->ic_bss)
-        add_sta_cmd.assoc_id = htole32(ic->ic_bss->ni_associd);
         
     if (in->in_ni.ni_flags & IEEE80211_NODE_HT || in->in_ni.ni_flags & IEEE80211_NODE_VHT) {
         XYLog("%s line=%d\n", __FUNCTION__, __LINE__);

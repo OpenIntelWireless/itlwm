@@ -315,9 +315,6 @@ iwm_add_sta_cmd(struct iwm_softc *sc, struct iwm_node *in, int update, unsigned 
     if (update)
         add_sta_cmd.modify_mask |= (IWM_STA_MODIFY_TID_DISABLE_TX);
     
-    if (ic->ic_state >= IEEE80211_S_ASSOC)
-        add_sta_cmd.assoc_id = htole16(in->in_ni.ni_associd);
-    
     if (in->in_ni.ni_flags & IEEE80211_NODE_HT) {
         XYLog("%s line=%d\n", __FUNCTION__, __LINE__);
         add_sta_cmd.station_flags_msk
