@@ -411,6 +411,7 @@ public:
     int    iwx_scan_abort(struct iwx_softc *);
     int    iwx_rs_rval2idx(uint8_t);
     uint16_t iwx_rs_ht_rates(struct iwx_softc *, struct ieee80211_node *, int);
+    uint16_t iwx_rs_fw_get_config_flags(struct iwx_softc *sc);
     int    iwx_rs_init(struct iwx_softc *, struct iwx_node *, bool update);
     void iwx_rs_update(struct iwx_softc *sc, struct iwx_tlc_update_notif *notif);
     int    iwx_enable_data_tx_queues(struct iwx_softc *);

@@ -434,6 +434,13 @@ iwm_reorder_timer_expired(void *arg)
     splx(s);
 }
 
+static inline uint8_t iwm_num_of_ant(uint8_t mask)
+{
+    return  !!((mask) & IWM_ANT_A) +
+        !!((mask) & IWM_ANT_B) +
+        !!((mask) & IWM_ANT_C);
+}
+
 void ItlIwm::
 iwm_setup_vht_rates(struct iwm_softc *sc)
 {
@@ -444,8 +451,8 @@ iwm_setup_vht_rates(struct iwm_softc *sc)
     /* enable 11ac support */
     ic->ic_flags |= IEEE80211_F_VHTON;
     
-    rx_ant = iwm_fw_valid_rx_ant(sc);
-    tx_ant = iwm_fw_valid_tx_ant(sc);
+    rx_ant = iwm_num_of_ant(iwm_fw_valid_rx_ant(sc));
+    tx_ant = iwm_num_of_ant(iwm_fw_valid_tx_ant(sc));
     
     ic->ic_vhtcaps = IEEE80211_VHTCAP_SHORT_GI_80 |
     IEEE80211_VHTCAP_RXSTBC_1 |

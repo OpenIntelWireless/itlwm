@@ -3865,6 +3865,13 @@ iwx_reorder_timer_expired(void *arg)
     splx(s);
 }
 
+static inline uint8_t iwx_num_of_ant(uint8_t mask)
+{
+    return  !!((mask) & IWX_ANT_A) +
+        !!((mask) & IWX_ANT_B) +
+        !!((mask) & IWX_ANT_C);
+}
+
 void ItlIwx::
 iwx_setup_vht_rates(struct iwx_softc *sc)
 {
@@ -3875,8 +3882,8 @@ iwx_setup_vht_rates(struct iwx_softc *sc)
     /* enable 11ac support */
     ic->ic_flags |= IEEE80211_F_VHTON;
     
-    rx_ant = iwx_fw_valid_rx_ant(sc);
-    tx_ant = iwx_fw_valid_tx_ant(sc);
+    rx_ant = iwx_num_of_ant(iwx_fw_valid_rx_ant(sc));
+    tx_ant = iwx_num_of_ant(iwx_fw_valid_tx_ant(sc));
     
     ic->ic_vhtcaps = IEEE80211_VHTCAP_SHORT_GI_80 |
     IEEE80211_VHTCAP_RXSTBC_1 |
@@ -5948,13 +5955,6 @@ iwx_get_ctrl_pos(struct ieee80211com *ic, struct ieee80211_channel *c) {
         return ret;
     }
     return ret;
-}
-
-static inline u8 iwx_num_of_ant(u8 mask)
-{
-    return  !!((mask) & IWX_ANT_A) +
-        !!((mask) & IWX_ANT_B) +
-        !!((mask) & IWX_ANT_C);
 }
 
 int ItlIwx::
@@ -8391,8 +8391,8 @@ static uint16_t iwx_rs_fw_get_max_amsdu_len(struct ieee80211_node *ni)
     return 0;
 }
 
-static 
-uint16_t iwx_rs_fw_get_config_flags(struct iwx_softc *sc)
+uint16_t ItlIwx::
+iwx_rs_fw_get_config_flags(struct iwx_softc *sc)
 {
     struct ieee80211com *ic = &sc->sc_ic;
     struct ieee80211_node *ni = ic->ic_bss;
@@ -8402,14 +8402,16 @@ uint16_t iwx_rs_fw_get_config_flags(struct iwx_softc *sc)
         return flags;
     }
     
-    if (ic->ic_flags & IEEE80211_F_HEON &&
-        ni->ni_he_cap_elem.phy_cap_info[2] &
-        IEEE80211_HE_PHY_CAP2_STBC_RX_UNDER_80MHZ) {
-        flags |= IWX_TLC_MNG_CFG_FLAGS_STBC_MSK;
-    } else if (ni->ni_vhtcaps & IEEE80211_VHTCAP_RXSTBC_MASK)
-        flags |= IWX_TLC_MNG_CFG_FLAGS_STBC_MSK;
-    else if (ni->ni_htcaps & IEEE80211_HTCAP_RXSTBC_MASK)
-        flags |= IWX_TLC_MNG_CFG_FLAGS_STBC_MSK;
+    if (iwx_num_of_ant(iwx_fw_valid_tx_ant(sc)) > 1) {
+        if (ic->ic_flags & IEEE80211_F_HEON &&
+            ni->ni_he_cap_elem.phy_cap_info[2] &
+            IEEE80211_HE_PHY_CAP2_STBC_RX_UNDER_80MHZ) {
+            flags |= IWX_TLC_MNG_CFG_FLAGS_STBC_MSK;
+        } else if (ni->ni_vhtcaps & IEEE80211_VHTCAP_RXSTBC_MASK)
+            flags |= IWX_TLC_MNG_CFG_FLAGS_STBC_MSK;
+        else if (ni->ni_htcaps & IEEE80211_HTCAP_RXSTBC_MASK)
+            flags |= IWX_TLC_MNG_CFG_FLAGS_STBC_MSK;
+    }
     
     if (((ni->ni_htcaps & IEEE80211_HTCAP_LDPC) ||
          ((ic->ic_flags & IEEE80211_F_VHTON) && (ni->ni_vhtcaps & IEEE80211_VHTCAP_RXLDPC))))
