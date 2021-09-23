@@ -343,6 +343,7 @@ createMediumTables(const IONetworkMedium **primary)
 
 bool AirportItlwm::start(IOService *provider)
 {
+    int boot_value = 0;
     if (!super::start(provider)) {
         return false;
     }
