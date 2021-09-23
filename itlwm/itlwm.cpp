@@ -307,6 +307,7 @@ void itlwm::associateSSID(const char *ssid, const char *pwd)
 
 bool itlwm::start(IOService *provider)
 {
+    int boot_value = 0;
     if (!super::start(provider)) {
         return false;
     }
@@ -348,6 +349,12 @@ bool itlwm::start(IOService *provider)
         return false;
     }
     fHalService->initWithController(this, _fWorkloop, _fCommandGate);
+    
+    if (PE_parse_boot_argn("-novht", &boot_value, sizeof(boot_value)))
+        fHalService->get80211Controller()->ic_userflags |= IEEE80211_F_NOVHT;
+    if (PE_parse_boot_argn("-noht40", &boot_value, sizeof(boot_value)))
+        fHalService->get80211Controller()->ic_userflags |= IEEE80211_F_NOHT40;
+    
     if (!fHalService->attach(pciNub)) {
         XYLog("attach fail\n");
         super::stop(pciNub);
