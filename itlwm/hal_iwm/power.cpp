@@ -339,6 +339,8 @@ iwm_add_sta_cmd(struct iwm_softc *sc, struct iwm_node *in, int update, unsigned 
         
         if (iwm_mimo_enabled(sc) && ic->ic_bss->ni_rx_nss > 1)
             add_sta_cmd.station_flags |= htole32(IWM_STA_FLG_MIMO_EN_MIMO2);
+        else
+            add_sta_cmd.station_flags |= htole32(IWM_STA_FLG_MIMO_EN_SISO);
         
         if (in->in_ni.ni_flags & IEEE80211_NODE_VHT) {
             aggsize = in->in_ni.ni_vhtcaps &

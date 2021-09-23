@@ -6923,6 +6923,8 @@ iwx_add_sta_cmd(struct iwx_softc *sc, struct iwx_node *in, int update)
         
         if (iwx_mimo_enabled(sc) && ic->ic_bss->ni_rx_nss > 1)
             add_sta_cmd.station_flags |= htole32(IWX_STA_FLG_MIMO_EN_MIMO2);
+        else
+            add_sta_cmd.station_flags |= htole32(IWX_STA_FLG_MIMO_EN_SISO);
         
         if (in->in_ni.ni_flags & IEEE80211_NODE_HE) {
             agg_size = in->in_ni.ni_vhtcaps &
