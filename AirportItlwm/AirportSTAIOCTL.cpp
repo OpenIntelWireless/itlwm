@@ -664,7 +664,7 @@ getMCS_VHT(OSObject *object, struct apple80211_mcs_vht_data *data)
     }
     memset(data, 0, sizeof(struct apple80211_mcs_vht_data));
     data->version = APPLE80211_VERSION;
-    data->guard_interval = (ieee80211_node_supports_vht_sgi80(ic->ic_bss) || ieee80211_node_supports_vht_sgi160(ic->ic_bss)) ? 400 : 800;
+    data->guard_interval = (ieee80211_node_supports_vht_sgi80(ic->ic_bss) || ieee80211_node_supports_vht_sgi160(ic->ic_bss)) ? APPLE80211_GI_SHORT : APPLE80211_GI_LONG;
     data->index = ic->ic_bss->ni_txmcs;
     data->nss = fHalService->getDriverInfo()->getTxNSS();
     switch (ic->ic_bss->ni_chw) {
@@ -936,7 +936,7 @@ setASSOCIATE(OSObject *object,
         return kIOReturnSuccess;
     }
 
-    if (ad->ad_mode != 1) {
+    if (ad->ad_mode != APPLE80211_AP_MODE_IBSS) {
         disassocIsVoluntary = false;
         auth_type_data.version = APPLE80211_VERSION;
         auth_type_data.authtype_upper = ad->ad_auth_upper;
