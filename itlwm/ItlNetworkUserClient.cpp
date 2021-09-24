@@ -167,8 +167,6 @@ sSTA_INFO(OSObject* target, void* data, bool isSet)
                 index += 12;
                 break;
 
-            case 0:
-            case 20:    
             default:
                 break;
         }

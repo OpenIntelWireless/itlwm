@@ -484,8 +484,6 @@ getRATE(OSObject *object, struct apple80211_rate_data *rd)
                     index += 12;
                     break;
 
-                case IEEE80211_CHAN_WIDTH_20_NOHT:
-                case IEEE80211_CHAN_WIDTH_20:    
                 default:
                     break;
             }
