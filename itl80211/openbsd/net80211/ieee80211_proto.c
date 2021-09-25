@@ -488,12 +488,6 @@ void
 ieee80211_setkeysdone(struct ieee80211com *ic)
 {
 	u_int8_t kid;
-    
-    /*
-     * Discard frames buffered for power-saving which were encrypted with
-     * the old group key. Clients are no longer able to decrypt them.
-     */
-    mq_purge(&ic->ic_bss->ni_savedq);
 
 	/* install GTK */
 	kid = (ic->ic_def_txkey == 1) ? 2 : 1;
