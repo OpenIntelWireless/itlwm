@@ -5710,6 +5710,9 @@ iwx_rx_tx_ba_notif(struct iwx_softc *sc, struct iwx_rx_packet *pkt, struct iwx_r
 
         qid = le16toh(ba_tfd->q_num);
         ring = &sc->txq[qid];
+
+        sc->sc_tx_timer = 0;
+
         iwx_ampdu_txq_advance(sc, ring, IWX_AGG_SSN_TO_TXQ_IDX(le16toh(ba_tfd->tfd_index), ring->ring_count));
         iwx_clear_oactive(sc, ring);
     }

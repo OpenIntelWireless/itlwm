@@ -1128,6 +1128,8 @@ iwm_rx_tx_ba_notif(struct iwm_softc *sc, struct iwm_rx_packet *pkt, struct iwm_r
     if (qid != IWM_FIRST_AGG_TX_QUEUE + ba_notif->tid)
         return;
     
+    sc->sc_tx_timer = 0;
+    
     ba = &ni->ni_tx_ba[ba_notif->tid];
     if (ba->ba_state != IEEE80211_BA_AGREED)
         return;
