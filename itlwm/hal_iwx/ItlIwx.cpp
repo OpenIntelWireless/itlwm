@@ -12438,7 +12438,11 @@ iwx_attach(struct iwx_softc *sc, struct pci_attach_args *pa)
              IWL_SUBDEVICE_CORES(subsystem_device))) {
             sc->sc_cfg = dev_info->cfg;
             if (dev_info->name)
-                XYLog("%s found device: %s index: %d\n", __FUNCTION__, dev_info->name, i);
+                XYLog("Found device: %s fw: %s index: %d:%zu\n", dev_info->name, dev_info->cfg->fwname, i, ARRAY_SIZE(iwl_dev_info_table));
+            else if (dev_info->cfg->name)
+                XYLog("Found device cfg: %s fw: %s index: %d:%zu\n", dev_info->cfg->name, dev_info->cfg->fwname, i, ARRAY_SIZE(iwl_dev_info_table));
+            else
+                XYLog("Found device: No Name fw: %s index: %d:%zu\n", dev_info->cfg->fwname, i, ARRAY_SIZE(iwl_dev_info_table));
         }
     }
     /*
@@ -12497,9 +12501,9 @@ iwx_attach(struct iwx_softc *sc, struct pci_attach_args *pa)
               sc->sc_hw_rev, sc->sc_hw_rf_id);
         return false;
     }
-    XYLog("Found PCI dev %04x/%04x, rev=0x%x, rfid=0x%x\n",
+    XYLog("Found PCI dev %04x/%04x, rev=0x%x, rfid=0x%x fw: %s\n",
           device, subsystem_device,
-          sc->sc_hw_rev, sc->sc_hw_rf_id);
+          sc->sc_hw_rev, sc->sc_hw_rf_id, sc->sc_cfg->fwname);
     sc->sc_fwname = sc->sc_cfg->fwname;
     sc->sc_device_family = sc->sc_cfg->device_family;
     sc->sc_integrated = sc->sc_cfg_params->integrated;
