@@ -448,6 +448,9 @@ iwm_setup_vht_rates(struct iwm_softc *sc)
     uint8_t rx_ant, tx_ant;
     unsigned int max_ampdu_exponent = IEEE80211_VHTCAP_MAX_AMPDU_1024K;
     
+    if (ic->ic_userflags & IEEE80211_F_NOVHT)
+        return;
+    
     /* enable 11ac support */
     ic->ic_flags |= IEEE80211_F_VHTON;
     
