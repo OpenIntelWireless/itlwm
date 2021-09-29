@@ -1695,7 +1695,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "${PROJECT_DIR}/scripts/fw_gen.sh -P ${PROJECT_DIR}/itlwm/firmware/\n";
+			shellScript = "scripts/fw_gen.sh -P \"${PROJECT_DIR}/itlwm/firmware/\"\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 

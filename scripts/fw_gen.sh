@@ -20,5 +20,5 @@ do
     shift
 done
 
-script_file="${PROJECT_DIR}/scripts/"
-python -c 'import sys;sys.path.append("'$script_file'");from zlib_compress_fw import *;process_files("'${target_file}'", "'$fw_files'")'
+script_file="${PROJECT_DIR}/scripts/zlib_compress_fw.py"
+python "${script_file}" "${target_file}" "${fw_files}"
