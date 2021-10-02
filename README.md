@@ -4,7 +4,7 @@
 
 ## Documentation
 
-We highly recommend exploring our documentation before using this Kernel Extension
+We highly recommend exploring our documentation before using this Kernel Extension:
 
 - [Intro](https://OpenIntelWireless.github.io/itlwm)
 - [Compatibility](https://openintelwireless.github.io/itlwm/Compat)
@@ -18,9 +18,9 @@ We highly recommend exploring our documentation before using this Kernel Extensi
 
 Check out our [FAQ Page](https://openintelwireless.github.io/itlwm/FAQ) for more info.
 
-If you have other questions or feedback, feel free to [![Join the chat at https://gitter.im/OpenIntelWireless/itlwm](https://badges.gitter.im/OpenIntelWireless/itlwm.svg)](https://gitter.im/OpenIntelWireless/itlwm?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+If you have other questions or feedback, feel free to [![Join the chat at https://gitter.im/OpenIntelWireless/itlwm](https://badges.gitter.im/OpenIntelWireless/itlwm.svg)](https://gitter.im/OpenIntelWireless/itlwm?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge).
 
-We only accept bug reports in GitHub Issues, before opening an issue, you're recommended to reconfirm it with us on [Gitter](https://gitter.im/OpenIntelWireless/itlwm); once it's confirmed, please use the given issue template and follow our [GitHub Issues Guide Line](/General/Issues.md).
+We only accept bug reports in GitHub Issues, before opening an issue, you're recommended to reconfirm it with us on [Gitter](https://gitter.im/OpenIntelWireless/itlwm); once it's confirmed, please use the provided issue template.
 
 ## Credits
 
@@ -34,7 +34,7 @@ We only accept bug reports in GitHub Issues, before opening an issue, you're rec
 - [OpenBSD](https://openbsd.org) for [net80211, iwn, iwm, and iwx](https://github.com/openbsd/src)
 - [pigworlds](https://github.com/OpenIntelWireless/itlwm/commits?author=pigworlds) for DVM devices support, MIRA bug fixes, and Tx aggregation for MVM Gen 1 devices
 - [rpeshkov](https://github.com/rpeshkov) for [black80211](https://github.com/rpeshkov/black80211)
-- [usr-sse2](https://github.com/zxystd) for implementing the usage of Apple RSN Supplicant and bug fixes
+- [usr-sse2](https://github.com/usr-sse2) for implementing the usage of Apple RSN Supplicant and bug fixes
 - [zxystd](https://github.com/zxystd) for developing [itlwm](https://github.com/OpenIntelWireless/itlwm)
 
 ## Acknowledgements
@@ -43,10 +43,5 @@ We only accept bug reports in GitHub Issues, before opening an issue, you're rec
 - [@Bat.bat](https://github.com/williambj1)
 - [@iStarForever](https://github.com/XStar-Dev)
 - [@stevezhengshiqi](https://github.com/stevezhengshiqi)
-- [@DogAndPot](https://github.com/DogAndPot)
-
-For providing resources and help for system configuration.
-
-- [@Daliansky](https://github.com/Daliansky)
-
-For providing Wi-Fi cards.
+- [@DogAndPot](https://github.com/DogAndPot) for providing resources and help for system configuration
+- [@Daliansky](https://github.com/Daliansky) for providing Wi-Fi cards
