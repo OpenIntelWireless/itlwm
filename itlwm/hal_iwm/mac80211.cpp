@@ -469,7 +469,8 @@ iwm_setup_vht_rates(struct iwm_softc *sc)
     ic->ic_vhtcaps |= IEEE80211_VHTCAP_SUPP_CHAN_WIDTH_160MHZ |
             IEEE80211_VHTCAP_SHORT_GI_160;
     
-    ic->ic_vhtcaps |= IEEE80211_VHTCAP_RXLDPC;
+    if (sc->support_ldpc)
+        ic->ic_vhtcaps |= IEEE80211_VHTCAP_RXLDPC;
     if (!iwm_mimo_enabled(sc)) {
         rx_ant = 1;
         tx_ant = 1;
@@ -4648,6 +4649,7 @@ iwm_attach(struct iwm_softc *sc, struct pci_attach_args *pa)
             sc->sc_fwdmasegsz = IWM_FWDMASEGSZ;
             sc->sc_nvm_max_section_size = 16384;
             sc->nvm_type = IWM_NVM;
+            sc->support_ldpc = 0;
             break;
         case PCI_PRODUCT_INTEL_WL_3165_1:
         case PCI_PRODUCT_INTEL_WL_3165_2:
@@ -4657,6 +4659,7 @@ iwm_attach(struct iwm_softc *sc, struct pci_attach_args *pa)
             sc->sc_fwdmasegsz = IWM_FWDMASEGSZ;
             sc->sc_nvm_max_section_size = 16384;
             sc->nvm_type = IWM_NVM;
+            sc->support_ldpc = 0;
             break;
         case PCI_PRODUCT_INTEL_WL_3168_1:
             sc->sc_fwname = "iwm-3168-29";
@@ -4665,6 +4668,7 @@ iwm_attach(struct iwm_softc *sc, struct pci_attach_args *pa)
             sc->sc_fwdmasegsz = IWM_FWDMASEGSZ;
             sc->sc_nvm_max_section_size = 16384;
             sc->nvm_type = IWM_NVM_SDP;
+            sc->support_ldpc = 0;
             break;
         case PCI_PRODUCT_INTEL_WL_7260_1:
         case PCI_PRODUCT_INTEL_WL_7260_2:
@@ -4674,6 +4678,7 @@ iwm_attach(struct iwm_softc *sc, struct pci_attach_args *pa)
             sc->sc_fwdmasegsz = IWM_FWDMASEGSZ;
             sc->sc_nvm_max_section_size = 16384;
             sc->nvm_type = IWM_NVM;
+            sc->support_ldpc = 0;
             break;
         case PCI_PRODUCT_INTEL_WL_7265_1:
         case PCI_PRODUCT_INTEL_WL_7265_2:
@@ -4683,6 +4688,7 @@ iwm_attach(struct iwm_softc *sc, struct pci_attach_args *pa)
             sc->sc_fwdmasegsz = IWM_FWDMASEGSZ;
             sc->sc_nvm_max_section_size = 16384;
             sc->nvm_type = IWM_NVM;
+            sc->support_ldpc = 1;
             break;
         case PCI_PRODUCT_INTEL_WL_8260_1:
         case PCI_PRODUCT_INTEL_WL_8260_2:
@@ -4692,6 +4698,7 @@ iwm_attach(struct iwm_softc *sc, struct pci_attach_args *pa)
             sc->sc_fwdmasegsz = IWM_FWDMASEGSZ_8000;
             sc->sc_nvm_max_section_size = 32768;
             sc->nvm_type = IWM_NVM_EXT;
+            sc->support_ldpc = 1;
             break;
         case PCI_PRODUCT_INTEL_WL_8265_1:
             sc->sc_fwname = "iwm-8265-34";
@@ -4700,6 +4707,7 @@ iwm_attach(struct iwm_softc *sc, struct pci_attach_args *pa)
             sc->sc_fwdmasegsz = IWM_FWDMASEGSZ_8000;
             sc->sc_nvm_max_section_size = 32768;
             sc->nvm_type = IWM_NVM_EXT;
+            sc->support_ldpc = 1;
             break;
         case PCI_PRODUCT_INTEL_WL_9260_1:
             sc->sc_fwname = "iwm-9260-34";
@@ -4708,6 +4716,7 @@ iwm_attach(struct iwm_softc *sc, struct pci_attach_args *pa)
             sc->sc_fwdmasegsz = IWM_FWDMASEGSZ_8000;
             sc->sc_nvm_max_section_size = 32768;
             sc->sc_mqrx_supported = 1;
+            sc->support_ldpc = 1;
             break;
         case PCI_PRODUCT_INTEL_WL_9560_1:
         case PCI_PRODUCT_INTEL_WL_9560_2:
@@ -4732,6 +4741,7 @@ iwm_attach(struct iwm_softc *sc, struct pci_attach_args *pa)
             sc->sc_nvm_max_section_size = 32768;
             sc->sc_mqrx_supported = 1;
             sc->sc_integrated = 1;
+            sc->support_ldpc = 1;
             break;
         default:
             XYLog("%s: unknown adapter type\n", DEVNAME(sc));

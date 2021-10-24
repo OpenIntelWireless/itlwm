@@ -655,6 +655,7 @@ struct iwm_softc {
 	int host_interrupt_operation_mode;
     int sc_ltr_enabled;
     enum iwm_nvm_type nvm_type;
+    int support_ldpc;
     
     int sc_mqrx_supported;
     int sc_integrated;
