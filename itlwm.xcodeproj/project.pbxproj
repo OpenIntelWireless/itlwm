@@ -322,7 +322,6 @@
 		5088ECC1252884D70068A63D /* libkmod.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 5088ECBC252884870068A63D /* libkmod.a */; };
 		F800DD9B24FBEBF000789320 /* ItlDriverController.hpp in Headers */ = {isa = PBXBuildFile; fileRef = F800DD9A24FBEBF000789320 /* ItlDriverController.hpp */; };
 		F8294FE424FCBF5100239253 /* FwBinary.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5076FA7F24CC71E40011B2BB /* FwBinary.cpp */; };
-		F883EC20266F43F200EA018C /* AirportItlwm-Monterey-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = F883EC1F266F43F200EA018C /* AirportItlwm-Monterey-Info.plist */; };
 		F88CB91424FBE9130060B1A5 /* ItlDriverInfo.hpp in Headers */ = {isa = PBXBuildFile; fileRef = F88CB91324FBE9130060B1A5 /* ItlDriverInfo.hpp */; };
 		F88D2B3D2414E64000BBE700 /* sha1-pbkdf2.c in Sources */ = {isa = PBXBuildFile; fileRef = F88D2B3B2414E64000BBE700 /* sha1-pbkdf2.c */; };
 		F897ECBA266EFF93005EE8F7 /* debug.h in Headers */ = {isa = PBXBuildFile; fileRef = F89B6C2225027609000F77FF /* debug.h */; };
@@ -553,8 +552,6 @@
 		F8D364F824F93AFD0029340B /* ItlHalService.cpp in Sources */ = {isa = PBXBuildFile; fileRef = F8D364F624F93AFD0029340B /* ItlHalService.cpp */; };
 		F8D364FA24F93AFD0029340B /* ItlHalService.hpp in Headers */ = {isa = PBXBuildFile; fileRef = F8D364F724F93AFD0029340B /* ItlHalService.hpp */; };
 		F8D76362244F21BB00DEA040 /* pm.cpp in Sources */ = {isa = PBXBuildFile; fileRef = F8D76361244F21BB00DEA040 /* pm.cpp */; };
-		F8E3806726D533D400568FEB /* iwlwifi-ty-a0-gf-a0.pnvm in Resources */ = {isa = PBXBuildFile; fileRef = F8E3806526D533D400568FEB /* iwlwifi-ty-a0-gf-a0.pnvm */; };
-		F8E3806826D533D400568FEB /* iwlwifi-ty-a0-gf-a0-63.ucode in Resources */ = {isa = PBXBuildFile; fileRef = F8E3806626D533D400568FEB /* iwlwifi-ty-a0-gf-a0-63.ucode */; };
 		F8E49A14249B923500BE6868 /* ItlNetworkUserClient.cpp in Sources */ = {isa = PBXBuildFile; fileRef = F8E49A12249B923500BE6868 /* ItlNetworkUserClient.cpp */; };
 		F8E49A15249B923500BE6868 /* ItlNetworkUserClient.hpp in Headers */ = {isa = PBXBuildFile; fileRef = F8E49A13249B923500BE6868 /* ItlNetworkUserClient.hpp */; };
 		F8ED134424FBB5B70068C831 /* ItlIwx.cpp in Sources */ = {isa = PBXBuildFile; fileRef = F8D6CD642442E8F200D2A454 /* ItlIwx.cpp */; };
@@ -1634,9 +1631,6 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				F8E3806726D533D400568FEB /* iwlwifi-ty-a0-gf-a0.pnvm in Resources */,
-				F883EC20266F43F200EA018C /* AirportItlwm-Monterey-Info.plist in Resources */,
-				F8E3806826D533D400568FEB /* iwlwifi-ty-a0-gf-a0-63.ucode in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
