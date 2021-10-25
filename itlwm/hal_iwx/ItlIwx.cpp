@@ -11184,21 +11184,21 @@ const struct iwl_cfg_trans_params iwl_ax200_trans_cfg = {
 
 const struct iwl_cfg iwlax210_2ax_cfg_so_jf_a0 = {
     .name = "Intel(R) Wireless-AC 9560 160MHz",
-    .fwname = "iwlwifi-so-a0-jf-b0-63.ucode",
+    .fwname = "iwlwifi-so-a0-jf-b0-64.ucode",
     .device_family = IWX_DEVICE_FAMILY_AX210,
     .num_rbds = IWL_NUM_RBDS_NON_HE,
 };
 
 const struct iwl_cfg iwlax210_2ax_cfg_so_hr_a0 = {
     .name = "Intel(R) Wi-Fi 6 AX210 160MHz",
-    .fwname = "iwlwifi-so-a0-hr-b0-63.ucode",
+    .fwname = "iwlwifi-so-a0-hr-b0-64.ucode",
     .device_family = IWX_DEVICE_FAMILY_AX210,
     .num_rbds = IWL_NUM_RBDS_AX210_HE,
 };
 
 const struct iwl_cfg iwlax211_2ax_cfg_so_gf_a0 = {
     .name = "Intel(R) Wi-Fi 6 AX211 160MHz",
-    .fwname = "iwlwifi-so-a0-gf-a0-63.ucode",
+    .fwname = "iwlwifi-so-a0-gf-a0-64.ucode",
     .uhb_supported = 1,
     .device_family = IWX_DEVICE_FAMILY_AX210,
     .num_rbds = IWL_NUM_RBDS_AX210_HE,
@@ -11206,7 +11206,7 @@ const struct iwl_cfg iwlax211_2ax_cfg_so_gf_a0 = {
 
 const struct iwl_cfg iwlax211_2ax_cfg_so_gf_a0_long = {
     .name = "Intel(R) Wi-Fi 6 AX211 160MHz",
-    .fwname = "iwlwifi-so-a0-gf-a0-63.ucode",
+    .fwname = "iwlwifi-so-a0-gf-a0-64.ucode",
     .uhb_supported = 1,
     .device_family = IWX_DEVICE_FAMILY_AX210,
     .trans.xtal_latency = 12000,
@@ -11313,7 +11313,7 @@ const struct iwl_cfg iwl_cfg_snj_a0_mr_a0 = {
 };
 
 const struct iwl_cfg iwl_cfg_so_a0_hr_a0 = {
-    .fwname = "iwlwifi-so-a0-hr-b0-63.ucode",
+    .fwname = "iwlwifi-so-a0-hr-b0-64.ucode",
     .device_family = IWX_DEVICE_FAMILY_AX210,
     .num_rbds = IWL_NUM_RBDS_AX210_HE,
 };
@@ -11472,7 +11472,7 @@ const struct iwl_cfg iwl_qnj_b0_hr_b0_cfg = {
 
 const struct iwl_cfg iwlax210_2ax_cfg_so_jf_b0 = {
     .name = "Intel(R) Wireless-AC 9560 160MHz",
-    .fwname = "iwlwifi-so-a0-jf-b0-63.ucode",
+    .fwname = "iwlwifi-so-a0-jf-b0-64.ucode",
     .device_family = IWX_DEVICE_FAMILY_AX210,
     .num_rbds = IWL_NUM_RBDS_NON_HE,
 };

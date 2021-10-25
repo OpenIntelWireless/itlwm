@@ -727,6 +727,10 @@
 		5088ECBA252884060068A63D /* iwlwifi-firmware-license */ = {isa = PBXFileReference; lastKnownFileType = text; path = "iwlwifi-firmware-license"; sourceTree = "<group>"; };
 		5088ECBC252884870068A63D /* libkmod.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libkmod.a; path = MacKernelSDK/Library/x86_64/libkmod.a; sourceTree = "<group>"; };
 		F800DD9A24FBEBF000789320 /* ItlDriverController.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = ItlDriverController.hpp; sourceTree = "<group>"; };
+		F837C9232724732A00B2C499 /* iwlwifi-so-a0-jf-b0-64.ucode */ = {isa = PBXFileReference; lastKnownFileType = file; path = "iwlwifi-so-a0-jf-b0-64.ucode"; sourceTree = "<group>"; };
+		F837C9252724732B00B2C499 /* iwlwifi-so-a0-gf-a0.pnvm */ = {isa = PBXFileReference; lastKnownFileType = file; path = "iwlwifi-so-a0-gf-a0.pnvm"; sourceTree = "<group>"; };
+		F837C9262724732B00B2C499 /* iwlwifi-so-a0-hr-b0-64.ucode */ = {isa = PBXFileReference; lastKnownFileType = file; path = "iwlwifi-so-a0-hr-b0-64.ucode"; sourceTree = "<group>"; };
+		F837C9272724732B00B2C499 /* iwlwifi-so-a0-gf-a0-64.ucode */ = {isa = PBXFileReference; lastKnownFileType = file; path = "iwlwifi-so-a0-gf-a0-64.ucode"; sourceTree = "<group>"; };
 		F883EC1F266F43F200EA018C /* AirportItlwm-Monterey-Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = "AirportItlwm-Monterey-Info.plist"; sourceTree = "<group>"; };
 		F889443424D670EE001DF7B7 /* iwlwifi-Qu-b0-jf-b0-48.ucode */ = {isa = PBXFileReference; lastKnownFileType = file; path = "iwlwifi-Qu-b0-jf-b0-48.ucode"; sourceTree = "<group>"; };
 		F889443524D670EE001DF7B7 /* iwlwifi-Qu-c0-jf-b0-48.ucode */ = {isa = PBXFileReference; lastKnownFileType = file; path = "iwlwifi-Qu-c0-jf-b0-48.ucode"; sourceTree = "<group>"; };
@@ -1031,6 +1035,10 @@
 				F8A68DD92482241E007EB376 /* iwlwifi-QuZ-a0-hr-b0-48.ucode */,
 				F8E3806626D533D400568FEB /* iwlwifi-ty-a0-gf-a0-63.ucode */,
 				F8E3806526D533D400568FEB /* iwlwifi-ty-a0-gf-a0.pnvm */,
+				F837C9272724732B00B2C499 /* iwlwifi-so-a0-gf-a0-64.ucode */,
+				F837C9252724732B00B2C499 /* iwlwifi-so-a0-gf-a0.pnvm */,
+				F837C9262724732B00B2C499 /* iwlwifi-so-a0-hr-b0-64.ucode */,
+				F837C9232724732A00B2C499 /* iwlwifi-so-a0-jf-b0-64.ucode */,
 				17FD7F3E255E4EB300611406 /* iwn-105 */,
 				17FD7F39255E4EB200611406 /* iwn-135 */,
 				17FD7F3B255E4EB200611406 /* iwn-1000 */,
