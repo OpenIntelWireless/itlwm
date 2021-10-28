@@ -4598,6 +4598,7 @@ struct iwm_lq_cmd {
 #define IWM_TX_CMD_FLG_VHT_NDPA        (1 << 8)
 #define IWM_TX_CMD_FLG_HT_NDPA        (1 << 9)
 #define IWM_TX_CMD_FLG_CSI_FDBK2HOST    (1 << 10)
+#define IWM_TX_CMD_FLG_BT_PRIO_POS      11
 #define IWM_TX_CMD_FLG_BT_DIS        (1 << 12)
 #define IWM_TX_CMD_FLG_SEQ_CTL        (1 << 13)
 #define IWM_TX_CMD_FLG_MORE_FRAG    (1 << 14)

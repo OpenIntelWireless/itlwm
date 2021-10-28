@@ -92,6 +92,10 @@ public:
     uint8_t iwm_umac_scan_fill_channels(struct iwm_softc *sc,
                                         struct iwm_scan_channel_cfg_umac *chan, int n_ssids, int bgscan);
     
+    //coex
+    uint16_t iwm_coex_agg_time_limit(struct iwm_softc *);
+    uint8_t iwm_coex_tx_prio(struct iwm_softc *, struct ieee80211_frame *, uint8_t);
+    
     int    iwm_is_mimo_ht_plcp(uint8_t);
     int    iwm_is_mimo_vht_plcp(uint8_t);
     int    iwm_is_mimo_mcs(int);

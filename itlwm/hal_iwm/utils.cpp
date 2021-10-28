@@ -128,8 +128,11 @@ iwm_send_bt_init_conf(struct iwm_softc *sc)
     XYLog("%s\n", __FUNCTION__);
     struct iwm_bt_coex_cmd bt_cmd;
     
-    bt_cmd.mode = htole32(IWM_BT_COEX_WIFI);
-    bt_cmd.enabled_modules = htole32(IWM_BT_COEX_HIGH_BAND_RET);
+    bt_cmd.mode = htole32(IWM_BT_COEX_NW);
+    bt_cmd.enabled_modules = htole32(IWM_BT_COEX_HIGH_BAND_RET | IWM_BT_COEX_SYNC2SCO_ENABLED);
+    
+    if (isset(sc->sc_enabled_capa, IWM_UCODE_TLV_CAPA_BT_MPLUT_SUPPORT))
+        bt_cmd.enabled_modules |= IWM_BT_COEX_MPLUT_ENABLED;
     
     return iwm_send_cmd_pdu(sc, IWM_BT_CONFIG, 0, sizeof(bt_cmd),
                             &bt_cmd);

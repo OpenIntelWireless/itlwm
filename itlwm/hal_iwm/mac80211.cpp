@@ -1850,7 +1850,7 @@ iwm_tx(struct iwm_softc *sc, mbuf_t m, struct ieee80211_node *ni, int ac)
         tx->sec_ctl = 0;
     }
     
-    flags |= IWM_TX_CMD_FLG_BT_DIS;
+    flags |= (iwm_coex_tx_prio(sc, wh, ac) << IWM_TX_CMD_FLG_BT_PRIO_POS);
     if (!hasqos)
         flags |= IWM_TX_CMD_FLG_SEQ_CTL;
     
@@ -2873,7 +2873,7 @@ iwm_setrates(struct iwm_node *in, int async)
     lqcmd.single_stream_ant_msk = IWM_ANT_A;
     lqcmd.dual_stream_ant_msk = IWM_ANT_AB;
     
-    lqcmd.agg_time_limit = htole16(4000);    /* 4ms */
+    lqcmd.agg_time_limit = htole16(iwm_coex_agg_time_limit(sc));
     lqcmd.agg_disable_start_th = 3;
     lqcmd.agg_frame_cnt_limit = 0x3f;
     

@@ -322,6 +322,13 @@
 		5088ECC1252884D70068A63D /* libkmod.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 5088ECBC252884870068A63D /* libkmod.a */; };
 		F800DD9B24FBEBF000789320 /* ItlDriverController.hpp in Headers */ = {isa = PBXBuildFile; fileRef = F800DD9A24FBEBF000789320 /* ItlDriverController.hpp */; };
 		F8294FE424FCBF5100239253 /* FwBinary.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5076FA7F24CC71E40011B2BB /* FwBinary.cpp */; };
+		F837C91D2724577F00B2C499 /* coex.cpp in Sources */ = {isa = PBXBuildFile; fileRef = F837C91C2724577F00B2C499 /* coex.cpp */; };
+		F837C91E2724577F00B2C499 /* coex.cpp in Sources */ = {isa = PBXBuildFile; fileRef = F837C91C2724577F00B2C499 /* coex.cpp */; };
+		F837C91F2724577F00B2C499 /* coex.cpp in Sources */ = {isa = PBXBuildFile; fileRef = F837C91C2724577F00B2C499 /* coex.cpp */; };
+		F837C9202724577F00B2C499 /* coex.cpp in Sources */ = {isa = PBXBuildFile; fileRef = F837C91C2724577F00B2C499 /* coex.cpp */; };
+		F837C9212724577F00B2C499 /* coex.cpp in Sources */ = {isa = PBXBuildFile; fileRef = F837C91C2724577F00B2C499 /* coex.cpp */; };
+		F837C9222724577F00B2C499 /* coex.cpp in Sources */ = {isa = PBXBuildFile; fileRef = F837C91C2724577F00B2C499 /* coex.cpp */; };
+		F883EC20266F43F200EA018C /* AirportItlwm-Monterey-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = F883EC1F266F43F200EA018C /* AirportItlwm-Monterey-Info.plist */; };
 		F88CB91424FBE9130060B1A5 /* ItlDriverInfo.hpp in Headers */ = {isa = PBXBuildFile; fileRef = F88CB91324FBE9130060B1A5 /* ItlDriverInfo.hpp */; };
 		F88D2B3D2414E64000BBE700 /* sha1-pbkdf2.c in Sources */ = {isa = PBXBuildFile; fileRef = F88D2B3B2414E64000BBE700 /* sha1-pbkdf2.c */; };
 		F897ECBA266EFF93005EE8F7 /* debug.h in Headers */ = {isa = PBXBuildFile; fileRef = F89B6C2225027609000F77FF /* debug.h */; };
@@ -731,6 +738,7 @@
 		F837C9252724732B00B2C499 /* iwlwifi-so-a0-gf-a0.pnvm */ = {isa = PBXFileReference; lastKnownFileType = file; path = "iwlwifi-so-a0-gf-a0.pnvm"; sourceTree = "<group>"; };
 		F837C9262724732B00B2C499 /* iwlwifi-so-a0-hr-b0-64.ucode */ = {isa = PBXFileReference; lastKnownFileType = file; path = "iwlwifi-so-a0-hr-b0-64.ucode"; sourceTree = "<group>"; };
 		F837C9272724732B00B2C499 /* iwlwifi-so-a0-gf-a0-64.ucode */ = {isa = PBXFileReference; lastKnownFileType = file; path = "iwlwifi-so-a0-gf-a0-64.ucode"; sourceTree = "<group>"; };
+		F837C91C2724577F00B2C499 /* coex.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = coex.cpp; sourceTree = "<group>"; };
 		F883EC1F266F43F200EA018C /* AirportItlwm-Monterey-Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = "AirportItlwm-Monterey-Info.plist"; sourceTree = "<group>"; };
 		F889443424D670EE001DF7B7 /* iwlwifi-Qu-b0-jf-b0-48.ucode */ = {isa = PBXFileReference; lastKnownFileType = file; path = "iwlwifi-Qu-b0-jf-b0-48.ucode"; sourceTree = "<group>"; };
 		F889443524D670EE001DF7B7 /* iwlwifi-Qu-c0-jf-b0-48.ucode */ = {isa = PBXFileReference; lastKnownFileType = file; path = "iwlwifi-Qu-c0-jf-b0-48.ucode"; sourceTree = "<group>"; };
@@ -1149,6 +1157,7 @@
 				024A08D123FCF395009FBA6C /* led.cpp */,
 				024A08D323FCF3E6009FBA6C /* power.cpp */,
 				024A08D523FCF4D7009FBA6C /* scan.cpp */,
+				F837C91C2724577F00B2C499 /* coex.cpp */,
 				F8AF3A2F24F9F35B008911C1 /* ItlIwm.cpp */,
 				F8AF3A3024F9F35B008911C1 /* ItlIwm.hpp */,
 			);
@@ -1724,6 +1733,7 @@
 				F8C2EC6B2408031A007A9422 /* ieee80211_regdomain.c in Sources */,
 				F8C2EC5B2408031A007A9422 /* ieee80211_crypto_bip.c in Sources */,
 				F8C2EC572408031A007A9422 /* timeout.c in Sources */,
+				F837C91D2724577F00B2C499 /* coex.cpp in Sources */,
 				F8AF3A3124F9F35B008911C1 /* ItlIwm.cpp in Sources */,
 				F88D2B3D2414E64000BBE700 /* sha1-pbkdf2.c in Sources */,
 				024A08D623FCF4D7009FBA6C /* scan.cpp in Sources */,
@@ -1786,6 +1796,7 @@
 				F8C594D725FD935B0007D19C /* ieee80211_ra.c in Sources */,
 				35CBE672251CB89700435CBC /* _task.cpp in Sources */,
 				35CBE673251CB89700435CBC /* FwBinary.cpp in Sources */,
+				F837C9212724577F00B2C499 /* coex.cpp in Sources */,
 				35CBE674251CB89700435CBC /* IOTaskQueue.cpp in Sources */,
 				35CBE675251CB89700435CBC /* ieee80211_proto.c in Sources */,
 				35CBE676251CB89700435CBC /* AirportItlwmInterface.cpp in Sources */,
@@ -1863,6 +1874,7 @@
 				F8C594D525FD935B0007D19C /* ieee80211_ra.c in Sources */,
 				35CBE6DC251CB8BF00435CBC /* _task.cpp in Sources */,
 				35CBE6DD251CB8BF00435CBC /* FwBinary.cpp in Sources */,
+				F837C91F2724577F00B2C499 /* coex.cpp in Sources */,
 				35CBE6DE251CB8BF00435CBC /* IOTaskQueue.cpp in Sources */,
 				35CBE6DF251CB8BF00435CBC /* ieee80211_proto.c in Sources */,
 				35CBE6E0251CB8BF00435CBC /* AirportItlwmInterface.cpp in Sources */,
@@ -1940,6 +1952,7 @@
 				F8C594D425FD935B0007D19C /* ieee80211_ra.c in Sources */,
 				35CBE747251CB8CA00435CBC /* _task.cpp in Sources */,
 				35CBE748251CB8CA00435CBC /* FwBinary.cpp in Sources */,
+				F837C91E2724577F00B2C499 /* coex.cpp in Sources */,
 				35CBE749251CB8CA00435CBC /* IOTaskQueue.cpp in Sources */,
 				35CBE74A251CB8CA00435CBC /* ieee80211_proto.c in Sources */,
 				35CBE74B251CB8CA00435CBC /* AirportItlwmInterface.cpp in Sources */,
@@ -2069,6 +2082,7 @@
 				F897ED00266EFF93005EE8F7 /* fw.cpp in Sources */,
 				F897ED01266EFF93005EE8F7 /* io.cpp in Sources */,
 				F897ED02266EFF93005EE8F7 /* rx.cpp in Sources */,
+				F837C9222724577F00B2C499 /* coex.cpp in Sources */,
 				F897ED03266EFF93005EE8F7 /* tx.cpp in Sources */,
 				F897ED04266EFF93005EE8F7 /* hw.cpp in Sources */,
 				F897ED05266EFF93005EE8F7 /* ItlIwn.cpp in Sources */,
@@ -2095,6 +2109,7 @@
 				F8C594D625FD935B0007D19C /* ieee80211_ra.c in Sources */,
 				F89B6C21250232DC000F77FF /* _task.cpp in Sources */,
 				F89B6BF3250231E3000F77FF /* FwBinary.cpp in Sources */,
+				F837C9202724577F00B2C499 /* coex.cpp in Sources */,
 				F89B6BF4250231E3000F77FF /* IOTaskQueue.cpp in Sources */,
 				F89B6BF5250231E3000F77FF /* ieee80211_proto.c in Sources */,
 				F8CA44A325091AF60036119A /* AirportItlwmInterface.cpp in Sources */,
