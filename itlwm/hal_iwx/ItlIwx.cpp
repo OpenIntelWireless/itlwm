@@ -12781,10 +12781,11 @@ iwx_resume(struct iwx_softc *sc)
         pci_conf_write(sc->sc_pct, sc->sc_pcitag,
                        PCI_COMMAND_STATUS_REG, reg);
     }
-    
-    iwx_disable_interrupts(sc);
-    
-    return iwx_start_hw(sc);
+
+    iwx_enable_rfkill_int(sc);
+    iwx_check_rfkill(sc);
+
+    return iwx_prepare_card_hw(sc);
 }
 
 int ItlIwx::

@@ -5147,10 +5147,11 @@ iwm_resume(struct iwm_softc *sc)
         pci_conf_write(sc->sc_pct, sc->sc_pcitag,
                        PCI_COMMAND_STATUS_REG, reg);
     }
-    
-    iwm_disable_interrupts(sc);
-    
-    return iwm_start_hw(sc);
+
+    iwm_enable_rfkill_int(sc);
+    iwm_check_rfkill(sc);
+
+    return iwm_prepare_card_hw(sc);
 }
 
 void ItlIwm::
