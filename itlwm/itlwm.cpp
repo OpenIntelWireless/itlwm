@@ -584,6 +584,18 @@ IOReturn itlwm::getHardwareAddress(IOEthernetAddress *addrP)
     }
 }
 
+IOReturn itlwm::setHardwareAddress(const IOEthernetAddress *addrP)
+{
+    if (!fNetIf || !addrP)
+        return kIOReturnError;
+    if_setlladdr(&fHalService->get80211Controller()->ic_ac.ac_if, addrP->bytes);
+    if (fHalService->get80211Controller()->ic_state > IEEE80211_S_INIT) {
+        fHalService->disable(fNetIf);
+        fHalService->enable(fNetIf);
+    }
+    return kIOReturnSuccess;
+}
+
 #ifdef __PRIVATE_SPI__
 IOReturn itlwm::outputStart(IONetworkInterface *interface, IOOptionBits options)
 {

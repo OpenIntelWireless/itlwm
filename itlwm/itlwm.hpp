@@ -52,6 +52,7 @@ public:
     virtual bool start(IOService *provider) override;
     virtual void stop(IOService *provider) override;
     virtual IOReturn getHardwareAddress(IOEthernetAddress* addrP) override;
+    virtual IOReturn setHardwareAddress(const IOEthernetAddress * addrP) override;
     virtual IOReturn enable(IONetworkInterface *netif) override;
     virtual IOReturn disable(IONetworkInterface *netif) override;
     virtual UInt32 outputPacket(mbuf_t, void * param) override;

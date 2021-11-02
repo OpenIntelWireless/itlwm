@@ -660,6 +660,18 @@ IOReturn AirportItlwm::getHardwareAddress(IOEthernetAddress *addrP)
     }
 }
 
+IOReturn AirportItlwm::setHardwareAddress(const IOEthernetAddress *addrP)
+{
+    if (!fNetIf || !addrP)
+        return kIOReturnError;
+    if_setlladdr(&fHalService->get80211Controller()->ic_ac.ac_if, addrP->bytes);
+    if (fHalService->get80211Controller()->ic_state > IEEE80211_S_INIT) {
+        fHalService->disable(fNetIf);
+        fHalService->enable(fNetIf);
+    }
+    return kIOReturnSuccess;
+}
+
 IOReturn AirportItlwm::getHardwareAddressForInterface(
                                                IO80211Interface *netif, IOEthernetAddress *addr)
 {
