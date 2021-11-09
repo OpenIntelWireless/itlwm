@@ -296,6 +296,9 @@ iwm_setup_ht_rates(struct iwm_softc *sc)
     memset(ic->ic_sup_mcs, 0, sizeof(ic->ic_sup_mcs));
     ic->ic_sup_mcs[0] = 0xff;        /* MCS 0-7 */
     
+    if (sc->support_ldpc)
+        ic->ic_htcaps |= IEEE80211_HTCAP_LDPC;
+    
     if (!iwm_mimo_enabled(sc))
         return;
     
@@ -2743,7 +2746,7 @@ iwm_setrates(struct iwm_node *in, int async)
     struct iwm_lq_cmd lqcmd;
     struct ieee80211_rateset *rs = &ni->ni_rates;
     const struct ieee80211_ra_rate *ra_rate = ieee80211_ra_get_rateset(&in->in_rn, ic, ni, ni->ni_txmcs);
-    int i, ridx, ridx_min, ridx_max, j, sgi_ok = 0, mimo, tab = 0, is_40mhz = 0, is_80mhz = 0, is_160mhz = 0;
+    int i, ridx, ridx_min, ridx_max, j, sgi_ok = 0, mimo, tab = 0, is_40mhz = 0, is_80mhz = 0, is_160mhz = 0, ldpc = 0;
     struct iwm_host_cmd cmd = {
         .id = IWM_LQ_CMD,
         .len = { sizeof(lqcmd), },
@@ -2766,6 +2769,14 @@ iwm_setrates(struct iwm_node *in, int async)
     }
     
     sgi_ok = ra_rate->sgi;
+    
+    if (ni->ni_flags & IEEE80211_NODE_VHT) {
+        if ((ni->ni_vhtcaps & IEEE80211_VHTCAP_RXLDPC) && (ic->ic_vhtcaps & IEEE80211_VHTCAP_RXLDPC))
+            ldpc = 1;
+    } else if (ni->ni_flags & IEEE80211_NODE_HT) {
+        if ((ni->ni_htcaps & IEEE80211_HTCAP_LDPC) && (ic->ic_htcaps & IEEE80211_HTCAP_LDPC))
+            ldpc = 1;
+    }
     
     /*
      * Fill the LQ rate selection table with legacy and/or HT rates
@@ -2806,6 +2817,8 @@ iwm_setrates(struct iwm_node *in, int async)
                         tab |= IWM_RATE_MCS_CHAN_WIDTH_160;
                     if (sgi_ok)
                         tab |= IWM_RATE_MCS_SGI_MSK;
+                    if (ldpc)
+                        tab |= IWM_RATE_MCS_LDPC_MSK;
                     break;
                 }
             }
@@ -2827,6 +2840,8 @@ iwm_setrates(struct iwm_node *in, int async)
                     /* TODO: If we enable 40mhz Tx rate in 2.4ghz band, the data will all sent fail */
                     if (is_40mhz && IEEE80211_IS_CHAN_5GHZ(ni->ni_chan))
                         tab |= IWM_RATE_MCS_CHAN_WIDTH_40;
+                    if (ldpc)
+                        tab |= IWM_RATE_MCS_LDPC_MSK;
                     break;
                 }
             }
