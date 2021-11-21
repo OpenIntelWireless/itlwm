@@ -11,7 +11,7 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  */
-/*    $OpenBSD: if_iwnreg.h,v 1.56 2019/07/29 10:50:08 stsp Exp $    */
+/*    $OpenBSD: if_iwnreg.h,v 1.59 2021/11/12 11:41:04 stsp Exp    */
 
 /*-
  * Copyright (c) 2007, 2008
@@ -651,6 +651,8 @@ struct iwn_node_info {
     uint32_t    htflags;
 #define IWN_AMDPU_SIZE_FACTOR(x)    ((x) << 19)
 #define IWN_AMDPU_SIZE_FACTOR_MASK    ((0x3) << 19)
+#define IWN_40MHZ_ENABLE        (1 << 21)
+#define IWN_MIMO_DISABLE        (1 << 22)
 #define IWN_AMDPU_DENSITY(x)        ((x) << 23)
 #define IWN_AMDPU_DENSITY_MASK        ((0x7) << 23)
 
@@ -1554,6 +1556,8 @@ struct iwn_general_stats {
 
 struct iwn_stats {
     uint32_t            flags;
+#define IWN_STATS_FLAGS_BAND_24G    0x02
+#define IWN_STATS_FLAGS_BAND_HT40    0x08
     struct iwn_rx_stats        rx;
     struct iwn_tx_stats        tx;
     struct iwn_general_stats    general;

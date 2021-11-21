@@ -253,6 +253,9 @@ public:
     int        iwn_scan(struct iwn_softc *, uint16_t, int);
     void        iwn_scan_abort(struct iwn_softc *);
     static int        iwn_bgscan(struct ieee80211com *);
+    void       iwn_rxon_configure_ht40(struct ieee80211com *,
+                                        struct ieee80211_node *);
+    int        iwn_rxon_ht40_enabled(struct iwn_softc *);
     int        iwn_auth(struct iwn_softc *, int);
     int        iwn_run(struct iwn_softc *);
     static int        iwn_set_key(struct ieee80211com *, struct ieee80211_node *,
