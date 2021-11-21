@@ -619,6 +619,7 @@ iwn4965_attach(struct iwn_softc *sc, pci_product_id_t pid)
     ops->nic_config = iwn4965_nic_config;
     ops->reset_sched = iwn4965_reset_sched;
     ops->update_sched = iwn4965_update_sched;
+    ops->update_rxon = iwn4965_update_rxon;
     ops->get_temperature = iwn4965_get_temperature;
     ops->get_rssi = iwn4965_get_rssi;
     ops->set_txpower = iwn4965_set_txpower;
@@ -658,6 +659,7 @@ iwn5000_attach(struct iwn_softc *sc, pci_product_id_t pid)
     ops->nic_config = iwn5000_nic_config;
     ops->reset_sched = iwn5000_reset_sched;
     ops->update_sched = iwn5000_update_sched;
+    ops->update_rxon = iwn5000_update_rxon;
     ops->get_temperature = iwn5000_get_temperature;
     ops->get_rssi = iwn5000_get_rssi;
     ops->set_txpower = iwn5000_set_txpower;
@@ -5930,7 +5932,7 @@ iwn_updateprot(struct ieee80211com *ic)
     sc->rxon.flags &= ~htole32(IWN_RXON_HT_PROTMODE(3));
     sc->rxon.flags |= htole32(IWN_RXON_HT_PROTMODE(htprot));
 
-    iwn_update_rxon(sc);
+    sc->ops.update_rxon(sc);
 }
 
 void ItlIwn::
@@ -5952,15 +5954,38 @@ iwn_updateslot(struct ieee80211com *ic)
     else
         sc->rxon.flags &= ~htole32(IWN_RXON_SHPREAMBLE);
     
-    iwn_update_rxon(sc);
+    sc->ops.update_rxon(sc);
 }
 
 void ItlIwn::
-iwn_update_rxon(struct iwn_softc *sc)
+iwn_update_rxon_restore_power(struct iwn_softc *sc)
 {
     struct ieee80211com *ic = &sc->sc_ic;
-    ItlIwn *that = container_of(sc, ItlIwn, com);
     struct iwn_ops *ops = &sc->ops;
+    int error;
+    
+    DELAY(100);
+    
+    /* All RXONs wipe the firmware's txpower table. Restore it. */
+    error = ops->set_txpower(sc, 1);
+    if (error != 0)
+        printf("%s: could not set TX power\n", sc->sc_dev.dv_xname);
+    
+    DELAY(100);
+    
+    /* Restore power saving level */
+    if (ic->ic_flags & IEEE80211_F_PMGTON)
+        error = iwn_set_pslevel(sc, 0, 3, 1);
+    else
+        error = iwn_set_pslevel(sc, 0, 0, 1);
+    if (error != 0)
+        printf("%s: could not set PS level\n", sc->sc_dev.dv_xname);
+}
+
+void ItlIwn::
+iwn5000_update_rxon(struct iwn_softc *sc)
+{
+    ItlIwn *that = container_of(sc, ItlIwn, com);
     struct iwn_rxon_assoc rxon_assoc;
     int s, error;
     
@@ -5975,24 +6000,43 @@ iwn_update_rxon(struct iwn_softc *sc)
     rxon_assoc.ht_triple_mask = sc->rxon.ht_triple_mask;
     rxon_assoc.rxchain = sc->rxon.rxchain;
     rxon_assoc.acquisition = sc->rxon.acquisition;
+    
     s = splnet();
-    error = that->iwn_cmd(sc, IWN_CMD_RXON_ASSOC, &rxon_assoc,
-                    sizeof(rxon_assoc), 1);
+    
+    error = that->iwn_cmd(sc, IWN_CMD_RXON_ASSOC, &rxon_assoc, sizeof(rxon_assoc), 1);
     if (error != 0)
         printf("%s: RXON_ASSOC command failed\n", sc->sc_dev.dv_xname);
-    DELAY(100);
-    /* All RXONs wipe the firmware's txpower table. Restore it. */
-    error = ops->set_txpower(sc, 1);
+    
+    that->iwn_update_rxon_restore_power(sc);
+    
+    splx(s);
+}
+
+void ItlIwn::
+iwn4965_update_rxon(struct iwn_softc *sc)
+{
+    ItlIwn *that = container_of(sc, ItlIwn, com);
+    struct iwn4965_rxon_assoc rxon_assoc;
+    int s, error;
+    
+    /* Update RXON config. */
+    memset(&rxon_assoc, 0, sizeof(rxon_assoc));
+    rxon_assoc.flags = sc->rxon.flags;
+    rxon_assoc.filter = sc->rxon.filter;
+    rxon_assoc.ofdm_mask = sc->rxon.ofdm_mask;
+    rxon_assoc.cck_mask = sc->rxon.cck_mask;
+    rxon_assoc.ht_single_mask = sc->rxon.ht_single_mask;
+    rxon_assoc.ht_dual_mask = sc->rxon.ht_dual_mask;
+    rxon_assoc.rxchain = sc->rxon.rxchain;
+    
+    s = splnet();
+    
+    error = that->iwn_cmd(sc, IWN_CMD_RXON_ASSOC, &rxon_assoc, sizeof(rxon_assoc), 1);
     if (error != 0)
-        printf("%s: could not set TX power\n", sc->sc_dev.dv_xname);
-    DELAY(100);
-    /* Restore power saving level */
-    if (ic->ic_flags & IEEE80211_F_PMGTON)
-        error = that->iwn_set_pslevel(sc, 0, 3, 1);
-    else
-        error = that->iwn_set_pslevel(sc, 0, 0, 1);
-    if (error != 0)
-        printf("%s: could not set PS level\n", sc->sc_dev.dv_xname);
+        printf("%s: RXON_ASSOC command failed\n", sc->sc_dev.dv_xname);
+    
+    that->iwn_update_rxon_restore_power(sc);
+    
     splx(s);
 }
 

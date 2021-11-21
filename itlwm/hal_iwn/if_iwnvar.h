@@ -193,6 +193,7 @@ struct iwn_ops {
     void        (*reset_sched)(struct iwn_softc *, int, int);
     void        (*update_sched)(struct iwn_softc *, int, int, uint8_t,
                 uint16_t);
+    void        (*update_rxon)(struct iwn_softc *);
     int        (*get_temperature)(struct iwn_softc *);
     int        (*get_rssi)(const struct iwn_rx_stat *);
     int        (*set_txpower)(struct iwn_softc *, int);

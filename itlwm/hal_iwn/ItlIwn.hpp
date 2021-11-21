@@ -261,7 +261,9 @@ public:
                 struct ieee80211_key *);
     static void        iwn_updateprot(struct ieee80211com *);
     static void        iwn_updateslot(struct ieee80211com *);
-    static void        iwn_update_rxon(struct iwn_softc *);
+    void        iwn_update_rxon_restore_power(struct iwn_softc *);
+    static void        iwn5000_update_rxon(struct iwn_softc *);
+    static void        iwn4965_update_rxon(struct iwn_softc *);
     static int        iwn_ampdu_rx_start(struct ieee80211com *,
                 struct ieee80211_node *, uint8_t);
     static void        iwn_ampdu_rx_stop(struct ieee80211com *,
