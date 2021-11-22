@@ -6144,6 +6144,32 @@ struct iwx_tx_path_flush_cmd {
     uint16_t reserved;
 } __packed; /* TX_PATH_FLUSH_CMD_API_S_VER_2 */
 
+#define IWX_TX_FLUSH_QUEUE_RSP 16
+
+/**
+ * struct iwx_flush_queue_info - virtual flush queue info
+ * @queue_num: virtual queue id
+ * @read_before_flush: read pointer before flush
+ * @read_after_flush: read pointer after flush
+ */
+struct iwx_flush_queue_info {
+    uint16_t tid;
+    uint16_t queue_num;
+    uint16_t read_before_flush;
+    uint16_t read_after_flush;
+} __packed; /* TFDQ_FLUSH_INFO_API_S_VER_1 */
+
+/**
+ * struct iwx_tx_path_flush_cmd_rsp -- queue/FIFO flush command response
+ * @num_flushed_queues: number of queues in queues array
+ * @queues: all flushed queues
+ */
+struct iwx_tx_path_flush_cmd_rsp {
+    uint16_t sta_id;
+    uint16_t num_flushed_queues;
+    struct iwx_flush_queue_info queues[IWX_TX_FLUSH_QUEUE_RSP];
+} __packed; /* TX_PATH_FLUSH_CMD_RSP_API_S_VER_1 */
+
 /**
  * iwx_get_scd_ssn - returns the SSN of the SCD
  * @tx_resp: the Tx response from the fw (agg or non-agg)

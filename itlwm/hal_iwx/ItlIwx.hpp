@@ -367,7 +367,8 @@ public:
     void    iwx_toggle_tx_ant(struct iwx_softc *sc, uint8_t *ant);
     void    iwx_tx_update_byte_tbl(struct iwx_softc *, struct iwx_tx_ring *, int, uint16_t, uint16_t);
     int    iwx_tx(struct iwx_softc *, mbuf_t, struct ieee80211_node *, int);
-    int    iwx_flush_tx_path(struct iwx_softc *);
+    int    iwx_flush_sta_tids(struct iwx_softc *, int, uint16_t);
+    int    iwx_flush_sta(struct iwx_softc *, struct iwx_node *);
     int    iwx_beacon_filter_send_cmd(struct iwx_softc *,
             struct iwx_beacon_filter_cmd *);
     int    iwx_update_beacon_abort(struct iwx_softc *, struct iwx_node *, int);

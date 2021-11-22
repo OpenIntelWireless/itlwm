@@ -6736,18 +6736,73 @@ iwx_tx(struct iwx_softc *sc, mbuf_t m, struct ieee80211_node *ni, int ac)
 }
 
 int ItlIwx::
-iwx_flush_tx_path(struct iwx_softc *sc)
+iwx_flush_sta_tids(struct iwx_softc *sc, int sta_id, uint16_t tids)
 {
+    struct iwx_rx_packet *pkt;
+    struct iwx_tx_path_flush_cmd_rsp *resp;
     struct iwx_tx_path_flush_cmd flush_cmd = {
-        .sta_id = htole32(IWX_STATION_ID),
-        .tid_mask = htole16(0xffff),
+        .sta_id = htole32(sta_id),
+        .tid_mask = htole16(tids),
     };
-    int err;
+    struct iwx_host_cmd hcmd = {
+        .id = IWX_TXPATH_FLUSH,
+        .len = { sizeof(flush_cmd), },
+        .data = { &flush_cmd, },
+        .flags = IWX_CMD_WANT_RESP,
+        .resp_pkt_len = sizeof(*pkt) + sizeof(*resp),
+    };
+    int err, resp_len, i, num_flushed_queues;
     
-    err = iwx_send_cmd_pdu(sc, IWX_TXPATH_FLUSH, 0,
-                           sizeof(flush_cmd), &flush_cmd);
+    err = iwx_send_cmd(sc, &hcmd);
     if (err)
-        XYLog("%s: Flushing tx queue failed: %d\n", DEVNAME(sc), err);
+        return err;
+    
+    pkt = hcmd.resp_pkt;
+    if (!pkt || (pkt->hdr.group_id & IWX_CMD_FAILED_MSK)) {
+        err = EIO;
+        goto out;
+    }
+    
+    resp_len = iwx_rx_packet_payload_len(pkt);
+    /* Some firmware versions don't provide a response. */
+    if (resp_len == 0)
+        goto out;
+    else if (resp_len != sizeof(*resp)) {
+        err = EIO;
+        goto out;
+    }
+    
+    resp = (struct iwx_tx_path_flush_cmd_rsp *)pkt->data;
+    
+    if (le16toh(resp->sta_id) != sta_id) {
+        err = EIO;
+        goto out;
+    }
+    
+    num_flushed_queues = le16toh(resp->num_flushed_queues);
+    if (num_flushed_queues > IWX_TX_FLUSH_QUEUE_RSP) {
+        err = EIO;
+        goto out;
+    }
+    
+    for (i = 0; i < num_flushed_queues; i++) {
+        struct iwx_flush_queue_info *queue_info = &resp->queues[i];
+        uint16_t tid = le16toh(queue_info->tid);
+        uint16_t read_after = le16toh(queue_info->read_after_flush);
+        uint16_t qid = le16toh(queue_info->queue_num);
+        struct iwx_tx_ring *txq;
+        
+        if (qid >= nitems(sc->txq))
+            continue;
+
+        if (sc->sc_tid_data[tid].qid != qid)
+            continue;
+        txq = &sc->txq[qid];
+        
+        iwx_ampdu_txq_advance(sc, txq, read_after);
+    }
+out:
+    iwx_free_resp(sc, &hcmd);
     return err;
 }
 
@@ -8864,7 +8919,7 @@ iwx_deauth(struct iwx_softc *sc)
         iwx_cancel_session_protection(sc, in);
     
     if (sc->sc_flags & IWX_FLAG_STA_ACTIVE) {
-        err = iwx_flush_tx_path(sc);
+        err = iwx_flush_sta_tids(sc, IWX_STATION_ID, 0xffff);
         if (err) {
             XYLog("%s: could not flush Tx path (error %d)\n",
                    DEVNAME(sc), err);
@@ -8945,7 +9000,6 @@ iwx_disassoc(struct iwx_softc *sc)
     int err;
     struct iwx_add_sta_cmd cmd;
     uint32_t status;
-    int qid;
     
     splassert(IPL_NET);
     
@@ -8960,7 +9014,12 @@ iwx_disassoc(struct iwx_softc *sc)
         cmd.station_flags_msk = htole32(IWX_STA_FLG_DRAIN_FLOW);
         err = iwx_send_cmd_pdu_status(sc, IWX_ADD_STA, sizeof(cmd), &cmd,
                                       &status);
-        err = iwx_flush_tx_path(sc);
+        err = iwx_flush_sta_tids(sc, IWX_STATION_ID, 0xffff);
+        if (err) {
+            XYLog("%s: could not flush Tx path (error %d)\n",
+                   DEVNAME(sc), err);
+            return err;
+        }
         cmd.sta_id = htole32(IWX_STATION_ID);
         cmd.mac_id_n_color
         = htole32(IWX_FW_CMD_ID_AND_COLOR(in->in_id, in->in_color));
