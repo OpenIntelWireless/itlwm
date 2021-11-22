@@ -9924,7 +9924,7 @@ iwx_init(struct _ifnet *ifp)
     err = iwx_init_hw(sc);
     if (err) {
         if (generation == sc->sc_generation)
-            iwx_stop(ifp);
+            iwx_stop_device(sc);
         return err;
     }
     
