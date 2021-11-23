@@ -5332,6 +5332,9 @@ iwx_rx_reorder(struct iwx_softc *sc, mbuf_t m, int chanidx,
     rxba = &sc->sc_rxba_data[baid];
     if (rxba->reorder_buf.buf_size == 0 || tid != rxba->tid || rxba->sta_id != IWX_STATION_ID)
         return 0;
+    
+    if (rxba->timeout != 0)
+        getmicrouptime(&rxba->last_rx);
 
     /* Bypass A-MPDU re-ordering in net80211. */
     rxi->rxi_flags |= IEEE80211_RXI_AMPDU_DONE;
