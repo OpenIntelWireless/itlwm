@@ -138,9 +138,10 @@ void taskq_create_thread(void *arg)
     IORecursiveLockLock(tq->tq_mtx);
     switch (tq->tq_state) {
         case TQ_S_DESTROYED:
-        IOLog("itlwm: taskq %s unlock\n", __FUNCTION__);
+            IOLog("itlwm: taskq %s unlock\n", __FUNCTION__);
             IORecursiveLockUnlock(tq->tq_mtx);
             if (tq != systq) {
+                IORecursiveLockFree(tq->tq_mtx);
                 IOFree(tq, sizeof(*tq));
             }
             return;
@@ -153,6 +154,7 @@ void taskq_create_thread(void *arg)
             IOLog("itlwm: unexpected %s tq state %u", tq->tq_name, tq->tq_state);
             IORecursiveLockUnlock(tq->tq_mtx);
             if (tq != systq) {
+                IORecursiveLockFree(tq->tq_mtx);
                 IOFree(tq, sizeof(*tq));
             }
             return;
