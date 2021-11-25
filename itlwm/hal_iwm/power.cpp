@@ -487,7 +487,8 @@ iwm_rm_sta_cmd(struct iwm_softc *sc, struct iwm_node *in)
         }
         for (qid = IWM_FIRST_AGG_TX_QUEUE; qid <= IWM_LAST_AGG_TX_QUEUE; qid++) {
             if (sc->agg_queue_mask & (1 << qid)) {
-                iwm_disable_txq(sc, qid, 0, 0);
+                iwm_disable_txq(sc, qid, qid - IWM_FIRST_AGG_TX_QUEUE, 0);
+                sc->agg_queue_mask &= ~(1 << qid);
             }
         }
     }
