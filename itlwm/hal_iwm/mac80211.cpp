@@ -3792,6 +3792,7 @@ iwm_stop(struct _ifnet *ifp)
     memset(sc->ba_timeout_val, 0, sizeof(sc->ba_timeout_val));
     
     sc->sc_newstate(ic, IEEE80211_S_INIT, -1);
+    sc->ns_nstate = IEEE80211_S_INIT;
     
     timeout_del(&sc->sc_calib_to); /* XXX refcount? */
     for (i = 0; i < nitems(sc->sc_rxba_data); i++) {
