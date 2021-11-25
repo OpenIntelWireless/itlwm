@@ -287,6 +287,7 @@ public:
     void    iwx_setup_he_rates(struct iwx_softc *);
     int    iwx_mimo_enabled(struct iwx_softc *);
     static void    iwx_mac_ctxt_task(void *);
+    static void    iwx_chan_ctxt_task(void *);
     static void    iwx_updateprot(struct ieee80211com *);
     static void    iwx_updateslot(struct ieee80211com *);
     static void    iwx_updateedca(struct ieee80211com *);

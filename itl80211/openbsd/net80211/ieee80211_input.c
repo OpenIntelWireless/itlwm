@@ -1949,15 +1949,6 @@ ieee80211_ht_updateparams_final(struct ieee80211com *ic, struct ieee80211_node *
     return (ret);
 }
 
-void
-ieee80211_update_chw(struct ieee80211com *ic)
-{
-    XYLog("%s chan width change to %d\n", __FUNCTION__, ic->ic_bss->ni_chw);
-    if (ic->ic_update_chw) {
-        (*ic->ic_update_chw)(ic);
-    }
-}
-
 /*-
  * Beacon/Probe response frame format:
  * [8]   Timestamp
@@ -2233,20 +2224,9 @@ ieee80211_recv_probe_resp(struct ieee80211com *ic, mbuf_t m,
     if (htop && !ieee80211_setup_htop(ni, htop + 2, htop[1], 1))
         htop = NULL; /* invalid HTOP */
     
-    int do_ht = 0;
-    int ht_state_change = 0;
-    if (htcaps != NULL && htop != NULL) {
-        do_ht = 1;
-    }
     if (vhtcap != NULL && vhtopmode != NULL) {
         ieee80211_setup_vhtcaps(ic, ni, vhtcap);
         ieee80211_setup_vhtopmode(ni, vhtopmode);
-        do_ht = 1;
-    }
-    if (do_ht) {
-        if (ieee80211_ht_updateparams_final(ic, ni, htcaps, htop)) {
-            ht_state_change = 1;
-        }
     }
     if (hecap != NULL && heopmode != NULL) {
         ieee80211_setup_hecaps(ni, hecap + 3, hecap[1] - 1);
@@ -2302,6 +2282,33 @@ ieee80211_recv_probe_resp(struct ieee80211com *ic, mbuf_t m,
         }
         if (updateprot && ic->ic_updateprot != NULL)
             ic->ic_updateprot(ic);
+
+        /*
+         * Check if 40MHz channel mode has changed since last beacon.
+         */
+        if (htop && !(ic->ic_bss->ni_flags & IEEE80211_NODE_VHT) &&
+            !(ic->ic_bss->ni_flags & IEEE80211_NODE_HE) &&
+            (ic->ic_bss->ni_flags & IEEE80211_NODE_HT) &&
+            (ic->ic_htcaps & IEEE80211_HTCAP_CBW20_40)) {
+            uint8_t chw_last, chw, sco_last, sco;
+            chw_last = (ic->ic_bss->ni_htop0 & IEEE80211_HTOP0_CHW);
+            chw = (ni->ni_htop0 & IEEE80211_HTOP0_CHW);
+            sco_last =
+            ((ic->ic_bss->ni_htop0 & IEEE80211_HTOP0_SCO_MASK)
+             >> IEEE80211_HTOP0_SCO_SHIFT);
+            sco = ((ni->ni_htop0 & IEEE80211_HTOP0_SCO_MASK) >>
+                   IEEE80211_HTOP0_SCO_SHIFT);
+            ic->ic_bss->ni_htop0 = ni->ni_htop0;
+            if (chw_last != chw || sco_last != sco) {
+                ieee80211_ht_negotiate_chw(ic, ni);
+                XYLog("[%s] channel mode change: was %d, now %d, sco was: %d, now: %d\n",
+                      ether_sprintf((u_int8_t *)wh->i_addr2),
+                      chw_last, chw, sco_last, sco);
+                if (ic->ic_update_chw != NULL)
+                    ic->ic_update_chw(ic);
+            }
+        } else if (htop)
+            ic->ic_bss->ni_htop0 = ni->ni_htop0;
         
         /*
          * Check if AP short slot time setting has changed
@@ -2434,18 +2441,6 @@ ieee80211_recv_probe_resp(struct ieee80211com *ic, mbuf_t m,
     ni->ni_erp = erp;
     /* NB: must be after ni_chan is setup */
     ieee80211_setup_rates(ic, ni, rates, xrates, IEEE80211_F_DOSORT);
-    /*
-    * When operating in station mode, check for state updates.
-    * Be careful to ignore beacons received while doing a
-    * background scan.  We consider only 11g/WMM stuff right now.
-    */
-    if (ni->ni_associd != 0 &&
-        ((ic->ic_flags & IEEE80211_F_BGSCAN) == 0 ||
-        IEEE80211_ADDR_EQ(wh->i_addr2, ni->ni_bssid))) {
-        if (ht_state_change) {
-            ieee80211_update_chw(ic);
-        }
-    }
 #ifndef IEEE80211_STA_ONLY
     if (ic->ic_opmode == IEEE80211_M_IBSS && is_new && isprobe) {
         /*

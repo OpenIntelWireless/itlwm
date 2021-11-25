@@ -612,6 +612,7 @@ struct iwx_softc {
 
     /* Task for ERP/HT prot/slot-time/EDCA updates. */
     struct task        mac_ctxt_task;
+    struct task        chan_ctxt_task;
 
 	bus_space_tag_t sc_st;
 	bus_space_handle_t sc_sh;

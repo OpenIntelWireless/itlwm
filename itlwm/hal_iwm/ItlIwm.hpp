@@ -188,6 +188,7 @@ public:
     void    iwm_setup_ht_rates(struct iwm_softc *);
     void    iwm_setup_vht_rates(struct iwm_softc *);
     static void    iwm_mac_ctxt_task(void *);
+    static void    iwm_chan_ctxt_task(void *);
     static void    iwm_updateprot(struct ieee80211com *);
     static void    iwm_updateslot(struct ieee80211com *);
     static void    iwm_updateedca(struct ieee80211com *);

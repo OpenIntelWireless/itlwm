@@ -183,6 +183,8 @@ extern	void ieee80211_setkeysdone(struct ieee80211com *);
 extern	void ieee80211_sa_query_timeout(void *);
 extern	void ieee80211_sa_query_request(struct ieee80211com *,
 	    struct ieee80211_node *);
+extern  void ieee80211_ht_negotiate_chw(struct ieee80211com *,
+    struct ieee80211_node *);
 extern	void ieee80211_ht_negotiate(struct ieee80211com *,
     struct ieee80211_node *);
 extern  void ieee80211_vht_negotiate(struct ieee80211com *,

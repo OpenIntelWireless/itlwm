@@ -4160,28 +4160,53 @@ iwx_mac_ctxt_task(void *arg)
 }
 
 void ItlIwx::
-iwx_update_chw(struct ieee80211com *ic)
+iwx_chan_ctxt_task(void *arg)
 {
-    XYLog("%s\n", __FUNCTION__);
-    struct iwx_softc *sc = (struct iwx_softc *)ic->ic_softc;
+    struct iwx_softc *sc = (struct iwx_softc *)arg;
+    struct ieee80211com *ic = &sc->sc_ic;
     ItlIwx *that = container_of(sc, ItlIwx, com);
     struct iwx_node *in = (struct iwx_node *)ic->ic_bss;
-    int err = 0;
     int chains = that->iwx_mimo_enabled(sc) ? 2 : 1;
+    int err, s = splnet();
     
-    err = that->iwx_phy_ctxt_cmd(sc, &sc->sc_phyctxt[0],
-                                 chains, chains, IWX_FW_CTXT_ACTION_MODIFY, 0);
+    if (sc->sc_flags & IWX_FLAG_SHUTDOWN ||
+        ic->ic_state != IEEE80211_S_RUN ||
+        in->in_phyctxt == NULL) {
+        //        refcnt_rele_wake(&sc->task_refs);
+        splx(s);
+        return;
+    }
+    
+    err = that->iwx_phy_ctxt_update(sc, in->in_phyctxt,
+                                    in->in_phyctxt->channel, chains, chains, 0);
     if (err) {
-        XYLog("%s: failed to update PHY\n",
-              __FUNCTION__);
+        XYLog("%s: failed to update PHY (error %d)\n",
+              __FUNCTION__, err);
+        //        refcnt_rele_wake(&sc->task_refs);
+        splx(s);
         return;
     }
     err = that->iwx_rs_init(sc, in, true);
     if (err) {
         XYLog("%s: could not update rate scaling (error %d)\n",
               __FUNCTION__, err);
+        //        refcnt_rele_wake(&sc->task_refs);
+        splx(s);
         return;
     }
+    
+    //    refcnt_rele_wake(&sc->task_refs);
+    splx(s);
+}
+
+void ItlIwx::
+iwx_update_chw(struct ieee80211com *ic)
+{
+    struct iwx_softc *sc = (struct iwx_softc *)ic->ic_softc;
+    ItlIwx *that = container_of(sc, ItlIwx, com);
+    
+    if (ic->ic_state == IEEE80211_S_RUN && (sc->sc_flags & IWX_FLAG_STA_ACTIVE))
+        that->iwx_add_task(sc, systq, &sc->chan_ctxt_task);
 }
 
 void ItlIwx::
@@ -5935,50 +5960,40 @@ iwx_get_channel_width(struct ieee80211com *ic, struct ieee80211_channel *c)
 }
 
 static uint8_t
-iwx_get_ctrl_pos(struct ieee80211com *ic, struct ieee80211_channel *c) {
-    uint8_t ret = IWX_PHY_VHT_CTRL_POS_1_BELOW;
-    if (ic->ic_bss == NULL || ic->ic_state < IEEE80211_S_ASSOC) {
-        return ret;
-    }
-    if (ic->ic_bss->ni_chw == IEEE80211_CHAN_WIDTH_40) {
-        if ((ic->ic_bss->ni_htop0 & IEEE80211_HTOP0_SCO_MASK) == IEEE80211_HTOP0_SCO_SCA) {
+iwx_get_ctrl_pos(struct ieee80211com *ic, struct ieee80211_channel *c)
+{
+    if (ic->ic_bss == NULL || ic->ic_state < IEEE80211_S_ASSOC || ic->ic_bss->ni_chw <= IEEE80211_CHAN_WIDTH_20)
+        return IWX_PHY_VHT_CTRL_POS_1_BELOW;
+
+    signed int offset = ic->ic_bss->ni_chan->ic_freq - ic->ic_bss->ni_chan->ic_center_freq1;
+    switch (offset) {
+        case -70:
+            return IWX_PHY_VHT_CTRL_POS_4_BELOW;
+        case -50:
+            return IWX_PHY_VHT_CTRL_POS_3_BELOW;
+        case -30:
+            return IWX_PHY_VHT_CTRL_POS_2_BELOW;
+        case -10:
             return IWX_PHY_VHT_CTRL_POS_1_BELOW;
-        } else {
+        case  10:
             return IWX_PHY_VHT_CTRL_POS_1_ABOVE;
-        }
-    } else if (ic->ic_bss->ni_chw == IEEE80211_CHAN_WIDTH_80 || ic->ic_bss->ni_chw == IEEE80211_CHAN_WIDTH_80P80 || ic->ic_bss->ni_chw == IEEE80211_CHAN_WIDTH_160) {
-        signed int offset = ic->ic_bss->ni_chan->ic_freq - ic->ic_bss->ni_chan->ic_center_freq1;
-        switch (offset) {
-            case -70:
-                return IWX_PHY_VHT_CTRL_POS_4_BELOW;
-            case -50:
-                return IWX_PHY_VHT_CTRL_POS_3_BELOW;
-            case -30:
-                return IWX_PHY_VHT_CTRL_POS_2_BELOW;
-            case -10:
-                return IWX_PHY_VHT_CTRL_POS_1_BELOW;
-            case  10:
-                return IWX_PHY_VHT_CTRL_POS_1_ABOVE;
-            case  30:
-                return IWX_PHY_VHT_CTRL_POS_2_ABOVE;
-            case  50:
-                return IWX_PHY_VHT_CTRL_POS_3_ABOVE;
-            case  70:
-                return IWX_PHY_VHT_CTRL_POS_4_ABOVE;
-            default:
-                XYLog("Invalid channel definition freq=%d %d\n", ic->ic_bss->ni_chan->ic_freq, offset);
-                /* fall through */
-            case 0:
-                /*
-                 * The FW is expected to check the control channel position only
-                 * when in HT/VHT and the channel width is not 20MHz. Return
-                 * this value as the default one.
-                 */
-                return IWX_PHY_VHT_CTRL_POS_1_BELOW;
-        }
-        return ret;
+        case  30:
+            return IWX_PHY_VHT_CTRL_POS_2_ABOVE;
+        case  50:
+            return IWX_PHY_VHT_CTRL_POS_3_ABOVE;
+        case  70:
+            return IWX_PHY_VHT_CTRL_POS_4_ABOVE;
+        default:
+            XYLog("Invalid channel definition freq=%d %d\n", ic->ic_bss->ni_chan->ic_freq, offset);
+            /* fall through */
+        case 0:
+            /*
+             * The FW is expected to check the control channel position only
+             * when in HT/VHT and the channel width is not 20MHz. Return
+             * this value as the default one.
+             */
+            return IWX_PHY_VHT_CTRL_POS_1_BELOW;
     }
-    return ret;
 }
 
 int ItlIwx::
@@ -6058,9 +6073,11 @@ iwx_phy_ctxt_cmd_uhb(struct iwx_softc *sc, struct iwx_phy_ctxt *ctxt,
     cmd.ci.width = iwx_get_channel_width(ic, chan);
     cmd.ci.ctrl_pos = iwx_get_ctrl_pos(ic, chan);
 
-    XYLog("%s: 2ghz=%d, channel=%d, channel_width=%d pos=%d chains static=0x%x, dynamic=0x%x, "
+    XYLog("%s: [%s:%s] 2ghz=%d, channel=%d, channel_width=%d pos=%d chains static=0x%x, dynamic=0x%x, "
           "rx_ant=0x%x, tx_ant=0x%x\n",
           __FUNCTION__,
+          ic->ic_bss == NULL ? "" : (const char *)ic->ic_bss->ni_essid,
+          ic->ic_bss == NULL ? "" : ether_sprintf(ic->ic_bss->ni_bssid),
           cmd.ci.band,
           cmd.ci.channel,
           cmd.ci.width,
@@ -9435,7 +9452,6 @@ iwx_newstate(struct ieee80211com *ic, enum ieee80211_state nstate, int arg)
     struct iwx_softc *sc = (struct iwx_softc *)ifp->if_softc;
     ItlIwx *that = container_of(sc, ItlIwx, com);
     struct ieee80211_node *ni = ic->ic_bss;
-    int i;
     
     if (ic->ic_state == IEEE80211_S_RUN) {
         if (nstate == IEEE80211_S_SCAN) {
@@ -9448,6 +9464,7 @@ iwx_newstate(struct ieee80211com *ic, enum ieee80211_state nstate, int arg)
         }
         that->iwx_del_task(sc, systq, &sc->ba_task);
         that->iwx_del_task(sc, systq, &sc->mac_ctxt_task);
+        that->iwx_del_task(sc, systq, &sc->chan_ctxt_task);
     }
     
     sc->ns_nstate = nstate;
@@ -10072,6 +10089,7 @@ iwx_stop(struct _ifnet *ifp)
     iwx_del_task(sc, sc->sc_nswq, &sc->newstate_task);
     iwx_del_task(sc, systq, &sc->ba_task);
     iwx_del_task(sc, systq, &sc->mac_ctxt_task);
+    iwx_del_task(sc, systq, &sc->chan_ctxt_task);
     KASSERT(sc->task_refs.refs >= 1, "sc->task_refs.refs >= 1");
     //    refcnt_finalize(&sc->task_refs, "iwxstop");
     
@@ -12758,6 +12776,7 @@ iwx_attach(struct iwx_softc *sc, struct pci_attach_args *pa)
     task_set(&sc->newstate_task, iwx_newstate_task, sc, "iwx_newstate_task");
     task_set(&sc->ba_task, iwx_ba_task, sc, "iwx_ba_task");
     task_set(&sc->mac_ctxt_task, iwx_mac_ctxt_task, sc, "iwx_mac_ctxt_task");
+    task_set(&sc->chan_ctxt_task, iwx_chan_ctxt_task, sc, "iwx_chan_ctxt_task");
     
     ic->ic_node_alloc = iwx_node_alloc;
     ic->ic_bgscan_start = iwx_bgscan;

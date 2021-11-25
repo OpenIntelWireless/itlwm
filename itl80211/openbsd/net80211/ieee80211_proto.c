@@ -572,14 +572,40 @@ ieee80211_sa_query_request(struct ieee80211com *ic, struct ieee80211_node *ni)
 #endif	/* IEEE80211_STA_ONLY */
 
 void
+ieee80211_ht_negotiate_chw(struct ieee80211com *ic, struct ieee80211_node *ni)
+{
+    int ht_param;
+
+    ni->ni_chw = IEEE80211_CHAN_WIDTH_20;
+    ni->ni_chan->ic_center_freq1 = ni->ni_chan->ic_freq;
+
+    if (((ic->ic_htcaps & IEEE80211_HTCAP_40INTOLERANT) || (ni->ni_htcaps & IEEE80211_HTCAP_40INTOLERANT) || (ic->ic_userflags & IEEE80211_F_NOHT40))
+        && IEEE80211_IS_CHAN_2GHZ(ni->ni_chan)) {
+        ni->ni_chw = IEEE80211_CHAN_WIDTH_20;
+    } else if ((ni->ni_htcaps & IEEE80211_HTCAP_CBW20_40) && IEEE80211_IS_CHAN_HT40(ni->ni_chan) && (ic->ic_htcaps & IEEE80211_HTCAP_CBW20_40)) {
+        ht_param = ni->ni_htop0 & IEEE80211_HTOP0_SCO_MASK;
+        if ((ht_param == IEEE80211_HTOP0_SCO_SCA) ||
+            (ht_param == IEEE80211_HTOP0_SCO_SCB))
+            ni->ni_chw = IEEE80211_CHAN_WIDTH_40;
+    }
+    
+    if (ni->ni_chw == IEEE80211_CHAN_WIDTH_40) {
+        if ((ni->ni_htop0 & IEEE80211_HTOP0_SCO_MASK) == IEEE80211_HTOP0_SCO_SCA)
+            ni->ni_chan->ic_center_freq1 = ni->ni_chan->ic_freq + 10;
+        else
+            ni->ni_chan->ic_center_freq1 = ni->ni_chan->ic_freq - 10;
+    }
+}
+
+void
 ieee80211_ht_negotiate(struct ieee80211com *ic, struct ieee80211_node *ni)
 {
 	int i;
-    int ht_param;
 
 	ni->ni_flags &= ~(IEEE80211_NODE_HT | IEEE80211_NODE_HT_SGI20 |
 	    IEEE80211_NODE_HT_SGI40);
     ni->ni_chw = IEEE80211_CHAN_WIDTH_20;
+    ni->ni_chan->ic_center_freq1 = ni->ni_chan->ic_freq;
 
 	/* Check if we support HT. */
 	if ((ic->ic_modecaps & (1 << IEEE80211_MODE_11N)) == 0)
@@ -627,24 +653,14 @@ ieee80211_ht_negotiate(struct ieee80211com *ic, struct ieee80211_node *ni)
 
 	ni->ni_flags |= IEEE80211_NODE_HT;
     
-    if (ieee80211_node_supports_ht_sgi20(ni)) {
+    if (ieee80211_node_supports_ht_sgi20(ni))
         ni->ni_flags |= IEEE80211_NODE_HT_SGI20;
-    }
     
-    if (((ic->ic_htcaps & IEEE80211_HTCAP_40INTOLERANT) || (ni->ni_htcaps & IEEE80211_HTCAP_40INTOLERANT) || (ic->ic_userflags & IEEE80211_F_NOHT40))
-        && IEEE80211_IS_CHAN_2GHZ(ni->ni_chan)) {
-        ni->ni_chw = IEEE80211_CHAN_WIDTH_20;
-    } else if ((ni->ni_htcaps & IEEE80211_HTCAP_CBW20_40) && IEEE80211_IS_CHAN_HT40(ni->ni_chan) && (ic->ic_htcaps & IEEE80211_HTCAP_CBW20_40)) {
-        ht_param = ni->ni_htop0 & IEEE80211_HTOP0_SCO_MASK;
-        if ((ht_param == IEEE80211_HTOP0_SCO_SCA && IEEE80211_IS_CHAN_HT40U(ni->ni_chan)) ||
-            (ht_param == IEEE80211_HTOP0_SCO_SCB && IEEE80211_IS_CHAN_HT40D(ni->ni_chan)))  {
-            ni->ni_chw = IEEE80211_CHAN_WIDTH_40;
-            
-            if (ieee80211_node_supports_ht_sgi40(ni)) {
-                ni->ni_flags |= IEEE80211_NODE_HT_SGI40;
-            }
-        }
-    }
+    ieee80211_ht_negotiate_chw(ic, ni);
+    
+    if (ni->ni_chw == IEEE80211_CHAN_WIDTH_40 && ieee80211_node_supports_ht_sgi40(ni))
+        ni->ni_flags |= IEEE80211_NODE_HT_SGI40;
+    
     XYLog("%s %d chan_width=%s\n", __FUNCTION__, __LINE__, ieee80211_chan_width_name[ni->ni_chw]);
 }
 

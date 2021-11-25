@@ -3043,16 +3043,9 @@ iwm_update_chw(struct ieee80211com *ic)
     XYLog("%s\n", __FUNCTION__);
     struct iwm_softc *sc = (struct iwm_softc *)ic->ic_softc;
     ItlIwm *that = container_of(sc, ItlIwm, com);
-    int err = 0;
     
-    int chains = that->iwm_mimo_enabled(sc) ? 2 : 1;
-    err = that->iwm_phy_ctxt_cmd(sc, &sc->sc_phyctxt[0],
-                                 chains, chains, IWM_FW_CTXT_ACTION_MODIFY, 0);
-    if (err) {
-        XYLog("%s: failed to update PHY\n",
-              __FUNCTION__);
-        return;
-    }
+    if (ic->ic_state == IEEE80211_S_RUN && (sc->sc_flags & IWM_FLAG_STA_ACTIVE))
+        that->iwm_add_task(sc, systq, &sc->chan_ctxt_task);
 }
 
 /*
@@ -3248,6 +3241,7 @@ iwm_newstate(struct ieee80211com *ic, enum ieee80211_state nstate, int arg)
         timeout_del(&sc->sc_calib_to);
         that->iwm_del_task(sc, systq, &sc->ba_task);
         that->iwm_del_task(sc, systq, &sc->mac_ctxt_task);
+        that->iwm_del_task(sc, systq, &sc->chan_ctxt_task);
         for (i = 0; i < nitems(sc->sc_rxba_data); i++) {
             struct iwm_rxba_data *rxba = &sc->sc_rxba_data[i];
             that->iwm_clear_reorder_buffer(sc, rxba);
@@ -3761,6 +3755,7 @@ iwm_stop(struct _ifnet *ifp)
     iwm_del_task(sc, sc->sc_nswq, &sc->newstate_task);
     iwm_del_task(sc, systq, &sc->ba_task);
     iwm_del_task(sc, systq, &sc->mac_ctxt_task);
+    iwm_del_task(sc, systq, &sc->chan_ctxt_task);
     //    KASSERT(sc->task_refs.refs >= 1, "sc->task_refs.refs >= 1");
     //    refcnt_finalize(&sc->task_refs, "iwmstop");
     
@@ -4951,6 +4946,7 @@ iwm_attach(struct iwm_softc *sc, struct pci_attach_args *pa)
     task_set(&sc->newstate_task, iwm_newstate_task, sc, "newstate_task");
     task_set(&sc->ba_task, iwm_ba_task, sc, "ba_task");
     task_set(&sc->mac_ctxt_task, iwm_mac_ctxt_task, sc, "mac_ctxt_task");
+    task_set(&sc->chan_ctxt_task, iwm_chan_ctxt_task, sc, "chan_ctxt_task");
     
     ic->ic_node_alloc = iwm_node_alloc;
     ic->ic_bgscan_start = iwm_bgscan;
@@ -5065,6 +5061,44 @@ iwm_mac_ctxt_task(void *arg)
     err = that->iwm_mac_ctxt_cmd(sc, in, IWM_FW_CTXT_ACTION_MODIFY, 1);
     if (err)
         printf("%s: failed to update MAC\n", DEVNAME(sc));
+    
+    //    refcnt_rele_wake(&sc->task_refs);
+    splx(s);
+}
+
+void ItlIwm::
+iwm_chan_ctxt_task(void *arg)
+{
+    struct iwm_softc *sc = (struct iwm_softc *)arg;
+    struct ieee80211com *ic = &sc->sc_ic;
+    struct iwm_node *in = (struct iwm_node *)ic->ic_bss;
+    ItlIwm *that = container_of(sc, ItlIwm, com);
+    int err, s = splnet();
+    
+    if (sc->sc_flags & IWM_FLAG_SHUTDOWN ||
+        ic->ic_state != IEEE80211_S_RUN ||
+        in->in_phyctxt == NULL) {
+        //        refcnt_rele_wake(&sc->task_refs);
+        splx(s);
+        return;
+    }
+    
+    int chains = that->iwm_mimo_enabled(sc) ? 2 : 1;
+    err = that->iwm_phy_ctxt_cmd(sc, in->in_phyctxt,
+                                 chains, chains, IWM_FW_CTXT_ACTION_MODIFY, 0);
+    if (err) {
+        XYLog("%s: failed to update PHY\n",
+              __FUNCTION__);
+        //        refcnt_rele_wake(&sc->task_refs);
+        splx(s);
+        return;
+    }
+    
+    if (in->in_rn.bw != in->in_ni.ni_chw) {
+        ieee80211_ra_node_init(ic, &in->in_rn, &in->in_ni);
+        ieee80211_ra_choose(&in->in_rn, ic, &in->in_ni);
+    }
+    that->iwm_setrates((struct iwm_node *)ic->ic_bss, 0);
     
     //    refcnt_rele_wake(&sc->task_refs);
     splx(s);

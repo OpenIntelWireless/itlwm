@@ -158,50 +158,40 @@ iwm_get_channel_width(struct ieee80211com *ic, struct ieee80211_channel *c)
 }
 
 static uint8_t
-iwm_get_ctrl_pos(struct ieee80211com *ic, struct ieee80211_channel *c) {
-    uint8_t ret = IWM_PHY_VHT_CTRL_POS_1_BELOW;
-    if (ic->ic_bss == NULL || ic->ic_state < IEEE80211_S_ASSOC) {
-        return ret;
-    }
-    if (ic->ic_bss->ni_chw == IEEE80211_CHAN_WIDTH_40) {
-        if ((ic->ic_bss->ni_htop0 & IEEE80211_HTOP0_SCO_MASK) == IEEE80211_HTOP0_SCO_SCA) {
+iwm_get_ctrl_pos(struct ieee80211com *ic, struct ieee80211_channel *c)
+{
+    if (ic->ic_bss == NULL || ic->ic_state < IEEE80211_S_ASSOC || ic->ic_bss->ni_chw <= IEEE80211_CHAN_WIDTH_20)
+        return IWM_PHY_VHT_CTRL_POS_1_BELOW;
+    
+    signed int offset = ic->ic_bss->ni_chan->ic_freq - ic->ic_bss->ni_chan->ic_center_freq1;
+    switch (offset) {
+        case -70:
+            return IWM_PHY_VHT_CTRL_POS_4_BELOW;
+        case -50:
+            return IWM_PHY_VHT_CTRL_POS_3_BELOW;
+        case -30:
+            return IWM_PHY_VHT_CTRL_POS_2_BELOW;
+        case -10:
             return IWM_PHY_VHT_CTRL_POS_1_BELOW;
-        } else {
+        case  10:
             return IWM_PHY_VHT_CTRL_POS_1_ABOVE;
-        }
-    } else if (ic->ic_bss->ni_chw == IEEE80211_CHAN_WIDTH_80 || ic->ic_bss->ni_chw == IEEE80211_CHAN_WIDTH_80P80 || ic->ic_bss->ni_chw == IEEE80211_CHAN_WIDTH_160) {
-        signed int offset = ic->ic_bss->ni_chan->ic_freq - ic->ic_bss->ni_chan->ic_center_freq1;
-        switch (offset) {
-            case -70:
-                return IWM_PHY_VHT_CTRL_POS_4_BELOW;
-            case -50:
-                return IWM_PHY_VHT_CTRL_POS_3_BELOW;
-            case -30:
-                return IWM_PHY_VHT_CTRL_POS_2_BELOW;
-            case -10:
-                return IWM_PHY_VHT_CTRL_POS_1_BELOW;
-            case  10:
-                return IWM_PHY_VHT_CTRL_POS_1_ABOVE;
-            case  30:
-                return IWM_PHY_VHT_CTRL_POS_2_ABOVE;
-            case  50:
-                return IWM_PHY_VHT_CTRL_POS_3_ABOVE;
-            case  70:
-                return IWM_PHY_VHT_CTRL_POS_4_ABOVE;
-            default:
-                XYLog("Invalid channel definition freq=%d %d\n", ic->ic_bss->ni_chan->ic_freq, offset);
-                /* fall through */
-            case 0:
-                /*
-                 * The FW is expected to check the control channel position only
-                 * when in HT/VHT and the channel width is not 20MHz. Return
-                 * this value as the default one.
-                 */
-                return IWM_PHY_VHT_CTRL_POS_1_BELOW;
-        }
-        return ret;
+        case  30:
+            return IWM_PHY_VHT_CTRL_POS_2_ABOVE;
+        case  50:
+            return IWM_PHY_VHT_CTRL_POS_3_ABOVE;
+        case  70:
+            return IWM_PHY_VHT_CTRL_POS_4_ABOVE;
+        default:
+            XYLog("Invalid channel definition freq=%d %d\n", ic->ic_bss->ni_chan->ic_freq, offset);
+            /* fall through */
+        case 0:
+            /*
+             * The FW is expected to check the control channel position only
+             * when in HT/VHT and the channel width is not 20MHz. Return
+             * this value as the default one.
+             */
+            return IWM_PHY_VHT_CTRL_POS_1_BELOW;
     }
-    return ret;
 }
 
 void ItlIwm::
