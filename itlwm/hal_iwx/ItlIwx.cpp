@@ -4077,56 +4077,41 @@ iwx_sta_rx_agg(struct iwx_softc *sc, struct ieee80211_node *ni, uint8_t tid,
         return;
     }
     
-    /* Deaggregation is done in hardware. */
-    if (start) {
-        if (!(status & IWX_ADD_STA_BAID_VALID_MASK)) {
-            ieee80211_addba_req_refuse(ic, ni, tid);
-            splx(s);
-            return;
-        }
-        baid = (status & IWX_ADD_STA_BAID_MASK) >>
-        IWX_ADD_STA_BAID_SHIFT;
-        if (baid == IWX_RX_REORDER_DATA_INVALID_BAID ||
-            baid >= nitems(sc->sc_rxba_data)) {
-            ieee80211_addba_req_refuse(ic, ni, tid);
-            splx(s);
-            return;
-        }
-        rxba = &sc->sc_rxba_data[baid];
-        if (rxba->baid != IWX_RX_REORDER_DATA_INVALID_BAID) {
-            ieee80211_addba_req_refuse(ic, ni, tid);
-            splx(s);
-            return;
-        }
-        rxba->sta_id = IWX_STATION_ID;
-        rxba->tid = tid;
-        rxba->baid = baid;
-        rxba->timeout = timeout_val;
-        getmicrouptime(&rxba->last_rx);
-        iwx_init_reorder_buffer(&rxba->reorder_buf, ssn,
-                                winsize);
-        if (timeout_val != 0) {
-            struct ieee80211_rx_ba *ba;
-            timeout_add_usec(&rxba->session_timer,
-                             timeout_val);
-            /* XXX disable net80211's BA timeout handler */
-            ba = &ni->ni_rx_ba[tid];
-            ba->ba_timeout_val = 0;
-        }
-    } else {
-        int i;
-        for (i = 0; i < nitems(sc->sc_rxba_data); i++) {
-            rxba = &sc->sc_rxba_data[i];
-            if (rxba->baid ==
-                IWX_RX_REORDER_DATA_INVALID_BAID)
-                continue;
-            if (rxba->tid != tid)
-                continue;
-            iwx_clear_reorder_buffer(sc, rxba);
-            break;
-        }
+    if (!(status & IWX_ADD_STA_BAID_VALID_MASK)) {
+        ieee80211_addba_req_refuse(ic, ni, tid);
+        splx(s);
+        return;
     }
-    
+    baid = (status & IWX_ADD_STA_BAID_MASK) >>
+    IWX_ADD_STA_BAID_SHIFT;
+    if (baid == IWX_RX_REORDER_DATA_INVALID_BAID ||
+        baid >= nitems(sc->sc_rxba_data)) {
+        ieee80211_addba_req_refuse(ic, ni, tid);
+        splx(s);
+        return;
+    }
+    rxba = &sc->sc_rxba_data[baid];
+    if (rxba->baid != IWX_RX_REORDER_DATA_INVALID_BAID) {
+        ieee80211_addba_req_refuse(ic, ni, tid);
+        splx(s);
+        return;
+    }
+    rxba->sta_id = IWX_STATION_ID;
+    rxba->tid = tid;
+    rxba->baid = baid;
+    rxba->timeout = timeout_val;
+    getmicrouptime(&rxba->last_rx);
+    iwx_init_reorder_buffer(&rxba->reorder_buf, ssn,
+                            winsize);
+    if (timeout_val != 0) {
+        struct ieee80211_rx_ba *ba;
+        timeout_add_usec(&rxba->session_timer,
+                         timeout_val);
+        /* XXX disable net80211's BA timeout handler */
+        ba = &ni->ni_rx_ba[tid];
+        ba->ba_timeout_val = 0;
+    }
+
     if (start) {
         sc->sc_rx_ba_sessions++;
         ieee80211_addba_req_accept(ic, ni, tid);
@@ -9179,25 +9164,9 @@ iwx_run_stop(struct iwx_softc *sc)
 {
     struct ieee80211com *ic = &sc->sc_ic;
     struct iwx_node *in = (struct iwx_node *)ic->ic_bss;
-    int err, i;
+    int err;
     
     splassert(IPL_NET);
-    
-    /*
-     * Stop Rx BA sessions now. We cannot rely on the BA task
-     * for this when moving out of RUN state since it runs in a
-     * separate thread.
-     * Note that in->in_ni (struct ieee80211_node) already represents
-     * our new access point in case we are roaming between APs.
-     * This means we cannot rely on struct ieee802111_node to tell
-     * us which BA sessions exist.
-     */
-    for (i = 0; i < nitems(sc->sc_rxba_data); i++) {
-        struct iwx_rxba_data *rxba = &sc->sc_rxba_data[i];
-        if (rxba->baid == IWX_RX_REORDER_DATA_INVALID_BAID)
-            continue;
-        iwx_sta_rx_agg(sc, &in->in_ni, rxba->tid, 0, 0, 0, 0);
-    }
     
     err = iwx_sf_config(sc, IWX_SF_INIT_OFF);
     if (err)
@@ -9452,6 +9421,7 @@ iwx_newstate(struct ieee80211com *ic, enum ieee80211_state nstate, int arg)
     struct iwx_softc *sc = (struct iwx_softc *)ifp->if_softc;
     ItlIwx *that = container_of(sc, ItlIwx, com);
     struct ieee80211_node *ni = ic->ic_bss;
+    int i;
     
     if (ic->ic_state == IEEE80211_S_RUN) {
         if (nstate == IEEE80211_S_SCAN) {
@@ -9465,6 +9435,10 @@ iwx_newstate(struct ieee80211com *ic, enum ieee80211_state nstate, int arg)
         that->iwx_del_task(sc, systq, &sc->ba_task);
         that->iwx_del_task(sc, systq, &sc->mac_ctxt_task);
         that->iwx_del_task(sc, systq, &sc->chan_ctxt_task);
+        for (i = 0; i < nitems(sc->sc_rxba_data); i++) {
+            struct iwx_rxba_data *rxba = &sc->sc_rxba_data[i];
+            that->iwx_clear_reorder_buffer(sc, rxba);
+        }
     }
     
     sc->ns_nstate = nstate;
