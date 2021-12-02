@@ -203,12 +203,6 @@ iwm_enable_fwload_interrupt(struct iwm_softc *sc)
     }
 }
 
-void
-iwm_restore_interrupts(struct iwm_softc *sc)
-{
-    IWM_WRITE(sc, IWM_CSR_INT_MASK, sc->sc_intmask);
-}
-
 void ItlIwm::
 iwm_disable_interrupts(struct iwm_softc *sc)
 {
