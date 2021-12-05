@@ -4233,6 +4233,7 @@ iwm_intr(OSObject *arg, IOInterruptEventSource* sender, int count)
     
     if (r1 & IWM_CSR_INT_BIT_RF_KILL) {
         handled |= IWM_CSR_INT_BIT_RF_KILL;
+        XYLog("%s RF_KILL has been toggled\n", __FUNCTION__);
         that->iwm_check_rfkill(sc);
         task_add(systq, &sc->init_task);
         rv = 1;

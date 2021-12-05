@@ -164,6 +164,8 @@ iwm_check_rfkill(struct iwm_softc *sc)
         sc->sc_flags &= ~IWM_FLAG_RFKILL;
     }
     
+    XYLog("%s RF_KILL hw: %d\n", __FUNCTION__, rv);
+
     splx(s);
     return rv;
 }

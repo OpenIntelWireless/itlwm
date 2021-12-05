@@ -2648,6 +2648,8 @@ iwx_check_rfkill(struct iwx_softc *sc)
         sc->sc_flags &= ~IWX_FLAG_RFKILL;
     }
     
+    XYLog("%s RF_KILL hw: %d\n", __FUNCTION__, rv);
+
     splx(s);
     return rv;
 }
@@ -11005,6 +11007,7 @@ iwx_intr(OSObject *object, IOInterruptEventSource* sender, int count)
     
     if (r1 & IWX_CSR_INT_BIT_RF_KILL) {
         handled |= IWX_CSR_INT_BIT_RF_KILL;
+        XYLog("%s RF_KILL has been toggled\n", __FUNCTION__);
         that->iwx_check_rfkill(sc);
         task_add(systq, &sc->init_task);
         rv = 1;
