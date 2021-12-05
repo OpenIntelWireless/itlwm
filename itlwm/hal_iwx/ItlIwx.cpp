@@ -6806,7 +6806,7 @@ iwx_flush_sta_tids(struct iwx_softc *sc, int sta_id, uint16_t tids)
             continue;
         txq = &sc->txq[qid];
         
-        iwx_ampdu_txq_advance(sc, txq, read_after);
+        iwx_ampdu_txq_advance(sc, txq, IWX_AGG_SSN_TO_TXQ_IDX(read_after, txq->ring_count));
     }
 out:
     iwx_free_resp(sc, &hcmd);
