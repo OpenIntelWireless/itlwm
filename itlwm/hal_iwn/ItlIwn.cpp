@@ -267,6 +267,8 @@ get80211Controller()
 #define    PCI_PRODUCT_INTEL_WL_6235_2    0x088f        /* Centrino Advanced-N 6235 */
 #define    PCI_PRODUCT_INTEL_WL_2200_1    0x0890        /* Centrino Wireless-N 2200 */
 #define    PCI_PRODUCT_INTEL_WL_2200_2    0x0891        /* Centrino Wireless-N 2200 */
+#define    PCI_PRODUCT_INTEL_WL_6150_1    0x0885        /* Centrino Wireless-N 6150 */
+#define    PCI_PRODUCT_INTEL_WL_6150_2    0x0886        /* Centrino Wireless-N 6150 */
 #define    PCI_PRODUCT_INTEL_WL_2230_1    0x0887        /* Centrino Wireless-N 2230 */
 #define    PCI_PRODUCT_INTEL_WL_2230_2    0x0888        /* Centrino Wireless-N 2230 */
 
@@ -309,6 +311,8 @@ static const struct pci_matchid iwn_devices[] = {
     { PCI_VENDOR_INTEL, PCI_PRODUCT_INTEL_WL_135_2 },
     { PCI_VENDOR_INTEL, PCI_PRODUCT_INTEL_WL_105_1 },
     { PCI_VENDOR_INTEL, PCI_PRODUCT_INTEL_WL_105_2 },
+    { PCI_VENDOR_INTEL, PCI_PRODUCT_INTEL_WL_6150_1 },
+    { PCI_VENDOR_INTEL, PCI_PRODUCT_INTEL_WL_6150_2 },
 };
 
 int ItlIwn::
