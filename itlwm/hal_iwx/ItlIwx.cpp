@@ -5937,7 +5937,6 @@ iwx_get_channel_width(struct ieee80211com *ic, struct ieee80211_channel *c)
             return IWX_PHY_VHT_CHANNEL_MODE40;
         case IEEE80211_CHAN_WIDTH_80:
             return IWX_PHY_VHT_CHANNEL_MODE80;
-        case IEEE80211_CHAN_WIDTH_80P80:
         case IEEE80211_CHAN_WIDTH_160:
             return IWX_PHY_VHT_CHANNEL_MODE160;
         default:
@@ -5949,7 +5948,7 @@ iwx_get_channel_width(struct ieee80211com *ic, struct ieee80211_channel *c)
 static uint8_t
 iwx_get_ctrl_pos(struct ieee80211com *ic, struct ieee80211_channel *c)
 {
-    if (ic->ic_bss == NULL || ic->ic_state < IEEE80211_S_ASSOC || ic->ic_bss->ni_chw <= IEEE80211_CHAN_WIDTH_20)
+    if (ic->ic_bss == NULL || ic->ic_state < IEEE80211_S_ASSOC || iwx_get_channel_width(ic, c) == IWX_PHY_VHT_CHANNEL_MODE20)
         return IWX_PHY_VHT_CTRL_POS_1_BELOW;
 
     signed int offset = ic->ic_bss->ni_chan->ic_freq - ic->ic_bss->ni_chan->ic_center_freq1;
@@ -9080,6 +9079,11 @@ iwx_run(struct iwx_softc *sc)
         err = iwx_auth(sc);
         if (err)
             return err;
+    }
+    
+    if (in->in_ni.ni_chw == IEEE80211_CHAN_WIDTH_80P80) {
+        /* Fallback to 20mhz VHT */
+        in->in_ni.ni_chw = IEEE80211_CHAN_WIDTH_20;
     }
     
     /* Configure Rx chains for MIMO. */

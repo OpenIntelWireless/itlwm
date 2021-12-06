@@ -148,7 +148,6 @@ iwm_get_channel_width(struct ieee80211com *ic, struct ieee80211_channel *c)
             return IWM_PHY_VHT_CHANNEL_MODE40;
         case IEEE80211_CHAN_WIDTH_80:
             return IWM_PHY_VHT_CHANNEL_MODE80;
-        case IEEE80211_CHAN_WIDTH_80P80:
         case IEEE80211_CHAN_WIDTH_160:
             return IWM_PHY_VHT_CHANNEL_MODE160;
         default:
@@ -160,7 +159,7 @@ iwm_get_channel_width(struct ieee80211com *ic, struct ieee80211_channel *c)
 static uint8_t
 iwm_get_ctrl_pos(struct ieee80211com *ic, struct ieee80211_channel *c)
 {
-    if (ic->ic_bss == NULL || ic->ic_state < IEEE80211_S_ASSOC || ic->ic_bss->ni_chw <= IEEE80211_CHAN_WIDTH_20)
+    if (ic->ic_bss == NULL || ic->ic_state < IEEE80211_S_ASSOC || iwm_get_channel_width(ic, c) == IWM_PHY_VHT_CHANNEL_MODE20)
         return IWM_PHY_VHT_CTRL_POS_1_BELOW;
     
     signed int offset = ic->ic_bss->ni_chan->ic_freq - ic->ic_bss->ni_chan->ic_center_freq1;

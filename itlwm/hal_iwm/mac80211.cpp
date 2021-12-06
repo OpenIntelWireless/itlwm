@@ -2439,6 +2439,11 @@ iwm_run(struct iwm_softc *sc)
             return err;
     }
     
+    if (in->in_ni.ni_chw == IEEE80211_CHAN_WIDTH_80P80) {
+        /* Fallback to 20mhz VHT */
+        in->in_ni.ni_chw = IEEE80211_CHAN_WIDTH_20;
+    }
+    
     /* Configure Rx chains for MIMO. */
     if ((ic->ic_opmode == IEEE80211_M_MONITOR ||
          (in->in_ni.ni_flags & IEEE80211_NODE_HT) ||
