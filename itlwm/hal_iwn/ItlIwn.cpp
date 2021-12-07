@@ -109,6 +109,10 @@ releaseAll()
 {
     pci_intr_handle *intrHandler = com.ih;
     
+    if (com.calib_to) {
+        timeout_del(&com.calib_to);
+        timeout_free(&com.calib_to);
+    }
     if (intrHandler) {
         if (intrHandler->intr && intrHandler->workloop) {
 //            intrHandler->intr->disable();
