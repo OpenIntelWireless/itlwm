@@ -1876,6 +1876,7 @@ iwn_newstate(struct ieee80211com *ic, enum ieee80211_state nstate, int arg)
         sc->rxon.associd = 0;
         sc->rxon.filter &= ~htole32(IWN_FILTER_BSS);
         sc->calib.state = IWN_CALIB_STATE_INIT;
+        sc->agg_queue_mask = 0;
         error = that->iwn_cmd(sc, IWN_CMD_RXON, &sc->rxon, sc->rxonsz, 1);
         if (error != 0)
             XYLog("%s: RXON command failed\n",
