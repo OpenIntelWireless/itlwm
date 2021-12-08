@@ -1918,37 +1918,6 @@ ieee80211_setup_vhtcaps(struct ieee80211com *ic, struct ieee80211_node *ni, cons
     ni->ni_flags |= IEEE80211_NODE_VHTCAP;
 }
 
-int
-ieee80211_ht_updateparams_final(struct ieee80211com *ic, struct ieee80211_node *ni,
-    const uint8_t *htcapie, const uint8_t *htinfoie)
-{
-    int ret = 0;
-    int ht_param;
-    
-    if (ni == NULL || ni->ni_chan == NULL) {
-        return ret;
-    }
-    
-    if (IEEE80211_IS_CHAN_HT40(ni->ni_chan) && (ic->ic_htcaps & IEEE80211_HTCAP_CBW20_40)) {
-        ht_param = ni->ni_htop0 & IEEE80211_HTOP0_SCO_MASK;
-
-        if ((ht_param == IEEE80211_HTOP0_SCO_SCA && IEEE80211_IS_CHAN_HT40U(ni->ni_chan)) ||
-            (ht_param == IEEE80211_HTOP0_SCO_SCB && IEEE80211_IS_CHAN_HT40D(ni->ni_chan)))  {
-            if (ni->ni_chw != IEEE80211_CHAN_WIDTH_40) {
-                ni->ni_chw = IEEE80211_CHAN_WIDTH_40;
-                ret = 1;
-            }
-        } else {
-            if (ni->ni_chw == IEEE80211_CHAN_WIDTH_40) {
-                ni->ni_chw = IEEE80211_CHAN_WIDTH_20;
-                ret = 1;
-            }
-        }
-    }
-    
-    return (ret);
-}
-
 /*-
  * Beacon/Probe response frame format:
  * [8]   Timestamp
@@ -2223,6 +2192,9 @@ ieee80211_recv_probe_resp(struct ieee80211com *ic, mbuf_t m,
         ieee80211_setup_htcaps(ni, htcaps + 2, htcaps[1]);
     if (htop && !ieee80211_setup_htop(ni, htop + 2, htop[1], 1))
         htop = NULL; /* invalid HTOP */
+    
+    if (htcaps != NULL && htop != NULL)
+        ieee80211_ht_negotiate_chw(ic, ni);
     
     if (vhtcap != NULL && vhtopmode != NULL) {
         ieee80211_setup_vhtcaps(ic, ni, vhtcap);

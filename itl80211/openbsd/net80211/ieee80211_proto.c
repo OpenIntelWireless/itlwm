@@ -576,6 +576,9 @@ ieee80211_ht_negotiate_chw(struct ieee80211com *ic, struct ieee80211_node *ni)
 {
     int ht_param;
 
+    if (!ni || !ni->ni_chan)
+        return;
+    
     ni->ni_chw = IEEE80211_CHAN_WIDTH_20;
     ni->ni_chan->ic_center_freq1 = ni->ni_chan->ic_freq;
 

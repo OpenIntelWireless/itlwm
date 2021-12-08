@@ -5642,7 +5642,7 @@ iwn_rxon_configure_ht40(struct ieee80211com *ic, struct ieee80211_node *ni)
     sc->rxon.flags &= ~htole32(IWN_RXON_HT_CHANMODE_MIXED2040 |
                                IWN_RXON_HT_CHANMODE_PURE40 | IWN_RXON_HT_HT40MINUS);
     
-    if (ni->ni_chw == IEEE80211_CHAN_WIDTH_40 &&
+    if (ieee80211_node_supports_ht_chan40(ni) &&
         (sco == IEEE80211_HTOP0_SCO_SCA ||
          sco == IEEE80211_HTOP0_SCO_SCB)) {
         if (sco == IEEE80211_HTOP0_SCO_SCB)

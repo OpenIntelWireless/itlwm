@@ -574,6 +574,15 @@ ieee80211_node_supports_ht_sgi40(struct ieee80211_node *ni)
 	    (ni->ni_htcaps & IEEE80211_HTCAP_SGI40);
 }
 
+/* Check if the peer can receive frames sent on a 40 MHz channel. */
+static inline int
+ieee80211_node_supports_ht_chan40(struct ieee80211_node *ni)
+{
+    return (ieee80211_node_supports_ht(ni) &&
+        (ni->ni_htcaps & IEEE80211_HTCAP_CBW20_40) &&
+        (ni->ni_htop0 & IEEE80211_HTOP0_CHW));
+}
+
 static inline int
 ieee80211_node_supports_vht_sgi80(struct ieee80211_node *ni)
 {
