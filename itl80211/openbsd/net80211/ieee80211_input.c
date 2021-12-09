@@ -879,8 +879,8 @@ ieee80211_input_ba(struct ieee80211com *ic, mbuf_t m,
             ieee80211_ba_move_window(ic, ni, tid, sn, ml);
         } else {
             ic->ic_stats.is_ht_rx_ba_window_slide++;
-            uint16_t max_seq = (ba->ba_winstart + count) & 0xfff;
-            ieee80211_input_ba_seq(ic, ni, (uint8_t)tid, max_seq, ml);
+            ieee80211_input_ba_seq(ic, ni, tid,
+                                   (ba->ba_winstart + count) & 0xfff, ml);
             ieee80211_input_ba_flush(ic, ni, ba, ml);
         }
     }
@@ -932,7 +932,7 @@ ieee80211_input_ba_seq(struct ieee80211com *ic, struct ieee80211_node *ni,
             seq = letoh16(*(u_int16_t *)wh->i_seq) >>
             IEEE80211_SEQ_SEQ_SHIFT;
             if (!SEQ_LT(seq, max_seq))
-                return;
+                break;
             ieee80211_inputm(ifp, ba->ba_buf[ba->ba_head].m,
                              ni, &ba->ba_buf[ba->ba_head].rxi, ml);
             ba->ba_buf[ba->ba_head].m = NULL;
@@ -953,6 +953,10 @@ ieee80211_input_ba_flush(struct ieee80211com *ic, struct ieee80211_node *ni,
 
 {
     struct _ifnet *ifp = &ic->ic_if;
+    
+    /* Do not re-arm the gap timeout if we made no progress. */
+    if (ba->ba_buf[ba->ba_head].m == NULL)
+        return;
     
     /* pass reordered MPDUs up to the next MAC process */
     while (ba->ba_buf[ba->ba_head].m != NULL) {
@@ -1050,6 +1054,7 @@ ieee80211_ba_move_window(struct ieee80211com *ic, struct ieee80211_node *ni,
     }
     /* move window forward */
     ba->ba_winstart = ssn;
+    ba->ba_winend = (ba->ba_winstart + ba->ba_winsize - 1) & 0xfff;
     
     ieee80211_input_ba_flush(ic, ni, ba, ml);
 }
@@ -1181,6 +1186,15 @@ ieee80211_decap(struct ieee80211com *ic, mbuf_t m,
         mbuf_adj(m, hdrlen - ETHER_HDR_LEN);
     }
     memcpy(mtod(m, caddr_t), &eh, ETHER_HDR_LEN);
+    if (!ALIGNED_POINTER(mtod(m, caddr_t) + ETHER_HDR_LEN, u_int32_t)) {
+        mbuf_t m0 = m;
+        m = m_dup_pkt(m0, ETHER_ALIGN, M_NOWAIT);
+        mbuf_freem(m0);
+        if (m == NULL) {
+            ic->ic_stats.is_rx_decap++;
+            return;
+        }
+    }
     ieee80211_enqueue_data(ic, m, ni, mcast, ml);
 }
 
@@ -3303,6 +3317,10 @@ ieee80211_recv_addba_req(struct ieee80211com *ic, mbuf_t m,
     /* The driver is still processing an ADDBA request for this tid. */
     if (ba->ba_state == IEEE80211_BA_REQUESTED)
         return;
+    /* If we are in the process of roaming between APs, ignore. */
+    if ((ic->ic_flags & IEEE80211_F_BGSCAN) &&
+        (ic->ic_xflags & IEEE80211_F_TX_MGMT_ONLY))
+        return;
     /* check if we already have a Block Ack agreement for this RA/TID */
     if (ba->ba_state == IEEE80211_BA_AGREED) {
         /* XXX should we update the timeout value? */
@@ -3517,6 +3535,8 @@ ieee80211_addba_resp_accept(struct ieee80211com *ic,
     /* MLME-ADDBA.confirm(Success) */
     ba->ba_state = IEEE80211_BA_AGREED;
     ic->ic_stats.is_ht_tx_ba_agreements++;
+    
+    ni->ni_qos_txseqs[tid] = ba->ba_winstart;
     
     /* Reset ADDBA request interval. */
     ni->ni_addba_req_intval[tid] = 1;

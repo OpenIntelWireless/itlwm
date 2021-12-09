@@ -591,6 +591,14 @@ fallback:
         goto bad;
     }
     
+#ifndef IEEE80211_STA_ONLY
+    if (ic->ic_opmode == IEEE80211_M_HOSTAP && ni != ic->ic_bss &&
+        ni->ni_state != IEEE80211_STA_ASSOC) {
+        ic->ic_stats.is_tx_nonode++;
+        goto bad;
+    }
+#endif
+    
     if ((ic->ic_flags & IEEE80211_F_RSNON) &&
         !ni->ni_port_valid &&
         eh.ether_type != htons(ETHERTYPE_PAE)) {
