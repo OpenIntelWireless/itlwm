@@ -1465,6 +1465,7 @@ justcleanup:
 		}
 		break;
 	case IEEE80211_S_AUTH:
+        ieee80211_clean_sta_bss_node(ic);
 		if (ostate == IEEE80211_S_RUN)
 			ieee80211_check_wpa_supplicant_failure(ic, ni);
 		ni->ni_rsn_supp_state = RSNA_SUPP_INITIALIZE;

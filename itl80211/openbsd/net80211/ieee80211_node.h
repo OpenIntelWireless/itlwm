@@ -632,6 +632,7 @@ void ieee80211_free_allnodes(struct ieee80211com *, int);
 void ieee80211_iterate_nodes(struct ieee80211com *,
 		ieee80211_iter_func *, void *);
 void ieee80211_clean_cached(struct ieee80211com *);
+void ieee80211_clean_sta_bss_node(struct ieee80211com *);
 void ieee80211_clean_nodes(struct ieee80211com *, int);
 void ieee80211_setup_htcaps(struct ieee80211_node *, const uint8_t *,
     uint8_t);

@@ -2173,6 +2173,27 @@ ieee80211_clean_cached(struct ieee80211com *ic)
     }
     splx(s);
 }
+
+void
+ieee80211_clean_sta_bss_node(struct ieee80211com *ic)
+{
+    struct ieee80211_node *ni, *next_ni;
+    int s;
+    
+    s = splnet();
+    if (ic->ic_bss == NULL)
+        return;
+
+    for (ni = RB_MIN(ieee80211_tree, &ic->ic_tree);
+         ni != NULL; ni = next_ni) {
+        next_ni = RB_NEXT(ieee80211_tree, &ic->ic_tree, ni);
+        if (ni->ni_state == IEEE80211_STA_BSS) {
+            if (memcmp(ic->ic_bss->ni_bssid, ni->ni_bssid, IEEE80211_ADDR_LEN) != 0)
+                ieee80211_node_newstate(ni, IEEE80211_STA_CACHE);
+        }
+    }
+    splx(s);
+}
 /*
  * Timeout inactive nodes.
  *
