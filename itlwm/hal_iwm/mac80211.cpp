@@ -3610,7 +3610,7 @@ iwm_init(struct _ifnet *ifp)
     err = iwm_init_hw(sc);
     if (err) {
         if (generation == sc->sc_generation)
-            iwm_stop(ifp);
+            iwm_stop_device(sc);
         return err;
     }
     
