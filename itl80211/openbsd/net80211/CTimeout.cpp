@@ -42,11 +42,16 @@ IOReturn CTimeout::timeout_add_msec(OSObject *target, void *arg0, void *arg1, vo
 {
     IOWorkLoop *wl = (IOWorkLoop*)arg1;
     int msecs = *(int*)arg2;
-    CTimeout *cto = (CTimeout *)arg0;
+    CTimeout **ccto = (CTimeout **)arg0;
+    
+    if (ccto == NULL || *ccto == NULL) {
+        return kIOReturnError;
+    }
+    CTimeout *cto = *ccto;
     if (cto->tm == NULL) {
         cto->tm = IOTimerEventSource::timerEventSource(cto, &CTimeout::timeoutOccurred);
         if (cto->tm == NULL) {
-            return 0;
+            return kIOReturnError;
         }
         cto->tm->enable();
         wl->addEventSource(cto->tm);
@@ -58,13 +63,15 @@ IOReturn CTimeout::timeout_add_msec(OSObject *target, void *arg0, void *arg1, vo
 
 IOReturn CTimeout::timeout_del(OSObject *target, void *arg0, void *arg1, void *arg2, void *arg3)
 {
-    CTimeout *cto = (CTimeout *)arg0;
-    if (cto == NULL || cto->tm == NULL || !cto->isPending) {
+    CTimeout **ccto = (CTimeout **)arg0;
+    if (ccto == NULL || *ccto == NULL) {
         return kIOReturnSuccess;
     }
-    if (cto->tm != NULL) {
-        cto->tm->cancelTimeout();
+    CTimeout *cto = *ccto;
+    if (cto->tm == NULL || !cto->isPending) {
+        return kIOReturnSuccess;
     }
+    cto->tm->cancelTimeout();
     cto->isPending = false;
     return kIOReturnSuccess;
 }

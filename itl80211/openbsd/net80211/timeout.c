@@ -45,10 +45,7 @@ void timeout_set(CTimeout **t, void (*fn)(void *), void *arg)
 
 int timeout_add_msec(CTimeout **to, int msecs)
 {
-    if (*to == NULL) {
-        return 0;
-    }
-    return _fCommandGate->runAction(&CTimeout::timeout_add_msec, *to, _fWorkloop, &msecs) == kIOReturnSuccess ? 1 : 0;
+    return _fCommandGate->runAction(&CTimeout::timeout_add_msec, to, _fWorkloop, &msecs) == kIOReturnSuccess ? 1 : 0;
 }
 
 int timeout_add_sec(CTimeout **to, int secs)
@@ -64,10 +61,7 @@ int timeout_add_usec(CTimeout **to, int usecs)
 int timeout_del(CTimeout **to)
 {
     //    IOLog("timeout_del\n");
-    if ((*to) == NULL) {
-        return 0;
-    }
-    return _fCommandGate->runAction(&CTimeout::timeout_del, *to, _fWorkloop) == kIOReturnSuccess ? 1 : 0;
+    return _fCommandGate->runAction(&CTimeout::timeout_del, to, _fWorkloop) == kIOReturnSuccess ? 1 : 0;
 }
 
 int timeout_free(CTimeout **to)
