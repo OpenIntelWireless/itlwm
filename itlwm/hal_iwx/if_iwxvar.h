@@ -672,7 +672,7 @@ struct iwx_softc {
     int sc_capa_num_stations;
 	uint8_t sc_ucode_api[howmany(IWX_NUM_UCODE_TLV_API, NBBY)];
 	uint8_t sc_enabled_capa[howmany(IWX_NUM_UCODE_TLV_CAPA, NBBY)];
-#define IWX_MAX_FW_CMD_VERSIONS	512
+#define IWX_MAX_FW_CMD_VERSIONS	800
 	struct iwx_fw_cmd_version cmd_versions[IWX_MAX_FW_CMD_VERSIONS];
 	int n_cmd_versions;
     char sc_fw_mcc[3];
