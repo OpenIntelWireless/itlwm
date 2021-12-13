@@ -59,7 +59,7 @@ IOReturn CTimeout::timeout_add_msec(OSObject *target, void *arg0, void *arg1, vo
 IOReturn CTimeout::timeout_del(OSObject *target, void *arg0, void *arg1, void *arg2, void *arg3)
 {
     CTimeout *cto = (CTimeout *)arg0;
-    if (cto == NULL) {
+    if (cto == NULL || cto->tm == NULL || !cto->isPending) {
         return kIOReturnSuccess;
     }
     if (cto->tm != NULL) {
@@ -74,7 +74,7 @@ IOReturn CTimeout::timeout_free(OSObject *target, void *arg0, void *arg1, void *
     CTimeout **cto = (CTimeout **)arg0;
     IOWorkLoop *wl = (IOWorkLoop*)arg1;
     if (cto == NULL || *cto == NULL) {
-        return 0;
+        return kIOReturnSuccess;
     }
     CTimeout *tm = *cto;
     if (tm->tm != NULL) {
