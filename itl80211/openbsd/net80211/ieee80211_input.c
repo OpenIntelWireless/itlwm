@@ -2286,7 +2286,6 @@ ieee80211_recv_probe_resp(struct ieee80211com *ic, mbuf_t m,
                    IEEE80211_HTOP0_SCO_SHIFT);
             ic->ic_bss->ni_htop0 = ni->ni_htop0;
             if (chw_last != chw || sco_last != sco) {
-                ieee80211_ht_negotiate_chw(ic, ni);
                 XYLog("[%s] channel mode change: was %d, now %d, sco was: %d, now: %d\n",
                       ether_sprintf((u_int8_t *)wh->i_addr2),
                       chw_last, chw, sco_last, sco);
