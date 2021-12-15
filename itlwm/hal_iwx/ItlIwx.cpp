@@ -1759,6 +1759,7 @@ iwx_pnvm_handle_section(struct iwx_softc *sc, const uint8_t *data, size_t len)
     uint32_t sha1 = 0;
     uint16_t mac_type = 0, rf_id = 0;
     uint8_t *pnvm_data = NULL, *tmp;
+    bool hw_match = false;
     uint32_t size = 0;
     int err = 0;
     struct iwx_prph_scratch_ctrl_cfg *prph_sc_ctrl;
@@ -1803,20 +1804,18 @@ iwx_pnvm_handle_section(struct iwx_softc *sc, const uint8_t *data, size_t len)
                     break;
                 }
                 
+                if (hw_match)
+                    break;
+
                 mac_type = le16_to_cpup((__le16 *)data);
                 rf_id = le16_to_cpup((__le16 *)(data + sizeof(__le16)));
                 
                 XYLog("Got IWL_UCODE_TLV_HW_TYPE mac_type 0x%0x rf_id 0x%0x\n",
                       mac_type, rf_id);
                 
-                if (mac_type != CSR_HW_REV_TYPE(sc->sc_hw_rev) ||
-                    rf_id != CSR_HW_RFID_TYPE(sc->sc_hw_rf_id)) {
-                    XYLog("HW mismatch, skipping PNVM section, mac_type 0x%0x, rf_id 0x%0x.\n",
-                          CSR_HW_REV_TYPE(sc->sc_hw_rev), sc->sc_hw_rf_id);
-                    err = -ENOENT;
-                    goto out;
-                }
-                
+                if (mac_type == CSR_HW_REV_TYPE(sc->sc_hw_rev) &&
+                    rf_id == CSR_HW_RFID_TYPE(sc->sc_hw_rf_id))
+                    hw_match = true;
                 break;
             case IWX_UCODE_TLV_SEC_RT: {
                 struct iwx_pnvm_section *section = (struct iwx_pnvm_section *)data;
@@ -1868,6 +1867,14 @@ iwx_pnvm_handle_section(struct iwx_softc *sc, const uint8_t *data, size_t len)
     }
     
 done:
+    if (!hw_match) {
+        XYLog("HW mismatch, skipping PNVM section (need mac_type 0x%x rf_id 0x%x)\n",
+                 CSR_HW_REV_TYPE(sc->sc_hw_rev),
+                 CSR_HW_RFID_TYPE(sc->sc_hw_rf_id));
+        err = -ENOENT;
+        goto out;
+    }
+
     if (!size) {
         XYLog("Empty PNVM, skipping.\n");
         err = -ENOENT;
