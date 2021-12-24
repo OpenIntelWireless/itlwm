@@ -34,8 +34,8 @@ void CTimeout::timeoutOccurred(OSObject* owner, IOTimerEventSource* timer)
         return;
     }
     //callback
-    tm->to_func(tm->to_arg);
     tm->isPending = false;
+    tm->to_func(tm->to_arg);
 }
 
 IOReturn CTimeout::timeout_add_msec(OSObject *target, void *arg0, void *arg1, void *arg2, void *arg3)
