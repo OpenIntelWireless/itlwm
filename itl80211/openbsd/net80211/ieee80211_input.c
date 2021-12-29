@@ -2207,9 +2207,6 @@ ieee80211_recv_probe_resp(struct ieee80211com *ic, mbuf_t m,
     if (htop && !ieee80211_setup_htop(ni, htop + 2, htop[1], 1))
         htop = NULL; /* invalid HTOP */
     
-    if (htcaps != NULL && htop != NULL)
-        ieee80211_ht_negotiate_chw(ic, ni);
-    
     if (vhtcap != NULL && vhtopmode != NULL) {
         ieee80211_setup_vhtcaps(ic, ni, vhtcap);
         ieee80211_setup_vhtopmode(ni, vhtopmode);
