@@ -2281,7 +2281,6 @@ iwm_auth(struct iwm_softc *sc)
               DEVNAME(sc), err);
         goto rm_binding;
     }
-    sc->sc_flags |= IWM_FLAG_STA_ACTIVE;
     
     if (ic->ic_opmode == IEEE80211_M_MONITOR)
         return 0;
@@ -2330,7 +2329,6 @@ iwm_deauth(struct iwm_softc *sc)
                   DEVNAME(sc), err);
             return err;
         }
-        sc->sc_flags &= ~IWM_FLAG_STA_ACTIVE;
         sc->sc_rx_ba_sessions = 0;
         sc->ba_start_tidmask = 0;
         sc->ba_stop_tidmask = 0;
@@ -2412,7 +2410,6 @@ iwm_disassoc(struct iwm_softc *sc)
                   DEVNAME(sc), err);
             return err;
         }
-        sc->sc_flags &= ~IWM_FLAG_STA_ACTIVE;
         sc->sc_rx_ba_sessions = 0;
         sc->ba_start_tidmask = 0;
         sc->ba_stop_tidmask = 0;

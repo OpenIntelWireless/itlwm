@@ -385,8 +385,9 @@ iwm_add_sta_cmd(struct iwm_softc *sc, struct iwm_node *in, int update, unsigned 
     if (!err && (status & IWM_ADD_STA_STATUS_MASK) != IWM_ADD_STA_SUCCESS) {
         err = EIO;
         XYLog("%s failed\n", __FUNCTION__);
-    }
-    
+    } else
+        sc->sc_flags |= IWM_FLAG_STA_ACTIVE;
+
     return err;
 }
 
@@ -503,5 +504,7 @@ done:
     sc->agg_queue_mask = 0;
     sc->agg_tid_disable = 0xffff;
     
+    sc->sc_flags &= ~IWM_FLAG_STA_ACTIVE;
+
     return err;
 }

@@ -7067,7 +7067,9 @@ iwx_add_sta_cmd(struct iwx_softc *sc, struct iwx_node *in, int update)
                                   &add_sta_cmd, &status);
     if (!err && (status & IWX_ADD_STA_STATUS_MASK) != IWX_ADD_STA_SUCCESS)
         err = EIO;
-    
+    else
+        sc->sc_flags |= IWX_FLAG_STA_ACTIVE;
+
     return err;
 }
 
@@ -7132,6 +7134,8 @@ iwx_rm_sta_cmd(struct iwx_softc *sc, struct iwx_node *in)
     err = iwx_send_cmd_pdu(sc, IWX_REMOVE_STA, 0, sizeof(rm_sta_cmd),
                            &rm_sta_cmd);
     
+    sc->sc_flags &= ~IWX_FLAG_STA_ACTIVE;
+
     return err;
 }
 
@@ -8870,7 +8874,6 @@ iwx_auth(struct iwx_softc *sc)
               DEVNAME(sc), err);
         goto rm_binding;
     }
-    sc->sc_flags |= IWX_FLAG_STA_ACTIVE;
     
     if (ic->ic_opmode == IEEE80211_M_MONITOR) {
         err = iwx_enable_txq(sc, IWX_MONITOR_STA_ID,
@@ -8915,10 +8918,8 @@ iwx_auth(struct iwx_softc *sc)
     return err;
     
 rm_sta:
-    if (generation == sc->sc_generation) {
+    if (generation == sc->sc_generation)
         iwx_rm_sta_cmd(sc, in);
-        sc->sc_flags &= ~IWX_FLAG_STA_ACTIVE;
-    }
 rm_binding:
     if (generation == sc->sc_generation) {
         iwx_binding_cmd(sc, in, IWX_FW_CTXT_ACTION_REMOVE);
@@ -8960,7 +8961,6 @@ iwx_deauth(struct iwx_softc *sc)
                   DEVNAME(sc), err);
             return err;
         }
-        sc->sc_flags &= ~IWX_FLAG_STA_ACTIVE;
         sc->sc_rx_ba_sessions = 0;
         sc->ba_start_tidmask = 0;
         sc->ba_stop_tidmask = 0;
@@ -9063,7 +9063,6 @@ iwx_disassoc(struct iwx_softc *sc)
                   DEVNAME(sc), err);
             return err;
         }
-        sc->sc_flags &= ~IWX_FLAG_STA_ACTIVE;
         sc->sc_rx_ba_sessions = 0;
         sc->ba_start_tidmask = 0;
         sc->ba_stop_tidmask = 0;
