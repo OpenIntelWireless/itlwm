@@ -2732,13 +2732,6 @@ iwm_calib_timeout(void *arg)
     timeout_add_msec(&sc->sc_calib_to, 500);
 }
 
-static int
-iwm_is_mimo_vht_plcp(uint8_t vht_plcp)
-{
-    return (vht_plcp != IWM_RATE_VHT_SISO_MCS_INV_PLCP &&
-            (vht_plcp & IWM_RATE_VHT_MCS_NSS_MSK));
-}
-
 void ItlIwm::
 iwm_setrates(struct iwm_node *in, int async)
 {
