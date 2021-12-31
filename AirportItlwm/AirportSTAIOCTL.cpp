@@ -608,7 +608,12 @@ getCARD_CAPABILITIES(OSObject *object,
     cd->capabilities[4] = 0xAD;
     cd->capabilities[5] = 0x80;//isCntryDefaultSupported
     cd->capabilities[5] |= 0x0C;
-    cd->capabilities[6] = 0x8D;
+    cd->capabilities[6] = (
+//                           1 |    //MFP capable
+                           0x8 |
+                           0x4 |
+                           0x80
+                           );
     cd->capabilities[7] = 0x84; // This byte contains Apple Watch unlock
     //cd->capabilities[8] = 0x40;
     //cd->capabilities[8] |= 8;//dfs white list
