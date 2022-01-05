@@ -81,9 +81,9 @@ apple80211VirtualRequest(UInt request_type, int request_number, IO80211VirtualIn
         case APPLE80211_IOC_AWDL_BSSID:
             IOCTL(request_type, AWDL_BSSID, apple80211_awdl_bssid);
             break;
-//        case APPLE80211_IOC_CHANNELS_INFO:
-//            IOCTL_GET(request_type, CHANNELS_INFO, apple80211_channels_info);
-//            break;
+        case APPLE80211_IOC_CHANNELS_INFO:
+            IOCTL_GET(request_type, CHANNELS_INFO, apple80211_channels_info);
+            break;
         case APPLE80211_IOC_PEER_CACHE_MAXIMUM_SIZE:
             IOCTL(request_type, PEER_CACHE_MAXIMUM_SIZE, apple80211_peer_cache_maximum_size);
             break;
@@ -286,19 +286,21 @@ IOReturn AirportItlwm::
 getCHANNELS_INFO(OSObject *object, struct apple80211_channels_info *data)
 {
     XYLog("%s\n", __FUNCTION__);
+    struct ieee80211com *ic = fHalService->get80211Controller();
     memset(data, 0, sizeof(*data));
     data->version = APPLE80211_VERSION;
-    data->unk1 = 0;
-    data->num_chan_specs = 3;
-    data->channels[0].chan_num = 6;
-    data->channels[0].support_80Mhz = 0;
-    data->channels[0].support_40Mhz = 0;
-    data->channels[1].chan_num = 44;
-    data->channels[1].support_80Mhz = 1;
-    data->channels[1].support_40Mhz = 1;
-    data->channels[2].chan_num = 149;
-    data->channels[2].support_80Mhz = 1;
-    data->channels[2].support_40Mhz = 1;
+    for (int i = 0; i < IEEE80211_CHAN_MAX; i++) {
+        struct ieee80211_channel *channel = &ic->ic_channels[i];
+        if (channel->ic_freq != 0) {
+            int chanNum = ieee80211_chan2ieee(ic, channel);
+            data->chan_num[data->num_chan_specs] = chanNum;
+            data->support_80Mhz[data->num_chan_specs] = IEEE80211_IS_CHAN_VHT80(channel);
+            data->support_40Mhz[data->num_chan_specs] = IEEE80211_IS_CHAN_HT40(channel) || IEEE80211_IS_CHAN_VHT40(channel);
+            data->num_chan_specs++;
+            if (data->num_chan_specs >= APPLE80211_MAX_CHANNELS)
+                break;
+        }
+    }
     return kIOReturnSuccess;
 }
 

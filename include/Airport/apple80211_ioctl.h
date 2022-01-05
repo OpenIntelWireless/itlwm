@@ -921,8 +921,26 @@ struct apple80211_channels_info {
     uint32_t    version;
     uint32_t    unk1;
     uint16_t    num_chan_specs;
-    struct apple80211_awdl_channel channels[APPLE80211_MAX_CHANNELS];
+    uint16_t    chan_spec[APPLE80211_MAX_CHANNELS];
+    uint8_t     chan_num[APPLE80211_MAX_CHANNELS];
+    uint8_t     indoor_restric[APPLE80211_MAX_CHANNELS];
+    uint8_t     radar_dfs[APPLE80211_MAX_CHANNELS];
+    uint8_t     passive[APPLE80211_MAX_CHANNELS];
+    uint8_t     support_40Mhz[APPLE80211_MAX_CHANNELS];
+    uint8_t     support_80Mhz[APPLE80211_MAX_CHANNELS];
+    uint8_t     z[APPLE80211_MAX_CHANNELS];
+    uint8_t     pad[386];
+    uint32_t    per_chan[APPLE80211_MAX_CHANNELS];
+    uint32_t    chan_bitmap[APPLE80211_MAX_CHANNELS];
 } __attribute__((packed));
+
+static_assert(__offsetof(struct apple80211_channels_info, chan_num) == 0x10A, "invalid offset");   //wf_chspec_ctlchan
+static_assert(__offsetof(struct apple80211_channels_info, indoor_restric) == 0x18A, "invalid offset"); //wlc_restricted_chanspec
+static_assert(__offsetof(struct apple80211_channels_info, radar_dfs) == 0x20A, "invalid offset");  //wlc_radar_chanspec
+static_assert(__offsetof(struct apple80211_channels_info, passive) == 0x28A, "invalid offset");    //wlc_quiet_chanspec
+static_assert(__offsetof(struct apple80211_channels_info, support_40Mhz) == 0x30A, "invalid offset");
+static_assert(__offsetof(struct apple80211_channels_info, support_80Mhz) == 0x38A, "invalid offset");
+static_assert(__offsetof(struct apple80211_channels_info, per_chan) == 0x60C, "invalid offset");
 
 struct apple80211_peer_cache_maximum_size {
     uint32_t    version;
