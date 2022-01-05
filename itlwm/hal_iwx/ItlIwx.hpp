@@ -291,6 +291,7 @@ public:
     static void    iwx_updateprot(struct ieee80211com *);
     static void    iwx_updateslot(struct ieee80211com *);
     static void    iwx_updateedca(struct ieee80211com *);
+    static void    iwx_updatedtim(struct ieee80211com *);
     void    iwx_init_reorder_buffer(struct iwx_reorder_buffer *, uint16_t,
             uint16_t);
     void    iwx_clear_reorder_buffer(struct iwx_softc *, struct iwx_rxba_data *);

@@ -4151,6 +4151,9 @@ iwx_mac_ctxt_task(void *arg)
     if (err)
         printf("%s: failed to update MAC\n", DEVNAME(sc));
     
+    if (!isset(sc->sc_enabled_capa, IWX_UCODE_TLV_CAPA_SESSION_PROT_CMD))
+        that->iwx_unprotect_session(sc, in);
+    
     //    refcnt_rele_wake(&sc->task_refs);
     splx(s);
 }
@@ -4229,6 +4232,17 @@ iwx_updateslot(struct ieee80211com *ic)
 
 void ItlIwx::
 iwx_updateedca(struct ieee80211com *ic)
+{
+    XYLog("%s\n", __FUNCTION__);
+    struct iwx_softc *sc = (struct iwx_softc *)ic->ic_softc;
+    ItlIwx *that = container_of(sc, ItlIwx, com);
+    
+    if (ic->ic_state == IEEE80211_S_RUN && (sc->sc_flags & IWX_FLAG_STA_ACTIVE))
+        that->iwx_add_task(sc, systq, &sc->mac_ctxt_task);
+}
+
+void ItlIwx::
+iwx_updatedtim(struct ieee80211com *ic)
 {
     XYLog("%s\n", __FUNCTION__);
     struct iwx_softc *sc = (struct iwx_softc *)ic->ic_softc;
@@ -7172,10 +7186,8 @@ iwx_umac_scan_fill_channels(struct iwx_softc *sc,
             chan->v1.iter_interval = htole16(0);
         }
         
-#if 0 /* XXX Active scan causes firmware errors after association. */
-        if (n_ssids != 0 && !bgscan) == 0)
+        if (n_ssids != 0 && !bgscan)
             chan->flags = htole32(1 << 0); /* select SSID 0 */
-#endif
         chan++;
         nchan++;
     }
@@ -7556,12 +7568,10 @@ iwx_umac_scan(struct iwx_softc *sc, int bgscan)
         if (isset(sc->sc_ucode_api, IWX_UCODE_TLV_API_ADWELL_HB_DEF_N_AP))
             req->v9.adwell_default_hb_n_aps = IWX_SCAN_ADWELL_DEFAULT_HB_N_APS;
         
-#if 0 /* XXX Active scan causes firmware errors after association. */
-        if (ic->ic_des_esslen != 0)
+        if (ic->ic_des_esslen != 0 && !bgscan)
             req->v7.adwell_max_budget =
             htole16(IWX_SCAN_ADWELL_MAX_BUDGET_DIRECTED_SCAN);
         else
-#endif
             req->v7.adwell_max_budget =
             htole16(IWX_SCAN_ADWELL_MAX_BUDGET_FULL_SCAN);
         
@@ -7635,9 +7645,8 @@ iwx_umac_scan(struct iwx_softc *sc, int bgscan)
         IWX_UMAC_SCAN_GEN_FLAGS2_ALLOW_CHNL_REORDER;
     }
     
-#if 0 /* XXX Active scan causes firmware errors after association. */
     /* Check if we're doing an active directed scan. */
-    if (ic->ic_des_esslen != 0) {
+    if (ic->ic_des_esslen != 0 && !bgscan) {
         if (isset(sc->sc_ucode_api, IWX_UCODE_TLV_API_SCAN_EXT_CHAN_VER)) {
             tail->direct_scan[0].id = IEEE80211_ELEMID_SSID;
             tail->direct_scan[0].len = ic->ic_des_esslen;
@@ -7652,7 +7661,6 @@ iwx_umac_scan(struct iwx_softc *sc, int bgscan)
         req->general_flags |=
         htole32(IWX_UMAC_SCAN_GEN_FLAGS_PRE_CONNECT);
     } else
-#endif
         req->general_flags |= htole32(IWX_UMAC_SCAN_GEN_FLAGS_PASSIVE);
     
     if (isset(sc->sc_enabled_capa, IWX_UCODE_TLV_CAPA_DS_PARAM_SET_IE_SUPPORT) &&
@@ -7719,9 +7727,7 @@ iwx_umac_scan_v12(struct iwx_softc *sc, int bgscan)
     
     req->ooc_priority = htole32(IWX_SCAN_PRIORITY_EXT_6);
     
-#if 0 /* XXX Active scan causes firmware errors after association. */
-    if (ic->ic_des_esslen == 0)
-#endif
+    if (ic->ic_des_esslen == 0 || bgscan)
         gen_flags |= IWX_UMAC_SCAN_GEN_FLAGS_V2_FORCE_PASSIVE;
     
     gen_flags |= IWX_UMAC_SCAN_GEN_FLAGS_V2_PASS_ALL |
@@ -7734,12 +7740,10 @@ iwx_umac_scan_v12(struct iwx_softc *sc, int bgscan)
     general_params->adwell_default_2g = IWX_SCAN_ADWELL_DEFAULT_LB_N_APS;
     general_params->adwell_default_5g = IWX_SCAN_ADWELL_DEFAULT_HB_N_APS;
 
-#if 0 /* XXX Active scan causes firmware errors after association. */
-    if (ic->ic_des_esslen != 0)
+    if (ic->ic_des_esslen != 0 && !bgscan)
         general_params->adwell_max_budget =
             cpu_to_le16(IWX_SCAN_ADWELL_MAX_BUDGET_DIRECTED_SCAN);
     else
-#endif
         general_params->adwell_max_budget =
             cpu_to_le16(IWX_SCAN_ADWELL_MAX_BUDGET_FULL_SCAN);
     
@@ -7767,15 +7771,13 @@ iwx_umac_scan_v12(struct iwx_softc *sc, int bgscan)
     if (err)
         return err;
 
-#if 0 /* XXX Active scan causes firmware errors after association. */
-    if (ic->ic_des_esslen != 0) {
+    if (ic->ic_des_esslen != 0 && !bgscan) {
         req->scan_params.probe_params.ssid_num = 1;
         req->scan_params.probe_params.direct_scan[0].id = IEEE80211_ELEMID_SSID;
         req->scan_params.probe_params.direct_scan[0].len = ic->ic_des_esslen;
         memcpy(req->scan_params.probe_params.direct_scan[0].ssid, ic->ic_des_essid,
                ic->ic_des_esslen);
     } else
-#endif
         req->scan_params.probe_params.ssid_num = 0;
     
     cp = &req->scan_params.channel_params;
@@ -7824,9 +7826,7 @@ iwx_umac_scan_v14(struct iwx_softc *sc, int bgscan)
     
     req->ooc_priority = htole32(IWX_SCAN_PRIORITY_EXT_6);
     
-#if 0 /* XXX Active scan causes firmware errors after association. */
-    if (ic->ic_des_esslen == 0)
-#endif
+    if (ic->ic_des_esslen == 0 || bgscan)
         gen_flags |= IWX_UMAC_SCAN_GEN_FLAGS_V2_FORCE_PASSIVE;
     
     gen_flags |= IWX_UMAC_SCAN_GEN_FLAGS_V2_PASS_ALL |
@@ -7838,12 +7838,10 @@ iwx_umac_scan_v14(struct iwx_softc *sc, int bgscan)
         IWX_SCAN_ADWELL_DEFAULT_N_APS_SOCIAL;
     general_params->adwell_default_2g = IWX_SCAN_ADWELL_DEFAULT_LB_N_APS;
     general_params->adwell_default_5g = IWX_SCAN_ADWELL_DEFAULT_HB_N_APS;
-#if 0 /* XXX Active scan causes firmware errors after association. */
-    if (ic->ic_des_esslen != 0)
+    if (ic->ic_des_esslen != 0 && !bgscan)
         general_params->adwell_max_budget =
             cpu_to_le16(IWX_SCAN_ADWELL_MAX_BUDGET_DIRECTED_SCAN);
     else
-#endif
         general_params->adwell_max_budget =
             cpu_to_le16(IWX_SCAN_ADWELL_MAX_BUDGET_FULL_SCAN);
     
@@ -7870,14 +7868,12 @@ iwx_umac_scan_v14(struct iwx_softc *sc, int bgscan)
     err = iwx_fill_probe_req(sc, &req->scan_params.probe_params.preq);
     if (err)
         return err;
-#if 0 /* XXX Active scan causes firmware errors after association. */
-    if (ic->ic_des_esslen != 0) {
+    if (ic->ic_des_esslen != 0 && !bgscan) {
         req->scan_params.probe_params.direct_scan[0].id = IEEE80211_ELEMID_SSID;
         req->scan_params.probe_params.direct_scan[0].len = ic->ic_des_esslen;
         memcpy(req->scan_params.probe_params.direct_scan[0].ssid, ic->ic_des_essid,
                ic->ic_des_esslen);
     }
-#endif
     
     cp = &req->scan_params.channel_params;
     
@@ -12810,6 +12806,7 @@ iwx_attach(struct iwx_softc *sc, struct pci_attach_args *pa)
     ic->ic_updateprot = iwx_updateprot;
     ic->ic_updateslot = iwx_updateslot;
     ic->ic_updateedca = iwx_updateedca;
+    ic->ic_updatedtim = iwx_updatedtim;
     ic->ic_ampdu_rx_start = iwx_ampdu_rx_start;
     ic->ic_ampdu_rx_stop = iwx_ampdu_rx_stop;
     ic->ic_ampdu_tx_start = iwx_ampdu_tx_start;

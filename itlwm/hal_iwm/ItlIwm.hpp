@@ -192,6 +192,7 @@ public:
     static void    iwm_updateprot(struct ieee80211com *);
     static void    iwm_updateslot(struct ieee80211com *);
     static void    iwm_updateedca(struct ieee80211com *);
+    static void    iwm_updatedtim(struct ieee80211com *);
     void   iwm_init_reorder_buffer(struct iwm_reorder_buffer *, uint16_t,
                                    uint16_t);
     void   iwm_clear_reorder_buffer(struct iwm_softc *, struct iwm_rxba_data *);

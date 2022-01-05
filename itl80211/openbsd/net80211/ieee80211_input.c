@@ -2176,7 +2176,7 @@ ieee80211_recv_probe_resp(struct ieee80211com *ic, mbuf_t m,
         if (ic->ic_opmode == IEEE80211_M_STA)
             ni->ni_chan = rni->ni_chan;
         
-        return;
+//        return;
     }
     
 #ifdef IEEE80211_DEBUG
@@ -2302,6 +2302,14 @@ ieee80211_recv_probe_resp(struct ieee80211com *ic, mbuf_t m,
             ieee80211_set_shortslottime(ic,
                                         ic->ic_curmode == IEEE80211_MODE_11A ||
                                         (capinfo & IEEE80211_CAPINFO_SHORT_SLOTTIME));
+        }
+        
+        if (!ic->ic_bss->ni_dtimperiod) {
+            ic->ic_bss->ni_dtimcount = ni->ni_dtimcount;
+            ic->ic_bss->ni_dtimperiod = ni->ni_dtimperiod ?: 1;
+            
+            if (ic->ic_updatedtim != NULL)
+                ic->ic_updatedtim(ic);
         }
         
         /*

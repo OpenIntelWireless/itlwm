@@ -3080,6 +3080,17 @@ iwm_updateedca(struct ieee80211com *ic)
         that->iwm_add_task(sc, systq, &sc->mac_ctxt_task);
 }
 
+void ItlIwm::
+iwm_updatedtim(struct ieee80211com *ic)
+{
+    XYLog("%s\n", __FUNCTION__);
+    struct iwm_softc *sc = (struct iwm_softc *)ic->ic_softc;
+    ItlIwm *that = container_of(sc, ItlIwm, com);
+    
+    if (ic->ic_state == IEEE80211_S_RUN && (sc->sc_flags & IWM_FLAG_STA_ACTIVE))
+        that->iwm_add_task(sc, systq, &sc->mac_ctxt_task);
+}
+
 int ItlIwm::iwm_media_change(struct _ifnet *ifp)
 {
     XYLog("%s\n", __FUNCTION__);
@@ -4956,6 +4967,7 @@ iwm_attach(struct iwm_softc *sc, struct pci_attach_args *pa)
     ic->ic_updateprot = iwm_updateprot;
     ic->ic_updateslot = iwm_updateslot;
     ic->ic_updateedca = iwm_updateedca;
+    ic->ic_updatedtim = iwm_updatedtim;
     ic->ic_ampdu_rx_start = iwm_ampdu_rx_start;
     ic->ic_ampdu_rx_stop = iwm_ampdu_rx_stop;
     ic->ic_ampdu_tx_start = iwm_ampdu_tx_start;
@@ -5058,6 +5070,8 @@ iwm_mac_ctxt_task(void *arg)
     err = that->iwm_mac_ctxt_cmd(sc, in, IWM_FW_CTXT_ACTION_MODIFY, 1);
     if (err)
         printf("%s: failed to update MAC\n", DEVNAME(sc));
+    
+    that->iwm_unprotect_session(sc, in);
     
     //    refcnt_rele_wake(&sc->task_refs);
     splx(s);
