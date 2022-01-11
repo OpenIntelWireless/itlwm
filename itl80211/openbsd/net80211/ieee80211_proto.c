@@ -901,13 +901,13 @@ ieee80211_sta_set_rx_nss(struct ieee80211com *ic, struct ieee80211_node *ni)
     }
 
     if (ni->ni_flags & IEEE80211_NODE_HT) {
-        if (ic->ic_sup_mcs[0])
+        if (ni->ni_rxmcs[0])
             ht_rx_nss++;
-        if (ic->ic_sup_mcs[1])
+        if (ni->ni_rxmcs[1])
             ht_rx_nss++;
-        if (ic->ic_sup_mcs[2])
+        if (ni->ni_rxmcs[2])
             ht_rx_nss++;
-        if (ic->ic_sup_mcs[3])
+        if (ni->ni_rxmcs[3])
             ht_rx_nss++;
         /* FIXME: consider rx_highest? */
     }

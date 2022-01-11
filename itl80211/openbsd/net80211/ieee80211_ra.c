@@ -153,7 +153,10 @@ static int support_nss(struct ieee80211com *ic)
     int i;
     if ((ic->ic_tx_mcs_set & IEEE80211_TX_RX_MCS_NOT_EQUAL) == 0) {
         for (i = 0; i < 4; i++) {
-            if (ic->ic_sup_mcs[i] == 0) {
+            if ((is_vht(ic->ic_bss) || is_he(ic->ic_bss)) &&
+                ic->ic_vht_sup_mcs[i] == 0) {
+                break;
+            } else if (ic->ic_sup_mcs[i] == 0) {
                 break;
             }
             ntxstreams++;
@@ -673,15 +676,25 @@ int
 ieee80211_ra_valid_tx_mcs(struct ieee80211com *ic, int mcs)
 {
     uint32_t ntxstreams = 1;
-    static const int max_mcs[] = { 7, 15, 23, 31 };
+    static const int max_ht_mcs[] = { 7, 15, 23, 31 };
+    static const int max_vht_mcs = 9;
+    static const int max_he_mcs = 10;
 
-    if ((ic->ic_tx_mcs_set & IEEE80211_TX_RX_MCS_NOT_EQUAL) == 0)
+    if ((ic->ic_tx_mcs_set & IEEE80211_TX_RX_MCS_NOT_EQUAL) == 0) {
+        if (is_he(ic->ic_bss) || is_vht(ic->ic_bss))
+            return isset(ic->ic_vht_sup_mcs, mcs);
         return isset(ic->ic_sup_mcs, mcs);
+    }
+
+    if (is_he(ic->ic_bss))
+        return mcs < max_he_mcs && isset(ic->ic_vht_sup_mcs, mcs);
+    if (is_vht(ic->ic_bss))
+        return mcs < max_vht_mcs && isset(ic->ic_vht_sup_mcs, mcs);
 
     ntxstreams += ((ic->ic_tx_mcs_set & IEEE80211_TX_SPATIAL_STREAMS) >> 2);
     if (ntxstreams < 1 || ntxstreams > 4)
         panic("invalid number of Tx streams: %u", ntxstreams);
-    return (mcs <= max_mcs[ntxstreams - 1] && isset(ic->ic_sup_mcs, mcs));
+    return (mcs <= max_ht_mcs[ntxstreams - 1] && isset(ic->ic_sup_mcs, mcs));
 }
 
 uint32_t

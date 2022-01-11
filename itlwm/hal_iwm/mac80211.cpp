@@ -501,6 +501,14 @@ iwm_setup_vht_rates(struct iwm_softc *sc)
     }
     ic->ic_vht_tx_mcs_map = ic->ic_vht_rx_mcs_map;
     ic->ic_vht_tx_highest = ic->ic_vht_rx_highest = 0;
+
+    memset(ic->ic_vht_sup_mcs, 0, sizeof(ic->ic_vht_sup_mcs));
+    ic->ic_vht_sup_mcs[0] = 0x03FF;        /* MCS 0-9 */
+    
+    if (!iwm_mimo_enabled(sc))
+        return;
+    
+    ic->ic_vht_sup_mcs[1] = 0x03FF;         /* MCS 0-9 */
 }
 
 #define IWM_MAX_RX_BA_SESSIONS 16
@@ -2439,6 +2447,18 @@ iwm_run(struct iwm_softc *sc)
     if (in->in_ni.ni_chw == IEEE80211_CHAN_WIDTH_80P80) {
         /* Fallback to 20mhz VHT */
         in->in_ni.ni_chw = IEEE80211_CHAN_WIDTH_20;
+    }
+    
+    if (in->in_ni.ni_flags & IEEE80211_NODE_VHT) {
+        if (in->in_ni.ni_chw == IEEE80211_CHAN_WIDTH_20) {
+            ic->ic_vht_sup_mcs[0] = 0x01FF;        /* MCS 0-8 */
+            if (iwm_mimo_enabled(sc))
+                ic->ic_vht_sup_mcs[1] = 0x01FF;         /* MCS 0-8 */
+        } else {
+            ic->ic_vht_sup_mcs[0] = 0x03FF;        /* MCS 0-9 */
+            if (iwm_mimo_enabled(sc))
+                ic->ic_vht_sup_mcs[1] = 0x03FF;         /* MCS 0-9 */
+        }
     }
     
     /* Configure Rx chains for MIMO. */

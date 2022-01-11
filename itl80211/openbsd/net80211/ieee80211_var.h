@@ -566,6 +566,7 @@ struct ieee80211com {
     uint16_t        ic_vht_rx_mcs_map;
     uint16_t        ic_vht_tx_highest;
     uint16_t        ic_vht_rx_highest;
+    uint16_t        ic_vht_sup_mcs[howmany(80, NBBY)];
     
     /* HE state */
     struct ieee80211_he_cap_elem ic_he_cap_elem;   /* Fixed portion of the HE capabilities element. */

@@ -3941,6 +3941,14 @@ iwx_setup_vht_rates(struct iwx_softc *sc)
     ic->ic_vht_tx_highest |=
         htole16(IEEE80211_VHT_EXT_NSS_BW_CAPABLE);
     ic->ic_vht_rx_highest = 0;
+    
+    memset(ic->ic_vht_sup_mcs, 0, sizeof(ic->ic_vht_sup_mcs));
+    ic->ic_vht_sup_mcs[0] = 0x03FF;        /* MCS 0-9 */
+    
+    if (!iwx_mimo_enabled(sc))
+        return;
+    
+    ic->ic_vht_sup_mcs[1] = 0x03FF;         /* MCS 0-9 */
 }
 
 void ItlIwx::
