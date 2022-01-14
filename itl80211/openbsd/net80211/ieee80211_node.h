@@ -621,10 +621,6 @@ struct ieee80211_node *ieee80211_find_rxnode(struct ieee80211com *,
 		const struct ieee80211_frame *);
 struct ieee80211_node *ieee80211_find_txnode(struct ieee80211com *,
 		const u_int8_t *);
-struct ieee80211_node *
-		ieee80211_find_node_for_beacon(struct ieee80211com *,
-		const u_int8_t *, const struct ieee80211_channel *,
-		const char *, u_int8_t);
 void ieee80211_release_node(struct ieee80211com *,
 		struct ieee80211_node *);
 void ieee80211_node_cleanup(struct ieee80211com *, struct ieee80211_node *);

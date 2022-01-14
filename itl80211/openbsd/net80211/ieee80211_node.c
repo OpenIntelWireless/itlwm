@@ -2004,30 +2004,6 @@ ieee80211_find_rxnode(struct ieee80211com *ic,
     return ieee80211_ref_node(ni);
 }
 
-struct ieee80211_node *
-ieee80211_find_node_for_beacon(struct ieee80211com *ic,
-                               const u_int8_t *macaddr, const struct ieee80211_channel *chan,
-                               const char *ssid, u_int8_t rssi)
-{
-    struct ieee80211_node *ni, *keep = NULL;
-    int s, score = 0;
-    
-    if ((ni = ieee80211_find_node(ic, macaddr)) != NULL) {
-        s = splnet();
-        
-        if (ni->ni_chan != chan && ni->ni_rssi >= rssi)
-            score++;
-        if (ssid[1] == 0 && ni->ni_esslen != 0)
-            score++;
-        if (score > 0)
-            keep = ni;
-        
-        splx(s);
-    }
-    
-    return (keep);
-}
-
 void
 ieee80211_ba_del(struct ieee80211_node *ni)
 {

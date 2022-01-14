@@ -1952,7 +1952,7 @@ void
 ieee80211_recv_probe_resp(struct ieee80211com *ic, mbuf_t m,
                           struct ieee80211_node *rni, struct ieee80211_rxinfo *rxi, int isprobe)
 {
-    struct ieee80211_node *ni;
+    struct ieee80211_node *ni = NULL;
     const struct ieee80211_frame *wh;
     const u_int8_t *frm, *efrm;
     const u_int8_t *tstamp, *ssid, *rates, *xrates, *edcaie, *wmmie;
@@ -2147,36 +2147,6 @@ ieee80211_recv_probe_resp(struct ieee80211com *ic, mbuf_t m,
                  isprobe ? "probe response" : "beacon", bchan, chan));
         ic->ic_stats.is_rx_chanmismatch++;
         return;
-    }
-    /*
-     * Use mac, channel and rssi so we collect only the
-     * best potential AP with the equal bssid while scanning.
-     * Collecting all potential APs may result in bloat of
-     * the node tree. This call will return NULL if the node
-     * for this APs does not exist or if the new node is the
-     * potential better one.
-     */
-    ni = ieee80211_find_node_for_beacon(ic, wh->i_addr2,
-                                        &ic->ic_channels[chan], (const char *)ssid, rxi->rxi_rssi);
-    if (ni != NULL) {
-        /*
-         * If we are doing a directed scan for an AP with a hidden SSID
-         * we must collect the SSID from a probe response to override
-         * a non-zero-length SSID filled with zeroes that we may have
-         * received earlier in a beacon.
-         */
-        if (isprobe && ssid[1] != 0 && ni->ni_essid[0] == '\0') {
-            ni->ni_esslen = ssid[1];
-            memset(ni->ni_essid, 0, sizeof(ni->ni_essid));
-            /* we know that ssid[1] <= IEEE80211_NWID_LEN */
-            memcpy(ni->ni_essid, &ssid[2], ssid[1]);
-        }
-        
-        /* Update channel in case AP has switched */
-        if (ic->ic_opmode == IEEE80211_M_STA)
-            ni->ni_chan = rni->ni_chan;
-        
-//        return;
     }
     
 #ifdef IEEE80211_DEBUG
@@ -2401,6 +2371,13 @@ ieee80211_recv_probe_resp(struct ieee80211com *ic, mbuf_t m,
         }
     }
     
+    /*
+     * Set our SSID if we do not know it yet.
+     * If we are doing a directed scan for an AP with a hidden SSID
+     * we must collect the SSID from a probe response to override
+     * a non-zero-length SSID filled with zeroes that we may have
+     * received earlier in a beacon.
+     */
     if (ssid[1] != 0 && ni->ni_essid[0] == '\0') {
         ni->ni_esslen = ssid[1];
         memset(ni->ni_essid, 0, sizeof(ni->ni_essid));
