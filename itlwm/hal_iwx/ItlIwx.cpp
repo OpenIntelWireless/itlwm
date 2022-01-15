@@ -2450,14 +2450,18 @@ iwx_free_rx_ring(struct iwx_softc *sc, struct iwx_rx_ring *ring)
 void ItlIwx::
 iwx_tx_ring_init(struct iwx_softc *sc, struct iwx_tx_ring *ring, int size)
 {
-    ring->ring_count = size;
-    ring->low_mark = ring->ring_count / 4;
-    if (ring->low_mark < 4)
-        ring->low_mark = 4;
+    int low_mark, high_mark;
 
-    ring->hi_mark = ring->ring_count / 8;
-    if (ring->hi_mark < 2)
-        ring->hi_mark = 2;
+    ring->ring_count = size;
+    low_mark = ring->ring_count / 4;
+    if (low_mark < 4)
+        low_mark = 4;
+    ring->low_mark = ring->ring_count - low_mark;
+
+    high_mark = ring->ring_count / 8;
+    if (high_mark < 2)
+        high_mark = 2;
+    ring->hi_mark = ring->ring_count - high_mark;
     ring->queued = 0;
     ring->cur = 0;
     ring->tail = 0;
