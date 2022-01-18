@@ -604,9 +604,6 @@ struct iwx_softc {
     
     uint32_t        ba_start_tidmask;
     uint32_t        ba_stop_tidmask;
-    uint16_t        ba_ssn[IWX_MAX_TID_COUNT];
-    uint16_t        ba_winsize[IWX_MAX_TID_COUNT];
-    int            ba_timeout_val[IWX_MAX_TID_COUNT];
     
     struct iwx_tid_data sc_tid_data[IWX_MAX_TID_COUNT + 1];//per tid data + mgmt. Look at %iwx_tid_data.
 

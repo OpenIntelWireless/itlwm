@@ -2945,7 +2945,6 @@ int ItlIwm::
 iwm_ampdu_rx_start(struct ieee80211com *ic, struct ieee80211_node *ni,
                    uint8_t tid)
 {
-    struct ieee80211_rx_ba *ba = &ni->ni_rx_ba[tid];
     struct iwm_softc *sc = (struct iwm_softc *)IC2IFP(ic)->if_softc;
     ItlIwm *that = container_of(sc, ItlIwm, com);
     
@@ -2955,9 +2954,6 @@ iwm_ampdu_rx_start(struct ieee80211com *ic, struct ieee80211_node *ni,
     
     sc->ba_tx = 0;
     sc->ba_start_tidmask |= (1 << tid);
-    sc->ba_ssn[tid] = ba->ba_winstart;
-    sc->ba_winsize[tid] = ba->ba_winsize;
-    sc->ba_timeout_val[tid] = ba->ba_timeout_val;
     that->iwm_add_task(sc, systq, &sc->ba_task);
     
     return EBUSY;
@@ -2987,7 +2983,6 @@ iwm_ampdu_tx_start(struct ieee80211com *ic, struct ieee80211_node *ni, uint8_t t
 {
     struct ieee80211_tx_ba *ba = &ni->ni_tx_ba[tid];
     struct iwm_softc *sc = (struct iwm_softc *)ic->ic_softc;
-    int ssn = htole16(ba->ba_winstart);
     ItlIwm *that = container_of(sc, ItlIwm, com);
     int qid = sc->first_agg_txq + tid;
     
@@ -3010,7 +3005,6 @@ iwm_ampdu_tx_start(struct ieee80211com *ic, struct ieee80211_node *ni, uint8_t t
 
     sc->ba_tx_start = 1;
     sc->ba_tx = 1;
-    sc->ba_tx_ssn = ssn;
     sc->ba_tx_tid = tid;
     
     that->iwm_add_task(sc, systq, &sc->ba_task);
@@ -3813,9 +3807,6 @@ iwm_stop(struct _ifnet *ifp)
     sc->sc_rx_ba_sessions = 0;
     sc->ba_start_tidmask = 0;
     sc->ba_stop_tidmask = 0;
-    memset(sc->ba_ssn, 0, sizeof(sc->ba_ssn));
-    memset(sc->ba_winsize, 0, sizeof(sc->ba_winsize));
-    memset(sc->ba_timeout_val, 0, sizeof(sc->ba_timeout_val));
     
     sc->sc_newstate(ic, IEEE80211_S_INIT, -1);
     sc->ns_nstate = IEEE80211_S_INIT;
@@ -5149,24 +5140,25 @@ iwm_ba_task(void *arg)
         struct ieee80211_tx_ba *ba = &ni->ni_tx_ba[sc->ba_tx_tid];
         int qid = sc->first_agg_txq + sc->ba_tx_tid;
         struct iwm_tx_ring *ring = &sc->txq[qid];
+        uint16_t ssn = ba->ba_winstart;
         if (sc->ba_tx_start) {
             uint8_t fifo = iwm_ac_to_tx_fifo[tid_to_mac80211_ac[sc->ba_tx_tid]];
 
-            XYLog("%s start=%d ssn=%d, tid=%d scd_queue=%d\n", __FUNCTION__, sc->ba_tx_start, sc->ba_tx_ssn, sc->ba_tx_tid, qid);
+            XYLog("%s start=%d ssn=%d, tid=%d scd_queue=%d\n", __FUNCTION__, sc->ba_tx_start, ssn, sc->ba_tx_tid, qid);
 
             if (!that->iwm_nic_lock(sc))
                 goto out;
-            if (that->iwm_enable_txq(sc, IWM_STATION_ID, qid, fifo, sc->ba_tx_ssn, sc->ba_tx_tid, 1))
+            if (that->iwm_enable_txq(sc, IWM_STATION_ID, qid, fifo, ssn, sc->ba_tx_tid, 1))
                 goto out;
             /*
              * If iwm_enable_txq() employed the SCD hardware bug
              * workaround we must skip the frame with seqnum SSN.
              */
             if (IWM_AGG_SSN_TO_TXQ_IDX(ring->cur) !=
-                IWM_AGG_SSN_TO_TXQ_IDX(sc->ba_tx_ssn)) {
-                sc->ba_tx_ssn = (sc->ba_tx_ssn + 1) & 0xfff;
-                ieee80211_output_ba_move_window(ic, ni, sc->ba_tx_tid, sc->ba_tx_ssn);
-                ni->ni_qos_txseqs[sc->ba_tx_tid] = sc->ba_tx_ssn;
+                IWM_AGG_SSN_TO_TXQ_IDX(ssn)) {
+                ssn = (ssn + 1) & 0xfff;
+                ieee80211_output_ba_move_window(ic, ni, sc->ba_tx_tid, ssn);
+                ni->ni_qos_txseqs[sc->ba_tx_tid] = ssn;
             }
             if (that->iwm_add_sta_cmd(sc, (struct iwm_node *)ni, 1, IWM_STA_MODIFY_QUEUES))
                 goto out;
@@ -5175,7 +5167,7 @@ iwm_ba_task(void *arg)
             sc->agg_queue_mask |= (1 << qid);
             sc->sc_tx_ba[sc->ba_tx_tid].wn = (iwm_node *)ni;
             ba->ba_bitmap = 0;
-            if (!that->iwm_sta_tx_agg(sc, ni, sc->ba_tx_tid, 0, sc->ba_tx_ssn, 1)) {
+            if (!that->iwm_sta_tx_agg(sc, ni, sc->ba_tx_tid, 0, ssn, 1)) {
                 ieee80211_addba_resp_accept(ic, ni, sc->ba_tx_tid);
             } else {
             out:
@@ -5194,8 +5186,9 @@ iwm_ba_task(void *arg)
             if (sc->sc_flags & IWM_FLAG_SHUTDOWN)
                 break;
             if (sc->ba_start_tidmask & (1 << tid)) {
-                that->iwm_sta_rx_agg(sc, ni, tid, sc->ba_ssn[tid],
-                               sc->ba_winsize[tid], sc->ba_timeout_val[tid], 1);
+                struct ieee80211_rx_ba *ba = &ni->ni_rx_ba[tid];
+                that->iwm_sta_rx_agg(sc, ni, tid,  ba->ba_winstart,
+                               ba->ba_winsize, ba->ba_timeout_val, 1);
                 sc->ba_start_tidmask &= ~(1 << tid);
             } else if (sc->ba_stop_tidmask & (1 << tid)) {
                 that->iwm_sta_rx_agg(sc, ni, tid, 0, 0, 0, 0);

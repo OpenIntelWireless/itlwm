@@ -513,14 +513,10 @@ struct iwm_softc {
 	struct task		ba_task;
 	int			ba_tx_start;
 	int			ba_tx_tid;
-	uint16_t		ba_tx_ssn;
     uint16_t        ba_tx_winsize;
     int         ba_tx;
     uint32_t                ba_start_tidmask;
     uint32_t                ba_stop_tidmask;
-    uint16_t                ba_ssn[IWM_MAX_TID_COUNT];
-    uint16_t                ba_winsize[IWM_MAX_TID_COUNT];
-    int                     ba_timeout_val[IWM_MAX_TID_COUNT];
 
     /* Task for ERP/HT prot/slot-time/EDCA updates. */
     struct task		mac_ctxt_task;

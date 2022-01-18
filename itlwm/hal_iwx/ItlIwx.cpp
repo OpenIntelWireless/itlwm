@@ -4311,8 +4311,9 @@ iwx_ba_task(void *arg)
             if (sc->sc_flags & IWX_FLAG_SHUTDOWN)
                 break;
             if (sc->ba_start_tidmask & (1 << tid)) {
-                that->iwx_sta_rx_agg(sc, ni, tid, sc->ba_ssn[tid],
-                               sc->ba_winsize[tid], sc->ba_timeout_val[tid], 1);
+                struct ieee80211_rx_ba *ba = &ni->ni_rx_ba[tid];
+                that->iwx_sta_rx_agg(sc, ni, tid, ba->ba_winstart,
+                               ba->ba_winsize, ba->ba_timeout_val, 1);
                 sc->ba_start_tidmask &= ~(1 << tid);
             } else if (sc->ba_stop_tidmask & (1 << tid)) {
                 that->iwx_sta_rx_agg(sc, ni, tid, 0, 0, 0, 0);
@@ -4343,9 +4344,6 @@ iwx_ampdu_rx_start(struct ieee80211com *ic, struct ieee80211_node *ni,
     
     sc->ba_tx = 0;
     sc->ba_start_tidmask |= (1 << tid);
-    sc->ba_ssn[tid] = ba->ba_winstart;
-    sc->ba_winsize[tid] = ba->ba_winsize;
-    sc->ba_timeout_val[tid] = ba->ba_timeout_val;
     that->iwx_add_task(sc, systq, &sc->ba_task);
     
     return EBUSY;
@@ -10133,9 +10131,6 @@ iwx_stop(struct _ifnet *ifp)
     sc->sc_rx_ba_sessions = 0;
     sc->ba_start_tidmask = 0;
     sc->ba_stop_tidmask = 0;
-    memset(sc->ba_ssn, 0, sizeof(sc->ba_ssn));
-    memset(sc->ba_winsize, 0, sizeof(sc->ba_winsize));
-    memset(sc->ba_timeout_val, 0, sizeof(sc->ba_timeout_val));
     
     sc->sc_newstate(ic, IEEE80211_S_INIT, -1);
     sc->ns_nstate = IEEE80211_S_INIT;
