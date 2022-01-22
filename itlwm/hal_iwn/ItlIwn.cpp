@@ -66,7 +66,6 @@ int iwn_debug = 1;
 #define DPRINTFN(n, x)    do { ; } while (0)
 #endif
 
-#define abs(N) ((N<0)?(-N):(N))
 #define M_DEVBUF 2
 
 #ifdef DELAY
