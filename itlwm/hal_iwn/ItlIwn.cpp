@@ -2376,8 +2376,7 @@ iwn_ht_single_rate_control(struct iwn_softc *sc, struct ieee80211_node *ni,
     struct ieee80211com *ic = &sc->sc_ic;
     struct iwn_node *wn = (struct iwn_node *)ni;
     int mcs = rate;
-    const struct ieee80211_ra_rate *rs =
-    ieee80211_ra_get_rateset(&wn->rn, ic, ni, rate);
+    const struct ieee80211_ra_rate *rs;
     unsigned int retries = 0, i;
     
     /*
@@ -2394,6 +2393,7 @@ iwn_ht_single_rate_control(struct iwn_softc *sc, struct ieee80211_node *ni,
     
     wn->lq_rate_mismatch = 0;
     
+    rs = ieee80211_ra_get_rateset(&wn->rn, ic, ni, rate);
     /*
      * Firmware has attempted rates in this rate set in sequence.
      * Retries at a basic rate are counted against the minimum MCS.
