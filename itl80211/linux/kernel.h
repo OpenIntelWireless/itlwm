@@ -253,6 +253,10 @@ static inline int atomic_inc_and_test(volatile SInt32 * addr)
 #define atomic_inc(v) OSIncrementAtomic(v)
 #define atomic_dec(v) OSDecrementAtomic(v)
 
-#define abs(N) ((N<0)?(-N):(N))
+#if __has_builtin(__builtin_abs)
+#define abs(N) __builtin_abs((N))
+#else
+#define abs(N) (((N)<0)?-(N):(N))
+#endif /* __has_builtin(__builtin_abs) */
 
 #endif /* kernel_h */
