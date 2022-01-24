@@ -131,8 +131,11 @@ extern const struct ieee80211_ht_rateset ieee80211_std_ratesets_11n[];
 #define IEEE80211_VHT_RATESET_MIMO2_160_SGI 15
 #define IEEE80211_VHT_NUM_RATESETS		16
 
-/* Maximum number of rates in a HT rateset. */
+/* Maximum number of rates in a VHT rateset. */
 #define IEEE80211_VHT_RATESET_MAX_NRATES	10
+
+/* Number of MCS indices represented by struct ieee80211_vht_rateset. */
+#define IEEE80211_VHT_RATESET_NUM_MCS   IEEE80211_VHT_RATESET_MAX_NRATES
 
 struct ieee80211_vht_rateset {
 	uint32_t nrates;
@@ -158,6 +161,9 @@ extern const struct ieee80211_vht_rateset ieee80211_std_ratesets_11ac[];
 
 /* Maximum number of rates in a HT rateset. */
 #define IEEE80211_HE_RATESET_MAX_NRATES    12
+
+/* Number of MCS indices represented by struct ieee80211_he_rateset. */
+#define IEEE80211_HE_RATESET_NUM_MCS    IEEE80211_HE_RATESET_MAX_NRATES
 
 struct ieee80211_he_rateset {
     uint32_t nrates;

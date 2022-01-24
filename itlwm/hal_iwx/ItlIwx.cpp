@@ -313,7 +313,8 @@ is5GBandSupport()
 int ItlIwx::
 getTxNSS()
 {
-    return !com.sc_nvm.sku_cap_mimo_disable ? (iwx_mimo_enabled(&com) ? 2 : 1) : 1;
+    return iwx_mimo_enabled(&com) && 
+    (com.sc_ic.ic_bss != NULL && com.sc_ic.ic_bss->ni_rx_nss > 1) ? 2 : 1;
 }
 
 struct ieee80211com *ItlIwx::

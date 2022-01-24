@@ -2821,7 +2821,7 @@ iwm_setrates(struct iwm_node *in, int async)
                 (!mimo && iwm_is_mimo_vht_plcp(vht_plcp)))
                 continue;
             for (i = ni->ni_txmcs; i >= 0; i--) {
-                if (isclr(ni->ni_rxmcs, i))
+                if ((in->in_rn.valid_rates & (1 << i)) == 0)
                     continue;
                 if (ridx == (mimo ? iwm_vht_mimo_mcs2ridx[i] : iwm_vht_siso_mcs2ridx[i])) {
                     tab = vht_plcp;

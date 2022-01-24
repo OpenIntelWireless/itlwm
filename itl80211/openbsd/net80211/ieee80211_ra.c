@@ -161,10 +161,12 @@ static int support_nss(struct ieee80211_node *ni)
                 break;
             }
             ntxstreams++;
+            if (ntxstreams >= ni->ni_rx_nss)
+                break;
         }
         return ntxstreams;
     }
-    return 1 + ((ic->ic_tx_mcs_set & IEEE80211_TX_SPATIAL_STREAMS) >> 2);
+    return MIN(1 + ((ic->ic_tx_mcs_set & IEEE80211_TX_SPATIAL_STREAMS) >> 2), ni->ni_rx_nss);
 }
 
 static void build_rateset(struct ieee80211_ra_node *rn, enum ieee80211_phymode mode)
@@ -680,7 +682,6 @@ ieee80211_ra_valid_tx_mcs(struct ieee80211_node *ni, int mcs)
     uint32_t ntxstreams = support_nss(ni);
     static const int max_ht_mcs[] = { 7, 15, 23, 31 };
     static const int max_vht_mcs = 9;
-    static const int max_he_mcs = 10;
 
     if ((ic->ic_tx_mcs_set & IEEE80211_TX_RX_MCS_NOT_EQUAL) == 0) {
         if (is_he(ni) || is_vht(ni))
@@ -688,9 +689,7 @@ ieee80211_ra_valid_tx_mcs(struct ieee80211_node *ni, int mcs)
         return isset(ic->ic_sup_mcs, mcs);
     }
 
-    if (is_he(ni))
-        return mcs < max_he_mcs && isset(ic->ic_vht_sup_mcs, mcs);
-    if (is_vht(ni))
+    if (is_he(ni) || is_vht(ni))
         return mcs < max_vht_mcs && isset(ic->ic_vht_sup_mcs, mcs);
 
     if (ntxstreams < 1 || ntxstreams > 4)
@@ -698,15 +697,48 @@ ieee80211_ra_valid_tx_mcs(struct ieee80211_node *ni, int mcs)
     return (mcs <= max_ht_mcs[ntxstreams - 1] && isset(ic->ic_sup_mcs, mcs));
 }
 
+int
+ieee80211_ra_vht_highest_rx_mcs(struct ieee80211_node *ni, int nss)
+{
+    uint16_t rx_mcs;
+
+    rx_mcs = le16toh(ni->ni_vht_mcsinfo.rx_mcs_map) &
+        (IEEE80211_VHT_MCS_NOT_SUPPORTED << (2 * (nss - 1)));
+    rx_mcs >>= (2 * (nss - 1));
+
+    return rx_mcs;
+}
+
+int
+ieee80211_ra_valid_rx_mcs(struct ieee80211_node *ni, int mcs)
+{
+    uint16_t rx_mcs;
+
+    if (is_he(ni) || is_vht(ni)) {
+        rx_mcs = ieee80211_ra_vht_highest_rx_mcs(ni, ni->ni_rx_nss > 1 ? 2 : 1);
+        if (rx_mcs == 0 && mcs == 8)
+            return 0;
+        else if (rx_mcs == 1 && mcs == 9)
+            return 0;
+
+        if (mcs == 9 && ni->ni_chw == IEEE80211_CHAN_WIDTH_20)
+            return 0;
+    } else if (!isset(ni->ni_rxmcs, mcs))
+        return 0;
+    return 1;
+}
+
 uint32_t
 ieee80211_ra_valid_rates(struct ieee80211com *ic, struct ieee80211_node *ni)
 {
     uint32_t valid_mcs = 0;
+    uint32_t max_mcs = (is_he(ni) || is_vht(ni)) ? IEEE80211_VHT_RATESET_NUM_MCS : IEEE80211_HT_RATESET_NUM_MCS;
     int i;
 
-    for (i = 0; i < IEEE80211_HT_RATESET_NUM_MCS; i++) {
-        if (!isset(ni->ni_rxmcs, i))
+    for (i = 0; i < max_mcs; i++) {
+        if (!ieee80211_ra_valid_rx_mcs(ni, i))
             continue;
+
         if (!ieee80211_ra_valid_tx_mcs(ni, i))
             continue;
         valid_mcs |= (1 << i);

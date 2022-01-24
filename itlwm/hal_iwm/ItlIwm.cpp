@@ -209,5 +209,7 @@ is5GBandSupport()
 int ItlIwm::
 getTxNSS()
 {
-    return !com.sc_nvm.sku_cap_mimo_disable ? (iwm_mimo_enabled(&com) ? 2 : 1) : 1;
+    return iwm_mimo_enabled(&com) &&
+    (com.sc_ic.ic_bss != NULL && com.sc_ic.ic_bss->ni_rx_nss > 1) ?
+    2 : 1;
 }
