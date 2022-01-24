@@ -403,7 +403,7 @@ iwm_add_aux_sta(struct iwm_softc *sc)
     if (isset(sc->sc_enabled_capa, IWM_UCODE_TLV_CAPA_DQA_SUPPORT)) {
         qid = IWM_DQA_AUX_QUEUE;
         err = iwm_enable_txq(sc, IWM_AUX_STA_ID, qid,
-                             IWM_TX_FIFO_MCAST, 0, 0, 0);
+                             IWM_TX_FIFO_MCAST, 0, IWM_MAX_TID_COUNT, 0);
     } else {
         qid = IWM_AUX_QUEUE;
         err = iwm_enable_ac_txq(sc, qid, IWM_TX_FIFO_MCAST);

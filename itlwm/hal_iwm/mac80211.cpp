@@ -1659,7 +1659,6 @@ iwm_tx(struct iwm_softc *sc, mbuf_t m, struct ieee80211_node *ni, int ac)
     int i, totlen, hasqos;
     int rtsthres = ic->ic_rtsthreshold;
     int qid;
-    uint16_t qos;
     bool amsdu;
     uint16_t len, tb1_len;
     
@@ -1667,44 +1666,45 @@ iwm_tx(struct iwm_softc *sc, mbuf_t m, struct ieee80211_node *ni, int ac)
     type = wh->i_fc[0] & IEEE80211_FC0_TYPE_MASK;
     subtype = wh->i_fc[0] & IEEE80211_FC0_SUBTYPE_MASK;
     
-    if (type == IEEE80211_FC0_TYPE_CTL) {
+    if (type == IEEE80211_FC0_TYPE_CTL)
         hdrlen = sizeof(struct ieee80211_frame_min);
-    } else {
+    else
         hdrlen = ieee80211_get_hdrlen(wh);
-    }
     
-    if ((hasqos = ieee80211_has_qos(wh))) {
-        /* Select EDCA Access Category and TX ring for this frame. */
-        struct ieee80211_tx_ba *ba;
-        qos = ieee80211_get_qos(wh);
-        tid = qos & IEEE80211_QOS_TID;
-        ac = ieee80211_up_to_ac(ic, tid);
-        if (isset(sc->sc_enabled_capa, IWM_UCODE_TLV_CAPA_DQA_SUPPORT)) {
-            qid = IWM_DQA_MIN_MGMT_QUEUE + ac;
-        } else {
-            qid = ac;
-        }
-
-        /* If possible, put this frame on an aggregation queue. */
-         if (sc->sc_tx_ba[tid].wn == in) {
-             ba = &ni->ni_tx_ba[tid];
-             if (!IEEE80211_IS_MULTICAST(wh->i_addr1) &&
-                 ba->ba_state == IEEE80211_BA_AGREED) {
-                 qid = sc->first_agg_txq + tid;
-                 DPRINTFN(3, ("%s agg packet qid=%d send\n", __FUNCTION__, qid));
-                 if (sc->qfullmsk & (1 << qid)) {
-                     mbuf_freem(m);
-                     return ENOBUFS;
-                 }
-             }
-         }
-    } else {
-        qos = 0;
+    hasqos = ieee80211_has_qos(wh);
+    if (type == IEEE80211_FC0_TYPE_DATA)
         tid = IWM_TID_NON_QOS;
-        if (isset(sc->sc_enabled_capa, IWM_UCODE_TLV_CAPA_DQA_SUPPORT)) {
-            qid = IWM_DQA_MIN_MGMT_QUEUE + ac;
-        } else {
-            qid = ac;
+    else
+        tid = IWM_MAX_TID_COUNT;
+    
+    /*
+     * Map EDCA categories to Tx data queues.
+     *
+     * We use static data queue assignments even in DQA mode. We do not
+     * need to share Tx queues between stations because we only implement
+     * client mode; the firmware's station table contains only one entry
+     * which represents our access point.
+     */
+    if (isset(sc->sc_enabled_capa, IWM_UCODE_TLV_CAPA_DQA_SUPPORT))
+        qid = IWM_DQA_MIN_MGMT_QUEUE + ac;
+    else
+        qid = ac;
+    
+    if (hasqos) {
+        struct ieee80211_tx_ba *ba;
+        uint16_t qos = ieee80211_get_qos(wh);
+        int qostid = qos & IEEE80211_QOS_TID;
+        int agg_qid = IWM_FIRST_AGG_TX_QUEUE + qostid;
+        
+        ba = &ni->ni_tx_ba[qostid];
+        if (!IEEE80211_IS_MULTICAST(wh->i_addr1) &&
+            type == IEEE80211_FC0_TYPE_DATA &&
+            subtype != IEEE80211_FC0_SUBTYPE_NODATA &&
+            sc->sc_tx_ba[tid].wn == in &&
+            ba->ba_state == IEEE80211_BA_AGREED) {
+            qid = agg_qid;
+            tid = qostid;
+            ac = ieee80211_up_to_ac(ic, qostid);
         }
     }
     
@@ -3564,7 +3564,7 @@ iwm_init_hw(struct iwm_softc *sc)
         else
             qid = IWM_AUX_QUEUE;
         err = iwm_enable_txq(sc, IWM_MONITOR_STA_ID, qid,
-                             iwm_ac_to_tx_fifo[EDCA_AC_BE], 0, 0, 0);
+                             iwm_ac_to_tx_fifo[EDCA_AC_BE], 0, IWM_MAX_TID_COUNT, 0);
         if (err) {
             XYLog("%s: could not enable monitor inject Tx queue "
                   "(error %d)\n", DEVNAME(sc), err);
@@ -3578,7 +3578,7 @@ iwm_init_hw(struct iwm_softc *sc)
             else
                 qid = ac;
             err = iwm_enable_txq(sc, IWM_STATION_ID, qid,
-                                 iwm_ac_to_tx_fifo[ac], 0, 0, 0);
+                                 iwm_ac_to_tx_fifo[ac], 0, IWM_TID_NON_QOS, 0);
             if (err) {
                 XYLog("%s: could not enable Tx queue %d "
                       "(error %d)\n", DEVNAME(sc), ac, err);
