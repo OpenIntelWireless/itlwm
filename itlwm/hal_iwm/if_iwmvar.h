@@ -687,6 +687,7 @@ struct iwm_softc {
 struct iwm_node {
     struct ieee80211_node in_ni;
     struct iwm_phy_ctxt *in_phyctxt;
+    uint8_t in_macaddr[ETHER_ADDR_LEN];
 
     uint16_t in_id;
     uint16_t in_color;

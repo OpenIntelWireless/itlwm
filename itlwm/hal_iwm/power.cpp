@@ -306,7 +306,7 @@ iwm_add_sta_cmd(struct iwm_softc *sc, struct iwm_node *in, int update, unsigned 
             }
         }
         add_sta_cmd.tfd_queue_msk = sc->agg_queue_mask;
-        IEEE80211_ADDR_COPY(&add_sta_cmd.addr, in->in_ni.ni_bssid);
+        IEEE80211_ADDR_COPY(&add_sta_cmd.addr, in->in_macaddr);
     }
     add_sta_cmd.add_modify = update ? 1 : 0;
     add_sta_cmd.station_flags_msk

@@ -1114,8 +1114,8 @@ iwm_rx_tx_ba_notif(struct iwm_softc *sc, struct iwm_rx_packet *pkt, struct iwm_r
     struct iwm_tx_ring *ring;
     uint16_t ssn;
     int qid;
-    struct ieee80211_node *ni;
-    struct iwm_node *in;
+    struct ieee80211_node *ni = ic->ic_bss;
+    struct iwm_node *in = (struct iwm_node *)ni;
     
     DPRINTFN(3, ("TID = %d, SeqCtl = %d, bitmap = 0x%llx, scd_flow = %d, scd_ssn = %d sent:%d, acked:%d\n",
                  ba_notif->tid, le16_to_cpu(ba_notif->seq_ctl),
@@ -1129,11 +1129,8 @@ iwm_rx_tx_ba_notif(struct iwm_softc *sc, struct iwm_rx_packet *pkt, struct iwm_r
         return;
     
     if (ba_notif->sta_id != IWM_STATION_ID ||
-        !IEEE80211_ADDR_EQ(ic->ic_bss->ni_macaddr, ba_notif->sta_addr))
+        !IEEE80211_ADDR_EQ(in->in_macaddr, ba_notif->sta_addr))
         return;
-    
-    ni = ic->ic_bss;
-    in = (struct iwm_node *)ni;
     
     qid = le16toh(ba_notif->scd_flow);
     if (qid < IWM_FIRST_AGG_TX_QUEUE || qid > IWM_LAST_AGG_TX_QUEUE)
@@ -2045,7 +2042,7 @@ iwm_mac_ctxt_cmd_common(struct iwm_softc *sc, struct iwm_node *in,
         return;
     }
     
-    IEEE80211_ADDR_COPY(cmd->bssid_addr, ni->ni_bssid);
+    IEEE80211_ADDR_COPY(cmd->bssid_addr, in->in_macaddr);
     iwm_ack_rates(sc, in, &cck_ack_rates, &ofdm_ack_rates);
     cmd->cck_rates = htole32(cck_ack_rates);
     cmd->ofdm_rates = htole32(ofdm_ack_rates);
@@ -2266,6 +2263,7 @@ iwm_auth(struct iwm_softc *sc)
         return err;
     }
     in->in_phyctxt = &sc->sc_phyctxt[0];
+    IEEE80211_ADDR_COPY(in->in_macaddr, in->in_ni.ni_macaddr);
     
     err = iwm_mac_ctxt_cmd(sc, in, IWM_FW_CTXT_ACTION_ADD, 0);
     if (err) {
@@ -2916,7 +2914,7 @@ int ItlIwm::
 iwm_allow_mcast(struct iwm_softc *sc)
 {
     struct ieee80211com *ic = &sc->sc_ic;
-    struct ieee80211_node *ni = ic->ic_bss;
+    struct iwm_node *in = (struct iwm_node *)ic->ic_bss;
     struct iwm_mcast_filter_cmd *cmd;
     size_t size;
     int err;
@@ -2929,7 +2927,7 @@ iwm_allow_mcast(struct iwm_softc *sc)
     cmd->port_id = 0;
     cmd->count = 0;
     cmd->pass_all = 1;
-    IEEE80211_ADDR_COPY(cmd->bssid, ni->ni_bssid);
+    IEEE80211_ADDR_COPY(cmd->bssid, in->in_macaddr);
     
     err = iwm_send_cmd_pdu(sc, IWM_MCAST_FILTER_CMD,
                            0, size, cmd);
@@ -3795,6 +3793,7 @@ iwm_stop(struct _ifnet *ifp)
     
     in->in_phyctxt = NULL;
     in->in_ni.ni_chw = IEEE80211_CHAN_WIDTH_20_NOHT;
+    IEEE80211_ADDR_COPY(in->in_macaddr, etheranyaddr);
     
     sc->sc_flags &= ~(IWM_FLAG_SCANNING | IWM_FLAG_BGSCAN);
     sc->sc_flags &= ~IWM_FLAG_MAC_ACTIVE;
