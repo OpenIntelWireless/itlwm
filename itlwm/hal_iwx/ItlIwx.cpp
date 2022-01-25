@@ -10566,8 +10566,7 @@ iwx_rx_pkt(struct iwx_softc *sc, struct iwx_rx_data *data, struct mbuf_list *ml)
         }
         
         len = sizeof(pkt->len_n_flags) + iwx_rx_packet_len(pkt);
-        if (len < sizeof(pkt->hdr) ||
-            len > (IWX_RBUF_SIZE - offset - minsz))
+        if (len < minsz || len > (IWX_RBUF_SIZE - offset))
             break;
         
         if (code == IWX_REPLY_RX_MPDU_CMD && ++nmpdu == 1) {
