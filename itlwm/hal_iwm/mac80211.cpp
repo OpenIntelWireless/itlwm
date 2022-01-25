@@ -1491,29 +1491,22 @@ iwm_rx_tx_cmd(struct iwm_softc *sc, struct iwm_rx_packet *pkt,
     
     DPRINTFN(2, ("%s idx=%d qid=%d txd->txmcs=%d txd->txrate=%d, frame_count=%d len=%d\n", __FUNCTION__, idx, qid, txd->txmcs, txd->txrate, ((struct           iwm_tx_resp *)pkt->data)->frame_count, ((struct iwm_tx_resp *)pkt->data)->byte_cnt));
     
+    memcpy(&ssn, &tx_resp->status + tx_resp->frame_count, sizeof(ssn));
+    ssn = le32toh(ssn) & 0xfff;
     if (qid >= sc->first_agg_txq) {
         int status;
-        
-        memcpy(&ssn, &tx_resp->status + tx_resp->frame_count, sizeof(ssn));
-        ssn = le32toh(ssn) & 0xfff;
         status = le16toh(tx_resp->status.status) & IWM_TX_STATUS_MSK;
         iwm_ampdu_tx_done(sc, cmd_hdr, txd->in, ring,
                           le32toh(tx_resp->initial_rate), tx_resp->frame_count,
                           tx_resp->failure_frame, ssn, status, &tx_resp->status);
     } else {
+        /*
+         * Even though this is not an agg queue, we must only free
+         * frames before the firmware's starting sequence number.
+         */
         iwm_rx_tx_cmd_single(sc, tx_resp, txd->in, txd->txmcs,
                              txd->txrate, qid);
-        iwm_reset_sched(sc, qid, idx, IWM_STATION_ID);
-        iwm_txd_done(sc, txd);
-        ring->queued--;
-        
-        /*
-         * XXX Sometimes we miss Tx completion interrupts.
-         * We cannot check Tx success/failure for affected frames;
-         * just free the associated mbuf and release the associated
-         * node reference.
-         */
-        iwm_ampdu_txq_advance(sc, ring, idx);
+        iwm_ampdu_txq_advance(sc, ring, IWM_AGG_SSN_TO_TXQ_IDX(ssn));
         iwm_clear_oactive(sc, ring);
     }
 }
