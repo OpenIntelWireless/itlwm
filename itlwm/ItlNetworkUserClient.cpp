@@ -334,6 +334,8 @@ sDISASSOCIATE(OSObject* target, void* data, bool isSet)
     ItlNetworkUserClient *that = OSDynamicCast(ItlNetworkUserClient, target);
     struct ioctl_disassociate *dis = (struct ioctl_disassociate *)data;
     struct ieee80211com *ic = that->fDriver->fHalService->get80211Controller();
+    if (ic->ic_state > IEEE80211_S_AUTH && ic->ic_bss != NULL)
+        IEEE80211_SEND_MGMT(ic, ic->ic_bss, IEEE80211_FC0_SUBTYPE_DEAUTH, IEEE80211_REASON_AUTH_LEAVE);
     ieee80211_del_ess(ic, (char *)dis->ssid, strlen((char *)dis->ssid), 0);
     ieee80211_deselect_ess(ic);
     if (TAILQ_EMPTY(&ic->ic_ess)) {
