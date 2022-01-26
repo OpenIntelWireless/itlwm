@@ -526,10 +526,12 @@ IOReturn AirportItlwm::
 setROAM_PROFILE(OSObject *object, struct apple80211_roam_profile_band_data *data)
 {
     XYLog("%s cnt=%d flags=%d\n", __FUNCTION__, data->profile_cnt, data->flags);
+#if 0
     for (int i = 0; i < data->profile_cnt; i++) {
         struct apple80211_roam_profile *bd = &data->profiles[i];
         XYLog("%s %d ROAM_PROF_BACKOFF_MULTIPLIER: %d, ROAM_PROF_FULLSCAN_PERIOD: %d, ROAM_PROF_INIT_SCAN_PERIOD: %d, ROAM_PROF_MAX_SCAN_PERIOD: %d, ROAM_PROF_NFSCAN: %d, ROAM_PROF_ROAM_DELTA: %d, ROAM_PROF_ROAM_FLAGS:%d, ROAM_PROF_ROAM_TRIGGER: %d, ROAM_PROF_RSSI_BOOST_DELTA: %d, ROAM_PROF_RSSI_BOOST_THRESH: %d, ROAM_PROF_RSSI_LOWER: %d\n", __FUNCTION__, i, bd->backoff_multiplier, bd->full_scan_period, bd->init_scan_period, bd->max_scan_period, bd->nfscan, bd->delta, bd->flags, bd->trigger, bd->rssi_boost_delta, bd->rssi_boost_thresh, bd->rssi_lower);
     }
+#endif
     if (roamProfile != NULL) {
         IOFree(roamProfile, sizeof(struct apple80211_roam_profile_band_data));
     }
@@ -1342,7 +1344,6 @@ setVIRTUAL_IF_CREATE(OSObject *object, struct apple80211_virt_if_create_data* da
         memcpy(addr.octet, data->mac, 6);
         inf->init(this, &addr, data->role, "p2p");
         fP2PDISCInterface = inf;
-        IOLog("啊啊啊啊 虚拟接口fP2PDISCInterface调用成功\n");
     } else if(data->role == APPLE80211_VIF_P2P_CLIENT) {
         
     } else if (data->role == APPLE80211_VIF_P2P_GO) {
@@ -1353,7 +1354,6 @@ setVIRTUAL_IF_CREATE(OSObject *object, struct apple80211_virt_if_create_data* da
         memcpy(addr.octet, data->mac, 6);
         inf->init(this, &addr, data->role, "p2p");
         fP2PGOInterface = inf;
-        IOLog("啊啊啊啊 虚拟接口fP2PGOInterface调用成功\n");
     } else if (data->role == APPLE80211_VIF_AWDL) {
         if (fAWDLInterface != NULL && strncmp((const char *)data->bsd_name, "awdl", 4) == 0) {
             XYLog("%s awdl interface already exists!\n", __FUNCTION__);
@@ -1370,7 +1370,6 @@ setVIRTUAL_IF_CREATE(OSObject *object, struct apple80211_virt_if_create_data* da
         chann.flags = APPLE80211_C_FLAG_5GHZ | APPLE80211_C_FLAG_ACTIVE | APPLE80211_C_FLAG_80MHZ;
         setInfraChannel(&chann);
         fAWDLInterface = inf;
-        IOLog("啊啊啊啊 虚拟接口fAWDLInterface调用成功\n");
     }
     return kIOReturnSuccess;
 }

@@ -412,6 +412,7 @@ getAWDL_SYNCHRONIZATION_CHANNEL_SEQUENCE(OSObject *object, struct apple80211_awd
     return kIOReturnSuccess;
 }
 
+#if 0
 static void dumpAWDLChannelSeqs(struct apple80211_awdl_sync_channel_sequence *data)
 {
     if (data == nullptr) {
@@ -426,12 +427,15 @@ static void dumpAWDLChannelSeqs(struct apple80211_awdl_sync_channel_sequence *da
         XYLog("%s %d 0x%04x=%d%s%s%s\n", __FUNCTION__, i, seq.flags, (uint8_t)seq.flags, band != 0x800 ? (band == 0xC00 ? ",20MHz" : ",unknown") : ",20MHz", channel != 0x200 ? (channel == 0x100 ? ",-1" : ",none") : ",1", (seq.flags & 0xF000) == 4096 ? ",5GHz" : ",unknown");
     }
 }
+#endif
 
 IOReturn AirportItlwm::
 setAWDL_SYNCHRONIZATION_CHANNEL_SEQUENCE(OSObject *object, struct apple80211_awdl_sync_channel_sequence *data)
 {
     XYLog("%s\n", __FUNCTION__);
+#if 0
     dumpAWDLChannelSeqs(data);
+#endif
     return kIOReturnSuccess;
 }
 
