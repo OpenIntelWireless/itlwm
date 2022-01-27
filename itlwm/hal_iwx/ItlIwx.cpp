@@ -6619,7 +6619,10 @@ iwx_tx(struct iwx_softc *sc, mbuf_t m, struct ieee80211_node *ni, int ac)
     }
 
     ring = &sc->txq[qid];
-
+    if (ring->ring_count == 0) {
+        mbuf_freem(m);
+        return EINVAL;
+    }
     idx = (ring->cur & (ring->ring_count - 1));
     desc = &ring->desc[idx];
     memset(desc, 0, sizeof(*desc));
