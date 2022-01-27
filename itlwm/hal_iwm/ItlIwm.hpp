@@ -341,8 +341,6 @@ public:
     int    iwm_scan_abort(struct iwm_softc *);
     int    iwm_auth(struct iwm_softc *);
     int    iwm_deauth(struct iwm_softc *);
-    int    iwm_assoc(struct iwm_softc *);
-    int    iwm_disassoc(struct iwm_softc *);
     int    iwm_run(struct iwm_softc *);
     int    iwm_run_stop(struct iwm_softc *);
     static struct ieee80211_node *iwm_node_alloc(struct ieee80211com *);

@@ -370,6 +370,7 @@ iwm_disable_txq(struct iwm_softc *sc, uint8_t qid, uint8_t tid, uint8_t flags)
         .scd_queue = qid,
         .enable = IWM_SCD_CFG_DISABLE_QUEUE,
         .sta_id = IWM_STATION_ID,
+        .tid = tid,
     };
     
     err = iwm_send_cmd_pdu(sc, IWM_SCD_QUEUE_CFG, flags,

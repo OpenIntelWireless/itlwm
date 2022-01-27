@@ -2372,52 +2372,6 @@ iwm_deauth(struct iwm_softc *sc)
 }
 
 int ItlIwm::
-iwm_assoc(struct iwm_softc *sc)
-{
-    XYLog("%s\n", __FUNCTION__);
-    struct ieee80211com *ic = &sc->sc_ic;
-    struct iwm_node *in = (struct iwm_node *)ic->ic_bss;
-    int update_sta = (sc->sc_flags & IWM_FLAG_STA_ACTIVE);
-    int err;
-    
-    splassert(IPL_NET);
-    
-    err = iwm_add_sta_cmd(sc, in, update_sta, 0);
-    if (err) {
-        XYLog("%s: could not %s STA (error %d)\n",
-              DEVNAME(sc), update_sta ? "update" : "add", err);
-        return err;
-    }
-    
-    return 0;
-}
-
-int ItlIwm::
-iwm_disassoc(struct iwm_softc *sc)
-{
-    XYLog("%s\n", __FUNCTION__);
-    struct ieee80211com *ic = &sc->sc_ic;
-    struct iwm_node *in = (struct iwm_node *)ic->ic_bss;
-    int err;
-    
-    splassert(IPL_NET);
-    
-    if (sc->sc_flags & IWM_FLAG_STA_ACTIVE) {
-        err = iwm_rm_sta_cmd(sc, in);
-        if (err) {
-            XYLog("%s: could not remove STA (error %d)\n",
-                  DEVNAME(sc), err);
-            return err;
-        }
-        sc->sc_rx_ba_sessions = 0;
-        sc->ba_start_tidmask = 0;
-        sc->ba_stop_tidmask = 0;
-    }
-    
-    return 0;
-}
-
-int ItlIwm::
 iwm_run(struct iwm_softc *sc)
 {
     XYLog("%s\n", __FUNCTION__);
@@ -2553,9 +2507,42 @@ iwm_run_stop(struct iwm_softc *sc)
 {
     struct ieee80211com *ic = &sc->sc_ic;
     struct iwm_node *in = (struct iwm_node *)ic->ic_bss;
-    int err;
+    int err, i, tid;
     
     splassert(IPL_NET);
+    
+    /*
+     * Stop Tx/Rx BA sessions now. We cannot rely on the BA task
+     * for this when moving out of RUN state since it runs in a
+     * separate thread.
+     * Note that in->in_ni (struct ieee80211_node) already represents
+     * our new access point in case we are roaming between APs.
+     * This means we cannot rely on struct ieee802111_node to tell
+     * us which BA sessions exist.
+     */
+    for (i = 0; i < nitems(sc->sc_rxba_data); i++) {
+        struct iwm_rxba_data *rxba = &sc->sc_rxba_data[i];
+        if (rxba->baid == IWM_RX_REORDER_DATA_INVALID_BAID)
+            continue;
+        iwm_sta_rx_agg(sc, &in->in_ni, rxba->tid, 0, 0, 0, 0);
+        iwm_clear_reorder_buffer(sc, rxba);
+        if (sc->sc_rx_ba_sessions > 0)
+            sc->sc_rx_ba_sessions--;
+    }
+    for (tid = 0; tid < IWM_MAX_TID_COUNT; tid++) {
+        int qid = sc->first_agg_txq + tid;
+        struct iwm_tx_ring *ring = &sc->txq[qid];
+        if ((sc->agg_queue_mask & (1 << qid)) == 0)
+            continue;
+        err = iwm_sta_tx_agg(sc, &in->in_ni, tid, 0, 0, 0);
+        if (err)
+            return err;
+        iwm_ampdu_txq_advance(sc, ring, ring->cur);
+        iwm_clear_oactive(sc, ring);
+    }
+    ieee80211_ba_del(&in->in_ni);
+    sc->ba_start_tidmask = 0;
+    sc->ba_stop_tidmask = 0;
     
     if (ic->ic_opmode == IEEE80211_M_MONITOR)
         iwm_led_blink_stop(sc);
@@ -2573,6 +2560,7 @@ iwm_run_stop(struct iwm_softc *sc)
         return err;
     }
     
+    /* Mark station as disassociated. */
     err = iwm_mac_ctxt_cmd(sc, in, IWM_FW_CTXT_ACTION_MODIFY, 0);
     if (err) {
         XYLog("%s: failed to update MAC\n", DEVNAME(sc));
@@ -3167,12 +3155,6 @@ iwm_newstate_task(void *psc)
                     goto out;
                 /* FALLTHROUGH */
             case IEEE80211_S_ASSOC:
-                if (nstate <= IEEE80211_S_ASSOC) {
-                    err = that->iwm_disassoc(sc);
-                    if (err)
-                        goto out;
-                }
-                /* FALLTHROUGH */
             case IEEE80211_S_AUTH:
                 if (nstate <= IEEE80211_S_AUTH) {
                     err = that->iwm_deauth(sc);
@@ -3211,7 +3193,6 @@ iwm_newstate_task(void *psc)
             break;
             
         case IEEE80211_S_ASSOC:
-            err = that->iwm_assoc(sc);
             break;
             
         case IEEE80211_S_RUN:
@@ -3253,10 +3234,6 @@ iwm_newstate(struct ieee80211com *ic, enum ieee80211_state nstate, int arg)
         that->iwm_del_task(sc, systq, &sc->ba_task);
         that->iwm_del_task(sc, systq, &sc->mac_ctxt_task);
         that->iwm_del_task(sc, systq, &sc->chan_ctxt_task);
-        for (i = 0; i < nitems(sc->sc_rxba_data); i++) {
-            struct iwm_rxba_data *rxba = &sc->sc_rxba_data[i];
-            that->iwm_clear_reorder_buffer(sc, rxba);
-        }
     }
     
     sc->ns_nstate = nstate;
@@ -5127,6 +5104,13 @@ iwm_ba_task(void *arg)
     struct ieee80211_node *ni = ic->ic_bss;
     int s = splnet();
     int tid;
+    
+    if ((sc->sc_flags & IWM_FLAG_SHUTDOWN) ||
+        ic->ic_state != IEEE80211_S_RUN) {
+//        refcnt_rele_wake(&sc->task_refs);
+        splx(s);
+        return;
+    }
 
     if (sc->ba_tx) {
         struct ieee80211_tx_ba *ba = &ni->ni_tx_ba[sc->ba_tx_tid];
@@ -5169,8 +5153,7 @@ iwm_ba_task(void *arg)
             that->iwm_nic_unlock(sc);
         } else {
             that->iwm_sta_tx_agg(sc, ni, sc->ba_tx_tid, 0, 0, 0);
-            that->iwm_ampdu_txq_advance(sc, ring,
-                IWM_AGG_SSN_TO_TXQ_IDX(ba->ba_winend));
+            that->iwm_ampdu_txq_advance(sc, ring, ring->cur);
             that->iwm_clear_oactive(sc, ring);
         }
     } else {
