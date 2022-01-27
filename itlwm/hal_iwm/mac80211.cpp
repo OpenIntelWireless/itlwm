@@ -3219,7 +3219,15 @@ iwm_newstate(struct ieee80211com *ic, enum ieee80211_state nstate, int arg)
     struct iwm_softc *sc = (struct iwm_softc*)ifp->if_softc;
     ItlIwm *that = container_of(sc, ItlIwm, com);
     struct ieee80211_node *ni = ic->ic_bss;
-    int i;
+    
+    /*
+     * Prevent attemps to transition towards the same state, unless
+     * we are scanning in which case a SCAN -> SCAN transition
+     * triggers another scan iteration. And AUTH -> AUTH is needed
+     * to support band-steering.
+     */
+    if (sc->ns_nstate == nstate && nstate != IEEE80211_S_SCAN &&
+        nstate != IEEE80211_S_AUTH)
     
     if (ic->ic_state == IEEE80211_S_RUN) {
         if (nstate == IEEE80211_S_SCAN) {
