@@ -121,30 +121,30 @@ ra_fp_sprintf(uint64_t fp)
 }
 #endif /* RA_DEBUG */
 
-static bool is_ht(struct ieee80211_node *ni)
+static int is_ht(struct ieee80211_node *ni)
 {
-    return (ni->ni_flags & IEEE80211_NODE_HT) != 0;
+    return (ni->ni_flags & IEEE80211_NODE_HT);
 }
 
-static bool is_vht(struct ieee80211_node *ni)
+static int is_vht(struct ieee80211_node *ni)
 {
-    return (ni->ni_flags & IEEE80211_NODE_VHT) != 0;
+    return (ni->ni_flags & IEEE80211_NODE_VHT);
 }
 
-static bool is_he(struct ieee80211_node *ni)
+static int is_he(struct ieee80211_node *ni)
 {
-    return (ni->ni_flags & IEEE80211_NODE_HE) != 0;
+    return (ni->ni_flags & IEEE80211_NODE_HE);
 }
 
 static int support_sgi(struct ieee80211_node *ni)
 {
     if (is_he(ni))
-        return false;
+        return 0;
     if (is_vht(ni))
         return ieee80211_node_supports_vht_sgi80(ni) || ieee80211_node_supports_vht_sgi160(ni);
     if (is_ht(ni))
         return ieee80211_node_supports_ht_sgi20(ni) || ieee80211_node_supports_ht_sgi40(ni);
-    return false;
+    return 0;
 }
 
 static int support_nss(struct ieee80211_node *ni)
