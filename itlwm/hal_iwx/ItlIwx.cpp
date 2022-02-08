@@ -611,21 +611,6 @@ iwx_lmac_id(struct iwx_softc *sc, ieee80211_channel *chan)
 }
 
 int ItlIwx::
-iwx_is_mimo_ht_plcp(uint8_t ht_plcp)
-{
-    return (ht_plcp != IWX_RATE_HT_SISO_MCS_INV_PLCP &&
-            (ht_plcp & IWX_RATE_HT_MCS_NSS_MSK));
-}
-
-int ItlIwx::
-iwx_is_mimo_mcs(int mcs)
-{
-    int ridx = iwx_mcs2ridx[mcs];
-    return iwx_is_mimo_ht_plcp(iwx_rates[ridx].ht_plcp);
-    
-}
-
-int ItlIwx::
 iwx_store_cscheme(struct iwx_softc *sc, uint8_t *data, size_t dlen)
 {
     struct iwx_fw_cscheme_list *l = (struct iwx_fw_cscheme_list *)data;

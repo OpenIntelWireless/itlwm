@@ -193,8 +193,6 @@ public:
     
     uint8_t    iwx_lookup_cmd_ver(struct iwx_softc *, uint8_t, uint8_t);
     uint32_t    iwx_lmac_id(struct iwx_softc *, ieee80211_channel *);
-    int    iwx_is_mimo_ht_plcp(uint8_t);
-    int    iwx_is_mimo_mcs(int);
     int    iwx_store_cscheme(struct iwx_softc *, uint8_t *, size_t);
     int    iwx_alloc_fw_monitor_block(struct iwx_softc *, uint8_t, uint8_t);
     int    iwx_alloc_fw_monitor(struct iwx_softc *, uint8_t);
