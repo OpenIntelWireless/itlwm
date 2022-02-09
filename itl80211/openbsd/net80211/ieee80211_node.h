@@ -484,8 +484,8 @@ struct ieee80211_node {
 #define IEEE80211_NODE_VHT		0x10000	/* VHT negotiated */
 #define IEEE80211_NODE_HTCAP		0x20000	/* claims to support HT */
 #define IEEE80211_NODE_VHTCAP       0x40000 /* claims to support VHT */
-#define IEEE80211_NODE_VHT_SGI80    0x80000    /* SGI on 20 MHz negotiated */ 
-#define IEEE80211_NODE_VHT_SGI160   0x100000    /* SGI on 40 MHz negotiated */
+#define IEEE80211_NODE_VHT_SGI80    0x80000    /* SGI on 80 MHz negotiated */
+#define IEEE80211_NODE_VHT_SGI160   0x100000    /* SGI on 160 MHz negotiated */
 #define IEEE80211_NODE_HE       0x200000    /* HE negotiated */
 
 	/* If not NULL, this function gets called when ni_refcnt hits zero. */
@@ -601,6 +601,39 @@ ieee80211_node_supports_vht_sgi160(struct ieee80211_node *ni)
 {
     return ieee80211_node_supports_vht(ni) &&
         (ni->ni_vhtcaps & IEEE80211_VHTCAP_SHORT_GI_160);
+}
+
+static inline int
+ieee80211_node_supports_sgi(struct ieee80211_node *ni)
+{
+    if (ni->ni_flags & IEEE80211_NODE_HE)
+        return 0;
+    if (ni->ni_flags & IEEE80211_NODE_VHT) {
+        switch (ni->ni_chw) {
+            case IEEE80211_CHAN_WIDTH_20:
+                return ieee80211_node_supports_ht_sgi20(ni);
+            case IEEE80211_CHAN_WIDTH_40:
+                return ieee80211_node_supports_ht_sgi40(ni);
+            case IEEE80211_CHAN_WIDTH_80:
+                return ieee80211_node_supports_vht_sgi80(ni);
+            case IEEE80211_CHAN_WIDTH_80P80:
+            case IEEE80211_CHAN_WIDTH_160:
+                return ieee80211_node_supports_vht_sgi160(ni);
+            default:
+                return false;
+        }
+    }
+    if (ni->ni_flags & IEEE80211_NODE_HT) {
+        switch (ni->ni_chw) {
+            case IEEE80211_CHAN_WIDTH_20:
+                return ieee80211_node_supports_ht_sgi20(ni);
+            case IEEE80211_CHAN_WIDTH_40:
+                return ieee80211_node_supports_ht_sgi40(ni);
+            default:
+                return false;
+        }
+    }
+    return 0;
 }
 
 struct ieee80211com;

@@ -466,8 +466,8 @@ getRATE(OSObject *object, struct apple80211_rate_data *rd)
         memset(rd, 0, sizeof(*rd));
         rd->version = APPLE80211_VERSION;
         rd->num_radios = 1;
+        sgi = ieee80211_node_supports_sgi(ic->ic_bss);
         if (ic->ic_curmode == IEEE80211_MODE_11AC) {
-            sgi = (ieee80211_node_supports_vht_sgi80(ic->ic_bss) || ieee80211_node_supports_vht_sgi160(ic->ic_bss));
             if (sgi) {
                 index += 1;
             }
@@ -492,7 +492,6 @@ getRATE(OSObject *object, struct apple80211_rate_data *rd)
             rd->rate[0] = rs->rates[ic->ic_bss->ni_txmcs % rs->nrates] / 2;
         } else if (ic->ic_curmode == IEEE80211_MODE_11N) {
             int is_40mhz = ic->ic_bss->ni_chw == IEEE80211_CHAN_WIDTH_40;
-            sgi = ((!is_40mhz && ieee80211_node_supports_ht_sgi20(ic->ic_bss)) || (is_40mhz && ieee80211_node_supports_ht_sgi40(ic->ic_bss)));
             if (sgi) {
                 index += 1;
             }

@@ -136,17 +136,6 @@ static int is_he(struct ieee80211_node *ni)
     return (ni->ni_flags & IEEE80211_NODE_HE);
 }
 
-static int support_sgi(struct ieee80211_node *ni)
-{
-    if (is_he(ni))
-        return 0;
-    if (is_vht(ni))
-        return ieee80211_node_supports_vht_sgi80(ni) || ieee80211_node_supports_vht_sgi160(ni);
-    if (is_ht(ni))
-        return ieee80211_node_supports_ht_sgi20(ni) || ieee80211_node_supports_ht_sgi40(ni);
-    return 0;
-}
-
 static int support_nss(struct ieee80211_node *ni)
 {
     uint32_t ntxstreams = 0;
@@ -277,7 +266,7 @@ ieee80211_ra_get_rateset(struct ieee80211_ra_node *ra, struct ieee80211com *ic, 
     int search_direction = mcs - last_ra_rate->max_mcs;
     for (i = ra->rs_index; (search_direction > 0 ? (i <= ra->active_rs_count - 1) : (i >= 0)); search_direction > 0 ? i++ : i--) {
         const struct ieee80211_ra_rate *ra_rate = &ra->active_rs[i];
-        if (ra_rate->sgi && !support_sgi(ni))
+        if (ra_rate->sgi && !ieee80211_node_supports_sgi(ni))
             continue;
         if (ra_rate->nss > sup_nss)
             continue;
@@ -381,7 +370,7 @@ ieee80211_ra_next_rateset(struct ieee80211_ra_node *rn, struct ieee80211com *ic,
                 continue;
             if (rsnext->nss > support_nss(ni))
                 continue;
-            if (rsnext->sgi && !support_sgi(ni))
+            if (rsnext->sgi && !ieee80211_node_supports_sgi(ni))
                 continue;
             found = true;
             break;
@@ -396,7 +385,7 @@ ieee80211_ra_next_rateset(struct ieee80211_ra_node *rn, struct ieee80211com *ic,
                 continue;
             if (rsnext->nss > support_nss(ni))
                 continue;
-            if (rsnext->sgi && !support_sgi(ni))
+            if (rsnext->sgi && !ieee80211_node_supports_sgi(ni))
                 continue;
             found = true;
             break;
@@ -911,7 +900,7 @@ ieee80211_ra_node_init(struct ieee80211com *ic, struct ieee80211_ra_node *rn, st
     memset(rn, 0, sizeof(*rn));
     build_rateset(rn, (enum ieee80211_phymode)ic->ic_curmode);
     rn->bw = ni->ni_chw;
-    rn->sgi = support_sgi(ni);
+    rn->sgi = ieee80211_node_supports_sgi(ni);
     rn->nss = support_nss(ni);
     switch (ni->ni_chw) {
         case IEEE80211_CHAN_WIDTH_20:

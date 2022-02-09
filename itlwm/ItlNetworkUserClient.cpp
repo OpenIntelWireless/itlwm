@@ -149,8 +149,8 @@ sSTA_INFO(OSObject* target, void* data, bool isSet)
     }
     st->rssi = -(0 - IWM_MIN_DBM - ic_bss->ni_rssi);
     st->noise = that->fDriver->fHalService->getDriverInfo()->getBSSNoise();
+    sgi = ieee80211_node_supports_sgi(ic_bss);
     if (ic->ic_curmode == IEEE80211_MODE_11AC) {
-        sgi = (ieee80211_node_supports_vht_sgi80(ic_bss) || ieee80211_node_supports_vht_sgi160(ic_bss));
         if (sgi) {
             index += 1;
         }
@@ -175,7 +175,6 @@ sSTA_INFO(OSObject* target, void* data, bool isSet)
         st->rate = rs->rates[ic_bss->ni_txmcs % rs->nrates] / 2;
     } else if (ic->ic_curmode == IEEE80211_MODE_11N) {
         int is_40mhz = ic_bss->ni_chw == IEEE80211_CHAN_WIDTH_40;
-        sgi = ((!is_40mhz && ieee80211_node_supports_ht_sgi20(ic_bss)) || (is_40mhz && ieee80211_node_supports_ht_sgi40(ic_bss)));
         if (sgi) {
             index += 1;
         }

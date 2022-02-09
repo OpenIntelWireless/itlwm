@@ -2805,6 +2805,8 @@ iwm_setrates(struct iwm_node *in, int async)
                 if (ridx == (mimo ? iwm_vht_mimo_mcs2ridx[i] : iwm_vht_siso_mcs2ridx[i])) {
                     tab = vht_plcp;
                     tab |= IWM_RATE_MCS_VHT_MSK;
+                    if (is_40mhz)
+                        tab |= IWM_RATE_MCS_CHAN_WIDTH_40;
                     if (is_80mhz)
                         tab |= IWM_RATE_MCS_CHAN_WIDTH_80;
                     if (is_160mhz)
