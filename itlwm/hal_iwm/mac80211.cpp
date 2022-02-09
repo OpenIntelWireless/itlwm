@@ -1652,7 +1652,6 @@ iwm_tx(struct iwm_softc *sc, mbuf_t m, struct ieee80211_node *ni, int ac)
     int i, totlen, hasqos;
     int rtsthres = ic->ic_rtsthreshold;
     int qid;
-    bool amsdu;
     uint16_t len, tb1_len;
     
     wh = mtod(m, struct ieee80211_frame *);
@@ -1799,21 +1798,12 @@ iwm_tx(struct iwm_softc *sc, mbuf_t m, struct ieee80211_node *ni, int ac)
     }
     
     len = sizeof(struct iwm_tx_cmd) + sizeof(struct iwm_cmd_header) + hdrlen - TB0_SIZE;
-    /* do not align A-MSDU to dword as the subframe header aligns it */
-    amsdu = ieee80211_has_qos(wh) &&
-        (ieee80211_get_qos(wh) &
-         IEEE80211_QOS_AMSDU);
     
-    if (!amsdu) {
-        tb1_len = _ALIGN(len, 4);
-        /* Tell NIC about any 2-byte padding after MAC header */
-        if (tb1_len != len) {
-            flags |= IWM_TX_CMD_FLG_MH_PAD;
-            tx->offload_assist |= htole16(IWM_TX_CMD_OFFLD_PAD);
-        }
-    } else {
-        tb1_len = len;
-        tx->offload_assist |= htole16(IWM_TX_CMD_OFFLD_AMSDU);
+    tb1_len = _ALIGN(len, 4);
+    /* Tell NIC about any 2-byte padding after MAC header */
+    if (tb1_len != len) {
+        flags |= IWM_TX_CMD_FLG_MH_PAD;
+        tx->offload_assist |= htole16(IWM_TX_CMD_OFFLD_PAD);
     }
     
     tx->driver_txop = 0;
@@ -1872,8 +1862,8 @@ iwm_tx(struct iwm_softc *sc, mbuf_t m, struct ieee80211_node *ni, int ac)
     data->ampdu_txmcs = ni->ni_txmcs;
     data->data_type = type;
     
-    DPRINTFN(3, ("sending data: 嘤嘤嘤 amsdu=%d qid=%d idx=%d len=%d nsegs=%d txflags=0x%08x rate_n_flags=0x%08x rateidx=%u txmcs=%d ni_txrate=%d\n",
-                 amsdu, ring->qid, ring->cur, totlen, nsegs, le32toh(tx->tx_flags),
+    DPRINTFN(3, ("sending data: 嘤嘤嘤 qid=%d idx=%d len=%d nsegs=%d txflags=0x%08x rate_n_flags=0x%08x rateidx=%u txmcs=%d ni_txrate=%d\n",
+                 ring->qid, ring->cur, totlen, nsegs, le32toh(tx->tx_flags),
                  le32toh(tx->rate_n_flags), tx->initial_rate_index,
                  data->txmcs,
                  data->txrate));
