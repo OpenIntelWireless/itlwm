@@ -12752,7 +12752,7 @@ iwx_attach(struct iwx_softc *sc, struct pci_attach_args *pa)
     ic->ic_txbfcaps = 0;
     ic->ic_aselcaps = 0;
     ic->ic_ampdu_params = (IEEE80211_AMPDU_PARAM_SS_4 | 0x3 /* 64k */);
-    ic->ic_caps |= (IEEE80211_C_QOS | IEEE80211_C_TX_AMPDU | IEEE80211_C_AMSDU_IN_AMPDU);
+    ic->ic_caps |= (IEEE80211_C_QOS | IEEE80211_C_TX_AMPDU_SETUP_IN_HW | IEEE80211_C_TX_AMPDU | IEEE80211_C_AMSDU_IN_AMPDU);
     ic->ic_caps |= IEEE80211_C_SUPPORTS_VHT_EXT_NSS_BW;
     
     ic->ic_sup_rates[IEEE80211_MODE_11A] = ieee80211_std_rateset_11a;
@@ -12825,11 +12825,6 @@ iwx_attach(struct iwx_softc *sc, struct pci_attach_args *pa)
     //    config_mountroot(self, iwx_attach_hook);
     if (iwx_preinit(sc)) {
         goto fail5;
-    }
-
-    if (isset(sc->sc_enabled_capa, IWX_UCODE_TLV_CAPA_TLC_OFFLOAD)) {
-        XYLog("%s Enable IEEE80211_C_TX_AMPDU_SETUP_IN_HW cap\n", __FUNCTION__);
-        ic->ic_caps |= IEEE80211_C_TX_AMPDU_SETUP_IN_HW;
     }
     
     return true;
