@@ -5294,6 +5294,8 @@ iwx_oldsn_workaround(struct iwx_softc *sc, struct ieee80211_node *ni, int tid,
 
     /* if limit is reached, send del BA and reset state */
     if (buffer->consec_oldsn_drops == IWX_AMPDU_CONSEC_DROPS_DELBA) {
+        XYLog("reached %d old SN frames, stopping BA session on TID %d\n",
+              IWX_AMPDU_CONSEC_DROPS_DELBA, tid);
         ieee80211_delba_request(ic, ni, IEEE80211_REASON_UNSPECIFIED,
             0, tid);
         buffer->consec_oldsn_prev_drop = 0;

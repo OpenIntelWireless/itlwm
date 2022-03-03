@@ -519,7 +519,7 @@ struct iwx_reorder_buffer {
     unsigned int consec_oldsn_drops;
     uint32_t consec_oldsn_ampdu_gp2;
     unsigned int consec_oldsn_prev_drop;
-#define IWX_AMPDU_CONSEC_DROPS_DELBA    10
+#define IWX_AMPDU_CONSEC_DROPS_DELBA    20
 };
 
 /**
