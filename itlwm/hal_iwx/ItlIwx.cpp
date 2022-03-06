@@ -6567,42 +6567,36 @@ iwx_tx(struct iwx_softc *sc, mbuf_t m, struct ieee80211_node *ni, int ac)
 
     uint16_t num_tbs;
     uint8_t tid, type, subtype;
-    int i, totlen, hasqos = 0;
+    int i, totlen;
     int qid = IWX_INVALID_QUEUE;
-    uint16_t qos;
     int idx;
 
     wh = mtod(m, struct ieee80211_frame *);
     type = wh->i_fc[0] & IEEE80211_FC0_TYPE_MASK;
     subtype = wh->i_fc[0] & IEEE80211_FC0_SUBTYPE_MASK;
-    if (type == IEEE80211_FC0_TYPE_CTL) {
+    if (type == IEEE80211_FC0_TYPE_CTL)
         hdrlen = sizeof(struct ieee80211_frame_min);
-    } else {
+    else
         hdrlen = ieee80211_get_hdrlen(wh);
-    }
-
+    
     tid = IWX_MGMT_TID;
-    if (!IEEE80211_IS_MULTICAST(wh->i_addr1) && (hasqos = ieee80211_has_qos(wh)) && !ieee80211_is_qos_nullfunc(wh)) {
-        /* Select EDCA Access Category and TX ring for this frame. */
-        qos = ieee80211_get_qos(wh);
-        int q_tid = qos & IEEE80211_QOS_TID;
-        if (ni->ni_tx_ba[q_tid].ba_state == IEEE80211_BA_AGREED) {
-            tid = q_tid;
+    qid = sc->first_data_qid;
+
+    /* Put QoS frames on the data queue which maps to their TID. */
+    if (ieee80211_has_qos(wh)) {
+        struct ieee80211_tx_ba *ba;
+        uint16_t qos = ieee80211_get_qos(wh);
+        uint8_t tid = qos & IEEE80211_QOS_TID;
+
+        ba = &ni->ni_tx_ba[tid];
+        if (!IEEE80211_IS_MULTICAST(wh->i_addr1) &&
+            type == IEEE80211_FC0_TYPE_DATA &&
+            subtype != IEEE80211_FC0_SUBTYPE_NODATA &&
+            sc->sc_tid_data[tid].qid != 0 &&
+            sc->sc_tid_data[tid].qid != IWX_INVALID_QUEUE &&
+            ba->ba_state == IEEE80211_BA_AGREED) {
             qid = sc->sc_tid_data[tid].qid;
-        } else {
-            DPRINTFN(1, ("%s qid=%d is not BA negotiated state=%d\n", __FUNCTION__, qid, ni->ni_tx_ba[q_tid].ba_state));
         }
-    }
-
-    if (tid == IWX_MGMT_TID) {
-        DPRINTFN(3, ("%s type=%d qos=%d multicast=%d len=%zu subtype=%d qid=%d using mgmt tid\n", __FUNCTION__, type, hasqos, IEEE80211_IS_MULTICAST(wh->i_addr1), mbuf_len(m), subtype, qid));
-        qid = sc->first_data_qid;
-    }
-
-    if (qid == IWX_INVALID_QUEUE || sc->qfullmsk & (1 << qid)) {
-        DPRINTFN(1, ("%s qid=%d fullmsk=%d\n", __FUNCTION__, qid, sc->qfullmsk));
-        mbuf_freem(m);
-        return ENOBUFS;
     }
 
     ring = &sc->txq[qid];
