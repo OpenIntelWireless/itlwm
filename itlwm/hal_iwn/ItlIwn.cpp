@@ -1874,6 +1874,8 @@ iwn_newstate(struct ieee80211com *ic, enum ieee80211_state nstate, int arg)
         /* Reset state to handle re- and disassociations. */
         sc->rxon.associd = 0;
         sc->rxon.filter &= ~htole32(IWN_FILTER_BSS);
+        sc->rxon.flags &= ~htole32(IWN_RXON_HT_CHANMODE_MIXED2040 |
+                                   IWN_RXON_HT_CHANMODE_PURE40 | IWN_RXON_HT_HT40MINUS);
         sc->calib.state = IWN_CALIB_STATE_INIT;
         sc->agg_queue_mask = 0;
         error = that->iwn_cmd(sc, IWN_CMD_RXON, &sc->rxon, sc->rxonsz, 1);
@@ -1887,21 +1889,20 @@ iwn_newstate(struct ieee80211com *ic, enum ieee80211_state nstate, int arg)
         /* Make the link LED blink while we're scanning. */
         that->iwn_set_led(sc, IWN_LED_LINK, 10, 10);
 
-        if ((error = that->iwn_scan(sc, IEEE80211_CHAN_2GHZ, 0)) != 0) {
-            XYLog("%s: could not initiate scan\n",
-                sc->sc_dev.dv_xname);
-            return error;
+        if ((sc->sc_flags & IWN_FLAG_BGSCAN) == 0) {
+            ieee80211_set_link_state(ic, LINK_STATE_DOWN);
+            ieee80211_node_cleanup(ic, ic->ic_bss);
         }
         if (ifp->if_flags & IFF_DEBUG)
             XYLog("%s: %s -> %s\n", ifp->if_xname,
                 ieee80211_state_name[ic->ic_state],
                 ieee80211_state_name[nstate]);
-        if ((sc->sc_flags & IWN_FLAG_BGSCAN) == 0) {
-            ieee80211_set_link_state(ic, LINK_STATE_DOWN);
-            ieee80211_node_cleanup(ic, ic->ic_bss);
-        }
         ic->ic_state = nstate;
-        return 0;
+        if ((error = that->iwn_scan(sc, IEEE80211_CHAN_2GHZ, 0)) != 0) {
+            printf("%s: could not initiate scan\n",
+                sc->sc_dev.dv_xname);
+        }
+        return error;
 
     case IEEE80211_S_ASSOC:
         if (ic->ic_state != IEEE80211_S_RUN)
