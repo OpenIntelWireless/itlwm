@@ -4139,7 +4139,9 @@ iwx_mac_ctxt_task(void *arg)
     struct iwx_node *in = (struct iwx_node *)ic->ic_bss;
     int err, s = splnet();
     
-    if (sc->sc_flags & IWX_FLAG_SHUTDOWN) {
+    if (sc->sc_flags & IWX_FLAG_SHUTDOWN ||
+        ic->ic_state != IEEE80211_S_RUN ||
+        in->in_phyctxt == NULL) {
         //        refcnt_rele_wake(&sc->task_refs);
         splx(s);
         return;
