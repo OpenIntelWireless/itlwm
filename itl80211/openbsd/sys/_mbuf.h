@@ -470,8 +470,11 @@ int if_input(struct _ifnet *ifq, struct mbuf_list *ml);
 
 static inline int if_enqueue(struct _ifnet *ifq, mbuf_t m)
 {
-    XYLog("%s 啊啊啊啊 if_enqueue!!\n", __FUNCTION__);
-    ifq->if_snd->lockEnqueue(m);
+    if (!ifq->if_snd->lockEnqueue(m)) {
+        XYLog("%s if_enqueue fail!!\n", __FUNCTION__);
+        mbuf_freem(m);
+        return -1;
+    }
     return 0;
 }
 
