@@ -3116,7 +3116,6 @@ ieee80211_notify_dtim(struct ieee80211com *ic)
             wh = mtod(m, struct ieee80211_frame *);
             wh->i_fc[1] |= IEEE80211_FC1_MORE_DATA;
         }
-        //        ifp->output_queue->enqueue(m, &TX_TYPE_MGMT);
         mq_enqueue(&ic->ic_pwrsaveq, m);
         (*ifp->if_start)(ifp);
         //        ifp->output_queue->start();

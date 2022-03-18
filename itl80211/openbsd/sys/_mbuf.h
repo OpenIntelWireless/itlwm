@@ -468,12 +468,8 @@ fail:
 
 int if_input(struct _ifnet *ifq, struct mbuf_list *ml);
 
-extern int TX_TYPE_MGMT;
-extern int TX_TYPE_FRAME;
-
 static inline int if_enqueue(struct _ifnet *ifq, mbuf_t m)
 {
-//    ifq->output_queue->enqueue(m, &TX_TYPE_FRAME);
     XYLog("%s 啊啊啊啊 if_enqueue!!\n", __FUNCTION__);
     ifq->if_snd->lockEnqueue(m);
     return 0;

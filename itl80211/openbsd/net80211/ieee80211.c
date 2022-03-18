@@ -74,9 +74,6 @@
 int	ieee80211_debug = 0;
 #endif
 
-int TX_TYPE_MGMT = 1;
-int TX_TYPE_FRAME = 2;
-
 ///compat for undefined symbols
 int _stop(struct kmod_info*, void*) {
     IOLog("_stop(struct kmod_info*, void*) has been invoked\n");
