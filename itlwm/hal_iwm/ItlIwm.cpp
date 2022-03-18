@@ -90,7 +90,12 @@ releaseAll()
 IOReturn ItlIwm::
 enable(IONetworkInterface *netif)
 {
+    XYLog("%s\n", __PRETTY_FUNCTION__);
     struct _ifnet *ifp = &com.sc_ic.ic_ac.ac_if;
+    if (ifp->if_flags & IFF_UP) {
+        XYLog("%s already in activating state\n", __FUNCTION__);
+        return kIOReturnSuccess;
+    }
     ifp->if_flags |= IFF_UP;
     iwm_activate(&com, DVACT_RESUME);
     iwm_activate(&com, DVACT_WAKEUP);
