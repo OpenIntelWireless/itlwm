@@ -192,6 +192,7 @@ public:
 //    static void onLoadFW(OSKextRequestTag requestTag, OSReturn result, const void *resourceData, uint32_t resourceDataLength, void *context);
     
     uint8_t    iwx_lookup_cmd_ver(struct iwx_softc *, uint8_t, uint8_t);
+    uint8_t    iwx_lookup_notif_ver(struct iwx_softc *, uint8_t, uint8_t);
     uint32_t    iwx_lmac_id(struct iwx_softc *, ieee80211_channel *);
     int    iwx_store_cscheme(struct iwx_softc *, uint8_t *, size_t);
     int    iwx_alloc_fw_monitor_block(struct iwx_softc *, uint8_t, uint8_t);
@@ -398,6 +399,7 @@ public:
     void    iwx_mcc_update(struct iwx_softc *, struct iwx_mcc_chub_notif *);
     uint8_t    iwx_ridx2rate(struct ieee80211_rateset *, int);
     int    iwx_rval2ridx(int);
+    int    iwx_rate2idx(int);
     void    iwx_ack_rates(struct iwx_softc *, struct iwx_node *, int *, int *);
     void    iwx_mac_ctxt_cmd_common(struct iwx_softc *, struct iwx_node *,
             struct iwx_mac_ctx_cmd *, uint32_t);
