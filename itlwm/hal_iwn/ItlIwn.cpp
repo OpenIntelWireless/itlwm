@@ -2013,7 +2013,6 @@ iwn_ccmp_decap(struct iwn_softc *sc, mbuf_t m, struct ieee80211_node *ni)
          (uint64_t)ivp[6] << 32 |
          (uint64_t)ivp[7] << 40;
     if (pn <= *prsc) {
-        DPRINTF(("CCMP replayed\n"));
         ic->ic_stats.is_ccmp_replays++;
         return 1;
     }
