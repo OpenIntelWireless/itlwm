@@ -5685,18 +5685,13 @@ iwx_rx_tx_cmd_single(struct iwx_softc *sc, struct iwx_rx_packet *pkt,
     
     KASSERT(tx_resp->frame_count == 1, "tx_resp->frame_count == 1");
     
-    txfail = (status != IWX_TX_STATUS_SUCCESS &&
-              status != IWX_TX_STATUS_DIRECT_DONE);
+    txfail = (status != IWX_TX_STATUS_SUCCESS);
     
     if (txfail) {
-        XYLog("%s %d OUTPUT_ERROR status=%d\n", __FUNCTION__, __LINE__, status);
+        XYLog("%s %d OUTPUT_ERROR type=%d status=%d\n", __FUNCTION__, __LINE__, txd->type, status);
         ifp->netStat->outputErrors++;
-        if (txd->type == IEEE80211_FC0_TYPE_MGT) {
+        if (txd->type == IEEE80211_FC0_TYPE_MGT)
             iwx_toggle_tx_ant(sc, &sc->sc_mgmt_last_antenna_idx);
-        }
-        if (ic->ic_state < IEEE80211_S_RUN) {
-            iwx_toggle_tx_ant(sc, &sc->sc_tx_ant);
-        }
     }
 }
 
@@ -6434,13 +6429,8 @@ iwx_cmd_done(struct iwx_softc *sc, int qid, int idx, int code)
 
 uint32_t ItlIwx::
 iwx_get_tx_ant(struct iwx_softc *sc, struct ieee80211_node *ni,
-                               const struct iwx_rate *rinfo, int type, struct ieee80211_frame *wh) {
-    if ((IEEE80211_IS_CHAN_2GHZ(ni->ni_chan))) {
-        return IWX_RATE_MCS_ANT_B_MSK;
-    }
-    if (!IEEE80211_IS_MULTICAST(wh->i_addr1) && type == IEEE80211_FC0_TYPE_DATA) {
-        return ((1 << sc->sc_tx_ant) << IWX_RATE_MCS_ANT_POS);
-    }
+                               const struct iwx_rate *rinfo, int type, struct ieee80211_frame *wh)
+{
     return ((1 << sc->sc_mgmt_last_antenna_idx) << IWX_RATE_MCS_ANT_POS);
 }
 
@@ -7071,10 +7061,6 @@ iwx_add_sta_cmd(struct iwx_softc *sc, struct iwx_node *in, int update)
             default:
                 break;
         }
-    }
-    
-    if (!update) {
-        iwx_toggle_tx_ant(sc, &sc->sc_tx_ant);
     }
     
     status = IWX_ADD_STA_SUCCESS;
