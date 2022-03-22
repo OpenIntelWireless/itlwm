@@ -2122,13 +2122,11 @@ iwn_rx_done(struct iwn_softc *sc, struct iwn_rx_desc *desc,
     if (ic->ic_opmode == IEEE80211_M_MONITOR) {
         /* Allow control frames in monitor mode. */
         if (len < sizeof (struct ieee80211_frame_cts)) {
-            DPRINTF(("frame too short: %d\n", len));
             ic->ic_stats.is_rx_tooshort++;
             ifp->netStat->inputErrors++;
             return;
         }
     } else if (len < sizeof (*wh)) {
-        DPRINTF(("frame too short: %d\n", len));
         ic->ic_stats.is_rx_tooshort++;
         ifp->netStat->inputErrors++;
         return;
