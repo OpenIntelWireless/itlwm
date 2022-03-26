@@ -4375,18 +4375,12 @@ iwx_ampdu_tx_start(struct ieee80211com *ic, struct ieee80211_node *ni, uint8_t t
         return ENOSPC;
     }
 
-    if (ba->ba_state == IEEE80211_BA_REQUESTED) {
-        XYLog("%s tid %d is pending to agg\n", __FUNCTION__, tid);
-        return ENOSPC;
-    }
-
     sc->ba_tx_start = 1;
     sc->ba_tx = 1;
     sc->ba_tx_ssn = ssn;
     sc->ba_tx_tid = tid;
-    ba->ba_state = IEEE80211_BA_REQUESTED;
     that->iwx_add_task(sc, systq, &sc->ba_task);
-    return 0;
+    return EBUSY;
 }
 
 void ItlIwx::

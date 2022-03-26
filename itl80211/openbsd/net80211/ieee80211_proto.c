@@ -1017,13 +1017,22 @@ ieee80211_addba_request(struct ieee80211com *ic, struct ieee80211_node *ni,
 	if ((ic->ic_htcaps & IEEE80211_HTCAP_DELAYEDBA) == 0)
 		/* immediate BA */
 		ba->ba_params |= IEEE80211_ADDBA_BA_POLICY;
-
-    /* we are waiting BA response */
-    if ((ic->ic_caps & IEEE80211_C_TX_AMPDU_SETUP_IN_HW) == 0) {
-        timeout_add_sec(&ba->ba_to, 1);	/* dot11ADDBAResponseTimeout */
-        IEEE80211_SEND_ACTION(ic, ni, IEEE80211_CATEG_BA,
-                              IEEE80211_ACTION_ADDBA_REQ, tid);
+    
+    if ((ic->ic_caps & IEEE80211_C_TX_AMPDU_SETUP_IN_HW) &&
+        ic->ic_ampdu_tx_start != NULL) {
+        int err = ic->ic_ampdu_tx_start(ic, ni, tid);
+        if (err && err != EBUSY) {
+            /* driver failed to setup, rollback */
+            ieee80211_addba_resp_refuse(ic, ni, tid,
+                                        IEEE80211_STATUS_UNSPECIFIED);
+        } else if (err == 0)
+            ieee80211_addba_resp_accept(ic, ni, tid);
+        return err; /* The device will send an ADDBA frame. */
     }
+
+    timeout_add_sec(&ba->ba_to, 1);    /* dot11ADDBAResponseTimeout */
+    IEEE80211_SEND_ACTION(ic, ni, IEEE80211_CATEG_BA,
+                          IEEE80211_ACTION_ADDBA_REQ, tid);
 	return 0;
 }
 
