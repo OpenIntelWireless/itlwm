@@ -292,7 +292,6 @@ public:
                                            struct ieee80211_frame *, struct iwm_tx_cmd *);
     void iwm_txd_done(struct iwm_softc *, struct iwm_tx_data *);
     void iwm_ampdu_txq_advance(struct iwm_softc *, struct iwm_tx_ring *, int);
-    void iwm_tx_reclaim(struct iwm_softc *, struct ieee80211_tx_info *tx_info, int, int, int, uint32_t, bool);
     void iwm_clear_oactive(struct iwm_softc *, struct iwm_tx_ring *);
     void iwm_ra_choose(struct iwm_softc *, struct ieee80211_node *);
     int    iwm_tx(struct iwm_softc *, mbuf_t, struct ieee80211_node *, int);
