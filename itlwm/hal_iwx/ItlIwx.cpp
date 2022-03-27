@@ -4090,41 +4090,56 @@ iwx_sta_rx_agg(struct iwx_softc *sc, struct ieee80211_node *ni, uint8_t tid,
         return;
     }
     
-    if (!(status & IWX_ADD_STA_BAID_VALID_MASK)) {
-        ieee80211_addba_req_refuse(ic, ni, tid);
-        splx(s);
-        return;
+    /* Deaggregation is done in hardware. */
+    if (start) {
+        if (!(status & IWX_ADD_STA_BAID_VALID_MASK)) {
+            ieee80211_addba_req_refuse(ic, ni, tid);
+            splx(s);
+            return;
+        }
+        baid = (status & IWX_ADD_STA_BAID_MASK) >>
+        IWX_ADD_STA_BAID_SHIFT;
+        if (baid == IWX_RX_REORDER_DATA_INVALID_BAID ||
+            baid >= nitems(sc->sc_rxba_data)) {
+            ieee80211_addba_req_refuse(ic, ni, tid);
+            splx(s);
+            return;
+        }
+        rxba = &sc->sc_rxba_data[baid];
+        if (rxba->baid != IWX_RX_REORDER_DATA_INVALID_BAID) {
+            ieee80211_addba_req_refuse(ic, ni, tid);
+            splx(s);
+            return;
+        }
+        rxba->sta_id = IWX_STATION_ID;
+        rxba->tid = tid;
+        rxba->baid = baid;
+        rxba->timeout = timeout_val;
+        getmicrouptime(&rxba->last_rx);
+        iwx_init_reorder_buffer(&rxba->reorder_buf, ssn,
+                                winsize);
+        if (timeout_val != 0) {
+            struct ieee80211_rx_ba *ba;
+            timeout_add_usec(&rxba->session_timer,
+                             timeout_val);
+            /* XXX disable net80211's BA timeout handler */
+            ba = &ni->ni_rx_ba[tid];
+            ba->ba_timeout_val = 0;
+        }
+    } else {
+        int i;
+        for (i = 0; i < nitems(sc->sc_rxba_data); i++) {
+            rxba = &sc->sc_rxba_data[i];
+            if (rxba->baid ==
+                IWX_RX_REORDER_DATA_INVALID_BAID)
+                continue;
+            if (rxba->tid != tid)
+                continue;
+            iwx_clear_reorder_buffer(sc, rxba);
+            break;
+        }
     }
-    baid = (status & IWX_ADD_STA_BAID_MASK) >>
-    IWX_ADD_STA_BAID_SHIFT;
-    if (baid == IWX_RX_REORDER_DATA_INVALID_BAID ||
-        baid >= nitems(sc->sc_rxba_data)) {
-        ieee80211_addba_req_refuse(ic, ni, tid);
-        splx(s);
-        return;
-    }
-    rxba = &sc->sc_rxba_data[baid];
-    if (rxba->baid != IWX_RX_REORDER_DATA_INVALID_BAID) {
-        ieee80211_addba_req_refuse(ic, ni, tid);
-        splx(s);
-        return;
-    }
-    rxba->sta_id = IWX_STATION_ID;
-    rxba->tid = tid;
-    rxba->baid = baid;
-    rxba->timeout = timeout_val;
-    getmicrouptime(&rxba->last_rx);
-    iwx_init_reorder_buffer(&rxba->reorder_buf, ssn,
-                            winsize);
-    if (timeout_val != 0) {
-        struct ieee80211_rx_ba *ba;
-        timeout_add_usec(&rxba->session_timer,
-                         timeout_val);
-        /* XXX disable net80211's BA timeout handler */
-        ba = &ni->ni_rx_ba[tid];
-        ba->ba_timeout_val = 0;
-    }
-
+    
     if (start) {
         sc->sc_rx_ba_sessions++;
         ieee80211_addba_req_accept(ic, ni, tid);
@@ -5695,6 +5710,25 @@ iwx_rx_tx_cmd_single(struct iwx_softc *sc, struct iwx_rx_packet *pkt,
     }
 }
 
+void
+iwx_clear_tx_desc(struct iwx_softc *sc, struct iwx_tx_ring *ring, int idx)
+{
+    struct iwx_tfh_tfd *desc = &ring->desc[idx];
+    uint8_t num_tbs = le16toh(desc->num_tbs) & 0x1f;
+    int i;
+    
+    /* First TB is never cleared - it is bidirectional DMA data. */
+    for (i = 1; i < num_tbs; i++) {
+        struct iwx_tfh_tb *tb = &desc->tbs[i];
+        memset(tb, 0, sizeof(*tb));
+    }
+    desc->num_tbs = 0;
+    
+//    bus_dmamap_sync(sc->sc_dmat, ring->desc_dma.map,
+//                    (char *)(void *)desc - (char *)(void *)ring->desc_dma.vaddr,
+//                    sizeof(*desc), BUS_DMASYNC_PREWRITE);
+}
+
 void ItlIwx::
 iwx_txd_done(struct iwx_softc *sc, struct iwx_tx_data *txd)
 {
@@ -5782,6 +5816,7 @@ iwx_ampdu_txq_advance(struct iwx_softc *sc, struct iwx_tx_ring *ring, int idx)
         txd = &ring->data[ring->tail];
         if (txd->m != NULL) {
             iwx_txd_done(sc, txd);
+            iwx_clear_tx_desc(sc, ring, ring->tail);
             ring->queued--;
         }
         ring->tail = (ring->tail + 1) % ring->ring_count;
@@ -6379,8 +6414,6 @@ int ItlIwx::
 iwx_send_cmd_pdu_status(struct iwx_softc *sc, uint32_t id, uint16_t len,
                         const void *data, uint32_t *status)
 {
-    
-    XYLog("%s\n", __FUNCTION__);
     struct iwx_host_cmd cmd = {
         .id = id,
         .len = { len, },
@@ -6826,6 +6859,74 @@ out:
     return err;
 }
 
+int ItlIwx::
+iwx_flush_sta(struct iwx_softc *sc, struct iwx_node *in)
+{
+    int err;
+    
+    splassert(IPL_NET);
+    
+    sc->sc_flags |= IWX_FLAG_TXFLUSH;
+    
+    err = iwx_drain_sta(sc, in, 1);
+    
+    if (err == ENXIO)
+        goto done;
+    
+    err = iwx_flush_sta_tids(sc, IWX_STATION_ID, 0xffff);
+    if (err) {
+        printf("%s: could not flush Tx path (error %d)\n",
+               DEVNAME(sc), err);
+        goto done;
+    }
+    
+    err = iwx_drain_sta(sc, in, 0);
+    if (err == ENXIO)
+        goto done;
+    else
+        err = 0;
+done:
+    sc->sc_flags &= ~IWX_FLAG_TXFLUSH;
+    return err;
+}
+
+int ItlIwx::
+iwx_drain_sta(struct iwx_softc *sc, struct iwx_node* in, int drain)
+{
+    struct iwx_add_sta_cmd cmd;
+    int err;
+    uint32_t status;
+    
+    memset(&cmd, 0, sizeof(cmd));
+    cmd.mac_id_n_color = htole32(IWX_FW_CMD_ID_AND_COLOR(in->in_id,
+                                                         in->in_color));
+    cmd.sta_id = IWX_STATION_ID;
+    cmd.add_modify = IWX_STA_MODE_MODIFY;
+    cmd.station_flags = drain ? htole32(IWX_STA_FLG_DRAIN_FLOW) : 0;
+    cmd.station_flags_msk = htole32(IWX_STA_FLG_DRAIN_FLOW);
+    
+    status = IWX_ADD_STA_SUCCESS;
+    err = iwx_send_cmd_pdu_status(sc, IWX_ADD_STA,
+                                  sizeof(cmd), &cmd, &status);
+    if (err) {
+        printf("%s: could not update sta (error %d)\n",
+               DEVNAME(sc), err);
+        return err;
+    }
+    
+    switch (status & IWX_ADD_STA_STATUS_MASK) {
+        case IWX_ADD_STA_SUCCESS:
+            break;
+        default:
+            err = EIO;
+            printf("%s: Couldn't %s draining for station\n",
+                   DEVNAME(sc), drain ? "enable" : "disable");
+            break;
+    }
+    
+    return err;
+}
+
 #define IWX_POWER_KEEP_ALIVE_PERIOD_SEC    25
 
 int ItlIwx::
@@ -7138,6 +7239,41 @@ iwx_rm_sta_cmd(struct iwx_softc *sc, struct iwx_node *in)
     sc->sc_flags &= ~IWX_FLAG_STA_ACTIVE;
 
     return err;
+}
+
+int ItlIwx::
+iwx_rm_sta(struct iwx_softc *sc, struct iwx_node *in)
+{
+    struct ieee80211com *ic = &sc->sc_ic;
+    struct ieee80211_node *ni = &in->in_ni;
+    int err, i;
+
+    err = iwx_flush_sta(sc, in);
+    if (err) {
+        XYLog("%s: could not flush Tx path (error %d)\n",
+            DEVNAME(sc), err);
+        return err;
+    }
+    err = iwx_rm_sta_cmd(sc, in);
+    if (err) {
+        printf("%s: could not remove STA (error %d)\n",
+            DEVNAME(sc), err);
+        return err;
+    }
+
+    sc->sc_rx_ba_sessions = 0;
+    sc->ba_rx.start_tidmask = 0;
+    sc->ba_rx.stop_tidmask = 0;
+    sc->ba_tx.start_tidmask = 0;
+    sc->ba_tx.stop_tidmask = 0;
+    for (i = 0; i < IEEE80211_NUM_TID; i++) {
+        struct ieee80211_tx_ba *ba = &ni->ni_tx_ba[i];
+        if (ba->ba_state != IEEE80211_BA_AGREED)
+            continue;
+        ieee80211_delba_request(ic, ni, 0, 1, i);
+    }
+
+    return 0;
 }
 
 uint8_t ItlIwx::
@@ -8923,7 +9059,7 @@ iwx_deauth(struct iwx_softc *sc)
     XYLog("%s\n", __FUNCTION__);
     struct ieee80211com *ic = &sc->sc_ic;
     struct iwx_node *in = (struct iwx_node *)ic->ic_bss;
-    int err, i;
+    int err;
     
     splassert(IPL_NET);
     
@@ -8933,29 +9069,9 @@ iwx_deauth(struct iwx_softc *sc)
         iwx_cancel_session_protection(sc, in);
     
     if (sc->sc_flags & IWX_FLAG_STA_ACTIVE) {
-        err = iwx_flush_sta_tids(sc, IWX_STATION_ID, 0xffff);
-        if (err) {
-            XYLog("%s: could not flush Tx path (error %d)\n",
-                   DEVNAME(sc), err);
+        err = iwx_rm_sta(sc, in);
+        if (err)
             return err;
-        }
-        err = iwx_rm_sta_cmd(sc, in);
-        if (err) {
-            XYLog("%s: could not remove STA (error %d)\n",
-                  DEVNAME(sc), err);
-            return err;
-        }
-        sc->sc_rx_ba_sessions = 0;
-        sc->ba_rx.start_tidmask = 0;
-        sc->ba_rx.stop_tidmask = 0;
-        sc->ba_tx.start_tidmask = 0;
-        sc->ba_tx.stop_tidmask = 0;
-        for (i = 0; i < IEEE80211_NUM_TID; i++) {
-            struct ieee80211_tx_ba *ba = &in->in_ni.ni_tx_ba[i];
-            if (ba->ba_state != IEEE80211_BA_AGREED)
-                continue;
-            ieee80211_delba_request(ic, &in->in_ni, 0, 1, i);
-        }
     }
     
     if (sc->sc_flags & IWX_FLAG_BINDING_ACTIVE) {
@@ -8976,96 +9092,6 @@ iwx_deauth(struct iwx_softc *sc)
             return err;
         }
         sc->sc_flags &= ~IWX_FLAG_MAC_ACTIVE;
-    }
-    
-    return 0;
-}
-
-int ItlIwx::
-iwx_assoc(struct iwx_softc *sc)
-{
-    XYLog("%s\n", __FUNCTION__);
-    struct ieee80211com *ic = &sc->sc_ic;
-    struct iwx_node *in = (struct iwx_node *)ic->ic_bss;
-    int update_sta = (sc->sc_flags & IWX_FLAG_STA_ACTIVE);
-    int err;
-    
-    splassert(IPL_NET);
-    
-    err = iwx_add_sta_cmd(sc, in, update_sta);
-    if (err) {
-        XYLog("%s: could not %s STA (error %d)\n",
-              DEVNAME(sc), update_sta ? "update" : "add", err);
-        return err;
-    }
-    
-    if (!update_sta)
-        err = iwx_enable_data_tx_queues(sc);
-
-    err = iwx_rs_init(sc, in, false);
-    if (err) {
-        XYLog("%s: could not init rate scaling (error %d)\n",
-              DEVNAME(sc), err);
-        return err;
-    }
-    
-    return err;
-}
-
-int ItlIwx::
-iwx_disassoc(struct iwx_softc *sc)
-{
-    XYLog("%s\n", __FUNCTION__);
-    struct ieee80211com *ic = &sc->sc_ic;
-    struct iwx_node *in = (struct iwx_node *)ic->ic_bss;
-    int err, i;
-    struct iwx_add_sta_cmd cmd;
-    uint32_t status;
-    
-    splassert(IPL_NET);
-    
-    if (sc->sc_flags & IWX_FLAG_STA_ACTIVE) {
-        memset(&cmd, 0, sizeof(cmd));
-        
-        cmd.sta_id = htole32(IWX_STATION_ID);
-        cmd.mac_id_n_color
-        = htole32(IWX_FW_CMD_ID_AND_COLOR(in->in_id, in->in_color));
-        cmd.add_modify = IWX_STA_MODE_MODIFY;
-        cmd.station_flags = htole32(IWX_STA_FLG_DRAIN_FLOW);
-        cmd.station_flags_msk = htole32(IWX_STA_FLG_DRAIN_FLOW);
-        err = iwx_send_cmd_pdu_status(sc, IWX_ADD_STA, sizeof(cmd), &cmd,
-                                      &status);
-        err = iwx_flush_sta_tids(sc, IWX_STATION_ID, 0xffff);
-        if (err) {
-            XYLog("%s: could not flush Tx path (error %d)\n",
-                   DEVNAME(sc), err);
-            return err;
-        }
-        cmd.sta_id = htole32(IWX_STATION_ID);
-        cmd.mac_id_n_color
-        = htole32(IWX_FW_CMD_ID_AND_COLOR(in->in_id, in->in_color));
-        cmd.add_modify = IWX_STA_MODE_MODIFY;
-        cmd.station_flags = 0;
-        cmd.station_flags_msk = htole32(IWX_STA_FLG_DRAIN_FLOW);
-        err = iwx_send_cmd_pdu_status(sc, IWX_ADD_STA, sizeof(cmd), &cmd,
-                                      &status);
-        err = iwx_rm_sta_cmd(sc, in);
-        if (err) {
-            XYLog("%s: could not remove STA (error %d)\n",
-                  DEVNAME(sc), err);
-            return err;
-        }
-        sc->sc_rx_ba_sessions = 0;
-        sc->ba_rx.start_tidmask = 0;
-        sc->ba_rx.stop_tidmask = 0;
-        sc->ba_tx.start_tidmask = 0;
-        sc->ba_tx.stop_tidmask = 0;
-        for (i = 0; i < IEEE80211_NUM_TID; i++) {
-            struct ieee80211_tx_ba *ba = &in->in_ni.ni_tx_ba[i];
-            if (ba->ba_state != IEEE80211_BA_AGREED)
-                continue;
-            ieee80211_delba_request(ic, &in->in_ni, 0, 1, i);
-        }
     }
     
     return 0;
@@ -9192,9 +9218,32 @@ iwx_run_stop(struct iwx_softc *sc)
 {
     struct ieee80211com *ic = &sc->sc_ic;
     struct iwx_node *in = (struct iwx_node *)ic->ic_bss;
-    int err;
+    int err, i;
     
     splassert(IPL_NET);
+    
+    err = iwx_flush_sta(sc, in);
+    if (err) {
+        XYLog("%s: could not flush Tx path (error %d)\n",
+              DEVNAME(sc), err);
+        return err;
+    }
+    
+    /*
+     * Stop Rx BA sessions now. We cannot rely on the BA task
+     * for this when moving out of RUN state since it runs in a
+     * separate thread.
+     * Note that in->in_ni (struct ieee80211_node) already represents
+     * our new access point in case we are roaming between APs.
+     * This means we cannot rely on struct ieee802111_node to tell
+     * us which BA sessions exist.
+     */
+    for (i = 0; i < nitems(sc->sc_rxba_data); i++) {
+        struct iwx_rxba_data *rxba = &sc->sc_rxba_data[i];
+        if (rxba->baid == IWX_RX_REORDER_DATA_INVALID_BAID)
+            continue;
+        iwx_sta_rx_agg(sc, ic->ic_bss, rxba->tid, 0, 0, 0, 0);
+    }
     
     err = iwx_sf_config(sc, IWX_SF_INIT_OFF);
     if (err)
@@ -9378,12 +9427,6 @@ iwx_newstate_task(void *psc)
                     goto out;
                 /* FALLTHROUGH */
             case IEEE80211_S_ASSOC:
-                if (nstate <= IEEE80211_S_ASSOC) {
-                    err = that->iwx_disassoc(sc);
-                    if (err)
-                        goto out;
-                }
-                /* FALLTHROUGH */
             case IEEE80211_S_AUTH:
                 if (nstate <= IEEE80211_S_AUTH) {
                     err = that->iwx_deauth(sc);
@@ -9422,8 +9465,6 @@ iwx_newstate_task(void *psc)
             break;
             
         case IEEE80211_S_ASSOC:
-            sc->sc_rx_ba_sessions = 0;
-            err = that->iwx_assoc(sc);
             break;
             
         case IEEE80211_S_RUN:
@@ -9449,7 +9490,6 @@ iwx_newstate(struct ieee80211com *ic, enum ieee80211_state nstate, int arg)
     struct iwx_softc *sc = (struct iwx_softc *)ifp->if_softc;
     ItlIwx *that = container_of(sc, ItlIwx, com);
     struct ieee80211_node *ni = ic->ic_bss;
-    int i;
     
     /*
      * Prevent attemps to transition towards the same state, unless
@@ -9472,10 +9512,6 @@ iwx_newstate(struct ieee80211com *ic, enum ieee80211_state nstate, int arg)
         that->iwx_del_task(sc, systq, &sc->ba_task);
         that->iwx_del_task(sc, systq, &sc->mac_ctxt_task);
         that->iwx_del_task(sc, systq, &sc->chan_ctxt_task);
-        for (i = 0; i < nitems(sc->sc_rxba_data); i++) {
-            struct iwx_rxba_data *rxba = &sc->sc_rxba_data[i];
-            that->iwx_clear_reorder_buffer(sc, rxba);
-        }
     }
     
     sc->ns_nstate = nstate;
@@ -10020,6 +10056,10 @@ _iwx_start_task(OSObject *target, void *arg0, void *arg1, void *arg2, void *arg3
             ifq_set_oactive(&ifp->if_snd);
             break;
         }
+
+        /* Don't queue additional frames while flushing Tx queues. */
+        if (sc->sc_flags & IWX_FLAG_TXFLUSH)
+            break;
         
         /* need to send management frames even if we're not RUNning */
         m = mq_dequeue(&ic->ic_mgtq);
@@ -10131,6 +10171,7 @@ iwx_stop(struct _ifnet *ifp)
     sc->sc_flags &= ~IWX_FLAG_TE_ACTIVE;
     sc->sc_flags &= ~IWX_FLAG_HW_ERR;
     sc->sc_flags &= ~IWX_FLAG_SHUTDOWN;
+    sc->sc_flags &= ~IWX_FLAG_TXFLUSH;
 
     sc->sc_rx_ba_sessions = 0;
     sc->ba_rx.start_tidmask = 0;

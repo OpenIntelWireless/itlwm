@@ -369,6 +369,7 @@ public:
     int    iwx_tx(struct iwx_softc *, mbuf_t, struct ieee80211_node *, int);
     int    iwx_flush_sta_tids(struct iwx_softc *, int, uint16_t);
     int    iwx_flush_sta(struct iwx_softc *, struct iwx_node *);
+    int    iwx_drain_sta(struct iwx_softc *sc, struct iwx_node *, int);
     int    iwx_beacon_filter_send_cmd(struct iwx_softc *,
             struct iwx_beacon_filter_cmd *);
     int    iwx_update_beacon_abort(struct iwx_softc *, struct iwx_node *, int);
@@ -381,6 +382,7 @@ public:
     int    iwx_add_sta_cmd(struct iwx_softc *, struct iwx_node *, int);
     int    iwx_add_aux_sta(struct iwx_softc *);
     int    iwx_rm_sta_cmd(struct iwx_softc *, struct iwx_node *);
+    int    iwx_rm_sta(struct iwx_softc *, struct iwx_node *);
     uint8_t iwx_umac_scan_fill_channels(struct iwx_softc *sc,
                                 struct iwx_scan_channel_cfg_umac *chan, int n_ssids, int bgscan);
     int iwx_fill_probe_req_v1(struct iwx_softc *sc, struct iwx_scan_probe_req_v1 *preq1);
@@ -420,8 +422,6 @@ public:
                                struct ieee80211_channel *, uint8_t, uint8_t, uint32_t);
     int    iwx_auth(struct iwx_softc *);
     int    iwx_deauth(struct iwx_softc *);
-    int    iwx_assoc(struct iwx_softc *);
-    int    iwx_disassoc(struct iwx_softc *);
     int    iwx_run(struct iwx_softc *);
     int    iwx_run_stop(struct iwx_softc *);
     static struct ieee80211_node *iwx_node_alloc(struct ieee80211com *);
