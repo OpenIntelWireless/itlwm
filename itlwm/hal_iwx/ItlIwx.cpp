@@ -4267,6 +4267,7 @@ iwx_ba_task(void *arg)
     int s = splnet();
     int err = 0;
     int qid = 0;
+    int tid;
     
     if (sc->sc_flags & IWX_FLAG_SHUTDOWN) {
         //        refcnt_rele_wake(&sc->task_refs);
@@ -4274,16 +4275,32 @@ iwx_ba_task(void *arg)
         return;
     }
 
-    if (sc->ba_tx) {
-        XYLog("%s ba_tx=%d ba_start=%d, tid=%d, ssn=%d\n", __FUNCTION__, sc->ba_tx, sc->ba_tx_start, sc->ba_tx_tid, sc->ba_tx_ssn);
-        if (sc->ba_tx_start) {
-            ba = &ni->ni_tx_ba[sc->ba_tx_tid];
-
+    for (tid = 0; tid < IWX_MAX_TID_COUNT; tid++) {
+        if (sc->sc_flags & IWX_FLAG_SHUTDOWN)
+            break;
+        if (sc->ba_rx.start_tidmask & (1 << tid)) {
+            struct ieee80211_rx_ba *ba = &ni->ni_rx_ba[tid];
+            XYLog("%s ba_rx_start tid=%d, ssn=%d\n", __FUNCTION__, tid, ba->ba_winstart);
+            that->iwx_sta_rx_agg(sc, ni, tid, ba->ba_winstart,
+                                 ba->ba_winsize, ba->ba_timeout_val, 1);
+            sc->ba_rx.start_tidmask &= ~(1 << tid);
+        } else if (sc->ba_rx.stop_tidmask & (1 << tid)) {
+            that->iwx_sta_rx_agg(sc, ni, tid, 0, 0, 0, 0);
+            sc->ba_rx.stop_tidmask &= ~(1 << tid);
+        }
+    }
+    
+    for (tid = 0; tid < IWX_MAX_TID_COUNT; tid++) {
+        if (sc->sc_flags & IWX_FLAG_SHUTDOWN)
+            break;
+        if (sc->ba_tx.start_tidmask & (1 << tid)) {
+            ba = &ni->ni_tx_ba[tid];
+            XYLog("%s ba_tx_start tid=%d, ssn=%d\n", __FUNCTION__, tid, ba->ba_winstart);
             if (!that->iwx_nic_lock(sc)) {
                 err = -1;
                 goto out;
             }
-            if ((qid = that->iwx_tvqm_alloc_txq(sc, sc->ba_tx_tid, sc->ba_tx_ssn)) < 0) {
+            if ((qid = that->iwx_tvqm_alloc_txq(sc, tid, ba->ba_winstart)) < 0) {
                 err = -1;
                 goto out;
             }
@@ -4297,20 +4314,7 @@ iwx_ba_task(void *arg)
             if (err) {
                 ba->ba_state = IEEE80211_BA_INIT;
             }
-        }
-    } else {
-        for (int tid = 0; tid < IWX_MAX_TID_COUNT; tid++) {
-            if (sc->sc_flags & IWX_FLAG_SHUTDOWN)
-                break;
-            if (sc->ba_start_tidmask & (1 << tid)) {
-                struct ieee80211_rx_ba *ba = &ni->ni_rx_ba[tid];
-                that->iwx_sta_rx_agg(sc, ni, tid, ba->ba_winstart,
-                               ba->ba_winsize, ba->ba_timeout_val, 1);
-                sc->ba_start_tidmask &= ~(1 << tid);
-            } else if (sc->ba_stop_tidmask & (1 << tid)) {
-                that->iwx_sta_rx_agg(sc, ni, tid, 0, 0, 0, 0);
-                sc->ba_stop_tidmask &= ~(1 << tid);
-            }
+            sc->ba_tx.start_tidmask &= ~(1 << tid);
         }
     }
     
@@ -4331,11 +4335,13 @@ iwx_ampdu_rx_start(struct ieee80211com *ic, struct ieee80211_node *ni,
     ItlIwx *that = container_of(sc, ItlIwx, com);
     
     if (sc->sc_rx_ba_sessions >= IWX_MAX_RX_BA_SESSIONS ||
-        tid >= IWX_MAX_TID_COUNT || (sc->ba_start_tidmask & (1 << tid)))
+        tid >= IWX_MAX_TID_COUNT)
         return ENOSPC;
     
-    sc->ba_tx = 0;
-    sc->ba_start_tidmask |= (1 << tid);
+    if (sc->ba_rx.start_tidmask & (1 << tid))
+        return EBUSY;
+
+    sc->ba_rx.start_tidmask |= (1 << tid);
     that->iwx_add_task(sc, systq, &sc->ba_task);
     
     return EBUSY;
@@ -4352,11 +4358,10 @@ iwx_ampdu_rx_stop(struct ieee80211com *ic, struct ieee80211_node *ni,
     struct iwx_softc *sc = (struct iwx_softc *)IC2IFP(ic)->if_softc;
     ItlIwx *that = container_of(sc, ItlIwx, com);
     
-    if (tid >= IWX_MAX_TID_COUNT || sc->ba_stop_tidmask & (1 << tid))
+    if (tid >= IWX_MAX_TID_COUNT || sc->ba_rx.stop_tidmask & (1 << tid))
         return;
     
-    sc->ba_tx = 0;
-    sc->ba_stop_tidmask = (1 << tid);
+    sc->ba_rx.stop_tidmask |= (1 << tid);
     that->iwx_add_task(sc, systq, &sc->ba_task);
 }
 
@@ -4365,20 +4370,21 @@ iwx_ampdu_tx_start(struct ieee80211com *ic, struct ieee80211_node *ni, uint8_t t
 {
     struct ieee80211_tx_ba *ba = &ni->ni_tx_ba[tid];
     struct iwx_softc *sc = (struct iwx_softc *)ic->ic_softc;
-    int ssn = htole16(ba->ba_winstart);
     ItlIwx *that = container_of(sc, ItlIwx, com);
 
-    XYLog("%s tid=%d ssn=%d\n", __FUNCTION__, tid, ssn);
+    XYLog("%s tid=%d ssn=%d\n", __FUNCTION__, tid, ba->ba_winstart);
 
     if (tid < 0 || tid >= IWX_MAX_TID_COUNT) {
         XYLog("%s tx agg refused. tid=%d\n", __FUNCTION__, tid);
         return ENOSPC;
     }
-
-    sc->ba_tx_start = 1;
-    sc->ba_tx = 1;
-    sc->ba_tx_ssn = ssn;
-    sc->ba_tx_tid = tid;
+    
+    if (sc->ba_tx.start_tidmask & (1 << tid)) {
+        XYLog("%s tid %d is pending to agg\n", __FUNCTION__, tid);
+        return EBUSY;
+    }
+    
+    sc->ba_tx.start_tidmask |= (1 << tid);
     that->iwx_add_task(sc, systq, &sc->ba_task);
     return EBUSY;
 }
@@ -8917,7 +8923,7 @@ iwx_deauth(struct iwx_softc *sc)
     XYLog("%s\n", __FUNCTION__);
     struct ieee80211com *ic = &sc->sc_ic;
     struct iwx_node *in = (struct iwx_node *)ic->ic_bss;
-    int err;
+    int err, i;
     
     splassert(IPL_NET);
     
@@ -8940,8 +8946,16 @@ iwx_deauth(struct iwx_softc *sc)
             return err;
         }
         sc->sc_rx_ba_sessions = 0;
-        sc->ba_start_tidmask = 0;
-        sc->ba_stop_tidmask = 0;
+        sc->ba_rx.start_tidmask = 0;
+        sc->ba_rx.stop_tidmask = 0;
+        sc->ba_tx.start_tidmask = 0;
+        sc->ba_tx.stop_tidmask = 0;
+        for (i = 0; i < IEEE80211_NUM_TID; i++) {
+            struct ieee80211_tx_ba *ba = &in->in_ni.ni_tx_ba[i];
+            if (ba->ba_state != IEEE80211_BA_AGREED)
+                continue;
+            ieee80211_delba_request(ic, &in->in_ni, 0, 1, i);
+        }
     }
     
     if (sc->sc_flags & IWX_FLAG_BINDING_ACTIVE) {
@@ -9004,7 +9018,7 @@ iwx_disassoc(struct iwx_softc *sc)
     XYLog("%s\n", __FUNCTION__);
     struct ieee80211com *ic = &sc->sc_ic;
     struct iwx_node *in = (struct iwx_node *)ic->ic_bss;
-    int err;
+    int err, i;
     struct iwx_add_sta_cmd cmd;
     uint32_t status;
     
@@ -9042,8 +9056,16 @@ iwx_disassoc(struct iwx_softc *sc)
             return err;
         }
         sc->sc_rx_ba_sessions = 0;
-        sc->ba_start_tidmask = 0;
-        sc->ba_stop_tidmask = 0;
+        sc->ba_rx.start_tidmask = 0;
+        sc->ba_rx.stop_tidmask = 0;
+        sc->ba_tx.start_tidmask = 0;
+        sc->ba_tx.stop_tidmask = 0;
+        for (i = 0; i < IEEE80211_NUM_TID; i++) {
+            struct ieee80211_tx_ba *ba = &in->in_ni.ni_tx_ba[i];
+            if (ba->ba_state != IEEE80211_BA_AGREED)
+                continue;
+            ieee80211_delba_request(ic, &in->in_ni, 0, 1, i);
+        }
     }
     
     return 0;
@@ -10111,8 +10133,10 @@ iwx_stop(struct _ifnet *ifp)
     sc->sc_flags &= ~IWX_FLAG_SHUTDOWN;
 
     sc->sc_rx_ba_sessions = 0;
-    sc->ba_start_tidmask = 0;
-    sc->ba_stop_tidmask = 0;
+    sc->ba_rx.start_tidmask = 0;
+    sc->ba_rx.stop_tidmask = 0;
+    sc->ba_tx.start_tidmask = 0;
+    sc->ba_tx.stop_tidmask = 0;
     
     sc->sc_newstate(ic, IEEE80211_S_INIT, -1);
     sc->ns_nstate = IEEE80211_S_INIT;

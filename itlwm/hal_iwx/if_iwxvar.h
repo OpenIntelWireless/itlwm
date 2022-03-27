@@ -581,6 +581,11 @@ struct iwx_rxq_dup_data {
     uint8_t last_sub_frame[IWX_MAX_TID_COUNT + 1];
 };
 
+struct iwx_ba_task_data {
+    uint32_t        start_tidmask;
+    uint32_t        stop_tidmask;
+};
+
 struct iwx_softc {
 	struct device sc_dev;
 	struct ieee80211com sc_ic;
@@ -596,14 +601,9 @@ struct iwx_softc {
 
 	/* Task for firmware BlockAck setup/teardown and its arguments. */
 	struct task	ba_task;
-	int			ba_tx_start;
-	int			ba_tx_tid;
-    int         ba_tx;
-	uint16_t    ba_tx_ssn;
-	uint16_t	ba_tx_winsize;
     
-    uint32_t        ba_start_tidmask;
-    uint32_t        ba_stop_tidmask;
+    struct iwx_ba_task_data    ba_rx;
+    struct iwx_ba_task_data    ba_tx;
     
     struct iwx_tid_data sc_tid_data[IWX_MAX_TID_COUNT + 1];//per tid data + mgmt. Look at %iwx_tid_data.
 
