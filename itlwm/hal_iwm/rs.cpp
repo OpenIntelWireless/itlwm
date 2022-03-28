@@ -110,32 +110,16 @@ struct rs_tx_column {
     allow_column_func_t checks[MAX_COLUMN_CHECKS];
 };
 
-static bool iwl_mvm_bt_coex_is_ant_avail(struct iwm_softc *sc, u8 ant)
-{
-    /* there is no other antenna, shared antenna is always available */
-//    if (mvm->cfg->bt_shared_single_ant)
-//        return true;
-//
-//    if (ant & mvm->cfg->non_shared_ant)
-//        return true;
-//
-//    return le32_to_cpu(mvm->last_bt_notif.bt_activity_grading) <
-//        BT_HIGH_TRAFFIC;
-    // TODO: IMP
-    return true;
-}
-
 static bool rs_ant_allow(struct iwm_softc *sc, struct ieee80211_node *ni,
              struct rs_rate *rate,
              const struct rs_tx_column *next_col)
 {
-    return iwl_mvm_bt_coex_is_ant_avail(sc, next_col->ant);
+    return ItlIwm::iwm_coex_is_ant_avail(sc, next_col->ant);
 }
 
 static bool iwl_mvm_bt_coex_is_mimo_allowed(struct iwm_softc *sc, struct ieee80211_node *ni)
 {
-    //TODO: IMP
-    return true;
+    return ItlIwm::iwm_coex_is_mimo_allowed(sc, ni);
 }
 
 static bool rs_mimo_allow(struct iwm_softc *sc, struct ieee80211_node *ni,
@@ -150,7 +134,7 @@ static bool rs_mimo_allow(struct iwm_softc *sc, struct ieee80211_node *ni,
 //    if (sta->smps_mode == IEEE80211_SMPS_STATIC)
 //        return false;
 
-    if (num_of_ant(that->iwm_fw_valid_tx_ant(sc)) < 2)
+    if (that->iwm_num_of_ant(that->iwm_fw_valid_tx_ant(sc)) < 2)
         return false;
 
     if (!iwl_mvm_bt_coex_is_mimo_allowed(sc, ni))
@@ -632,7 +616,7 @@ static void rs_tl_turn_on_agg(struct iwm_softc *sc,
         return;
     }
 
-    tx_ba = &sc->sc_ic.ic_bss->ni_tx_ba[tid];
+    tx_ba = &ni->ni_tx_ba[tid];
     tid_data = &sc->sc_tx_ba[tid];
     if (sc->sc_ic.ic_state >= IEEE80211_S_RUN &&
         tx_ba->ba_state == IEEE80211_BA_INIT &&
@@ -759,7 +743,6 @@ static void rs_update_tid_tpt_stats(struct iwm_softc *sc,
         return;
 
     struct iwm_tx_ba *tid_data = &sc->sc_tx_ba[tid];
-    struct ieee80211_tx_ba *tx_ba = &sc->sc_ic.ic_bss->ni_tx_ba[tid];
 
     /*
      * Measure if there're enough successful transmits per second.
@@ -767,7 +750,7 @@ static void rs_update_tid_tpt_stats(struct iwm_softc *sc,
      * BA session, so it should be updated only when A-MPDU is
      * off.
      */
-    if (tx_ba->ba_state != IEEE80211_BA_INIT)
+    if (tid_data->wn != NULL)
         return;
 
     if (time_is_before_jiffies(tid_data->tpt_meas_start + hz) ||
@@ -1124,7 +1107,7 @@ static void rs_get_lower_rate_down_column(struct iwl_lq_sta *lq_sta,
             LQ_VHT_SISO : LQ_HT_SISO;
     }
 
-    if (num_of_ant(rate->ant) > 1)
+    if (that->iwm_num_of_ant(rate->ant) > 1)
         rate->ant = first_antenna(that->iwm_fw_valid_tx_ant(sc));
 
     /* Relevant in both switching to SISO or Legacy */
@@ -1899,13 +1882,7 @@ static void rs_get_adjacent_txp(struct iwm_softc *mvm, int index,
 static bool iwl_mvm_bt_coex_is_tpc_allowed(struct iwm_softc *mvm,
                     enum nl80211_band band)
 {
-//    u32 bt_activity = le32_to_cpu(mvm->last_bt_notif.bt_activity_grading);
-//
-    if (band != NL80211_BAND_2GHZ)
-        return false;
-//
-//    return bt_activity >= BT_LOW_TRAFFIC;
-    return false;
+    return ItlIwm::iwm_coex_is_tpc_allowed(mvm, band == NL80211_BAND_5GHZ);
 }
 
 static bool rs_tpc_allowed(struct iwm_softc *mvm,
@@ -2756,7 +2733,7 @@ void rs_drv_free_sta(iwm_softc *sc, struct ieee80211_node *ni)
 static int rs_vht_highest_rx_mcs_index(struct ieee80211_node *sta,
                        int nss)
 {
-    u16 rx_mcs = le16_to_cpu(sta->ni_ic->ic_bss->ni_vht_mcsinfo.rx_mcs_map) &
+    u16 rx_mcs = le16_to_cpu(sta->ni_vht_mcsinfo.rx_mcs_map) &
         (0x3 << (2 * (nss - 1)));
     rx_mcs >>= (2 * (nss - 1));
 
@@ -2832,7 +2809,7 @@ static void rs_ht_init(struct iwm_softc *mvm,
     if ((sta->ni_htcaps & IEEE80211_HTCAP_LDPC))
         lq_sta->ldpc = true;
 
-    if ((num_of_ant(that->iwm_fw_valid_tx_ant(mvm)) > 1) &&
+    if ((that->iwm_num_of_ant(that->iwm_fw_valid_tx_ant(mvm)) > 1) &&
         (sta->ni_htcaps & IEEE80211_HTCAP_RXSTBC_MASK))
         lq_sta->stbc_capable = true;
 
@@ -2849,12 +2826,12 @@ static void rs_vht_init(struct iwm_softc *mvm,
     if ((sta->ni_vhtcaps & IEEE80211_VHTCAP_RXLDPC))
         lq_sta->ldpc = true;
 
-    if ((num_of_ant(that->iwm_fw_valid_tx_ant(mvm)) > 1) &&
+    if ((that->iwm_num_of_ant(that->iwm_fw_valid_tx_ant(mvm)) > 1) &&
         (sta->ni_vhtcaps & IEEE80211_VHTCAP_RXSTBC_MASK))
         lq_sta->stbc_capable = true;
 
     if (isset(mvm->sc_enabled_capa, IWM_UCODE_TLV_CAPA_BEAMFORMER) &&
-        (num_of_ant(that->iwm_fw_valid_tx_ant(mvm)) > 1) &&
+        (that->iwm_num_of_ant(that->iwm_fw_valid_tx_ant(mvm)) > 1) &&
         (sta->ni_vhtcaps & IEEE80211_VHTCAP_SU_BEAMFORMEE_CAPABLE))
         lq_sta->bfer_capable = true;
 
@@ -3011,14 +2988,13 @@ static void rs_drv_rate_init(struct iwm_softc *mvm, struct ieee80211_node *sta,
     lq_sta->max_mimo2_rate_idx =
         rs_get_max_rate_from_mask(lq_sta->active_mimo2_rate);
 
-    IWL_DEBUG_RATE(mvm,
-               "LEGACY=%lX SISO=%lX MIMO2=%lX VHT=%d LDPC=%d STBC=%d BFER=%d\n",
+    XYLog("LEGACY=%lX SISO=%lX MIMO2=%lX VHT=%d LDPC=%d STBC=%d BFER=%d\n",
                lq_sta->active_legacy_rate,
                lq_sta->active_siso_rate,
                lq_sta->active_mimo2_rate,
                lq_sta->is_vht, lq_sta->ldpc, lq_sta->stbc_capable,
                lq_sta->bfer_capable);
-    IWL_DEBUG_RATE(mvm, "MAX RATE: LEGACY=%d SISO=%d MIMO2=%d\n",
+    XYLog("MAX RATE: LEGACY=%d SISO=%d MIMO2=%d\n",
                lq_sta->max_legacy_rate_idx,
                lq_sta->max_siso_rate_idx,
                lq_sta->max_mimo2_rate_idx);
@@ -3403,55 +3379,58 @@ static void rs_build_rates_table(struct iwm_softc *mvm,
     lq_cmd->flags = LQ_FLAG_COLOR_SET(lq_cmd->flags, color);
 }
 
-//struct rs_bfer_active_iter_data {
-//    struct ieee80211_node *exclude_sta;
-//    struct ieee80211_node *bfer_mvmsta;
-//};
-//
-//static void rs_bfer_active_iter(void *_data,
-//                struct ieee80211_node *sta)
-//{
-//    struct rs_bfer_active_iter_data *data = (struct rs_bfer_active_iter_data *)_data;
-//    struct iwm_lq_cmd *lq_cmd = &sta->ni_ic->lq_sta.rs_drv.lq;
-//    u32 ss_params = le32_to_cpu(lq_cmd->ss_params);
-//
-//    if (sta == data->exclude_sta)
-//        return;
-//
-//    /* The current sta has BFER allowed */
-//    if (ss_params & LQ_SS_BFER_ALLOWED) {
-//        WARN_ON_ONCE(data->bfer_mvmsta != NULL);
-//
-//        data->bfer_mvmsta = mvmsta;
-//    }
-//}
-//
-//static int rs_bfer_priority(struct ieee80211_node *sta)
-//{
-//    return 1;
-//}
-//
-///* Returns >0 if sta1 has a higher BFER priority compared to sta2 */
-//static int rs_bfer_priority_cmp(struct ieee80211_node *sta1,
-//                struct ieee80211_node *sta2)
-//{
-//    int prio1 = rs_bfer_priority(sta1);
-//    int prio2 = rs_bfer_priority(sta2);
-//
-//    if (prio1 > prio2)
-//        return 1;
-//    if (prio1 < prio2)
-//        return -1;
-//    return 0;
-//}
-//
-//static inline void ieee80211_iterate_stations_atomic(struct iwm_softc *hw,
-//            void (*iterator)(void *data,
-//                     struct ieee80211_node *sta),
-//            void *data)
-//{
-//    iterator(data, hw->sc_ic.ic_bss);
-//}
+#if 0
+struct rs_bfer_active_iter_data {
+    struct ieee80211_node *exclude_sta;
+    struct ieee80211_node *bfer_mvmsta;
+};
+
+static void rs_bfer_active_iter(void *_data,
+                struct ieee80211_node *sta)
+{
+    struct rs_bfer_active_iter_data *data = (struct rs_bfer_active_iter_data *)_data;
+    struct iwm_lq_cmd *lq_cmd = &sta->ni_ic->lq_sta.rs_drv.lq;
+    u32 ss_params = le32_to_cpu(lq_cmd->ss_params);
+
+    if (sta == data->exclude_sta)
+        return;
+
+    /* The current sta has BFER allowed */
+    if (ss_params & LQ_SS_BFER_ALLOWED) {
+        WARN_ON_ONCE(data->bfer_mvmsta != NULL);
+
+        data->bfer_mvmsta = mvmsta;
+    }
+}
+
+static int rs_bfer_priority(struct ieee80211_node *sta)
+{
+    return 1;
+}
+
+/* Returns >0 if sta1 has a higher BFER priority compared to sta2 */
+static int rs_bfer_priority_cmp(struct ieee80211_node *sta1,
+                struct ieee80211_node *sta2)
+{
+    int prio1 = rs_bfer_priority(sta1);
+    int prio2 = rs_bfer_priority(sta2);
+
+    if (prio1 > prio2)
+        return 1;
+    if (prio1 < prio2)
+        return -1;
+    return 0;
+}
+
+static inline void ieee80211_iterate_stations_atomic(struct iwm_softc *hw,
+            void (*iterator)(void *data,
+                     struct ieee80211_node *sta),
+            void *data)
+{
+    iterator(data, hw->sc_ic.ic_bss);
+}
+
+#endif
 
 static void rs_set_lq_ss_params(struct iwm_softc *mvm,
                 struct ieee80211_node *sta,
@@ -3459,10 +3438,12 @@ static void rs_set_lq_ss_params(struct iwm_softc *mvm,
                 const struct rs_rate *initial_rate)
 {
     struct iwm_lq_cmd *lq_cmd = &lq_sta->lq;
-//    struct rs_bfer_active_iter_data data = {
-//        .exclude_sta = sta,
-//        .bfer_mvmsta = NULL,
-//    };
+#if 0
+    struct rs_bfer_active_iter_data data = {
+        .exclude_sta = sta,
+        .bfer_mvmsta = NULL,
+    };
+#endif
     u32 ss_params = LQ_SS_PARAMS_VALID;
 
     if (!iwl_mvm_bt_coex_is_mimo_allowed(mvm, sta))
@@ -3471,67 +3452,50 @@ static void rs_set_lq_ss_params(struct iwm_softc *mvm,
     if (lq_sta->stbc_capable)
         ss_params |= LQ_SS_STBC_1SS_ALLOWED;
 
+#if 0
     if (!lq_sta->bfer_capable)
         goto out;
 
-//    ieee80211_iterate_stations_atomic(mvm,
-//                      rs_bfer_active_iter,
-//                      &data);
-//    bfer_mvmsta = data.bfer_mvmsta;
-//
-//    /* This code is safe as it doesn't run concurrently for different
-//     * stations. This is guaranteed by the fact that calls to
-//     * ieee80211_tx_status wouldn't run concurrently for a single HW.
-//     */
-//    if (!bfer_mvmsta) {
-//        IWL_DEBUG_RATE(mvm, "No sta with BFER allowed found. Allow\n");
-//
-//        ss_params |= LQ_SS_BFER_ALLOWED;
-//        goto out;
-//    }
-//
-//    IWL_DEBUG_RATE(mvm, "Found existing sta %d with BFER activated\n",
-//               bfer_mvmsta->sta_id);
-//
-//    /* Disallow BFER on another STA if active and we're a higher priority */
-//    if (rs_bfer_priority_cmp(mvmsta, bfer_mvmsta) > 0) {
-//        struct iwm_lq_cmd *bfersta_lq_cmd =
-//            &bfer_mvmsta->lq_sta.rs_drv.lq;
-//        u32 bfersta_ss_params = le32_to_cpu(bfersta_lq_cmd->ss_params);
-//
-//        bfersta_ss_params &= ~LQ_SS_BFER_ALLOWED;
-//        bfersta_lq_cmd->ss_params = cpu_to_le32(bfersta_ss_params);
-//        iwl_mvm_send_lq_cmd(mvm, bfersta_lq_cmd);
-//
-//        ss_params |= LQ_SS_BFER_ALLOWED;
-//        IWL_DEBUG_RATE(mvm,
-//                   "Lower priority BFER sta found (%d). Switch BFER\n",
-//                   bfer_mvmsta->sta_id);
-//    }
+    ieee80211_iterate_stations_atomic(mvm,
+                      rs_bfer_active_iter,
+                      &data);
+    bfer_mvmsta = data.bfer_mvmsta;
+
+    /* This code is safe as it doesn't run concurrently for different
+     * stations. This is guaranteed by the fact that calls to
+     * ieee80211_tx_status wouldn't run concurrently for a single HW.
+     */
+    if (!bfer_mvmsta) {
+        IWL_DEBUG_RATE(mvm, "No sta with BFER allowed found. Allow\n");
+
+        ss_params |= LQ_SS_BFER_ALLOWED;
+        goto out;
+    }
+
+    IWL_DEBUG_RATE(mvm, "Found existing sta %d with BFER activated\n",
+               bfer_mvmsta->sta_id);
+
+    /* Disallow BFER on another STA if active and we're a higher priority */
+    if (rs_bfer_priority_cmp(mvmsta, bfer_mvmsta) > 0) {
+        struct iwm_lq_cmd *bfersta_lq_cmd =
+            &bfer_mvmsta->lq_sta.rs_drv.lq;
+        u32 bfersta_ss_params = le32_to_cpu(bfersta_lq_cmd->ss_params);
+
+        bfersta_ss_params &= ~LQ_SS_BFER_ALLOWED;
+        bfersta_lq_cmd->ss_params = cpu_to_le32(bfersta_ss_params);
+        iwl_mvm_send_lq_cmd(mvm, bfersta_lq_cmd);
+
+        ss_params |= LQ_SS_BFER_ALLOWED;
+        IWL_DEBUG_RATE(mvm,
+                   "Lower priority BFER sta found (%d). Switch BFER\n",
+                   bfer_mvmsta->sta_id);
+    }
+#else
+    if (lq_sta->bfer_capable)
+        ss_params |= LQ_SS_BFER_ALLOWED;
+#endif
 out:
     lq_cmd->ss_params = cpu_to_le32(ss_params);
-}
-
-#define LINK_QUAL_AGG_TIME_LIMIT_DEF    (4000)
-#define LINK_QUAL_AGG_TIME_LIMIT_BT_ACT    (1200)
-
-static u16 iwl_mvm_coex_agg_time_limit(struct iwm_softc *mvm,
-struct ieee80211_node *sta)
-{
-//    if (mvm->last_bt_notif.ttc_status & BIT(phy_ctxt->id))
-//        return LINK_QUAL_AGG_TIME_LIMIT_DEF;
-//
-//    if (le32_to_cpu(mvm->last_bt_notif.bt_activity_grading) <
-//        BT_HIGH_TRAFFIC)
-//        return LINK_QUAL_AGG_TIME_LIMIT_DEF;
-//
-//    lut_type = iwl_get_coex_type(mvm, mvmsta->vif);
-//
-//    if (lut_type == BT_COEX_LOOSE_LUT || lut_type == BT_COEX_INVALID_LUT)
-        return LINK_QUAL_AGG_TIME_LIMIT_DEF;
-
-//    /* tight coex, high bt traffic, reduce AGG time limit */
-//    return LINK_QUAL_AGG_TIME_LIMIT_BT_ACT;
 }
 
 static void rs_fill_lq_cmd(struct iwm_softc *mvm,
@@ -3540,6 +3504,7 @@ static void rs_fill_lq_cmd(struct iwm_softc *mvm,
                const struct rs_rate *initial_rate)
 {
     struct iwm_lq_cmd *lq_cmd = &lq_sta->lq;
+    ItlIwm *that = container_of(mvm, ItlIwm, com);
 
     lq_cmd->agg_disable_start_th = IWL_MVM_RS_AGG_DISABLE_START;
     lq_cmd->agg_time_limit =
@@ -3554,7 +3519,7 @@ static void rs_fill_lq_cmd(struct iwm_softc *mvm,
         rs_set_lq_ss_params(mvm, sta, lq_sta, initial_rate);
 
     if (!isset(&mvm->sc_enabled_capa, IWM_UCODE_TLV_CAPA_COEX_SCHEMA_2) &&
-        num_of_ant(initial_rate->ant) == 1)
+        that->iwm_num_of_ant(initial_rate->ant) == 1)
         lq_cmd->single_stream_ant_msk = initial_rate->ant;
 
     lq_cmd->agg_frame_cnt_limit = LINK_QUAL_AGG_FRAME_LIMIT_DEF;
@@ -3565,7 +3530,7 @@ static void rs_fill_lq_cmd(struct iwm_softc *mvm,
 #endif
 
     lq_cmd->agg_time_limit =
-            cpu_to_le16(iwl_mvm_coex_agg_time_limit(mvm, sta));
+            cpu_to_le16(that->iwm_coex_agg_time_limit(mvm, sta));
 }
 
 int rs_pretty_print_rate(char *buf, int bufsz, const u32 rate)

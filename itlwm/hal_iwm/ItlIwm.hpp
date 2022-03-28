@@ -93,8 +93,11 @@ public:
                                         struct iwm_scan_channel_cfg_umac *chan, int n_ssids, int bgscan);
     
     //coex
-    uint16_t iwm_coex_agg_time_limit(struct iwm_softc *);
+    uint16_t iwm_coex_agg_time_limit(struct iwm_softc *, struct ieee80211_node *);
     uint8_t iwm_coex_tx_prio(struct iwm_softc *, struct ieee80211_frame *, uint8_t);
+    static bool iwm_coex_is_ant_avail(struct iwm_softc *, u8);
+    static bool iwm_coex_is_mimo_allowed(struct iwm_softc *, struct ieee80211_node *);
+    static bool iwm_coex_is_tpc_allowed(struct iwm_softc *, bool);
     
     uint8_t iwm_lookup_cmd_ver(struct iwm_softc *, uint8_t, uint8_t);
     int    iwm_is_mimo_ht_plcp(uint8_t);
@@ -206,6 +209,7 @@ public:
                                      uint8_t);
     static void   iwm_rx_ba_session_expired(void *);
     static void   iwm_reorder_timer_expired(void *);
+    static uint8_t iwm_num_of_ant(uint8_t mask);
     int    iwm_sta_rx_agg(struct iwm_softc *, struct ieee80211_node *, uint8_t,
                            uint16_t, uint16_t, int, int);
     static int    iwm_ampdu_tx_start(struct ieee80211com *, struct ieee80211_node *,

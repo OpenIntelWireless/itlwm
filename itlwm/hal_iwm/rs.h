@@ -36,7 +36,7 @@
 #define IWL_ERR(sc, fmt, x...)\
 do\
 {\
-XYLog("%s: " fmt, "ERR", ##x);\
+XYLog("RS %s: " fmt, "ERR", ##x);\
 }while(0)
 
 /**
@@ -669,13 +669,6 @@ enum {
     IWL_RATE_11M_PLCP = 110,
     IWL_RATE_INVM_PLCP = 0xff,
 };
-
-static inline u8 num_of_ant(u8 mask)
-{
-    return  !!((mask) & ANT_A) +
-        !!((mask) & ANT_B) +
-        !!((mask) & ANT_C);
-}
 
 /*
  * Returns the first antenna as ANT_[ABC], as defined in iwl-config.h.
