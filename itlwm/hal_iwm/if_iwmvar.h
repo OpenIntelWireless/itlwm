@@ -551,6 +551,7 @@ struct iwm_softc {
     int cmdqid;
     
     uint8_t sc_mgmt_last_antenna_idx;
+    uint8_t sc_tx_ant;
 
 	int sc_sf_state;
 
@@ -713,7 +714,6 @@ struct iwm_node {
     uint16_t in_color;
 
     struct ieee80211_amrr_node in_amn;
-    struct ieee80211_ra_node in_rn;
     int lq_rate_mismatch;
     uint32_t next_ampdu_id;
     

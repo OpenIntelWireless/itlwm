@@ -1236,15 +1236,6 @@ iwm_ampdu_tx_done(struct iwm_softc *sc, struct iwm_cmd_header *cmd_hdr,
     int txfail = (status != IWM_TX_STATUS_SUCCESS &&
                   status != IWM_TX_STATUS_DIRECT_DONE);
     struct ieee80211_tx_ba *ba;
-    int rate = 0;
-    if (initial_rate & IWM_RATE_MCS_VHT_MSK) {
-        rate = (initial_rate &
-                IWM_RATE_VHT_MCS_RATE_CODE_MSK);
-    } else if (initial_rate & IWM_RATE_MCS_HT_MSK) {
-        rate = (initial_rate &
-                (IWM_RATE_HT_MCS_RATE_CODE_MSK |
-                 IWM_RATE_HT_MCS_NSS_MSK));
-    }
     
     sc->sc_tx_timer = 0;
     
@@ -1348,6 +1339,11 @@ iwm_rx_tx_cmd_single(struct iwm_softc *sc, struct iwm_tx_resp *tx_resp,
             if ((status & IWM_TX_STATUS_MSK) != IWM_TX_STATUS_SUCCESS &&
                 ieee80211_is_mgmt(txd->fc))
                 iwm_toggle_tx_ant(sc, &sc->sc_mgmt_last_antenna_idx);
+            
+            if ((status & IWM_TX_STATUS_MSK) != IWM_TX_STATUS_SUCCESS &&
+                sc->sc_ic.ic_state <= IEEE80211_S_RUN)
+                iwm_toggle_tx_ant(sc, &sc->sc_tx_ant);
+                
 
             /*
              * If we are freeing multiple frames, mark all the frames
@@ -1554,77 +1550,51 @@ iwm_tx_fill_cmd(struct iwm_softc *sc, struct iwm_node *in,
 {
     struct ieee80211com *ic = &sc->sc_ic;
     struct ieee80211_node *ni = &in->in_ni;
-    const struct iwm_rate *rinfo;
+    const struct iwm_rate *rinfo = NULL;
     int type = wh->i_fc[0] & IEEE80211_FC0_TYPE_MASK;
     int subtype = wh->i_fc[0] & IEEE80211_FC0_SUBTYPE_MASK;
     int ridx, rate_flags;
+    int min_ridx = (IEEE80211_IS_CHAN_5GHZ(ni->ni_chan)) ?
+    IWL_FIRST_OFDM_RATE : IWL_FIRST_CCK_RATE;
+    int i;
+    
+    int min_rate = ieee80211_min_basic_rate(ic);
+    for (i = 0; i < ieee80211_std_rateset_11g.rs_nrates; i++) {
+        if (ieee80211_std_rateset_11g.rs_rates[i] == min_rate) {
+            min_ridx = i;
+            break;
+        }
+    }
 
+    ridx = min_ridx;
     tx->rts_retry_limit = IWM_RTS_DFAULT_RETRY_LIMIT;
     
-    if (type == IEEE80211_FC0_TYPE_CTL && subtype == IEEE80211_FC0_SUBTYPE_BAR) {
+    if (type == IEEE80211_FC0_TYPE_CTL && subtype == IEEE80211_FC0_SUBTYPE_BAR)
         tx->data_retry_limit = IWM_BAR_DFAULT_RETRY_LIMIT;
-    } else {
+    else
         tx->data_retry_limit = IWM_DEFAULT_TX_RETRY;
-    }
     
     /*
     * for data packets, rate info comes from the table inside the fw. This
     * table is controlled by LINK_QUALITY commands
     */
     if (!IEEE80211_IS_MULTICAST(wh->i_addr1) && type == IEEE80211_FC0_TYPE_DATA) {
-        int i;
         tx->initial_rate_index = 0;
         tx->tx_flags |= cpu_to_le32(IWM_TX_CMD_FLG_STA_RATE);
-        if (ni->ni_flags & IEEE80211_NODE_VHT) {
-            ridx = (in->in_rn.nss > 1 ? iwm_vht_mimo_mcs2ridx[ni->ni_txmcs] : iwm_vht_siso_mcs2ridx[ni->ni_txmcs]);
-            return &iwm_rates[ridx];
-        } else if (ni->ni_flags & IEEE80211_NODE_HT) {
-            ridx = iwm_mcs2ridx[ni->ni_txmcs];
-            return &iwm_rates[ridx];
-        }
-        ridx = (IEEE80211_IS_CHAN_5GHZ(ni->ni_chan)) ?
-            IWM_RIDX_OFDM : IWM_RIDX_CCK;
-        for (i = 0; i < ni->ni_rates.rs_nrates; i++) {
-            if (iwm_rates[i].rate == (ni->ni_txrate &
-                IEEE80211_RATE_VAL)) {
-                ridx = i;
-                break;
-            }
-        }
-        return &iwm_rates[ridx];
-    } else if (type == IEEE80211_FC0_TYPE_CTL && subtype == IEEE80211_FC0_SUBTYPE_BAR) {
+        return rinfo;
+    } else if (type == IEEE80211_FC0_TYPE_CTL && subtype == IEEE80211_FC0_SUBTYPE_BAR)
         tx->tx_flags |= htole32(IWM_TX_CMD_FLG_ACK | IWM_TX_CMD_FLG_BAR);
-    }
-    
-    ridx = (IEEE80211_IS_CHAN_5GHZ(ni->ni_chan)) ?
-    IWM_RIDX_OFDM : IWM_RIDX_CCK;
-    for (int i = 0; i < ni->ni_rates.rs_nrates; i++) {
-        if (iwm_rates[i].rate == (ni->ni_txrate &
-                                  IEEE80211_RATE_VAL)) {
-            ridx = i;
-            break;
-        }
-    }
-    if (ni->ni_flags & IEEE80211_NODE_VHT) {
-        ridx = (in->in_rn.nss > 1 ? iwm_vht_mimo_mcs2ridx[ni->ni_txmcs] : iwm_vht_siso_mcs2ridx[ni->ni_txmcs]);
-    } else if (ni->ni_flags & IEEE80211_NODE_HT) {
-        ridx = iwm_mcs2ridx[ni->ni_txmcs];
-    }
-    if (ic->ic_fixed_mcs != -1) {
-        ridx = sc->sc_fixed_ridx;
-    }
 
-    rinfo = &iwm_rates[ridx];
-    if (iwm_is_mimo_ht_plcp(rinfo->ht_plcp) || iwm_is_mimo_vht_plcp(rinfo->vht_plcp))
-        rate_flags = IWM_RATE_MCS_ANT_AB_MSK;
-    else if (sc->sc_device_family == IWM_DEVICE_FAMILY_9000 &&
-             (iwm_fw_valid_tx_ant(sc) & IWM_ANT_B))
-        rate_flags = IWM_RATE_MCS_ANT_B_MSK;
-    else
-        rate_flags = IWM_RATE_MCS_ANT_A_MSK;
-    if (IWM_RIDX_IS_CCK(ridx))
-        rate_flags |= IWM_RATE_MCS_CCK_MSK;
-    tx->rate_n_flags = htole32(rate_flags | rinfo->plcp);
+    if (ic->ic_fixed_mcs != -1) 
+        ridx = sc->sc_fixed_ridx;
+
+    XYLog("%s ridx=%d\n", __FUNCTION__, ridx);
+    
+    rate_flags = iwm_get_tx_ant(sc, ni, type, wh);
+    /* Set CCK flag as needed */
+    if ((ridx >= IWL_FIRST_CCK_RATE) && (ridx <= IWL_LAST_CCK_RATE))
+        rate_flags |= RATE_MCS_CCK_MSK;
+    tx->rate_n_flags = htole32(rate_flags | iwl_mvm_mac80211_idx_to_hwrate(ridx));
 
     return rinfo;
 }
@@ -2287,6 +2257,8 @@ iwm_auth(struct iwm_softc *sc)
         goto rm_binding;
     }
     
+    iwm_toggle_tx_ant(sc, &sc->sc_tx_ant);
+    
     if (ic->ic_opmode == IEEE80211_M_MONITOR)
         return 0;
     
@@ -2515,7 +2487,6 @@ iwm_run(struct iwm_softc *sc)
     }
     
     ieee80211_amrr_node_init(&sc->sc_amrr, &in->in_amn);
-    ieee80211_ra_node_init(ic, &in->in_rn, &in->in_ni);
     
     if (ic->ic_opmode == IEEE80211_M_MONITOR) {
         iwm_led_blink_start(sc);
@@ -2525,7 +2496,6 @@ iwm_run(struct iwm_softc *sc)
     /* Start at lowest available bit-rate, AMRR will raise. */
     in->in_ni.ni_txrate = 0;
     in->in_ni.ni_txmcs = 0;
-//    iwm_setrates(in, 0);
     
     iwl_mvm_rs_rate_init(sc, ic->ic_bss,
                          IEEE80211_IS_CHAN_2GHZ(ic->ic_bss->ni_chan) ? NL80211_BAND_2GHZ : NL80211_BAND_5GHZ,
@@ -2760,187 +2730,13 @@ iwm_calib_timeout(void *arg)
          */
         if (ni->ni_txrate != old_txrate) {
             XYLog("iwm_calib_timeout in->ni_txrate=%d\n", in->in_ni.ni_txrate);
-            that->iwm_setrates(in, 1);
+            iwl_mvm_send_lq_cmd(sc, &sc->lq_sta.rs_drv.lq);
         }
     }
     
     splx(s);
     
     timeout_add_msec(&sc->sc_calib_to, 500);
-}
-
-void ItlIwm::
-iwm_setrates(struct iwm_node *in, int async)
-{
-    struct ieee80211_node *ni = &in->in_ni;
-    struct ieee80211com *ic = ni->ni_ic;
-    struct iwm_softc *sc = (struct iwm_softc *)IC2IFP(ic)->if_softc;
-    struct iwm_lq_cmd lqcmd;
-    struct ieee80211_rateset *rs = &ni->ni_rates;
-    const struct ieee80211_ra_rate *ra_rate = ieee80211_ra_get_rateset(&in->in_rn, ic, ni, ni->ni_txmcs);
-    int i, ridx, ridx_min, ridx_max, j, sgi_ok = 0, mimo, tab = 0, is_40mhz = 0, is_80mhz = 0, is_160mhz = 0, ldpc = 0;
-    struct iwm_host_cmd cmd = {
-        .id = IWM_LQ_CMD,
-        .len = { sizeof(lqcmd), },
-    };
-    
-    cmd.flags = async ? IWM_CMD_ASYNC : 0;
-    
-    memset(&lqcmd, 0, sizeof(lqcmd));
-    lqcmd.sta_id = IWM_STATION_ID;
-    
-    if (ic->ic_flags & IEEE80211_F_USEPROT)
-        lqcmd.flags |= IWM_LQ_FLAG_USE_RTS_MSK;
-    
-    if (ni->ni_chw == IEEE80211_CHAN_WIDTH_80P80 || ni->ni_chw == IEEE80211_CHAN_WIDTH_160) {
-        is_160mhz = 1;
-    } else if (ni->ni_chw == IEEE80211_CHAN_WIDTH_80) {
-        is_80mhz = 1;
-    } else if (ni->ni_chw == IEEE80211_CHAN_WIDTH_40) {
-        is_40mhz = 1;
-    }
-    
-    sgi_ok = ra_rate->sgi;
-    
-    if (ni->ni_flags & IEEE80211_NODE_VHT) {
-        if ((ni->ni_vhtcaps & IEEE80211_VHTCAP_RXLDPC) && (ic->ic_vhtcaps & IEEE80211_VHTCAP_RXLDPC))
-            ldpc = 1;
-    } else if (ni->ni_flags & IEEE80211_NODE_HT) {
-        if ((ni->ni_htcaps & IEEE80211_HTCAP_LDPC) && (ic->ic_htcaps & IEEE80211_HTCAP_LDPC))
-            ldpc = 1;
-    }
-    
-    /*
-     * Fill the LQ rate selection table with legacy and/or HT rates
-     * in descending order, i.e. with the node's current TX rate first.
-     * In cases where throughput of an HT rate corresponds to a legacy
-     * rate it makes no sense to add both. We rely on the fact that
-     * iwm_rates is laid out such that equivalent HT/legacy rates share
-     * the same IWM_RATE_*_INDEX value. Also, rates not applicable to
-     * legacy/HT are assumed to be marked with an 'invalid' PLCP value.
-     */
-    j = 0;
-    ridx_min = iwm_rval2ridx(ieee80211_min_basic_rate(ic));
-    mimo = ra_rate->nss > 1;
-    ridx_max = (mimo ? IWM_RIDX_MAX : ((ni->ni_flags & IEEE80211_NODE_VHT) ? IWM_LAST_VHT_SISO_RATE : IWM_LAST_HT_SISO_RATE));
-    for (ridx = ridx_max; ridx >= ridx_min; ridx--) {
-        uint8_t plcp = iwm_rates[ridx].plcp;
-        uint8_t ht_plcp = iwm_rates[ridx].ht_plcp;
-        uint8_t vht_plcp = iwm_rates[ridx].vht_plcp;
-        
-        if (j >= nitems(lqcmd.rs_table))
-            break;
-        tab = 0;
-        if (ni->ni_flags & IEEE80211_NODE_VHT) {
-            if (vht_plcp == IWM_RATE_VHT_SISO_MCS_INV_PLCP || vht_plcp == IWM_RATE_VHT_MIMO2_MCS_INV_PLCP)
-                continue;
-            if ((mimo && !iwm_is_mimo_vht_plcp(vht_plcp)) ||
-                (!mimo && iwm_is_mimo_vht_plcp(vht_plcp)))
-                continue;
-            for (i = ni->ni_txmcs; i >= 0; i--) {
-                if ((in->in_rn.valid_rates & (1 << i)) == 0)
-                    continue;
-                if (ridx == (mimo ? iwm_vht_mimo_mcs2ridx[i] : iwm_vht_siso_mcs2ridx[i])) {
-                    tab = vht_plcp;
-                    tab |= IWM_RATE_MCS_VHT_MSK;
-                    if (is_40mhz)
-                        tab |= IWM_RATE_MCS_CHAN_WIDTH_40;
-                    if (is_80mhz)
-                        tab |= IWM_RATE_MCS_CHAN_WIDTH_80;
-                    if (is_160mhz)
-                        tab |= IWM_RATE_MCS_CHAN_WIDTH_160;
-                    if (sgi_ok)
-                        tab |= IWM_RATE_MCS_SGI_MSK;
-                    if (ldpc)
-                        tab |= IWM_RATE_MCS_LDPC_MSK;
-                    break;
-                }
-            }
-        } else if (ni->ni_flags & IEEE80211_NODE_HT) {
-            if (ht_plcp == IWM_RATE_HT_SISO_MCS_INV_PLCP)
-                continue;
-            /* Do not mix SISO and MIMO HT rates. */
-            if ((mimo && !iwm_is_mimo_ht_plcp(ht_plcp)) ||
-                (!mimo && iwm_is_mimo_ht_plcp(ht_plcp)))
-                continue;
-            for (i = ni->ni_txmcs; i >= 0; i--) {
-                if (isclr(ni->ni_rxmcs, i))
-                    continue;
-                if (ridx == iwm_mcs2ridx[i]) {
-                    tab = ht_plcp;
-                    tab |= IWM_RATE_MCS_HT_MSK;
-                    if (sgi_ok)
-                        tab |= IWM_RATE_MCS_SGI_MSK;
-                    /* TODO: If we enable 40mhz Tx rate in 2.4ghz band, the data will all sent fail */
-                    if (is_40mhz && IEEE80211_IS_CHAN_5GHZ(ni->ni_chan))
-                        tab |= IWM_RATE_MCS_CHAN_WIDTH_40;
-                    if (ldpc)
-                        tab |= IWM_RATE_MCS_LDPC_MSK;
-                    break;
-                }
-            }
-        } else if (plcp != IWM_RATE_INVM_PLCP) {
-            for (i = ni->ni_txmcs; i >= 0; i--) {
-                if (iwm_rates[ridx].rate == (rs->rs_rates[i] &
-                                             IEEE80211_RATE_VAL)) {
-                    tab = plcp;
-                    break;
-                }
-            }
-        }
-        
-        if (tab == 0)
-            continue;
-        
-        if (ni->ni_flags & IEEE80211_NODE_VHT) {
-            if (iwm_is_mimo_vht_plcp(vht_plcp))
-                tab |= IWM_RATE_MCS_ANT_AB_MSK;
-            else if (sc->sc_device_family == IWM_DEVICE_FAMILY_9000  &&
-                     (iwm_fw_valid_tx_ant(sc) & IWM_ANT_B))
-                tab |= IWM_RATE_MCS_ANT_B_MSK;
-            else
-                tab |= IWM_RATE_MCS_ANT_A_MSK;
-        } else if (iwm_is_mimo_ht_plcp(ht_plcp))
-            tab |= IWM_RATE_MCS_ANT_AB_MSK;
-        else if (sc->sc_device_family == IWM_DEVICE_FAMILY_9000  &&
-                 (iwm_fw_valid_tx_ant(sc) & IWM_ANT_B))
-            tab |= IWM_RATE_MCS_ANT_B_MSK;
-        else
-            tab |= IWM_RATE_MCS_ANT_A_MSK;
-        
-        if (IWM_RIDX_IS_CCK(ridx))
-            tab |= IWM_RATE_MCS_CCK_MSK;
-        lqcmd.rs_table[j++] = htole32(tab);
-    }
-    
-    lqcmd.mimo_delim = (mimo ? j : 0);
-    
-    /* Fill the rest with the lowest possible rate */
-    while (j < nitems(lqcmd.rs_table)) {
-        tab = iwm_rates[ridx_min].plcp;
-        if (IWM_RIDX_IS_CCK(ridx_min))
-            tab |= IWM_RATE_MCS_CCK_MSK;
-        if (sc->sc_device_family == IWM_DEVICE_FAMILY_9000 &&
-            (iwm_fw_valid_tx_ant(sc) & IWM_ANT_B))
-            tab |= IWM_RATE_MCS_ANT_B_MSK;
-        else
-            tab |= IWM_RATE_MCS_ANT_A_MSK;
-        lqcmd.rs_table[j++] = htole32(tab);
-    }
-    
-    if (sc->sc_device_family == IWM_DEVICE_FAMILY_9000 &&
-        (iwm_fw_valid_tx_ant(sc) & IWM_ANT_B))
-        lqcmd.single_stream_ant_msk = IWM_ANT_B;
-    else
-        lqcmd.single_stream_ant_msk = IWM_ANT_A;
-    lqcmd.dual_stream_ant_msk = IWM_ANT_AB;
-    
-    lqcmd.agg_time_limit = htole16(iwm_coex_agg_time_limit(sc, ni));
-    lqcmd.agg_disable_start_th = 3;
-    lqcmd.agg_frame_cnt_limit = 0x3f;
-    
-    cmd.data[0] = &lqcmd;
-    iwm_send_cmd(sc, &cmd);
 }
 
 /* Allow multicast from our BSSID. */
@@ -3132,18 +2928,6 @@ int ItlIwm::iwm_media_change(struct _ifnet *ifp)
     err = ieee80211_media_change(ifp);
     if (err != ENETRESET)
         return err;
-    
-    if (ic->ic_fixed_mcs != -1)
-        sc->sc_fixed_ridx = iwm_mcs2ridx[ic->ic_fixed_mcs];
-    else if (ic->ic_fixed_rate != -1) {
-        rate = ic->ic_sup_rates[ic->ic_curmode].
-        rs_rates[ic->ic_fixed_rate] & IEEE80211_RATE_VAL;
-        /* Map 802.11 rate to HW rate index. */
-        for (ridx = 0; ridx <= IWM_RIDX_MAX; ridx++)
-            if (iwm_rates[ridx].rate == rate)
-                break;
-        sc->sc_fixed_ridx = ridx;
-    }
     
     if ((ifp->if_flags & (IFF_UP | IFF_RUNNING)) ==
         (IFF_UP | IFF_RUNNING)) {
@@ -5171,12 +4955,9 @@ iwm_chan_ctxt_task(void *arg)
         splx(s);
         return;
     }
-    
-    if (in->in_rn.bw != in->in_ni.ni_chw) {
-        ieee80211_ra_node_init(ic, &in->in_rn, &in->in_ni);
-        ieee80211_ra_choose(&in->in_rn, ic, &in->in_ni);
-    }
-    that->iwm_setrates((struct iwm_node *)ic->ic_bss, 0);
+
+    rs_drv_rate_update(sc, &in->in_ni, IEEE80211_IS_CHAN_2GHZ(in->in_ni.ni_chan) ? NL80211_BAND_2GHZ : NL80211_BAND_5GHZ, true);
+    iwl_mvm_send_lq_cmd(sc, &sc->lq_sta.rs_drv.lq);
     
     //    refcnt_rele_wake(&sc->task_refs);
     splx(s);
