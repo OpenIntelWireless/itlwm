@@ -438,7 +438,8 @@ iwm_reorder_timer_expired(void *arg)
     splx(s);
 }
 
-static inline uint8_t iwm_num_of_ant(uint8_t mask)
+uint8_t ItlIwm::
+iwm_num_of_ant(uint8_t mask)
 {
     return  !!((mask) & IWM_ANT_A) +
         !!((mask) & IWM_ANT_B) +
@@ -3088,7 +3089,7 @@ iwm_setrates(struct iwm_node *in, int async)
         lqcmd.single_stream_ant_msk = IWM_ANT_A;
     lqcmd.dual_stream_ant_msk = IWM_ANT_AB;
     
-    lqcmd.agg_time_limit = htole16(iwm_coex_agg_time_limit(sc));
+    lqcmd.agg_time_limit = htole16(iwm_coex_agg_time_limit(sc, ni));
     lqcmd.agg_disable_start_th = 3;
     lqcmd.agg_frame_cnt_limit = 0x3f;
     
