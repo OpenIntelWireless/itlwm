@@ -61,7 +61,7 @@ static const u8 ant_toggle_lookup[] = {
  * maps to IWL_RATE_INVALID
  *
  */
-static const struct iwl_rs_rate_info iwl_rates[IWL_RATE_COUNT] = {
+struct iwl_rs_rate_info iwl_rates[IWL_RATE_COUNT] = {
     IWL_DECLARE_RATE_INFO(1, INV, INV, 2),   /*  1mbps */
     IWL_DECLARE_RATE_INFO(2, INV, 1, 5),     /*  2mbps */
     IWL_DECLARE_RATE_INFO(5, INV, 2, 11),    /*5.5mbps */

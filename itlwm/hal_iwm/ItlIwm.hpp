@@ -84,9 +84,11 @@ public:
     int    iwm_send_bt_init_conf(struct iwm_softc *);
     
     //fw
-    uint8_t iwm_fw_valid_tx_ant(struct iwm_softc *sc);
-    uint8_t iwm_fw_valid_rx_ant(struct iwm_softc *sc);
+    static uint8_t iwm_fw_valid_tx_ant(struct iwm_softc *sc);
+    static uint8_t iwm_fw_valid_rx_ant(struct iwm_softc *sc);
     void    iwm_toggle_tx_ant(struct iwm_softc *sc, uint8_t *ant);
+    uint32_t iwm_get_tx_ant(struct iwm_softc *sc, struct ieee80211_node *ni,
+                            int type, struct ieee80211_frame *wh);
     
     //scan
     uint8_t iwm_umac_scan_fill_channels(struct iwm_softc *sc,
@@ -98,11 +100,9 @@ public:
     static bool iwm_coex_is_ant_avail(struct iwm_softc *, u8);
     static bool iwm_coex_is_mimo_allowed(struct iwm_softc *, struct ieee80211_node *);
     static bool iwm_coex_is_tpc_allowed(struct iwm_softc *, bool);
+    static bool iwm_coex_is_shared_ant_avail(struct iwm_softc *);
     
     uint8_t iwm_lookup_cmd_ver(struct iwm_softc *, uint8_t, uint8_t);
-    int    iwm_is_mimo_ht_plcp(uint8_t);
-    int    iwm_is_mimo_vht_plcp(uint8_t);
-    int    iwm_is_mimo_mcs(int);
     int    iwm_store_cscheme(struct iwm_softc *, uint8_t *, size_t);
     int    iwm_firmware_store_section(struct iwm_softc *, enum iwm_ucode_type,
                                       uint8_t *, size_t);
@@ -332,7 +332,6 @@ public:
     int    iwm_umac_scan(struct iwm_softc *, int);
     void    iwm_mcc_update(struct iwm_softc *, struct iwm_mcc_chub_notif *);
     uint8_t    iwm_ridx2rate(struct ieee80211_rateset *, int);
-    int    iwm_rval2ridx(int);
     void    iwm_ack_rates(struct iwm_softc *, struct iwm_node *, int *, int *);
     void    iwm_mac_ctxt_cmd_common(struct iwm_softc *, struct iwm_node *,
                                     struct iwm_mac_ctx_cmd *, uint32_t);
@@ -363,7 +362,6 @@ public:
     static void    iwm_delete_key(struct ieee80211com *,
                                   struct ieee80211_node *, struct ieee80211_key *);
     static void    iwm_calib_timeout(void *);
-    void    iwm_setrates(struct iwm_node *, int);
     int    iwm_media_change(struct _ifnet *);
     static void    iwm_newstate_task(void *);
     static int    iwm_newstate(struct ieee80211com *, enum ieee80211_state, int);

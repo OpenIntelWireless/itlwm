@@ -128,6 +128,17 @@ iwm_coex_is_tpc_allowed(struct iwm_softc *mvm, bool is5G)
 #ifdef notyet_coex
     return le32_to_cpu(mvm->last_bt_notif.bt_activity_grading) >= BT_LOW_TRAFFIC;
 #else
-    return true;
+    return false;
+#endif
+}
+
+bool ItlIwm::
+iwm_coex_is_shared_ant_avail(struct iwm_softc *mvm)
+{
+#ifdef notyet_coex
+    return le32_to_cpu(mvm->last_bt_notif.bt_activity_grading) < BT_HIGH_TRAFFIC;
+#else
+    return mvm->sc_device_family == IWM_DEVICE_FAMILY_9000 &&
+            (iwm_fw_valid_tx_ant(mvm) & IWM_ANT_B);
 #endif
 }

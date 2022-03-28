@@ -921,9 +921,6 @@ enum {
 
 /* Link Quality definitions */
 
-/* # entries in rate scale table to support Tx retries */
-#define  LQ_MAX_RETRY_NUM 16
-
 /* Link quality command flags bit fields */
 
 /* Bit 0: (0) Don't use RTS (1) Use RTS */
@@ -1000,6 +997,8 @@ struct iwl_rs_rate_info {
     u8 prev_rs;      /* previous rate used in rs algo */
     u8 next_rs;      /* next rate used in rs algo */
 };
+
+extern struct iwl_rs_rate_info iwl_rates[IWL_RATE_COUNT];
 
 #define IWL_RATE_60M_PLCP 3
 
