@@ -290,7 +290,7 @@ public:
     void    iwm_cmd_done(struct iwm_softc *, int, int, int);
     void    iwm_update_sched(struct iwm_softc *, int, int, uint8_t, uint16_t);
     void    iwm_reset_sched(struct iwm_softc *, int, int, uint8_t);
-    const struct iwm_rate *iwm_tx_fill_cmd(struct iwm_softc *, struct iwm_node *,
+    const struct iwl_rs_rate_info *iwm_tx_fill_cmd(struct iwm_softc *, struct iwm_node *,
                                            struct ieee80211_frame *, struct iwm_tx_cmd *);
     void iwm_txd_done(struct iwm_softc *, struct iwm_tx_data *);
     void iwm_ampdu_txq_advance(struct iwm_softc *, struct iwm_tx_ring *, int);

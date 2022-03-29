@@ -1387,6 +1387,31 @@ static const u8 fw_rate_idx_to_plcp[IWL_RATE_COUNT] = {
 
 #undef IWL_DECLARE_RATE_INFO
 
+/* Convert an MCS index into an iwm_rates[] index. */
+const int iwm_ht_mcs2ridx[] = {
+    IWL_RATE_MCS_0_INDEX,
+    IWL_RATE_MCS_1_INDEX,
+    IWL_RATE_MCS_2_INDEX,
+    IWL_RATE_MCS_3_INDEX,
+    IWL_RATE_MCS_4_INDEX,
+    IWL_RATE_MCS_5_INDEX,
+    IWL_RATE_MCS_6_INDEX,
+    IWL_RATE_MCS_7_INDEX,
+};
+
+const int iwm_vht_mcs2ridx[] = {
+    IWL_RATE_MCS_0_INDEX,
+    IWL_RATE_MCS_1_INDEX,
+    IWL_RATE_MCS_2_INDEX,
+    IWL_RATE_MCS_3_INDEX,
+    IWL_RATE_MCS_4_INDEX,
+    IWL_RATE_MCS_5_INDEX,
+    IWL_RATE_MCS_6_INDEX,
+    IWL_RATE_MCS_7_INDEX,
+    IWL_RATE_MCS_8_INDEX,
+    IWL_RATE_MCS_9_INDEX,
+};
+
 static inline int iwl_mvm_legacy_rate_to_mac80211_idx(u32 rate_n_flags,
                     enum nl80211_band band)
 {
