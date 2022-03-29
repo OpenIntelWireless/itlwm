@@ -1544,13 +1544,12 @@ iwm_rx_bmiss(struct iwm_softc *sc, struct iwm_rx_packet *pkt,
  * unfilled for data frames (firmware takes care of that).
  * Return the selected TX rate.
  */
-const struct iwm_rate * ItlIwm::
+const struct iwl_rs_rate_info *ItlIwm::
 iwm_tx_fill_cmd(struct iwm_softc *sc, struct iwm_node *in,
                 struct ieee80211_frame *wh, struct iwm_tx_cmd *tx)
 {
     struct ieee80211com *ic = &sc->sc_ic;
     struct ieee80211_node *ni = &in->in_ni;
-    const struct iwm_rate *rinfo = NULL;
     int type = wh->i_fc[0] & IEEE80211_FC0_TYPE_MASK;
     int subtype = wh->i_fc[0] & IEEE80211_FC0_SUBTYPE_MASK;
     int ridx, rate_flags;
@@ -1578,25 +1577,33 @@ iwm_tx_fill_cmd(struct iwm_softc *sc, struct iwm_node *in,
     * for data packets, rate info comes from the table inside the fw. This
     * table is controlled by LINK_QUALITY commands
     */
-    if (!IEEE80211_IS_MULTICAST(wh->i_addr1) && type == IEEE80211_FC0_TYPE_DATA) {
+    if (!IEEE80211_IS_MULTICAST(wh->i_addr1) &&
+        type == IEEE80211_FC0_TYPE_DATA) {
         tx->initial_rate_index = 0;
         tx->tx_flags |= cpu_to_le32(IWM_TX_CMD_FLG_STA_RATE);
-        return rinfo;
-    } else if (type == IEEE80211_FC0_TYPE_CTL && subtype == IEEE80211_FC0_SUBTYPE_BAR)
+        return &iwl_rates[ridx];
+    } else if (type == IEEE80211_FC0_TYPE_CTL &&
+               subtype == IEEE80211_FC0_SUBTYPE_BAR)
         tx->tx_flags |= htole32(IWM_TX_CMD_FLG_ACK | IWM_TX_CMD_FLG_BAR);
 
-    if (ic->ic_fixed_mcs != -1) 
+    if (ic->ic_fixed_mcs != -1 ||
+        ic->ic_fixed_rate != -1)
         ridx = sc->sc_fixed_ridx;
-
-    XYLog("%s ridx=%d\n", __FUNCTION__, ridx);
+    else {
+        if (ni->ni_flags & IEEE80211_NODE_VHT)
+            ridx = iwm_vht_mcs2ridx[ni->ni_txmcs];
+        else if (ni->ni_flags & IEEE80211_NODE_HT)
+            ridx = iwm_ht_mcs2ridx[ni->ni_txmcs % 8];
+    }
     
     rate_flags = iwm_get_tx_ant(sc, ni, type, wh);
+    XYLog("%s ridx=%d ant=%d\n", __FUNCTION__, ridx, (rate_flags >> RATE_MCS_ANT_POS));
     /* Set CCK flag as needed */
     if ((ridx >= IWL_FIRST_CCK_RATE) && (ridx <= IWL_LAST_CCK_RATE))
         rate_flags |= RATE_MCS_CCK_MSK;
     tx->rate_n_flags = htole32(rate_flags | iwl_mvm_mac80211_idx_to_hwrate(ridx));
 
-    return rinfo;
+    return &iwl_rates[ridx];
 }
 
 #define TB0_SIZE 20
@@ -1612,7 +1619,7 @@ iwm_tx(struct iwm_softc *sc, mbuf_t m, struct ieee80211_node *ni, int ac)
     struct iwm_tx_cmd *tx;
     struct ieee80211_frame *wh;
     struct ieee80211_key *k = NULL;
-    const struct iwm_rate *rinfo;
+    const struct iwl_rs_rate_info *rinfo;
     uint8_t *ivp;
     uint32_t flags;
     u_int hdrlen;
@@ -2922,12 +2929,28 @@ int ItlIwm::iwm_media_change(struct _ifnet *ifp)
     XYLog("%s\n", __FUNCTION__);
     struct iwm_softc *sc = (struct iwm_softc*)ifp->if_softc;
     struct ieee80211com *ic = &sc->sc_ic;
+    struct ieee80211_node *ni = ic->ic_bss;
     uint8_t rate, ridx;
     int err;
     
     err = ieee80211_media_change(ifp);
     if (err != ENETRESET)
         return err;
+    
+    if (ic->ic_fixed_mcs != -1) {
+        if (ni->ni_flags & IEEE80211_NODE_VHT)
+            sc->sc_fixed_ridx = iwm_vht_mcs2ridx[ic->ic_fixed_mcs];
+        else if (ni->ni_flags & IEEE80211_NODE_HT)
+            sc->sc_fixed_ridx = iwm_ht_mcs2ridx[ic->ic_fixed_mcs % 8];
+    } else if (ic->ic_fixed_rate != -1) {
+        rate = ic->ic_sup_rates[ic->ic_curmode].
+        rs_rates[ic->ic_fixed_rate] & IEEE80211_RATE_VAL;
+        /* Map 802.11 rate to HW rate index. */
+        for (ridx = 0; ridx <= ieee80211_std_rateset_11g.rs_nrates; ridx++)
+            if (ieee80211_std_rateset_11g.rs_rates[ridx] == rate)
+                break;
+        sc->sc_fixed_ridx = ridx;
+    }
     
     if ((ifp->if_flags & (IFF_UP | IFF_RUNNING)) ==
         (IFF_UP | IFF_RUNNING)) {
