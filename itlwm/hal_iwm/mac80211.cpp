@@ -1552,7 +1552,7 @@ iwm_tx_fill_cmd(struct iwm_softc *sc, struct iwm_node *in,
     struct ieee80211_node *ni = &in->in_ni;
     int type = wh->i_fc[0] & IEEE80211_FC0_TYPE_MASK;
     int subtype = wh->i_fc[0] & IEEE80211_FC0_SUBTYPE_MASK;
-    int ridx, rate_flags;
+    int ridx = -1, rate_flags;
     int min_ridx = (IEEE80211_IS_CHAN_5GHZ(ni->ni_chan)) ?
     IWL_FIRST_OFDM_RATE : IWL_FIRST_CCK_RATE;
     int i;
@@ -1565,7 +1565,6 @@ iwm_tx_fill_cmd(struct iwm_softc *sc, struct iwm_node *in,
         }
     }
 
-    ridx = min_ridx;
     tx->rts_retry_limit = IWM_RTS_DFAULT_RETRY_LIMIT;
     
     if (type == IEEE80211_FC0_TYPE_CTL && subtype == IEEE80211_FC0_SUBTYPE_BAR)
@@ -1595,6 +1594,9 @@ iwm_tx_fill_cmd(struct iwm_softc *sc, struct iwm_node *in,
         else if (ni->ni_flags & IEEE80211_NODE_HT)
             ridx = iwm_ht_mcs2ridx[ni->ni_txmcs % 8];
     }
+    
+    if (ridx == -1 || ridx >= IWL_RATE_COUNT_LEGACY)
+        ridx = min_ridx;
     
     rate_flags = iwm_get_tx_ant(sc, ni, type, wh);
     XYLog("%s ridx=%d ant=%d\n", __FUNCTION__, ridx, (rate_flags >> RATE_MCS_ANT_POS));
