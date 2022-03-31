@@ -1590,9 +1590,9 @@ iwm_tx_fill_cmd(struct iwm_softc *sc, struct iwm_node *in,
         ridx = sc->sc_fixed_ridx;
     else {
         if (ni->ni_flags & IEEE80211_NODE_VHT)
-            ridx = iwm_vht_mcs2ridx[ni->ni_txmcs];
+            ridx = iwm_mcs2ridx[ni->ni_txmcs];
         else if (ni->ni_flags & IEEE80211_NODE_HT)
-            ridx = iwm_ht_mcs2ridx[ni->ni_txmcs % 8];
+            ridx = iwm_mcs2ridx[ni->ni_txmcs % 8];
     }
     
     if (ridx == -1 || ridx >= IWL_RATE_COUNT_LEGACY)
@@ -2941,9 +2941,9 @@ int ItlIwm::iwm_media_change(struct _ifnet *ifp)
     
     if (ic->ic_fixed_mcs != -1) {
         if (ni->ni_flags & IEEE80211_NODE_VHT)
-            sc->sc_fixed_ridx = iwm_vht_mcs2ridx[ic->ic_fixed_mcs];
+            sc->sc_fixed_ridx = iwm_mcs2ridx[ic->ic_fixed_mcs];
         else if (ni->ni_flags & IEEE80211_NODE_HT)
-            sc->sc_fixed_ridx = iwm_ht_mcs2ridx[ic->ic_fixed_mcs % 8];
+            sc->sc_fixed_ridx = iwm_mcs2ridx[ic->ic_fixed_mcs % 8];
     } else if (ic->ic_fixed_rate != -1) {
         rate = ic->ic_sup_rates[ic->ic_curmode].
         rs_rates[ic->ic_fixed_rate] & IEEE80211_RATE_VAL;
