@@ -1486,42 +1486,43 @@ static void rs_set_amsdu_len(struct iwm_softc *sc, struct ieee80211_node *ni,
                  struct iwl_scale_tbl_info *tbl,
                  enum rs_action scale_action)
 {
-//    struct iwl_mvm_sta *mvmsta = iwl_mvm_sta_from_mac80211(sta);
-//    int i;
-//
-//    sta->max_amsdu_len = rs_fw_get_max_amsdu_len(sta);
-//
-//    /*
-//     * In case TLC offload is not active amsdu_enabled is either 0xFFFF
-//     * or 0, since there is no per-TID alg.
-//     */
-//    if ((!is_vht(&tbl->rate) && !is_ht(&tbl->rate)) ||
-//        tbl->rate.index < IWL_RATE_MCS_5_INDEX ||
-//        scale_action == RS_ACTION_DOWNSCALE)
-//        mvmsta->amsdu_enabled = 0;
-//    else
-//        mvmsta->amsdu_enabled = 0xFFFF;
-//
-//    if (mvmsta->vif->bss_conf.he_support &&
-//        !iwlwifi_mod_params.disable_11ax)
-//        mvmsta->max_amsdu_len = sta->max_amsdu_len;
-//    else
-//        mvmsta->max_amsdu_len = min_t(int, sta->max_amsdu_len, 8500);
-//
-//    sta->max_rc_amsdu_len = mvmsta->max_amsdu_len;
-//
-//    for (i = 0; i < IWL_MAX_TID_COUNT; i++) {
-//        if (mvmsta->amsdu_enabled)
-//            sta->max_tid_amsdu_len[i] =
-//                iwl_mvm_max_amsdu_size(mvm, sta, i);
-//        else
-//            /*
-//             * Not so elegant, but this will effectively
-//             * prevent AMSDU on this TID
-//             */
-//            sta->max_tid_amsdu_len[i] = 1;
-//    }
-    // TODO: IMP
+#if 0
+    struct iwl_mvm_sta *mvmsta = iwl_mvm_sta_from_mac80211(sta);
+    int i;
+
+    sta->max_amsdu_len = rs_fw_get_max_amsdu_len(sta);
+
+    /*
+     * In case TLC offload is not active amsdu_enabled is either 0xFFFF
+     * or 0, since there is no per-TID alg.
+     */
+    if ((!is_vht(&tbl->rate) && !is_ht(&tbl->rate)) ||
+        tbl->rate.index < IWL_RATE_MCS_5_INDEX ||
+        scale_action == RS_ACTION_DOWNSCALE)
+        mvmsta->amsdu_enabled = 0;
+    else
+        mvmsta->amsdu_enabled = 0xFFFF;
+
+    if (mvmsta->vif->bss_conf.he_support &&
+        !iwlwifi_mod_params.disable_11ax)
+        mvmsta->max_amsdu_len = sta->max_amsdu_len;
+    else
+        mvmsta->max_amsdu_len = min_t(int, sta->max_amsdu_len, 8500);
+
+    sta->max_rc_amsdu_len = mvmsta->max_amsdu_len;
+
+    for (i = 0; i < IWL_MAX_TID_COUNT; i++) {
+        if (mvmsta->amsdu_enabled)
+            sta->max_tid_amsdu_len[i] =
+                iwl_mvm_max_amsdu_size(mvm, sta, i);
+        else
+            /*
+             * Not so elegant, but this will effectively
+             * prevent AMSDU on this TID
+             */
+            sta->max_tid_amsdu_len[i] = 1;
+    }
+#endif
 }
 
 /**
@@ -2102,8 +2103,7 @@ static void rs_rate_scale_perform(struct iwm_softc *mvm,
     rate = &tbl->rate;
 
     if (prev_agg != lq_sta->is_agg) {
-        IWL_DEBUG_RATE(mvm,
-                   "Aggregation changed: prev %d current %d. Update expected TPT table\n",
+        XYLog("Aggregation changed: prev %d current %d. Update expected TPT table\n",
                    prev_agg, lq_sta->is_agg);
         rs_set_expected_tpt_table(lq_sta, tbl);
         rs_rate_scale_clear_tbl_windows(mvm, tbl);
@@ -2806,7 +2806,8 @@ static void rs_ht_init(struct iwm_softc *mvm,
     lq_sta->active_mimo2_rate &= ~((u16)0x2);
     lq_sta->active_mimo2_rate <<= IWL_FIRST_OFDM_RATE;
 
-    if ((sta->ni_htcaps & IEEE80211_HTCAP_LDPC))
+    if ((sta->ni_htcaps & IEEE80211_HTCAP_LDPC) &&
+        mvm->support_ldpc)
         lq_sta->ldpc = true;
 
     if ((that->iwm_num_of_ant(that->iwm_fw_valid_tx_ant(mvm)) > 1) &&
@@ -2823,7 +2824,8 @@ static void rs_vht_init(struct iwm_softc *mvm,
     ItlIwm *that = container_of(mvm, ItlIwm, com);
     rs_vht_set_enabled_rates(sta, lq_sta);
 
-    if ((sta->ni_vhtcaps & IEEE80211_VHTCAP_RXLDPC))
+    if ((sta->ni_vhtcaps & IEEE80211_VHTCAP_RXLDPC) &&
+        mvm->support_ldpc)
         lq_sta->ldpc = true;
 
     if ((that->iwm_num_of_ant(that->iwm_fw_valid_tx_ant(mvm)) > 1) &&

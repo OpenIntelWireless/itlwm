@@ -1388,25 +1388,14 @@ static const u8 fw_rate_idx_to_plcp[IWL_RATE_COUNT] = {
 #undef IWL_DECLARE_RATE_INFO
 
 /* Convert an MCS index into an iwm_rates[] index. */
-const int iwm_ht_mcs2ridx[] = {
+const int iwm_mcs2ridx[] = {
     IWL_RATE_6M_INDEX,
+    IWL_RATE_12M_INDEX,
     IWL_RATE_12M_INDEX,
     IWL_RATE_18M_INDEX,
     IWL_RATE_24M_INDEX,
     IWL_RATE_36M_INDEX,
     IWL_RATE_48M_INDEX,
-    IWL_RATE_54M_INDEX,
-    IWL_RATE_54M_INDEX,
-};
-
-const int iwm_vht_mcs2ridx[] = {
-    IWL_RATE_6M_INDEX,
-    IWL_RATE_12M_INDEX,
-    IWL_RATE_18M_INDEX,
-    IWL_RATE_24M_INDEX,
-    IWL_RATE_36M_INDEX,
-    IWL_RATE_48M_INDEX,
-    IWL_RATE_54M_INDEX,
     IWL_RATE_54M_INDEX,
     IWL_RATE_54M_INDEX,
     IWL_RATE_54M_INDEX,
