@@ -2083,11 +2083,15 @@ static void rs_rate_scale_perform(struct iwm_softc *mvm,
     s32 sr;
     u8 prev_agg = lq_sta->is_agg;
     struct rs_rate *rate;
-
-    lq_sta->is_agg = (mvm->sc_tx_ba[EDCA_AC_BE].wn != NULL ||
-                      mvm->sc_tx_ba[EDCA_AC_BK].wn != NULL ||
-                      mvm->sc_tx_ba[EDCA_AC_VI].wn != NULL ||
-                      mvm->sc_tx_ba[EDCA_AC_VO].wn != NULL);
+    int i;
+    
+    lq_sta->is_agg = false;
+    for (i = 0; i <= IWM_MAX_TID_COUNT; i++) {
+        if (mvm->sc_tx_ba[i].wn != NULL) {
+            lq_sta->is_agg = true;
+            break;
+        }
+    }
 
     /*
      * Select rate-scale / modulation-mode table to work with in
