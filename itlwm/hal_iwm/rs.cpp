@@ -600,7 +600,7 @@ static void rs_tl_turn_on_agg(struct iwm_softc *sc,
                   u8 tid, struct iwl_lq_sta *lq_sta,
                   struct ieee80211_node *ni)
 {
-#if 0
+#if 1
     struct iwm_tx_ba *tid_data;
     struct ieee80211_tx_ba *tx_ba;
 
@@ -622,7 +622,7 @@ static void rs_tl_turn_on_agg(struct iwm_softc *sc,
         tx_ba->ba_state == IEEE80211_BA_INIT &&
         (lq_sta->tx_agg_tid_en & BIT(tid)) &&
         tid_data->tx_count_last >= IWL_MVM_RS_AGG_START_THRESHOLD) {
-        IWL_DEBUG_RATE(mvm, "try to aggregate tid %d\n", tid);
+        XYLog("RS: try to aggregate tid %d\n", tid);
         rs_tl_turn_on_agg_for_tid(sc, lq_sta, tid, ni);
     }
 #else
