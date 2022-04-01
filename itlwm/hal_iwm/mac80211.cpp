@@ -1593,6 +1593,14 @@ iwm_tx_fill_cmd(struct iwm_softc *sc, struct iwm_node *in,
             ridx = iwm_mcs2ridx[ni->ni_txmcs];
         else if (ni->ni_flags & IEEE80211_NODE_HT)
             ridx = iwm_mcs2ridx[ni->ni_txmcs % 8];
+        else {
+            for (i = 0; i < ieee80211_std_rateset_11g.rs_nrates; i++) {
+                if (ieee80211_std_rateset_11g.rs_rates[i] == ni->ni_txrate) {
+                    ridx = i;
+                    break;
+                }
+            }
+        }
     }
     
     if (ridx == -1 || ridx >= IWL_RATE_COUNT_LEGACY)
