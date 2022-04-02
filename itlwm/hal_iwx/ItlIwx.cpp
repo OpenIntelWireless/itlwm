@@ -9690,6 +9690,12 @@ iwx_newstate_task(void *psc)
             break;
             
         case IEEE80211_S_ASSOC:
+            err = that->iwx_rs_init(sc, (iwx_node *)ic->ic_bss, false);
+            if (err) {
+                XYLog("%s: could not init rate scaling (error %d)\n",
+                      DEVNAME(sc), err);
+                goto out;
+            }
             break;
             
         case IEEE80211_S_RUN:
