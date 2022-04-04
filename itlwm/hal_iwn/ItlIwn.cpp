@@ -2063,8 +2063,6 @@ iwn_rx_done(struct iwn_softc *sc, struct iwn_rx_desc *desc,
     struct ieee80211_frame *wh;
     struct ieee80211_rxinfo rxi;
     struct ieee80211_node *ni;
-    struct ieee80211_channel *bss_chan = NULL;
-    uint8_t saved_bssid[IEEE80211_ADDR_LEN] = { 0 };
     mbuf_t m, m1;
     struct iwn_rx_stat *stat;
     caddr_t head;
@@ -2251,17 +2249,6 @@ iwn_rx_done(struct iwn_softc *sc, struct iwn_rx_desc *desc,
     if (chan > IEEE80211_CHAN_MAX)
         chan = IEEE80211_CHAN_MAX;
 
-    /* Fix current channel. */
-    if (ni == ic->ic_bss) {
-        /*
-         * We may switch ic_bss's channel during scans.
-         * Record the current channel so we can restore it later.
-         */
-        bss_chan = ni->ni_chan;
-        IEEE80211_ADDR_COPY(&saved_bssid, ni->ni_macaddr);
-    }
-    ni->ni_chan = &ic->ic_channels[chan];
-
 #if NBPFILTER > 0
     if (sc->sc_drvbpf != NULL) {
         struct iwn_rx_radiotap_header *tap = &sc->sc_rxtap;
@@ -2309,14 +2296,8 @@ iwn_rx_done(struct iwn_softc *sc, struct iwn_rx_desc *desc,
     /* Send the frame to the 802.11 layer. */
     rxi.rxi_rssi = rssi;
     rxi.rxi_tstamp = 0;    /* unused */
+    rxi.rxi_chan = chan;
     ieee80211_inputm(ifp, m, ni, &rxi, ml);
-
-    /*
-     * ieee80211_inputm() might have changed our BSS.
-     * Restore ic_bss's channel if we are still in the same BSS.
-     */
-    if (ni == ic->ic_bss && IEEE80211_ADDR_EQ(saved_bssid, ni->ni_macaddr))
-        ni->ni_chan = bss_chan;
 
     /* Node is no longer needed. */
     ieee80211_release_node(ic, ni);

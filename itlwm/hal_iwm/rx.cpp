@@ -421,6 +421,7 @@ iwm_rx_mpdu(struct iwm_softc *sc, mbuf_t m, void *pktdata,
 
     rxi.rxi_rssi = rssi;
     rxi.rxi_tstamp = device_timestamp;
+    rxi.rxi_chan = chanidx;
     
     iwm_rx_frame(sc, m, chanidx, rx_pkt_status,
                  (phy_flags & IWM_PHY_INFO_FLAG_SHPREAMBLE),
@@ -955,6 +956,7 @@ iwm_rx_mpdu_mq(struct iwm_softc *sc, mbuf_t m, void *pktdata,
     
     rxi.rxi_rssi = rssi;
     rxi.rxi_tstamp = le64toh(desc->v1.tsf_on_air_rise);
+    rxi.rxi_chan = chanidx;
     
     if (iwm_rx_reorder(sc, m, chanidx, desc,
                        (phy_info & IWM_RX_MPDU_PHY_SHORT_PREAMBLE),

@@ -2003,7 +2003,10 @@ ieee80211_recv_probe_resp(struct ieee80211com *ic, mbuf_t m,
     
     ssid = rates = xrates = edcaie = wmmie = rsnie = wpaie = csa = vhtcap = vhtopmode = hecap = heopmode = NULL;
     htcaps = htop = NULL;
-    bchan = ieee80211_chan2ieee(ic, ic->ic_bss->ni_chan);
+    if (rxi->rxi_chan)
+         bchan = rxi->rxi_chan;
+     else
+         bchan = ieee80211_chan2ieee(ic, ic->ic_bss->ni_chan);
     chan = bchan;
     erp = 0;
     dtim_count = dtim_period = 0;
@@ -2135,9 +2138,10 @@ ieee80211_recv_probe_resp(struct ieee80211com *ic, mbuf_t m,
         ic->ic_stats.is_rx_badchan++;
         return;
     }
-    if ((ic->ic_state != IEEE80211_S_SCAN ||
+    if ((rxi->rxi_chan != 0 && chan != rxi->rxi_chan) ||
+        ((ic->ic_state != IEEE80211_S_SCAN ||
          !(ic->ic_caps & IEEE80211_C_SCANALL)) &&
-        chan != bchan) {
+        chan != bchan)) {
         /*
          * Frame was received on a channel different from the
          * one indicated in the DS params element id;
@@ -2173,6 +2177,8 @@ ieee80211_recv_probe_resp(struct ieee80211com *ic, mbuf_t m,
         is_new = 1;
     } else
         is_new = 0;
+    
+    ni->ni_chan = &ic->ic_channels[chan];
     
     if (htcaps)
         ieee80211_setup_htcaps(ni, htcaps + 2, htcaps[1]);
@@ -2387,8 +2393,6 @@ ieee80211_recv_probe_resp(struct ieee80211com *ic, mbuf_t m,
         memcpy(ni->ni_essid, &ssid[2], ssid[1]);
     }
     IEEE80211_ADDR_COPY(ni->ni_bssid, wh->i_addr3);
-    /* XXX validate channel # */
-    ni->ni_chan = &ic->ic_channels[chan];
     if (ic->ic_state == IEEE80211_S_SCAN &&
         IEEE80211_IS_CHAN_5GHZ(ni->ni_chan)) {
         /*

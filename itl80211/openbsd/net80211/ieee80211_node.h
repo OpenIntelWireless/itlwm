@@ -234,7 +234,8 @@ enum {
 struct ieee80211_rxinfo {
 	u_int32_t		rxi_flags;
 	u_int32_t		rxi_tstamp;
-	int			rxi_rssi;
+	int             rxi_rssi;
+    uint8_t         rxi_chan;
 };
 #define IEEE80211_RXI_HWDEC		0x00000001
 #define IEEE80211_RXI_AMPDU_DONE	0x00000002
