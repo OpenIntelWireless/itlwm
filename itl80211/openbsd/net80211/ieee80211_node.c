@@ -1368,7 +1368,7 @@ ieee80211_node_choose_bss(struct ieee80211com *ic, int bgscan,
     if (selbs2 != NULL) {
         XYLog("%s 2ghz ssid=%s mac=%s rssi=%d\n", __FUNCTION__, selbs2->ni_essid, ether_sprintf(selbs2->ni_bssid), selbs2->ni_rssi);
     }
-    if (selbs5 && selbs5->ni_rssi > min_5ghz_rssi)
+    if (selbs5 && (*ic->ic_node_checkrssi)(ic, selbs5))
         selbs = selbs5;
     else if (selbs5 && selbs2)
         selbs = (selbs5->ni_rssi >= selbs2->ni_rssi ? selbs5 : selbs2);
