@@ -1601,6 +1601,8 @@ iwm_tx_fill_cmd(struct iwm_softc *sc, struct iwm_node *in,
     rinfo = &iwm_rates[ridx];
     if (iwm_is_mimo_ht_plcp(rinfo->ht_plcp) || iwm_is_mimo_vht_plcp(rinfo->vht_plcp))
         rate_flags = IWM_RATE_MCS_ANT_AB_MSK;
+    else if (sc->sc_device_family == IWM_DEVICE_FAMILY_9000)
+        rate_flags = IWM_RATE_MCS_ANT_B_MSK;
     else
         rate_flags = IWM_RATE_MCS_ANT_A_MSK;
     if (IWM_RIDX_IS_CCK(ridx))
@@ -1954,7 +1956,7 @@ iwm_reset_sched(struct iwm_softc *sc, int qid, int idx, uint8_t sta_id)
 int ItlIwm::
 iwm_flush_tx_path(struct iwm_softc *sc, int tfd_queue_msk)
 {
-    struct iwm_tx_path_flush_cmd flush_cmd = {
+    struct iwm_tx_path_flush_cmd_v1 flush_cmd = {
         .queues_ctl = htole32(tfd_queue_msk),
         .flush_ctl = htole16(IWM_DUMP_TX_FIFO_FLUSH),
     };
@@ -2138,7 +2140,7 @@ iwm_mac_ctxt_cmd(struct iwm_softc *sc, struct iwm_node *in, uint32_t action,
 int ItlIwm::
 iwm_update_quotas(struct iwm_softc *sc, struct iwm_node *in, int running)
 {
-    struct iwm_time_quota_cmd cmd;
+    struct iwm_time_quota_cmd_v1 cmd;
     int i, idx, num_active_macs, quota, quota_rem;
     int colors[IWM_MAX_BINDINGS] = { -1, -1, -1, -1, };
     int n_ifs[IWM_MAX_BINDINGS] = {0, };
@@ -2193,8 +2195,22 @@ iwm_update_quotas(struct iwm_softc *sc, struct iwm_node *in, int running)
     /* Give the remainder of the session to the first binding */
     cmd.quotas[0].quota = htole32(le32toh(cmd.quotas[0].quota) + quota_rem);
     
-    return iwm_send_cmd_pdu(sc, IWM_TIME_QUOTA_CMD, 0,
-                            sizeof(cmd), &cmd);
+    if (isset(sc->sc_ucode_api, IWM_UCODE_TLV_API_QUOTA_LOW_LATENCY)) {
+        struct iwm_time_quota_cmd cmd_v2;
+        
+        memset(&cmd_v2, 0, sizeof(cmd_v2));
+        for (i = 0; i < IWM_MAX_BINDINGS; i++) {
+            cmd_v2.quotas[i].id_and_color =
+            cmd.quotas[i].id_and_color;
+            cmd_v2.quotas[i].quota = cmd.quotas[i].quota;
+            cmd_v2.quotas[i].max_duration =
+            cmd.quotas[i].max_duration;
+        }
+        return iwm_send_cmd_pdu(sc, IWM_TIME_QUOTA_CMD, 0,
+                                sizeof(cmd_v2), &cmd_v2);
+    }
+    
+    return iwm_send_cmd_pdu(sc, IWM_TIME_QUOTA_CMD, 0, sizeof(cmd), &cmd);
 }
 
 int ItlIwm::
@@ -2208,10 +2224,6 @@ iwm_auth(struct iwm_softc *sc)
     
     splassert(IPL_NET);
     
-    if (ic->ic_opmode == IEEE80211_M_MONITOR)
-        sc->sc_phyctxt[0].channel = ic->ic_ibss_chan;
-    else
-        sc->sc_phyctxt[0].channel = in->in_ni.ni_chan;
     in->in_ni.ni_chw = IEEE80211_CHAN_WIDTH_20_NOHT;
     in->in_ni.ni_flags &= ~(IEEE80211_NODE_HT |
                             IEEE80211_NODE_QOS |
@@ -2220,12 +2232,16 @@ iwm_auth(struct iwm_softc *sc)
                             IEEE80211_NODE_VHT |
                             IEEE80211_NODE_VHT_SGI80 |
                             IEEE80211_NODE_VHT_SGI160);
-    err = iwm_phy_ctxt_cmd(sc, &sc->sc_phyctxt[0], 1, 1,
-                           IWM_FW_CTXT_ACTION_MODIFY, 0);
-    if (err) {
-        XYLog("%s: could not update PHY context (error %d)\n",
-              DEVNAME(sc), err);
-        return err;
+    if (ic->ic_opmode == IEEE80211_M_MONITOR) {
+        err = iwm_phy_ctxt_update(sc, &sc->sc_phyctxt[0],
+                                  ic->ic_ibss_chan, 1, 1, 0);
+        if (err)
+            return err;
+    } else {
+        err = iwm_phy_ctxt_update(sc, &sc->sc_phyctxt[0],
+                                  in->in_ni.ni_chan, 1, 1, 0);
+        if (err)
+            return err;
     }
     in->in_phyctxt = &sc->sc_phyctxt[0];
     IEEE80211_ADDR_COPY(in->in_macaddr, in->in_ni.ni_macaddr);
@@ -2340,6 +2356,20 @@ iwm_deauth(struct iwm_softc *sc)
         sc->sc_flags &= ~IWM_FLAG_MAC_ACTIVE;
     }
     
+    in->in_ni.ni_chw = IEEE80211_CHAN_WIDTH_20_NOHT;
+    in->in_ni.ni_flags &= ~(IEEE80211_NODE_HT |
+                            IEEE80211_NODE_QOS |
+                            IEEE80211_NODE_HT_SGI20 |
+                            IEEE80211_NODE_HT_SGI40 |
+                            IEEE80211_NODE_VHT |
+                            IEEE80211_NODE_VHT_SGI80 |
+                            IEEE80211_NODE_VHT_SGI160);
+    /* Move unused PHY context to a default channel. */
+    err = iwm_phy_ctxt_update(sc, &sc->sc_phyctxt[0],
+                              &ic->ic_channels[1], 1, 1, 0);
+    if (err)
+        return err;
+    
     return 0;
 }
 
@@ -2382,8 +2412,8 @@ iwm_run(struct iwm_softc *sc)
     if ((ic->ic_opmode == IEEE80211_M_MONITOR ||
          (in->in_ni.ni_flags & IEEE80211_NODE_HT) ||
          (in->in_ni.ni_flags & IEEE80211_NODE_VHT))) {
-        err = iwm_phy_ctxt_cmd(sc, &sc->sc_phyctxt[0],
-                               chains, chains, IWM_FW_CTXT_ACTION_MODIFY, 0);
+        err = iwm_phy_ctxt_update(sc, &sc->sc_phyctxt[0], in->in_ni.ni_chan,
+                               chains, chains, 0);
         if (err) {
             XYLog("%s: failed to update PHY\n",
                   DEVNAME(sc));
@@ -2446,11 +2476,13 @@ iwm_run(struct iwm_softc *sc)
         return err;
     }
     
-    err = iwm_update_quotas(sc, in, 1);
-    if (err) {
-        XYLog("%s: could not update quotas (error %d)\n",
-              DEVNAME(sc), err);
-        return err;
+    if (!isset(sc->sc_enabled_capa, IWM_UCODE_TLV_CAPA_DYNAMIC_QUOTA)) {
+        err = iwm_update_quotas(sc, in, 1);
+        if (err) {
+            XYLog("%s: could not update quotas (error %d)\n",
+                  DEVNAME(sc), err);
+            return err;
+        }
     }
     
     ieee80211_amrr_node_init(&sc->sc_amrr, &in->in_amn);
@@ -2525,11 +2557,13 @@ iwm_run_stop(struct iwm_softc *sc)
     
     iwm_disable_beacon_filter(sc);
     
-    err = iwm_update_quotas(sc, in, 0);
-    if (err) {
-        XYLog("%s: could not update quotas (error %d)\n",
-              DEVNAME(sc), err);
-        return err;
+    if (!isset(sc->sc_enabled_capa, IWM_UCODE_TLV_CAPA_DYNAMIC_QUOTA)) {
+        err = iwm_update_quotas(sc, in, 0);
+        if (err) {
+            XYLog("%s: could not update quotas (error %d)\n",
+                  DEVNAME(sc), err);
+            return err;
+        }
     }
     
     /* Mark station as disassociated. */
@@ -2542,8 +2576,7 @@ iwm_run_stop(struct iwm_softc *sc)
     /* Reset Tx chains in case MIMO was enabled. */
     if ((in->in_ni.ni_flags & IEEE80211_NODE_HT) &&
         iwm_mimo_enabled(sc)) {
-        err = iwm_phy_ctxt_cmd(sc, &sc->sc_phyctxt[0], 1, 1,
-                               IWM_FW_CTXT_ACTION_MODIFY, 0);
+        err = iwm_phy_ctxt_update(sc, &sc->sc_phyctxt[0], in->in_ni.ni_chan, 1, 1, 0);
         if (err) {
             XYLog("%s: failed to update PHY\n", DEVNAME(sc));
             return err;
@@ -2829,13 +2862,16 @@ iwm_setrates(struct iwm_node *in, int async)
         if (ni->ni_flags & IEEE80211_NODE_VHT) {
             if (iwm_is_mimo_vht_plcp(vht_plcp))
                 tab |= IWM_RATE_MCS_ANT_AB_MSK;
+            else if (sc->sc_device_family == IWM_DEVICE_FAMILY_9000)
+                tab |= IWM_RATE_MCS_ANT_B_MSK;
             else
                 tab |= IWM_RATE_MCS_ANT_A_MSK;
-        } else if (iwm_is_mimo_ht_plcp(ht_plcp)) {
+        } else if (iwm_is_mimo_ht_plcp(ht_plcp))
             tab |= IWM_RATE_MCS_ANT_AB_MSK;
-        } else {
+        else if (sc->sc_device_family == IWM_DEVICE_FAMILY_9000)
+            tab |= IWM_RATE_MCS_ANT_B_MSK;
+        else
             tab |= IWM_RATE_MCS_ANT_A_MSK;
-        }
         
         if (IWM_RIDX_IS_CCK(ridx))
             tab |= IWM_RATE_MCS_CCK_MSK;
@@ -2849,11 +2885,17 @@ iwm_setrates(struct iwm_node *in, int async)
         tab = iwm_rates[ridx_min].plcp;
         if (IWM_RIDX_IS_CCK(ridx_min))
             tab |= IWM_RATE_MCS_CCK_MSK;
-        tab |= IWM_RATE_MCS_ANT_A_MSK;
+        if (sc->sc_device_family == IWM_DEVICE_FAMILY_9000)
+             tab |= IWM_RATE_MCS_ANT_B_MSK;
+         else
+             tab |= IWM_RATE_MCS_ANT_A_MSK;
         lqcmd.rs_table[j++] = htole32(tab);
     }
     
-    lqcmd.single_stream_ant_msk = IWM_ANT_A;
+    if (sc->sc_device_family == IWM_DEVICE_FAMILY_9000)
+         lqcmd.single_stream_ant_msk = IWM_ANT_B;
+     else
+         lqcmd.single_stream_ant_msk = IWM_ANT_A;
     lqcmd.dual_stream_ant_msk = IWM_ANT_AB;
     
     lqcmd.agg_time_limit = htole16(iwm_coex_agg_time_limit(sc));
@@ -3444,6 +3486,13 @@ iwm_init_hw(struct iwm_softc *sc)
         return err;
     }
     
+    if (isset(sc->sc_enabled_capa,
+              IWM_UCODE_TLV_CAPA_SOC_LATENCY_SUPPORT)) {
+        err = iwm_send_soc_conf(sc);
+        if (err)
+            return err;
+    }
+    
     if (isset(sc->sc_enabled_capa, IWM_UCODE_TLV_CAPA_DQA_SUPPORT)) {
         err = iwm_send_dqa_cmd(sc);
         if (err)
@@ -3458,12 +3507,13 @@ iwm_init_hw(struct iwm_softc *sc)
         goto err;
     }
     
-    for (i = 0; i < 1; i++) {
+    for (i = 0; i < IWM_NUM_PHY_CTX; i++) {
         /*
          * The channel used here isn't relevant as it's
          * going to be overwritten in the other flows.
          * For now use the first channel we have.
          */
+        sc->sc_phyctxt[i].id = i;
         sc->sc_phyctxt[i].channel = &ic->ic_channels[1];
         err = iwm_phy_ctxt_cmd(sc, &sc->sc_phyctxt[i], 1, 1,
                                IWM_FW_CTXT_ACTION_ADD, 0);
@@ -3483,6 +3533,12 @@ iwm_init_hw(struct iwm_softc *sc)
     if (err) {
         XYLog("%s: PCIe LTR configuration failed (error %d)\n",
               DEVNAME(sc), err);
+    }
+    
+    if (isset(sc->sc_enabled_capa, IWM_UCODE_TLV_CAPA_CT_KILL_BY_FW)) {
+        err = iwm_send_temp_report_ths_cmd(sc);
+        if (err)
+            goto err;
     }
     
     err = iwm_power_update_device(sc);
@@ -4672,7 +4728,7 @@ iwm_attach(struct iwm_softc *sc, struct pci_attach_args *pa)
             break;
         case PCI_PRODUCT_INTEL_WL_8260_1:
         case PCI_PRODUCT_INTEL_WL_8260_2:
-            sc->sc_fwname = "iwm-8000C-34";
+            sc->sc_fwname = "iwm-8000C-36";
             sc->host_interrupt_operation_mode = 0;
             sc->sc_device_family = IWM_DEVICE_FAMILY_8000;
             sc->sc_fwdmasegsz = IWM_FWDMASEGSZ_8000;
@@ -4681,7 +4737,7 @@ iwm_attach(struct iwm_softc *sc, struct pci_attach_args *pa)
             sc->support_ldpc = 1;
             break;
         case PCI_PRODUCT_INTEL_WL_8265_1:
-            sc->sc_fwname = "iwm-8265-34";
+            sc->sc_fwname = "iwm-8265-36";
             sc->host_interrupt_operation_mode = 0;
             sc->sc_device_family = IWM_DEVICE_FAMILY_8000;
             sc->sc_fwdmasegsz = IWM_FWDMASEGSZ_8000;
@@ -4690,7 +4746,7 @@ iwm_attach(struct iwm_softc *sc, struct pci_attach_args *pa)
             sc->support_ldpc = 1;
             break;
         case PCI_PRODUCT_INTEL_WL_9260_1:
-            sc->sc_fwname = "iwm-9260-34";
+            sc->sc_fwname = "iwm-9260-46";
             sc->host_interrupt_operation_mode = 0;
             sc->sc_device_family = IWM_DEVICE_FAMILY_9000;
             sc->sc_fwdmasegsz = IWM_FWDMASEGSZ_8000;
@@ -4714,7 +4770,7 @@ iwm_attach(struct iwm_softc *sc, struct pci_attach_args *pa)
         case PCI_PRODUCT_INTEL_WL_9461_2:
         case PCI_PRODUCT_INTEL_WL_9461_3:
         case PCI_PRODUCT_INTEL_WL_9461_4:
-            sc->sc_fwname = "iwm-9000-34";
+            sc->sc_fwname = "iwm-9000-46";
             sc->host_interrupt_operation_mode = 0;
             sc->sc_device_family = IWM_DEVICE_FAMILY_9000;
             sc->sc_fwdmasegsz = IWM_FWDMASEGSZ_8000;
@@ -4722,6 +4778,7 @@ iwm_attach(struct iwm_softc *sc, struct pci_attach_args *pa)
             sc->sc_mqrx_supported = 1;
             sc->sc_integrated = 1;
             sc->support_ldpc = 1;
+            sc->sc_xtal_latency = 650;
             break;
         default:
             XYLog("%s: unknown adapter type\n", DEVNAME(sc));
@@ -5059,8 +5116,8 @@ iwm_chan_ctxt_task(void *arg)
     }
     
     int chains = that->iwm_mimo_enabled(sc) ? 2 : 1;
-    err = that->iwm_phy_ctxt_cmd(sc, in->in_phyctxt,
-                                 chains, chains, IWM_FW_CTXT_ACTION_MODIFY, 0);
+    err = that->iwm_phy_ctxt_update(sc, in->in_phyctxt, in->in_ni.ni_chan,
+                                 chains, chains, 0);
     if (err) {
         XYLog("%s: failed to update PHY\n",
               __FUNCTION__);

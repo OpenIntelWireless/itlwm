@@ -122,6 +122,21 @@
 #include "ItlIwm.hpp"
 #include <FwData.h>
 
+uint8_t ItlIwm::
+iwm_lookup_cmd_ver(struct iwm_softc *sc, uint8_t grp, uint8_t cmd)
+{
+   const struct iwm_fw_cmd_version *entry;
+   int i;
+
+   for (i = 0; i < sc->n_cmd_versions; i++) {
+       entry = &sc->cmd_versions[i];
+       if (entry->group == grp && entry->cmd == cmd)
+           return entry->cmd_ver;
+   }
+
+   return IWM_FW_CMD_VER_UNKNOWN;
+}
+
 int ItlIwm::
 iwm_is_mimo_ht_plcp(uint8_t ht_plcp)
 {
@@ -225,6 +240,20 @@ iwm_fw_info_free(struct iwm_fw_info *fw)
     memset(fw->fw_sects, 0, sizeof(fw->fw_sects));
 }
 
+void
+iwm_fw_version_str(char *buf, size_t bufsize,
+    uint32_t major, uint32_t minor, uint32_t api)
+{
+    /*
+     * Starting with major version 35 the Linux driver prints the minor
+     * version in hexadecimal.
+     */
+    if (major >= 35)
+        snprintf(buf, bufsize, "%u.%08x.%u", major, minor, api);
+    else
+        snprintf(buf, bufsize, "%u.%u.%u", major, minor, api);
+}
+
 int ItlIwm::
 iwm_read_firmware(struct iwm_softc *sc, enum iwm_ucode_type ucode_type)
 {
@@ -284,6 +313,7 @@ iwm_read_firmware(struct iwm_softc *sc, enum iwm_ucode_type ucode_type)
     sc->sc_capaflags = 0;
     sc->sc_capa_n_scan_channels = IWM_DEFAULT_SCAN_CHANNELS;
     memset(sc->sc_enabled_capa, 0, sizeof(sc->sc_enabled_capa));
+    sc->n_cmd_versions = 0;
     memset(sc->sc_ucode_api, 0, sizeof(sc->sc_ucode_api));
     memcpy(sc->sc_fw_mcc, "ZZ", sizeof(sc->sc_fw_mcc));
     sc->sc_fw_mcc_int = 0x3030;
@@ -297,10 +327,11 @@ iwm_read_firmware(struct iwm_softc *sc, enum iwm_ucode_type ucode_type)
         goto out;
     }
     
-    snprintf(sc->sc_fwver, sizeof(sc->sc_fwver), "%d.%d (API ver %d)",
-             IWM_UCODE_MAJOR(le32toh(uhdr->ver)),
-             IWM_UCODE_MINOR(le32toh(uhdr->ver)),
-             IWM_UCODE_API(le32toh(uhdr->ver)));
+    iwm_fw_version_str(sc->sc_fwver, sizeof(sc->sc_fwver),
+                       IWM_UCODE_MAJOR(le32toh(uhdr->ver)),
+                       IWM_UCODE_MINOR(le32toh(uhdr->ver)),
+                       IWM_UCODE_API(le32toh(uhdr->ver)));
+    
     data = uhdr->data;
     len = fw->fw_rawsize - sizeof(*uhdr);
     
@@ -456,7 +487,22 @@ iwm_read_firmware(struct iwm_softc *sc, enum iwm_ucode_type ucode_type)
                 break;
             }
                 
-            case 48: /* undocumented TLV */
+            case IWM_UCODE_TLV_CMD_VERSIONS:
+                if (tlv_len % sizeof(struct iwm_fw_cmd_version)) {
+                    tlv_len /= sizeof(struct iwm_fw_cmd_version);
+                    tlv_len *= sizeof(struct iwm_fw_cmd_version);
+                }
+                if (sc->n_cmd_versions != 0) {
+                    err = EINVAL;
+                    goto parse_out;
+                }
+                if (tlv_len > sizeof(sc->cmd_versions)) {
+                    err = EINVAL;
+                    goto parse_out;
+                }
+                memcpy(&sc->cmd_versions[0], tlv_data, tlv_len);
+                sc->n_cmd_versions = tlv_len / sizeof(struct iwm_fw_cmd_version);
+                break;
             case IWM_UCODE_TLV_SDIO_ADMA_ADDR:
             case IWM_UCODE_TLV_FW_GSCAN_CAPA:
                 /* ignore, not used by current driver */
@@ -519,25 +565,35 @@ iwm_read_firmware(struct iwm_softc *sc, enum iwm_ucode_type ucode_type)
                     err = EINVAL;
                     goto parse_out;
                 }
-                snprintf(sc->sc_fwver, sizeof(sc->sc_fwver),
-                         "%u.%u.%u",
-                         le32toh(((uint32_t *)tlv_data)[0]),
-                         le32toh(((uint32_t *)tlv_data)[1]),
-                         le32toh(((uint32_t *)tlv_data)[2]));
+                iwm_fw_version_str(sc->sc_fwver, sizeof(sc->sc_fwver),
+                                   le32toh(((uint32_t *)tlv_data)[0]),
+                                   le32toh(((uint32_t *)tlv_data)[1]),
+                                   le32toh(((uint32_t *)tlv_data)[2]));
                 break;
                 
             case IWM_UCODE_TLV_FW_DBG_DEST:
             case IWM_UCODE_TLV_FW_DBG_CONF:
+            case IWM_UCODE_TLV_UMAC_DEBUG_ADDRS:
+            case IWM_UCODE_TLV_LMAC_DEBUG_ADDRS:
+            case IWM_UCODE_TLV_TYPE_DEBUG_INFO:
+            case IWM_UCODE_TLV_TYPE_BUFFER_ALLOCATION:
+            case IWM_UCODE_TLV_TYPE_HCMD:
+            case IWM_UCODE_TLV_TYPE_REGIONS:
+            case IWM_UCODE_TLV_TYPE_TRIGGERS:
+                break;
+
+            case IWM_UCODE_TLV_HW_TYPE:
                 break;
                 
             case IWM_UCODE_TLV_FW_MEM_SEG:
                 break;
+                /* undocumented TLVs found in iwm-9000-43 image */
+            case 0x1000003:
+            case 0x1000004:
+                break;
             case 52://IWL_UCODE_TLV_IML
             case 53://IWL_UCODE_TLV_FW_FMAC_API_VERSION
-            case 54://IWL_UCODE_TLV_UMAC_DEBUG_ADDRS
-            case 55://IWL_UCODE_TLV_LMAC_DEBUG_ADDRS
             case 57://IWL_UCODE_TLV_FW_RECOVERY_INFO
-            case 58:
             case 59://IWL_UCODE_TLV_FW_FMAC_RECOVERY_INFO
                 break;
             case 60: {//IWL_UCODE_TLV_FW_FSEQ_VERSION
@@ -555,12 +611,6 @@ iwm_read_firmware(struct iwm_softc *sc, enum iwm_ucode_type ucode_type)
                          fseq_ver->version);
             }
                 break;
-        #define IWL_UCODE_TLV_DEBUG_BASE    0x1000005
-            case IWL_UCODE_TLV_DEBUG_BASE + 0://IWL_UCODE_TLV_TYPE_DEBUG_INFO
-            case IWL_UCODE_TLV_DEBUG_BASE + 1://IWL_UCODE_TLV_TYPE_BUFFER_ALLOCATION
-            case IWL_UCODE_TLV_DEBUG_BASE + 2://IWL_UCODE_TLV_TYPE_HCMD
-            case IWL_UCODE_TLV_DEBUG_BASE + 3://IWL_UCODE_TLV_TYPE_REGIONS
-            case IWL_UCODE_TLV_DEBUG_BASE + 4://IWL_UCODE_TLV_TYPE_TRIGGERS
             /* TLVs 0x1000-0x2000 are for internal driver usage */
             case 0x1000://IWL_UCODE_TLV_FW_DBG_DUMP_LST
                 

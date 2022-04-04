@@ -379,6 +379,45 @@ iwm_disable_txq(struct iwm_softc *sc, uint8_t qid, uint8_t tid, uint8_t flags)
 }
 
 int ItlIwm::
+iwm_send_soc_conf(struct iwm_softc *sc)
+{
+    struct iwm_soc_configuration_cmd cmd;
+    int err;
+    uint32_t cmd_id, flags = 0;
+    
+    memset(&cmd, 0, sizeof(cmd));
+    
+    /*
+     * In VER_1 of this command, the discrete value is considered
+     * an integer; In VER_2, it's a bitmask.  Since we have only 2
+     * values in VER_1, this is backwards-compatible with VER_2,
+     * as long as we don't set any other flag bits.
+     */
+    if (!sc->sc_integrated) { /* VER_1 */
+        flags = IWM_SOC_CONFIG_CMD_FLAGS_DISCRETE;
+    } else { /* VER_2 */
+        uint8_t scan_cmd_ver;
+        if (sc->sc_ltr_delay != IWM_SOC_FLAGS_LTR_APPLY_DELAY_NONE)
+            flags |= (sc->sc_ltr_delay &
+                      IWM_SOC_FLAGS_LTR_APPLY_DELAY_MASK);
+        scan_cmd_ver = iwm_lookup_cmd_ver(sc, IWM_LONG_GROUP,
+                                          IWM_SCAN_REQ_UMAC);
+        if (scan_cmd_ver != IWM_FW_CMD_VER_UNKNOWN &&
+            scan_cmd_ver >= 2 && sc->sc_low_latency_xtal)
+            flags |= IWM_SOC_CONFIG_CMD_FLAGS_LOW_LATENCY;
+    }
+    cmd.flags = htole32(flags);
+    
+    cmd.latency = htole32(sc->sc_xtal_latency);
+    
+    cmd_id = iwm_cmd_id(IWM_SOC_CONFIGURATION_CMD, IWM_SYSTEM_GROUP, 0);
+    err = iwm_send_cmd_pdu(sc, cmd_id, 0, sizeof(cmd), &cmd);
+    if (err)
+        printf("%s: failed to set soc latency: %d\n", DEVNAME(sc), err);
+    return err;
+}
+
+int ItlIwm::
 iwm_send_update_mcc_cmd(struct iwm_softc *sc, const char *alpha2)
 {
     XYLog("%s\n", __FUNCTION__);
@@ -386,11 +425,14 @@ iwm_send_update_mcc_cmd(struct iwm_softc *sc, const char *alpha2)
     struct iwm_host_cmd hcmd = {
         .id = IWM_MCC_UPDATE_CMD,
         .flags = IWM_CMD_WANT_RESP,
+        .resp_pkt_len = IWM_CMD_RESP_MAX,
         .data = { &mcc_cmd },
     };
+    struct iwm_rx_packet *pkt;
+    size_t resp_len;
     int err;
-    int resp_v2 = isset(sc->sc_enabled_capa,
-                        IWM_UCODE_TLV_CAPA_LAR_SUPPORT_V2);
+    int resp_v3 = isset(sc->sc_enabled_capa,
+                        IWM_UCODE_TLV_CAPA_LAR_SUPPORT_V3);
     
     if (sc->sc_device_family == IWM_DEVICE_FAMILY_8000 &&
         !sc->sc_nvm.lar_enabled) {
@@ -405,23 +447,77 @@ iwm_send_update_mcc_cmd(struct iwm_softc *sc, const char *alpha2)
     else
         mcc_cmd.source_id = IWM_MCC_SOURCE_OLD_FW;
     
-    if (resp_v2) {
+    if (resp_v3) { /* same size as resp_v2 */
         hcmd.len[0] = sizeof(struct iwm_mcc_update_cmd);
-        hcmd.resp_pkt_len = sizeof(struct iwm_rx_packet) +
-        sizeof(struct iwm_mcc_update_resp);
     } else {
         hcmd.len[0] = sizeof(struct iwm_mcc_update_cmd_v1);
-        hcmd.resp_pkt_len = sizeof(struct iwm_rx_packet) +
-        sizeof(struct iwm_mcc_update_resp_v1);
     }
     
     err = iwm_send_cmd(sc, &hcmd);
     if (err)
         return err;
     
-    iwm_free_resp(sc, &hcmd);
+    pkt = hcmd.resp_pkt;
+    if (!pkt || (pkt->hdr.flags & IWM_CMD_FAILED_MSK)) {
+        err = EIO;
+        goto out;
+    }
     
-    return 0;
+    if (resp_v3) {
+        struct iwm_mcc_update_resp_v3 *resp;
+        resp_len = iwm_rx_packet_payload_len(pkt);
+        if (resp_len < sizeof(*resp)) {
+            err = EIO;
+            goto out;
+        }
+        
+        resp = (struct iwm_mcc_update_resp_v3 *)pkt->data;
+        if (resp_len != sizeof(*resp) +
+            resp->n_channels * sizeof(resp->channels[0])) {
+            err = EIO;
+            goto out;
+        }
+    } else {
+        struct iwm_mcc_update_resp_v1 *resp_v1;
+        resp_len = iwm_rx_packet_payload_len(pkt);
+        if (resp_len < sizeof(*resp_v1)) {
+            err = EIO;
+            goto out;
+        }
+        
+        resp_v1 = (struct iwm_mcc_update_resp_v1 *)pkt->data;
+        if (resp_len != sizeof(*resp_v1) +
+            resp_v1->n_channels * sizeof(resp_v1->channels[0])) {
+            err = EIO;
+            goto out;
+        }
+    }
+out:
+    iwm_free_resp(sc, &hcmd);
+    return err;
+}
+
+int ItlIwm::
+iwm_send_temp_report_ths_cmd(struct iwm_softc *sc)
+{
+    struct iwm_temp_report_ths_cmd cmd;
+    int err;
+    
+    /*
+     * In order to give responsibility for critical-temperature-kill
+     * and TX backoff to FW we need to send an empty temperature
+     * reporting command at init time.
+     */
+    memset(&cmd, 0, sizeof(cmd));
+    
+    err = iwm_send_cmd_pdu(sc,
+                           IWM_WIDE_ID(IWM_PHY_OPS_GROUP, IWM_TEMP_REPORTING_THRESHOLDS_CMD),
+                           0, sizeof(cmd), &cmd);
+    if (err)
+        printf("%s: TEMP_REPORT_THS_CMD command failed (error %d)\n",
+               DEVNAME(sc), err);
+    
+    return err;
 }
 
 void ItlIwm::

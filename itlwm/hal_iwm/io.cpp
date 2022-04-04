@@ -123,23 +123,35 @@
 #include <IOKit/IODMACommand.h>
 
 uint32_t ItlIwm::
-iwm_read_prph(struct iwm_softc *sc, uint32_t addr)
+iwm_read_prph_unlocked(struct iwm_softc *sc, uint32_t addr)
 {
-    iwm_nic_assert_locked(sc);
     IWM_WRITE(sc,
         IWM_HBUS_TARG_PRPH_RADDR, ((addr & 0x000fffff) | (3 << 24)));
     IWM_BARRIER_READ_WRITE(sc);
     return IWM_READ(sc, IWM_HBUS_TARG_PRPH_RDAT);
 }
 
+uint32_t ItlIwm::
+iwm_read_prph(struct iwm_softc *sc, uint32_t addr)
+{
+    iwm_nic_assert_locked(sc);
+    return iwm_read_prph_unlocked(sc, addr);
+}
+
+void ItlIwm::
+iwm_write_prph_unlocked(struct iwm_softc *sc, uint32_t addr, uint32_t val)
+{
+    IWM_WRITE(sc,
+              IWM_HBUS_TARG_PRPH_WADDR, ((addr & 0x000fffff) | (3 << 24)));
+    IWM_BARRIER_WRITE(sc);
+    IWM_WRITE(sc, IWM_HBUS_TARG_PRPH_WDAT, val);
+}
+
 void ItlIwm::
 iwm_write_prph(struct iwm_softc *sc, uint32_t addr, uint32_t val)
 {
     iwm_nic_assert_locked(sc);
-    IWM_WRITE(sc,
-        IWM_HBUS_TARG_PRPH_WADDR, ((addr & 0x000fffff) | (3 << 24)));
-    IWM_BARRIER_WRITE(sc);
-    IWM_WRITE(sc, IWM_HBUS_TARG_PRPH_WDAT, val);
+    iwm_write_prph_unlocked(sc, addr, val);
 }
 
 void ItlIwm::

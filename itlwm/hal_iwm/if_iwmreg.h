@@ -838,6 +838,7 @@ enum iwm_msix_ivar_for_cause {
 #define IWM_UCODE_TLV_API_NAN2_VER2        31
 #define IWM_UCODE_TLV_API_ADAPTIVE_DWELL    32
 #define IWM_UCODE_TLV_API_NEW_RX_STATS        35
+#define IWM_UCODE_TLV_API_QUOTA_LOW_LATENCY    38
 #define IWM_UCODE_TLV_API_ADAPTIVE_DWELL_V2    42
 #define IWM_UCODE_TLV_API_SCAN_EXT_CHAN_VER    58
 #define IWM_NUM_UCODE_TLV_API            128
@@ -928,13 +929,18 @@ enum iwm_msix_ivar_for_cause {
 #define IWM_UCODE_TLV_CAPA_GSCAN_SUPPORT        31
 #define IWM_UCODE_TLV_CAPA_NAN_SUPPORT            34
 #define IWM_UCODE_TLV_CAPA_UMAC_UPLOAD            35
+#define IWM_UCODE_TLV_CAPA_SOC_LATENCY_SUPPORT        37
+#define IWM_UCODE_TLV_CAPA_BINDING_CDB_SUPPORT        39
+#define IWM_UCODE_TLV_CAPA_CDB_SUPPORT            40
+#define IWM_UCODE_TLV_CAPA_DYNAMIC_QUOTA                44
+#define IWM_UCODE_TLV_CAPA_ULTRA_HB_CHANNELS        48
 #define IWM_UCODE_TLV_CAPA_EXTENDED_DTS_MEASURE        64
 #define IWM_UCODE_TLV_CAPA_SHORT_PM_TIMEOUTS        65
 #define IWM_UCODE_TLV_CAPA_BT_MPLUT_SUPPORT        67
 #define IWM_UCODE_TLV_CAPA_MULTI_QUEUE_RX_SUPPORT    68
 #define IWM_UCODE_TLV_CAPA_BEACON_ANT_SELECTION        71
 #define IWM_UCODE_TLV_CAPA_BEACON_STORING        72
-#define IWM_UCODE_TLV_CAPA_LAR_SUPPORT_V2        73
+#define IWM_UCODE_TLV_CAPA_LAR_SUPPORT_V3        73
 #define IWM_UCODE_TLV_CAPA_CT_KILL_BY_FW        74
 #define IWM_UCODE_TLV_CAPA_TEMP_THS_REPORT_SUPPORT    75
 #define IWM_UCODE_TLV_CAPA_CTDP_SUPPORT            76
@@ -1103,8 +1109,21 @@ struct iwm_ucode_header {
 #define IWM_UCODE_TLV_FW_DBG_DEST    38
 #define IWM_UCODE_TLV_FW_DBG_CONF    39
 #define IWM_UCODE_TLV_FW_DBG_TRIGGER    40
+#define IWM_UCODE_TLV_CMD_VERSIONS    48
 #define IWM_UCODE_TLV_FW_GSCAN_CAPA    50
 #define IWM_UCODE_TLV_FW_MEM_SEG    51
+
+#define IWM_UCODE_TLV_UMAC_DEBUG_ADDRS    54
+#define IWM_UCODE_TLV_LMAC_DEBUG_ADDRS    55
+#define IWM_UCODE_TLV_HW_TYPE        58
+
+#define IWM_UCODE_TLV_DEBUG_BASE        0x1000005
+#define IWM_UCODE_TLV_TYPE_DEBUG_INFO        (IWM_UCODE_TLV_DEBUG_BASE + 0)
+#define IWM_UCODE_TLV_TYPE_BUFFER_ALLOCATION    (IWM_UCODE_TLV_DEBUG_BASE + 1)
+#define IWM_UCODE_TLV_TYPE_HCMD            (IWM_UCODE_TLV_DEBUG_BASE + 2)
+#define IWM_UCODE_TLV_TYPE_REGIONS        (IWM_UCODE_TLV_DEBUG_BASE + 3)
+#define IWM_UCODE_TLV_TYPE_TRIGGERS        (IWM_UCODE_TLV_DEBUG_BASE + 4)
+#define IWM_UCODE_TLV_DEBUG_MAX            IWM_UCODE_TLV_TYPE_TRIGGERS
 
 struct iwm_ucode_tlv {
     uint32_t type;        /* see above */
@@ -2081,6 +2100,13 @@ struct iwm_agn_scd_bc_tbl {
 #define IWM_DATA_PATH_GROUP    0x5
 #define IWM_PROT_OFFLOAD_GROUP    0xb
 
+/* SYSTEM_GROUP group subcommand IDs */
+
+#define IWM_SHARED_MEM_CFG_CMD        0x00
+#define IWM_SOC_CONFIGURATION_CMD    0x01
+#define IWM_INIT_EXTENDED_CFG_CMD    0x03
+#define IWM_FW_ERROR_RECOVERY_CMD    0x07
+
 /* DATA_PATH group subcommand IDs */
 #define IWM_DQA_ENABLE_CMD    0x00
 
@@ -2175,6 +2201,31 @@ struct iwm_phy_cfg_cmd {
 #define IWM_PHY_CFG_RX_CHAIN_A    (1 << 12)
 #define IWM_PHY_CFG_RX_CHAIN_B    (1 << 13)
 #define IWM_PHY_CFG_RX_CHAIN_C    (1 << 14)
+
+#define IWM_MAX_DTS_TRIPS    8
+
+/**
+ * struct iwm_ct_kill_notif - CT-kill entry notification
+ *
+ * @temperature: the current temperature in celsius
+ * @reserved: reserved
+ */
+struct iwm_ct_kill_notif {
+    uint16_t temperature;
+    uint16_t reserved;
+} __packed; /* GRP_PHY_CT_KILL_NTF */
+
+/**
+ * struct iwm_temp_report_ths_cmd - set temperature thresholds
+ * (IWM_TEMP_REPORTING_THRESHOLDS_CMD)
+ *
+ * @num_temps: number of temperature thresholds passed
+ * @thresholds: array with the thresholds to be configured
+ */
+struct iwm_temp_report_ths_cmd {
+    uint32_t num_temps;
+    uint16_t thresholds[IWM_MAX_DTS_TRIPS];
+} __packed; /* GRP_PHY_TEMP_REPORTING_THRESHOLDS_CMD */
 
 /*
  * PHY db
@@ -2514,6 +2565,31 @@ struct iwm_alive_resp_v3 {
     uint32_t dbg_print_buff_addr;
 } __packed; /* ALIVE_RES_API_S_VER_3 */
 
+#define IWM_SOC_CONFIG_CMD_FLAGS_DISCRETE    (1 << 0)
+#define IWM_SOC_CONFIG_CMD_FLAGS_LOW_LATENCY    (1 << 1)
+
+#define IWM_SOC_FLAGS_LTR_APPLY_DELAY_MASK        0xc
+#define IWM_SOC_FLAGS_LTR_APPLY_DELAY_NONE        0
+#define IWM_SOC_FLAGS_LTR_APPLY_DELAY_200        1
+#define IWM_SOC_FLAGS_LTR_APPLY_DELAY_2500        2
+#define IWM_SOC_FLAGS_LTR_APPLY_DELAY_1820        3
+
+/**
+ * struct iwm_soc_configuration_cmd - Set device stabilization latency
+ *
+ * @flags: soc settings flags.  In VER_1, we can only set the DISCRETE
+ *    flag, because the FW treats the whole value as an integer. In
+ *    VER_2, we can set the bits independently.
+ * @latency: time for SOC to ensure stable power & XTAL
+ */
+struct iwm_soc_configuration_cmd {
+    uint32_t flags;
+    uint32_t latency;
+} __packed; /*
+             * SOC_CONFIGURATION_CMD_S_VER_1 (see description above)
+             * SOC_CONFIGURATION_CMD_S_VER_2
+             */
+
 /* Error response/notification */
 #define IWM_FW_ERR_UNKNOWN_CMD        0x0
 #define IWM_FW_ERR_INVALID_CMD_PARAM    0x1
@@ -2544,6 +2620,22 @@ struct iwm_error_resp {
     uint16_t bad_cmd_seq_num;
     uint32_t error_service;
     uint64_t timestamp;
+} __packed;
+
+#define IWM_FW_CMD_VER_UNKNOWN 99
+
+/**
+ * struct iwm_fw_cmd_version - firmware command version entry
+ * @cmd: command ID
+ * @group: group ID
+ * @cmd_ver: command version
+ * @notif_ver: notification version
+ */
+struct iwm_fw_cmd_version {
+    uint8_t cmd;
+    uint8_t group;
+    uint8_t cmd_ver;
+    uint8_t notif_ver;
 } __packed;
 
 
@@ -2856,12 +2948,31 @@ struct iwm_time_event_notif {
 /* Bindings and Time Quota */
 
 /**
+ * struct iwm_binding_cmd_v1 - configuring bindings
+ * ( IWM_BINDING_CONTEXT_CMD = 0x2b )
+ * @id_and_color: ID and color of the relevant Binding
+ * @action: action to perform, one of IWM_FW_CTXT_ACTION_*
+ * @macs: array of MAC id and colors which belong to the binding
+ * @phy: PHY id and color which belongs to the binding
+ * @lmac_id: the lmac id the binding belongs to
+ */
+struct iwm_binding_cmd_v1 {
+    /* COMMON_INDEX_HDR_API_S_VER_1 */
+    uint32_t id_and_color;
+    uint32_t action;
+    /* IWM_BINDING_DATA_API_S_VER_1 */
+    uint32_t macs[IWM_MAX_MACS_IN_BINDING];
+    uint32_t phy;
+} __packed; /* IWM_BINDING_CMD_API_S_VER_1 */
+
+/**
  * struct iwm_binding_cmd - configuring bindings
  * ( IWM_BINDING_CONTEXT_CMD = 0x2b )
  * @id_and_color: ID and color of the relevant Binding
  * @action: action to perform, one of IWM_FW_CTXT_ACTION_*
  * @macs: array of MAC id and colors which belong to the binding
  * @phy: PHY id and color which belongs to the binding
+ * @lmac_id: the lmac id the binding belongs to
  */
 struct iwm_binding_cmd {
     /* COMMON_INDEX_HDR_API_S_VER_1 */
@@ -2870,7 +2981,11 @@ struct iwm_binding_cmd {
     /* IWM_BINDING_DATA_API_S_VER_1 */
     uint32_t macs[IWM_MAX_MACS_IN_BINDING];
     uint32_t phy;
-} __packed; /* IWM_BINDING_CMD_API_S_VER_1 */
+    uint32_t lmac_id;
+} __packed; /* IWM_BINDING_CMD_API_S_VER_2 */
+
+#define IWM_LMAC_24G_INDEX        0
+#define IWM_LMAC_5G_INDEX        1
 
 /* The maximal number of fragments in the FW's schedule session */
 #define IWM_MAX_QUOTA 128
@@ -2882,7 +2997,7 @@ struct iwm_binding_cmd {
  *    remainig quota (after Time Events) according to this quota.
  * @max_duration: max uninterrupted context duration in TU
  */
-struct iwm_time_quota_data {
+struct iwm_time_quota_data_v1 {
     uint32_t id_and_color;
     uint32_t quota;
     uint32_t max_duration;
@@ -2893,9 +3008,40 @@ struct iwm_time_quota_data {
  * ( IWM_TIME_QUOTA_CMD = 0x2c )
  * @quotas: allocations per binding
  */
+struct iwm_time_quota_cmd_v1 {
+    struct iwm_time_quota_data_v1 quotas[IWM_MAX_BINDINGS];
+} __packed; /* IWM_TIME_QUOTA_ALLOCATION_CMD_API_S_VER_1 */
+
+#define IWM_QUOTA_LOW_LATENCY_NONE    0
+#define IWM_QUOTA_LOW_LATENCY_TX    (1 << 0)
+#define IWM_QUOTA_LOW_LATENCY_RX    (1 << 1)
+
+/**
+ * struct iwm_time_quota_data - configuration of time quota per binding
+ * @id_and_color: ID and color of the relevant Binding.
+ * @quota: absolute time quota in TU. The scheduler will try to divide the
+ *    remainig quota (after Time Events) according to this quota.
+ * @max_duration: max uninterrupted context duration in TU
+ * @low_latency: low latency status IWM_QUOTA_LOW_LATENCY_*
+ */
+struct iwm_time_quota_data {
+    uint32_t id_and_color;
+    uint32_t quota;
+    uint32_t max_duration;
+    uint32_t low_latency;
+}; /* TIME_QUOTA_DATA_API_S_VER_2 */
+
+/**
+ * struct iwm_time_quota_cmd - configuration of time quota between bindings
+ * ( TIME_QUOTA_CMD = 0x2c )
+ * Note: on non-CDB the fourth one is the auxilary mac and is essentially zero.
+ * On CDB the fourth one is a regular binding.
+ *
+ * @quotas: allocations per binding
+ */
 struct iwm_time_quota_cmd {
     struct iwm_time_quota_data quotas[IWM_MAX_BINDINGS];
-} __packed; /* IWM_TIME_QUOTA_ALLOCATION_CMD_API_S_VER_1 */
+} __packed; /* IWM_TIME_QUOTA_ALLOCATION_CMD_API_S_VER_2 */
 
 
 /* PHY context */
@@ -2937,12 +3083,29 @@ struct iwm_time_quota_cmd {
  * @width: PHY_[VHT|LEGACY]_CHANNEL_*
  * @ctrl channel: PHY_[VHT|LEGACY]_CTRL_*
  */
-struct iwm_fw_channel_info {
+struct iwm_fw_channel_info_v1 {
     uint8_t band;
     uint8_t channel;
     uint8_t width;
     uint8_t ctrl_pos;
-} __packed;
+} __packed; /* CHANNEL_CONFIG_API_S_VER_1 */
+
+/*
+ * struct iwm_fw_channel_info - channel information
+ *
+ * @channel: channel number
+ * @band: PHY_BAND_*
+ * @width: PHY_[VHT|LEGACY]_CHANNEL_*
+ * @ctrl channel: PHY_[VHT|LEGACY]_CTRL_*
+ * @reserved: for future use and alignment
+ */
+struct iwm_fw_channel_info {
+    uint32_t channel;
+    uint8_t band;
+    uint8_t width;
+    uint8_t ctrl_pos;
+    uint8_t reserved;
+} __packed; /* CHANNEL_CONFIG_API_S_VER_2 */
 
 #define IWM_PHY_RX_CHAIN_DRIVER_FORCE_POS    (0)
 #define IWM_PHY_RX_CHAIN_DRIVER_FORCE_MSK \
@@ -2984,7 +3147,15 @@ struct iwm_fw_channel_info {
  * @acquisition_data: ???
  * @dsp_cfg_flags: set to 0
  */
-struct iwm_phy_context_cmd {
+/*
+ * XXX Intel forgot to bump the PHY_CONTEXT command API when they increased
+ * the size of fw_channel_info from v1 to v2.
+ * To keep things simple we define two versions of this struct, and both
+ * are labled as CMD_API_VER_1. (The Linux iwlwifi driver performs dark
+ * magic with pointers to struct members instead.)
+ */
+/* This version must be used if IWM_UCODE_TLV_CAPA_ULTRA_HB_CHANNELS is set: */
+struct iwm_phy_context_cmd_uhb {
     /* COMMON_INDEX_HDR_API_S_VER_1 */
     uint32_t id_and_color;
     uint32_t action;
@@ -2992,6 +3163,20 @@ struct iwm_phy_context_cmd {
     uint32_t apply_time;
     uint32_t tx_param_color;
     struct iwm_fw_channel_info ci;
+    uint32_t txchain_info;
+    uint32_t rxchain_info;
+    uint32_t acquisition_data;
+    uint32_t dsp_cfg_flags;
+} __packed; /* IWM_PHY_CONTEXT_CMD_API_VER_1 */
+/* This version must be used otherwise: */
+struct iwm_phy_context_cmd {
+    /* COMMON_INDEX_HDR_API_S_VER_1 */
+    uint32_t id_and_color;
+    uint32_t action;
+    /* IWM_PHY_CONTEXT_DATA_API_S_VER_1 */
+    uint32_t apply_time;
+    uint32_t tx_param_color;
+    struct iwm_fw_channel_info_v1 ci;
     uint32_t txchain_info;
     uint32_t rxchain_info;
     uint32_t acquisition_data;
@@ -5034,11 +5219,23 @@ struct iwm_beacon_notif {
  * @flush_ctl: control flags
  * @reserved: reserved
  */
-struct iwm_tx_path_flush_cmd {
+struct iwm_tx_path_flush_cmd_v1 {
     uint32_t queues_ctl;
     uint16_t flush_ctl;
     uint16_t reserved;
 } __packed; /* IWM_TX_PATH_FLUSH_CMD_API_S_VER_1 */
+
+/**
+ * struct iwl_tx_path_flush_cmd -- queue/FIFO flush command
+ * @sta_id: station ID to flush
+ * @tid_mask: TID mask to flush
+ * @reserved: reserved
+ */
+struct iwm_tx_path_flush_cmd {
+    uint32_t sta_id;
+    uint16_t tid_mask;
+    uint16_t reserved;
+} __packed; /* TX_PATH_FLUSH_CMD_API_S_VER_2 */
 
 /**
  * iwm_get_scd_ssn - returns the SSN of the SCD
@@ -5578,6 +5775,16 @@ struct iwm_scan_config {
 #define IWM_UMAC_SCAN_GEN_FLAGS_ADAPTIVE_DWELL        (1 << 13)
 #define IWM_UMAC_SCAN_GEN_FLAGS_MAX_CHNL_TIME        (1 << 14)
 #define IWM_UMAC_SCAN_GEN_FLAGS_PROB_REQ_HIGH_TX_RATE    (1 << 15)
+
+/**
+ * UMAC scan general flags #2
+ * @IWM_UMAC_SCAN_GEN_FLAGS2_NOTIF_PER_CHNL: Whether to send a complete
+ *    notification per channel or not.
+ * @IWM_UMAC_SCAN_GEN_FLAGS2_ALLOW_CHNL_REORDER: Whether to allow channel
+ *    reorder optimization or not.
+ */
+#define IWM_UMAC_SCAN_GEN_FLAGS2_NOTIF_PER_CHNL        (1 << 0)
+#define IWM_UMAC_SCAN_GEN_FLAGS2_ALLOW_CHNL_REORDER    (1 << 1)
 
 /**
  * struct iwm_scan_channel_cfg_umac
@@ -6415,7 +6622,7 @@ struct iwm_mcc_update_resp_v1  {
 } __packed; /* LAR_UPDATE_MCC_CMD_RESP_S_VER_1 */
 
 /**
- * iwm_mcc_update_resp - response to MCC_UPDATE_CMD.
+ * iwm_mcc_update_resp_v2 - response to MCC_UPDATE_CMD.
  * Contains the new channel control profile map, if changed, and the new MCC
  * (mobile country code).
  * The new MCC may be different than what was requested in MCC_UPDATE_CMD.
@@ -6430,7 +6637,7 @@ struct iwm_mcc_update_resp_v1  {
  * @channels: channel control data map, DWORD for each channel. Only the first
  *    16bits are used.
  */
-struct iwm_mcc_update_resp {
+struct iwm_mcc_update_resp_v2 {
     uint32_t status;
     uint16_t mcc;
     uint8_t cap;
@@ -6440,6 +6647,36 @@ struct iwm_mcc_update_resp {
     uint32_t n_channels;
     uint32_t channels[0];
 } __packed; /* LAR_UPDATE_MCC_CMD_RESP_S_VER_2 */
+
+#define IWM_GEO_NO_INFO            0
+#define IWM_GEO_WMM_ETSI_5GHZ_INFO    (1 << 0)
+
+/**
+ * iwm_mcc_update_resp_v3 - response to MCC_UPDATE_CMD.
+ * Contains the new channel control profile map, if changed, and the new MCC
+ * (mobile country code).
+ * The new MCC may be different than what was requested in MCC_UPDATE_CMD.
+ * @status: see &enum iwm_mcc_update_status
+ * @mcc: the new applied MCC
+ * @cap: capabilities for all channels which matches the MCC
+ * @source_id: the MCC source, see IWM_MCC_SOURCE_*
+ * @time: time elapsed from the MCC test start (in 30 seconds TU)
+ * @geo_info: geographic specific profile information
+ * @n_channels: number of channels in @channels_data (may be 14, 39, 50 or 51
+ *        channels, depending on platform)
+ * @channels: channel control data map, DWORD for each channel. Only the first
+ *    16bits are used.
+ */
+struct iwm_mcc_update_resp_v3 {
+    uint32_t status;
+    uint16_t mcc;
+    uint8_t cap;
+    uint8_t source_id;
+    uint16_t time;
+    uint16_t geo_info;
+    uint32_t n_channels;
+    uint32_t channels[0];
+} __packed; /* LAR_UPDATE_MCC_CMD_RESP_S_VER_3 */
 
 /**
  * struct iwm_mcc_chub_notif - chub notifies of mcc change

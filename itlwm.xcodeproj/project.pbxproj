@@ -731,6 +731,10 @@
 		5088ECB9252883C60068A63D /* LICENSE */ = {isa = PBXFileReference; lastKnownFileType = text; path = LICENSE; sourceTree = "<group>"; };
 		5088ECBA252884060068A63D /* iwlwifi-firmware-license */ = {isa = PBXFileReference; lastKnownFileType = text; path = "iwlwifi-firmware-license"; sourceTree = "<group>"; };
 		5088ECBC252884870068A63D /* libkmod.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libkmod.a; path = MacKernelSDK/Library/x86_64/libkmod.a; sourceTree = "<group>"; };
+		A5213EBB27A0C3EC00D7EAB1 /* iwm-9000-46 */ = {isa = PBXFileReference; lastKnownFileType = file; path = "iwm-9000-46"; sourceTree = "<group>"; };
+		A5213EBC27A0C3ED00D7EAB1 /* iwm-8000C-36 */ = {isa = PBXFileReference; lastKnownFileType = file; path = "iwm-8000C-36"; sourceTree = "<group>"; };
+		A5213EBD27A0C3ED00D7EAB1 /* iwm-9260-46 */ = {isa = PBXFileReference; lastKnownFileType = file; path = "iwm-9260-46"; sourceTree = "<group>"; };
+		A5213EBE27A0C3ED00D7EAB1 /* iwm-8265-36 */ = {isa = PBXFileReference; lastKnownFileType = file; path = "iwm-8265-36"; sourceTree = "<group>"; };
 		F800DD9A24FBEBF000789320 /* ItlDriverController.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = ItlDriverController.hpp; sourceTree = "<group>"; };
 		F837C91C2724577F00B2C499 /* coex.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = coex.cpp; sourceTree = "<group>"; };
 		F837C9252724732B00B2C499 /* iwlwifi-so-a0-gf-a0.pnvm */ = {isa = PBXFileReference; lastKnownFileType = file; path = "iwlwifi-so-a0-gf-a0.pnvm"; sourceTree = "<group>"; };
@@ -804,11 +808,7 @@
 		F8C2EC9024080556007A9422 /* timeout.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = timeout.h; sourceTree = "<group>"; };
 		F8C2EC9B2408062D007A9422 /* pcireg.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = pcireg.h; sourceTree = "<group>"; };
 		F8C4BF822420FAEB007F410E /* iwm-3160-17 */ = {isa = PBXFileReference; lastKnownFileType = text; path = "iwm-3160-17"; sourceTree = "<group>"; };
-		F8C4BF842420FAEB007F410E /* iwm-8000C-34 */ = {isa = PBXFileReference; lastKnownFileType = text; path = "iwm-8000C-34"; sourceTree = "<group>"; };
-		F8C4BF882420FAEC007F410E /* iwm-8265-34 */ = {isa = PBXFileReference; lastKnownFileType = text; path = "iwm-8265-34"; sourceTree = "<group>"; };
-		F8C4BF892420FAEC007F410E /* iwm-9000-34 */ = {isa = PBXFileReference; lastKnownFileType = text; path = "iwm-9000-34"; sourceTree = "<group>"; };
 		F8C4BF8A2420FAEC007F410E /* iwm-3168-29 */ = {isa = PBXFileReference; lastKnownFileType = text; path = "iwm-3168-29"; sourceTree = "<group>"; };
-		F8C4BF8B2420FAED007F410E /* iwm-9260-34 */ = {isa = PBXFileReference; lastKnownFileType = text; path = "iwm-9260-34"; sourceTree = "<group>"; };
 		F8C4BF8C2420FAED007F410E /* iwm-7265-17 */ = {isa = PBXFileReference; lastKnownFileType = text; path = "iwm-7265-17"; sourceTree = "<group>"; };
 		F8C4BF8F2420FAED007F410E /* iwm-7260-17 */ = {isa = PBXFileReference; lastKnownFileType = text; path = "iwm-7260-17"; sourceTree = "<group>"; };
 		F8C594D125FD935B0007D19C /* ieee80211_ra.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = ieee80211_ra.c; sourceTree = "<group>"; };
@@ -1025,14 +1025,14 @@
 		0250B31C23FD768400FF8CEA /* firmware */ = {
 			isa = PBXGroup;
 			children = (
+				A5213EBC27A0C3ED00D7EAB1 /* iwm-8000C-36 */,
+				A5213EBE27A0C3ED00D7EAB1 /* iwm-8265-36 */,
+				A5213EBB27A0C3EC00D7EAB1 /* iwm-9000-46 */,
+				A5213EBD27A0C3ED00D7EAB1 /* iwm-9260-46 */,
 				F8C4BF822420FAEB007F410E /* iwm-3160-17 */,
 				F8C4BF8A2420FAEC007F410E /* iwm-3168-29 */,
 				F8C4BF8F2420FAED007F410E /* iwm-7260-17 */,
 				F8C4BF8C2420FAED007F410E /* iwm-7265-17 */,
-				F8C4BF842420FAEB007F410E /* iwm-8000C-34 */,
-				F8C4BF882420FAEC007F410E /* iwm-8265-34 */,
-				F8C4BF892420FAEC007F410E /* iwm-9000-34 */,
-				F8C4BF8B2420FAED007F410E /* iwm-9260-34 */,
 				F8F884F6279128C400545F2C /* iwlwifi-QuZ-a0-jf-b0-68.ucode */,
 				F8F884F22791286E00545F2C /* iwlwifi-Qu-b0-jf-b0-68.ucode */,
 				F8F884F32791289200545F2C /* iwlwifi-Qu-c0-hr-b0-68.ucode */,

@@ -583,6 +583,26 @@ iwm_conf_msix_hw(struct iwm_softc *sc, int stopped)
 }
 
 int ItlIwm::
+iwm_clear_persistence_bit(struct iwm_softc *sc)
+{
+    uint32_t hpm, wprot;
+    
+    hpm = iwm_read_prph_unlocked(sc, IWM_HPM_DEBUG);
+    if (hpm != 0xa5a5a5a0 && (hpm & IWM_HPM_PERSISTENCE_BIT)) {
+        wprot = iwm_read_prph_unlocked(sc, IWM_PREG_PRPH_WPROT_9000);
+        if (wprot & IWM_PREG_WFPM_ACCESS) {
+            printf("%s: cannot clear persistence bit\n",
+                   DEVNAME(sc));
+            return EPERM;
+        }
+        iwm_write_prph_unlocked(sc, IWM_HPM_DEBUG,
+                                hpm & ~IWM_HPM_PERSISTENCE_BIT);
+    }
+    
+    return 0;
+}
+
+int ItlIwm::
 iwm_start_hw(struct iwm_softc *sc)
 {
     XYLog("%s\n", __FUNCTION__);
@@ -591,6 +611,12 @@ iwm_start_hw(struct iwm_softc *sc)
     err = iwm_prepare_card_hw(sc);
     if (err)
         return err;
+    
+    if (sc->sc_device_family == IWM_DEVICE_FAMILY_9000) {
+        err = iwm_clear_persistence_bit(sc);
+        if (err)
+            return err;
+    }
     
     /* Reset the entire device */
     IWM_WRITE(sc, IWM_CSR_RESET, IWM_CSR_RESET_REG_FLAG_SW_RESET);

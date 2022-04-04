@@ -388,7 +388,9 @@ iwm_lmac_scan(struct iwm_softc *sc, int bgscan)
         req->scan_flags |=
         htole32(IWM_LMAC_SCAN_FLAG_PRE_CONNECTION);
     if (isset(sc->sc_enabled_capa,
-              IWM_UCODE_TLV_CAPA_DS_PARAM_SET_IE_SUPPORT))
+              IWM_UCODE_TLV_CAPA_DS_PARAM_SET_IE_SUPPORT) &&
+              isset(sc->sc_enabled_capa,
+              IWM_UCODE_TLV_CAPA_WFA_TPC_REP_IE_SUPPORT))
         req->scan_flags |= htole32(IWM_LMAC_SCAN_FLAGS_RRM_ENABLED);
     
     req->flags = htole32(IWM_PHY_BAND_24);
@@ -639,6 +641,8 @@ iwm_umac_scan(struct iwm_softc *sc, int bgscan)
         req->v1.passive_dwell = 110;
         req->v1.fragmented_dwell = 44;
         req->v1.extended_dwell = 90;
+
+        req->v1.scan_priority = htole32(IWM_SCAN_PRIORITY_HIGH);
     }
     
     if (bgscan) {
@@ -656,8 +660,7 @@ iwm_umac_scan(struct iwm_softc *sc, int bgscan)
             req->v1.suspend_time = timeout;
         }
     }
-    
-    req->v1.scan_priority = htole32(IWM_SCAN_PRIORITY_HIGH);
+
     req->ooc_priority = htole32(IWM_SCAN_PRIORITY_HIGH);
     
     cmd_data = iwm_get_scan_req_umac_data(sc, req);
@@ -675,6 +678,10 @@ iwm_umac_scan(struct iwm_softc *sc, int bgscan)
     
     req->general_flags = htole32(IWM_UMAC_SCAN_GEN_FLAGS_PASS_ALL |
                                  IWM_UMAC_SCAN_GEN_FLAGS_ITER_COMPLETE);
+    if (isset(sc->sc_ucode_api, IWM_UCODE_TLV_API_ADAPTIVE_DWELL_V2)) {
+        req->v8.general_flags2 =
+        IWM_UMAC_SCAN_GEN_FLAGS2_ALLOW_CHNL_REORDER;
+    }
     
     /* Check if we're doing an active directed scan. */
     if (ic->ic_des_esslen != 0) {
@@ -695,7 +702,9 @@ iwm_umac_scan(struct iwm_softc *sc, int bgscan)
         req->general_flags |= htole32(IWM_UMAC_SCAN_GEN_FLAGS_PASSIVE);
     
     if (isset(sc->sc_enabled_capa,
-              IWM_UCODE_TLV_CAPA_DS_PARAM_SET_IE_SUPPORT))
+              IWM_UCODE_TLV_CAPA_DS_PARAM_SET_IE_SUPPORT) &&
+              isset(sc->sc_enabled_capa,
+              IWM_UCODE_TLV_CAPA_WFA_TPC_REP_IE_SUPPORT))
         req->general_flags |=
         htole32(IWM_UMAC_SCAN_GEN_FLAGS_RRM_ENABLED);
     
@@ -723,6 +732,27 @@ iwm_umac_scan(struct iwm_softc *sc, int bgscan)
     err = iwm_send_cmd(sc, &hcmd);
     ::free(req);
     return err;
+}
+
+void ItlIwm::
+iwm_mcc_update(struct iwm_softc *sc, struct iwm_mcc_chub_notif *notif)
+{
+    struct ieee80211com *ic = &sc->sc_ic;
+    struct _ifnet *ifp = IC2IFP(ic);
+    
+    snprintf(sc->sc_fw_mcc, sizeof(sc->sc_fw_mcc), "%c%c",
+             (le16toh(notif->mcc) & 0xff00) >> 8, le16toh(notif->mcc) & 0xff);
+    if (sc->sc_fw_mcc_int != notif->mcc && sc->sc_ic.ic_event_handler) {
+        (*sc->sc_ic.ic_event_handler)(&sc->sc_ic, IEEE80211_EVT_COUNTRY_CODE_UPDATE, NULL);
+    }
+    sc->sc_fw_mcc_int = notif->mcc;
+    
+    if (ifp->if_flags & IFF_DEBUG) {
+        DPRINTFN(3, ("%s: firmware has detected regulatory domain '%s' "
+               "(0x%x)\n", DEVNAME(sc), sc->sc_fw_mcc, le16toh(notif->mcc)));
+    }
+    
+    /* TODO: Schedule a task to send MCC_UPDATE_CMD? */
 }
 
 uint8_t ItlIwm::

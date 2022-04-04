@@ -1163,22 +1163,28 @@ iwm_rx_pkt(struct iwm_softc *sc, struct iwm_rx_data *data, struct mbuf_list *ml)
             case IWM_MCC_CHUB_UPDATE_CMD: {
                 struct iwm_mcc_chub_notif *notif;
                 SYNC_RESP_STRUCT(notif, pkt, struct iwm_mcc_chub_notif *);
-                
-                sc->sc_fw_mcc[0] = (notif->mcc & 0xff00) >> 8;
-                sc->sc_fw_mcc[1] = notif->mcc & 0xff;
-                sc->sc_fw_mcc[2] = '\0';
-
-                if (sc->sc_fw_mcc_int != notif->mcc && sc->sc_ic.ic_event_handler) {
-                    (*sc->sc_ic.ic_event_handler)(&sc->sc_ic, IEEE80211_EVT_COUNTRY_CODE_UPDATE, NULL);
-                }
-
-                sc->sc_fw_mcc_int = notif->mcc;
+                iwm_mcc_update(sc, notif);
+                break;
             }
                 
             case IWM_DTS_MEASUREMENT_NOTIFICATION:
             case IWM_WIDE_ID(IWM_PHY_OPS_GROUP,
                              IWM_DTS_MEASUREMENT_NOTIF_WIDE):
+            case IWM_WIDE_ID(IWM_PHY_OPS_GROUP,
+                             IWM_TEMP_REPORTING_THRESHOLDS_CMD):
                 break;
+
+            case IWM_WIDE_ID(IWM_PHY_OPS_GROUP,
+                             IWM_CT_KILL_NOTIFICATION): {
+                struct iwm_ct_kill_notif *notif;
+                SYNC_RESP_STRUCT(notif, pkt, struct iwm_ct_kill_notif *);
+                XYLog("%s: device at critical temperature (%u degC), "
+                       "stopping device\n",
+                       DEVNAME(sc), le16toh(notif->temperature));
+                sc->sc_flags |= IWM_FLAG_HW_ERR;
+                task_add(systq, &sc->init_task);
+                break;
+            }
                 
             case IWM_ADD_STA_KEY:
             case IWM_PHY_CONFIGURATION_CMD:
@@ -1313,6 +1319,9 @@ iwm_rx_pkt(struct iwm_softc *sc, struct iwm_rx_data *data, struct mbuf_list *ml)
             }
                 
             case IWM_WIDE_ID(IWM_DATA_PATH_GROUP, IWM_DQA_ENABLE_CMD):
+                break;
+
+            case IWM_WIDE_ID(IWM_SYSTEM_GROUP, IWM_SOC_CONFIGURATION_CMD):
                 break;
                 
             default:
