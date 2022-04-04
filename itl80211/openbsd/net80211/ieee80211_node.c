@@ -1049,7 +1049,8 @@ ieee80211_match_bss(struct ieee80211com *ic, struct ieee80211_node *ni,
     int fail;
     
     fail = 0;
-    if (isclr(ic->ic_chan_active, ieee80211_chan2ieee(ic, ni->ni_chan)))
+    if ((ic->ic_flags & IEEE80211_F_BGSCAN) == 0 &&
+        isclr(ic->ic_chan_active, ieee80211_chan2ieee(ic, ni->ni_chan)))
         fail |= IEEE80211_NODE_ASSOCFAIL_CHAN;
     if (ic->ic_des_chan != IEEE80211_CHAN_ANYC &&
         ni->ni_chan != ic->ic_des_chan)

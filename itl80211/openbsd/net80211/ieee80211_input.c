@@ -2127,7 +2127,9 @@ ieee80211_recv_probe_resp(struct ieee80211com *ic, mbuf_t m,
 #if IEEE80211_CHAN_MAX < 255
         chan > IEEE80211_CHAN_MAX ||
 #endif
-        isclr(ic->ic_chan_active, chan)) {
+        (isclr(ic->ic_chan_active, chan) &&
+         ((ic->ic_caps & IEEE80211_C_SCANALL) == 0 ||
+          (ic->ic_flags & IEEE80211_F_BGSCAN) == 0))) {
         DPRINTF(("ignore %s with invalid channel %u\n",
                  isprobe ? "probe response" : "beacon", chan));
         ic->ic_stats.is_rx_badchan++;
