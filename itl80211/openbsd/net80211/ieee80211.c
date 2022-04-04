@@ -1167,8 +1167,8 @@ ieee80211_setmode(struct ieee80211com *ic, enum ieee80211_phymode mode)
         IEEE80211_CHAN_B,    /* IEEE80211_MODE_11B */
         IEEE80211_CHAN_PUREG,    /* IEEE80211_MODE_11G */
         IEEE80211_CHAN_HT,    /* IEEE80211_MODE_11N */
-        IEEE80211_CHAN_VHT,    /* IEEE80211_MODE_11AC */
-        IEEE80211_CHAN_VHT,    /* IEEE80211_MODE_11AX */
+        IEEE80211_CHAN_VHT | IEEE80211_CHAN_HT,    /* IEEE80211_MODE_11AC */
+        IEEE80211_CHAN_VHT | IEEE80211_CHAN_HT,    /* IEEE80211_MODE_11AX */
     };
     const struct ieee80211_channel *c;
     u_int modeflags;
@@ -1193,7 +1193,7 @@ ieee80211_setmode(struct ieee80211com *ic, enum ieee80211_phymode mode)
         if (mode == IEEE80211_MODE_AUTO) {
             if (c->ic_flags != 0)
                 break;
-        } else if ((c->ic_flags & modeflags) == modeflags)
+        } else if ((c->ic_flags & modeflags) != 0)
             break;
     }
     if (i > IEEE80211_CHAN_MAX) {
@@ -1210,7 +1210,7 @@ ieee80211_setmode(struct ieee80211com *ic, enum ieee80211_phymode mode)
         if (mode == IEEE80211_MODE_AUTO) {
             if (c->ic_flags != 0)
                 setbit(ic->ic_chan_active, i);
-        } else if ((c->ic_flags & modeflags) == modeflags)
+        } else if ((c->ic_flags & modeflags) != 0)
             setbit(ic->ic_chan_active, i);
     }
     /*
