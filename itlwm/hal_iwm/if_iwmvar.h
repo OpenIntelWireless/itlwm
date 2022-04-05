@@ -492,6 +492,11 @@ struct iwm_tx_ba {
    struct iwm_node *    wn;
 };
 
+struct iwm_ba_task_data {
+    uint32_t        start_tidmask;
+    uint32_t        stop_tidmask;
+};
+
 struct iwm_softc {
 	struct device sc_dev;
 	struct ieee80211com sc_ic;
@@ -511,12 +516,8 @@ struct iwm_softc {
 
 	/* Task for firmware BlockAck setup/teardown and its arguments. */
 	struct task		ba_task;
-	int			ba_tx_start;
-	int			ba_tx_tid;
-    uint16_t        ba_tx_winsize;
-    int         ba_tx;
-    uint32_t                ba_start_tidmask;
-    uint32_t                ba_stop_tidmask;
+	struct iwm_ba_task_data    ba_rx;
+    struct iwm_ba_task_data    ba_tx;
 
     /* Task for ERP/HT prot/slot-time/EDCA updates. */
     struct task		mac_ctxt_task;

@@ -206,7 +206,7 @@ public:
                                      uint8_t);
     static void   iwm_rx_ba_session_expired(void *);
     static void   iwm_reorder_timer_expired(void *);
-    void    iwm_sta_rx_agg(struct iwm_softc *, struct ieee80211_node *, uint8_t,
+    int    iwm_sta_rx_agg(struct iwm_softc *, struct ieee80211_node *, uint8_t,
                            uint16_t, uint16_t, int, int);
     static int    iwm_ampdu_tx_start(struct ieee80211com *, struct ieee80211_node *,
                               uint8_t);
