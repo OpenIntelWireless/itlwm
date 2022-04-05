@@ -997,7 +997,7 @@ iwm_ampdu_txq_advance(struct iwm_softc *sc, struct iwm_tx_ring *ring, int idx)
     while (ring->tail != idx) {
         txd = &ring->data[ring->tail];
         if (txd->m != NULL) {
-            if (ring->qid < sc->first_agg_txq)
+            if (ring->qid < IWM_FIRST_AGG_TX_QUEUE)
                 DPRINTF(("%s: missed Tx completion: tail=%d "
                          "idx=%d\n", __func__, ring->tail, idx));
             iwm_reset_sched(sc, ring->qid, ring->tail, IWM_STATION_ID);
@@ -1165,7 +1165,7 @@ iwm_ampdu_tx_done(struct iwm_softc *sc, struct iwm_cmd_header *cmd_hdr,
     struct iwm_agg_tx_status *agg_status)
 {
     struct ieee80211com *ic = &sc->sc_ic;
-    int tid = cmd_hdr->qid - sc->first_agg_txq;
+    int tid = cmd_hdr->qid - IWM_FIRST_AGG_TX_QUEUE;
     struct iwm_tx_data *txdata = &txq->data[cmd_hdr->idx];
     struct ieee80211_node *ni = &in->in_ni;
     int txfail = (status != IWM_TX_STATUS_SUCCESS &&
@@ -1450,9 +1450,11 @@ iwm_rx_tx_cmd(struct iwm_softc *sc, struct iwm_rx_packet *pkt,
     /* Sanity checks. */
     if (sizeof(*tx_resp) > len)
         return;
-    if (qid < sc->first_agg_txq && tx_resp->frame_count > 1)
+    if (qid < IWM_FIRST_AGG_TX_QUEUE && tx_resp->frame_count > 1)
         return;
-    if (qid >= sc->first_agg_txq && sizeof(*tx_resp) + sizeof(ssn) +
+    if (qid > IWM_LAST_AGG_TX_QUEUE)
+        return;
+    if (sizeof(*tx_resp) + sizeof(ssn) +
         tx_resp->frame_count * sizeof(tx_resp->status) > len)
         return;
     
@@ -1477,7 +1479,7 @@ iwm_rx_tx_cmd(struct iwm_softc *sc, struct iwm_rx_packet *pkt,
     
     memcpy(&ssn, &tx_resp->status + tx_resp->frame_count, sizeof(ssn));
     ssn = le32toh(ssn) & 0xfff;
-    if (qid >= sc->first_agg_txq) {
+    if (qid >= IWM_FIRST_AGG_TX_QUEUE) {
         int status;
         status = le16toh(tx_resp->status.status) & IWM_TX_STATUS_MSK;
         iwm_ampdu_tx_done(sc, cmd_hdr, txd->in, ring,
@@ -2540,7 +2542,7 @@ iwm_run_stop(struct iwm_softc *sc)
             sc->sc_rx_ba_sessions--;
     }
     for (tid = 0; tid < IWM_MAX_TID_COUNT; tid++) {
-        int qid = sc->first_agg_txq + tid;
+        int qid = IWM_FIRST_AGG_TX_QUEUE + tid;
         struct iwm_tx_ring *ring = &sc->txq[qid];
         if ((sc->agg_queue_mask & (1 << qid)) == 0)
             continue;
@@ -2986,7 +2988,6 @@ iwm_ampdu_tx_start(struct ieee80211com *ic, struct ieee80211_node *ni, uint8_t t
     struct ieee80211_tx_ba *ba = &ni->ni_tx_ba[tid];
     struct iwm_softc *sc = (struct iwm_softc *)ic->ic_softc;
     ItlIwm *that = container_of(sc, ItlIwm, com);
-    int qid = sc->first_agg_txq + tid;
     
     /* We only implement Tx aggregation with DQA-capable firmware. */
     if (!isset(sc->sc_enabled_capa, IWM_UCODE_TLV_CAPA_DQA_SUPPORT))
@@ -3608,8 +3609,6 @@ iwm_init(struct _ifnet *ifp)
     int err, generation;
     
     //    rw_assert_wrlock(&sc->ioctl_rwl);
-    
-    sc->first_agg_txq = IWM_FIRST_AGG_TX_QUEUE;
     sc->agg_tid_disable = 0xffff;
     sc->agg_queue_mask = 0;
     memset(sc->sc_tx_ba, 0, sizeof(sc->sc_tx_ba));
@@ -5166,7 +5165,7 @@ iwm_ba_task(void *arg)
         if (sc->sc_flags & IWM_FLAG_SHUTDOWN)
             break;
         struct ieee80211_tx_ba *ba = &ni->ni_tx_ba[tid];
-        int qid = sc->first_agg_txq + tid;
+        int qid = IWM_FIRST_AGG_TX_QUEUE + tid;
         struct iwm_tx_ring *ring = &sc->txq[qid];
         uint16_t ssn = ba->ba_winstart;
         if (sc->ba_tx.start_tidmask & (1 << tid)) {

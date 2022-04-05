@@ -640,7 +640,6 @@ struct iwm_softc {
 #define IWM_MAX_BAID   32
     struct iwm_rxba_data sc_rxba_data[IWM_MAX_BAID];
     
-    int first_agg_txq;
     int agg_queue_mask;
     int agg_tid_disable;
     struct iwm_tx_ba sc_tx_ba[IEEE80211_NUM_TID];
