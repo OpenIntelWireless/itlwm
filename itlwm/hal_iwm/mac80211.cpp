@@ -1601,7 +1601,6 @@ iwm_tx_fill_cmd(struct iwm_softc *sc, struct iwm_node *in,
         ridx = sc->sc_fixed_ridx;
     }
 
-    XYLog("%s ridx=%d\n", __FUNCTION__, ridx);
     rinfo = &iwm_rates[ridx];
     if (iwm_is_mimo_ht_plcp(rinfo->ht_plcp) || iwm_is_mimo_vht_plcp(rinfo->vht_plcp))
         rate_flags = IWM_RATE_MCS_ANT_AB_MSK;

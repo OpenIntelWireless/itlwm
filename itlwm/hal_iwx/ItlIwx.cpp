@@ -7168,8 +7168,9 @@ iwx_add_sta_cmd(struct iwx_softc *sc, struct iwx_node *in, int update)
     |= htole32(IWX_STA_FLG_FAT_EN_MSK | IWX_STA_FLG_MIMO_EN_MSK);
     add_sta_cmd.tid_disable_tx = htole16(0xffff);
         
-    if (in->in_ni.ni_flags & IEEE80211_NODE_HT || in->in_ni.ni_flags & IEEE80211_NODE_VHT) {
-        XYLog("%s line=%d\n", __FUNCTION__, __LINE__);
+    if ((in->in_ni.ni_flags & IEEE80211_NODE_HT) ||
+        (in->in_ni.ni_flags & IEEE80211_NODE_VHT) ||
+        (in->in_ni.ni_flags & IEEE80211_NODE_HE)) {
         add_sta_cmd.station_flags_msk
         |= htole32(IWX_STA_FLG_MAX_AGG_SIZE_MSK |
                    IWX_STA_FLG_AGG_MPDU_DENS_MSK);
@@ -8884,15 +8885,12 @@ iwx_rs_init(struct iwx_softc *sc, struct iwx_node *in, bool update)
         cfg_cmd.non_ht_rates |= (1 << idx);
     }
     if (ni->ni_flags & IEEE80211_NODE_HE) {
-        XYLog("%s line=%d\n", __FUNCTION__, __LINE__);
         cfg_cmd.mode = IWX_TLC_MNG_MODE_HE;
         iwx_rs_fw_he_set_enabled_rates(sc, &cfg_cmd);
     } else if (ni->ni_flags & IEEE80211_NODE_VHT) {
-        XYLog("%s line=%d\n", __FUNCTION__, __LINE__);
         cfg_cmd.mode = IWX_TLC_MNG_MODE_VHT;
         iwx_rs_fw_vht_set_enabled_rates(sc, &cfg_cmd);
     } else if (ni->ni_flags & IEEE80211_NODE_HT) {
-        XYLog("%s line=%d\n", __FUNCTION__, __LINE__);
         cfg_cmd.mode = IWX_TLC_MNG_MODE_HT;
         cfg_cmd.ht_rates[IWX_TLC_NSS_1][IWX_TLC_MCS_PER_BW_80] = htole16(iwx_rs_ht_rates(sc, ni, ni->ni_chw == IEEE80211_CHAN_WIDTH_40 ? IEEE80211_HT_RATESET_CBW40_SISO : IEEE80211_HT_RATESET_SISO));
         if (ni->ni_rx_nss > 1)

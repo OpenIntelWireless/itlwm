@@ -315,8 +315,8 @@ iwm_add_sta_cmd(struct iwm_softc *sc, struct iwm_node *in, int update, unsigned 
     if (update)
         add_sta_cmd.modify_mask |= (IWM_STA_MODIFY_TID_DISABLE_TX);
     
-    if (in->in_ni.ni_flags & IEEE80211_NODE_HT) {
-        XYLog("%s line=%d\n", __FUNCTION__, __LINE__);
+    if ((in->in_ni.ni_flags & IEEE80211_NODE_HT) ||
+        (in->in_ni.ni_flags & IEEE80211_NODE_VHT)) {
         add_sta_cmd.station_flags_msk
         |= htole32(IWM_STA_FLG_MAX_AGG_SIZE_MSK |
                    IWM_STA_FLG_AGG_MPDU_DENS_MSK);
