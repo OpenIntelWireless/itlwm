@@ -96,6 +96,7 @@ void ieee80211_node_join_ht(struct ieee80211com *, struct ieee80211_node *);
 void ieee80211_node_join_rsn(struct ieee80211com *, struct ieee80211_node *);
 void ieee80211_node_join_11g(struct ieee80211com *, struct ieee80211_node *);
 void ieee80211_node_leave_ht(struct ieee80211com *, struct ieee80211_node *);
+void ieee80211_node_leave_vht(struct ieee80211com *, struct ieee80211_node *);
 void ieee80211_node_leave_rsn(struct ieee80211com *, struct ieee80211_node *);
 void ieee80211_node_leave_11g(struct ieee80211com *, struct ieee80211_node *);
 void ieee80211_inact_timeout(void *);
@@ -3156,6 +3157,15 @@ ieee80211_node_join(struct ieee80211com *ic, struct ieee80211_node *ni,
 }
 
 /*
+ * Handle a VHT STA leaving a VHT network.
+ */
+void
+ieee80211_node_leave_vht(struct ieee80211com *ic, struct ieee80211_node *ni)
+{
+    ieee80211_clear_vhtcaps(ni);
+}
+
+/*
  * Handle an HT STA leaving an HT network.
  */
 void
@@ -3297,6 +3307,9 @@ ieee80211_node_leave(struct ieee80211com *ic, struct ieee80211_node *ni)
     if (ni->ni_flags & IEEE80211_NODE_HT)
         ieee80211_node_leave_ht(ic, ni);
     
+    if (ni->ni_flags & IEEE80211_NODE_VHT)
+        ieee80211_node_leave_vht(ic, ni);
+
     if (ic->ic_node_leave != NULL)
         (*ic->ic_node_leave)(ic, ni);
     

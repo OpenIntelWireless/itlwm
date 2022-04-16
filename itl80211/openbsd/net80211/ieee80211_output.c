@@ -334,6 +334,12 @@ const struct ieee80211_edca_ac_params
 		[EDCA_AC_VI] = { 3,  4, 2,  94 },
 		[EDCA_AC_VO] = { 2,  3, 2,  47 }
 	},
+    [IEEE80211_MODE_11AC] = {
+        [EDCA_AC_BK] = { 4, 10, 7,   0 },
+        [EDCA_AC_BE] = { 4, 10, 3,   0 },
+        [EDCA_AC_VI] = { 3,  4, 2,  94 },
+        [EDCA_AC_VO] = { 2,  3, 2,  47 }
+    },
 };
 
 #ifndef IEEE80211_STA_ONLY
@@ -363,6 +369,12 @@ const struct ieee80211_edca_ac_params
 		[EDCA_AC_VI] = { 3,  4, 1,  94 },
 		[EDCA_AC_VO] = { 2,  3, 1,  47 }
 	},
+    [IEEE80211_MODE_11AC] = {
+        [EDCA_AC_BK] = { 4, 10, 7,   0 },
+        [EDCA_AC_BE] = { 4,  6, 3,   0 },
+        [EDCA_AC_VI] = { 3,  4, 1,  94 },
+        [EDCA_AC_VO] = { 2,  3, 1,  47 }
+    },
 };
 #endif	/* IEEE80211_STA_ONLY */
 
