@@ -675,6 +675,9 @@ void ieee80211_setup_htcaps(struct ieee80211_node *, const uint8_t *,
 void ieee80211_clear_htcaps(struct ieee80211_node *);
 int ieee80211_setup_htop(struct ieee80211_node *, const uint8_t *,
     uint8_t, int);
+void ieee80211_setup_vhtcaps(struct ieee80211com *, struct ieee80211_node *, const uint8_t *);
+void ieee80211_setup_vhtopmode(struct ieee80211_node *, const uint8_t *);
+void ieee80211_clear_vhtcaps(struct ieee80211_node *);
 void ieee80211_setup_hecaps(struct ieee80211_node *, const uint8_t *,
                            uint8_t);
 int ieee80211_setup_heop(struct ieee80211_node *, const uint8_t *,
