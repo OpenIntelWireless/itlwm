@@ -21,4 +21,4 @@ do
 done
 
 script_file="${PROJECT_DIR}/scripts/zlib_compress_fw.py"
-python "${script_file}" "${target_file}" "${fw_files}"
+python3 "${script_file}" "${target_file}" "${fw_files}"
