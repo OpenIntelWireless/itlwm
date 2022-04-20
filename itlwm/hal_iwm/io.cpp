@@ -232,7 +232,7 @@ iwm_nic_lock(struct iwm_softc *sc)
     IWM_SETBITS(sc, IWM_CSR_GP_CNTRL,
         IWM_CSR_GP_CNTRL_REG_FLAG_MAC_ACCESS_REQ);
 
-    if (sc->sc_device_family == IWM_DEVICE_FAMILY_8000)
+    if (sc->sc_device_family >= IWM_DEVICE_FAMILY_8000)
         DELAY(2);
 
     if (iwm_poll_bit(sc, IWM_CSR_GP_CNTRL,
