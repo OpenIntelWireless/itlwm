@@ -224,7 +224,6 @@ int ItlIwm::
 iwm_nic_lock(struct iwm_softc *sc)
 {
     if (sc->sc_nic_locks > 0) {
-        iwm_nic_assert_locked(sc);
         sc->sc_nic_locks++;
         return 1; /* already locked */
     }
