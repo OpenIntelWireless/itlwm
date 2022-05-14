@@ -207,6 +207,7 @@ public:
     int iwx_get_num_sections(const struct iwx_fw_sects *fws, int start);
     int    iwx_init_fw_sec(struct iwx_softc *, const struct iwx_fw_sects *,
             struct iwx_context_info_dram *);
+    void    iwx_fw_version_str(char *, size_t, uint32_t, uint32_t, uint32_t);
     int    iwx_firmware_store_section(struct iwx_softc *, enum iwx_ucode_type,
             uint8_t *, size_t);
     int    iwx_set_default_calib(struct iwx_softc *, const void *);

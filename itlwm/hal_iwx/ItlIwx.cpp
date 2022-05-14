@@ -839,6 +839,20 @@ iwx_init_fw_sec(struct iwx_softc *sc, const struct iwx_fw_sects *fws,
     return 0;
 }
 
+void ItlIwx::
+iwx_fw_version_str(char *buf, size_t bufsize,
+                   uint32_t major, uint32_t minor, uint32_t api)
+{
+    /*
+     * Starting with major version 35 the Linux driver prints the minor
+     * version in hexadecimal.
+     */
+    if (major >= 35)
+        snprintf(buf, bufsize, "%u.%08x.%u", major, minor, api);
+    else
+        snprintf(buf, bufsize, "%u.%u.%u", major, minor, api);
+}
+
 int ItlIwx::
 iwx_alloc_fw_monitor_block(struct iwx_softc *sc, uint8_t max_power,
                            uint8_t min_power)
@@ -1417,7 +1431,7 @@ iwx_read_firmware(struct iwx_softc *sc)
         goto out;
     }
     
-    snprintf(sc->sc_fwver, sizeof(sc->sc_fwver), "%d.%d (API ver %d)",
+    iwx_fw_version_str(sc->sc_fwver, sizeof(sc->sc_fwver),
              IWX_UCODE_MAJOR(le32toh(uhdr->ver)),
              IWX_UCODE_MINOR(le32toh(uhdr->ver)),
              IWX_UCODE_API(le32toh(uhdr->ver)));
@@ -1615,8 +1629,7 @@ iwx_read_firmware(struct iwx_softc *sc)
                     err = EINVAL;
                     goto parse_out;
                 }
-                snprintf(sc->sc_fwver, sizeof(sc->sc_fwver),
-                         "%u.%u.%u",
+                iwx_fw_version_str(sc->sc_fwver, sizeof(sc->sc_fwver),
                          le32toh(((uint32_t *)tlv_data)[0]),
                          le32toh(((uint32_t *)tlv_data)[1]),
                          le32toh(((uint32_t *)tlv_data)[2]));
