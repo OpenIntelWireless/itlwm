@@ -367,7 +367,6 @@ struct iwx_rx_ring {
 	struct iwx_dma_info	free_desc_dma;
 	struct iwx_dma_info	stat_dma;
 	struct iwx_dma_info	used_desc_dma;
-	struct iwx_dma_info	buf_dma;
 	void			*desc;
 	void	        *stat;
 	struct iwx_rx_data	data[IWX_RX_MQ_RING_COUNT];
