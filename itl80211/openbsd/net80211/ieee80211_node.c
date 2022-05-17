@@ -1458,19 +1458,21 @@ ieee80211_end_scan(struct _ifnet *ifp)
             return;
         }
 #endif
-        /*
-         * Reset the list of channels to scan and scan the next mode
-         * if nothing has been found.
-         * If the device scans all bands in one fell swoop, return
-         * current scan results to userspace regardless of mode.
-         * This will loop forever until an access point is found.
-         */
-        ieee80211_reset_scan(ifp);
-        if (ieee80211_next_mode(ifp) == IEEE80211_MODE_AUTO ||
-            (ic->ic_caps & IEEE80211_C_SCANALLBAND))
-            ic->ic_scan_count++;
-        
-        ieee80211_next_scan(ifp);
+        if (ic->ic_state != IEEE80211_S_RUN) {
+            /*
+             * Reset the list of channels to scan and scan the next mode
+             * if nothing has been found.
+             * If the device scans all bands in one fell swoop, return
+             * current scan results to userspace regardless of mode.
+             * This will loop forever until an access point is found.
+             */
+            ieee80211_reset_scan(ifp);
+            if (ieee80211_next_mode(ifp) == IEEE80211_MODE_AUTO ||
+                (ic->ic_caps & IEEE80211_C_SCANALLBAND))
+                ic->ic_scan_count++;
+            
+            ieee80211_next_scan(ifp);
+        }
         return;
     }
     
@@ -1486,6 +1488,7 @@ ieee80211_end_scan(struct _ifnet *ifp)
         if (selbs == NULL || curbs == NULL) {
             ic->ic_flags &= ~IEEE80211_F_BGSCAN;
             ic->ic_flags &= ~IEEE80211_F_DISABLE_BG_AUTO_CONNECT;
+            XYLog("%s %d AP disappeared? Should not happen.\n", __FUNCTION__, __LINE__);
             goto notfound;
         }
         
