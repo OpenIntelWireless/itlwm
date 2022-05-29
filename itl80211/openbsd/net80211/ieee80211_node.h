@@ -495,7 +495,9 @@ struct ieee80211_node {
 	void *			ni_unref_arg;
 	size_t 			ni_unref_arg_size;
     
+#ifdef AIRPORT
     uint8_t verb[0x1024];//冗余信息 zxy
+#endif
 };
 
 RB_HEAD(ieee80211_tree, ieee80211_node);
