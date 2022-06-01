@@ -370,6 +370,7 @@ bool AirportItlwm::start(IOService *provider)
         super::stop(pciNub);
         return false;
     }
+    _fWorkloop = OSDynamicCast(IO80211WorkLoop, getWorkLoop());
     if (_fWorkloop == NULL) {
         XYLog("No _fWorkloop!!\n");
         super::stop(pciNub);
@@ -490,17 +491,6 @@ bool AirportItlwm::initPCIPowerManagment(IOPCIDevice *provider)
     return true;
 }
 
-bool AirportItlwm::createWorkLoop()
-{
-    _fWorkloop = IO80211WorkLoop::workLoop();
-    return _fWorkloop != 0;
-}
-
-IOWorkLoop *AirportItlwm::getWorkLoop() const
-{
-    return _fWorkloop;
-}
-
 IOReturn AirportItlwm::selectMedium(const IONetworkMedium *medium)
 {
     setSelectedMedium(medium);
@@ -591,7 +581,7 @@ void AirportItlwm::releaseAll()
             fWatchdogWorkLoop->release();
             fWatchdogWorkLoop = NULL;
         }
-        _fWorkloop->release();
+//        _fWorkloop->release();
         _fWorkloop = NULL;
     }
     unregistPM();
@@ -930,6 +920,7 @@ void AirportItlwm::setPowerStateOn()
     pmPolicyMaker->acknowledgeSetPowerState();
 }
 
+#if __IO80211_TARGET >= __MAC_10_11
 int AirportItlwm::
 outputRaw80211Packet(IO80211Interface *interface, mbuf_t m)
 {
@@ -937,6 +928,7 @@ outputRaw80211Packet(IO80211Interface *interface, mbuf_t m)
     freePacket(m);
     return kIOReturnOutputDropped;
 }
+#endif
 
 UInt32 AirportItlwm::
 hardwareOutputQueueDepth(IO80211Interface *interface)

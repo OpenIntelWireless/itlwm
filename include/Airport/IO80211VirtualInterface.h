@@ -52,7 +52,9 @@ public:
                                            unsigned long   stateNumber,
                                            IOService *     whatDevice ) APPLE_KEXT_OVERRIDE;
     virtual bool init(IO80211Controller *,ether_addr *,UInt,char const*);
+#if __IO80211_TARGET >= __MAC_10_12
     virtual bool createPeerManager(ether_addr *,IO80211PeerManager **);
+#endif
     virtual IOMediumType getMediumType();
     virtual void setLinkState(IO80211LinkState,UInt);
     virtual bool dequeueOutputPacketsWithServiceClass(UInt,IOMbufServiceClass,mbuf_t*,mbuf_t*,UInt *,unsigned long long *);
@@ -63,8 +65,10 @@ public:
     virtual IOReturn controllerWillChangePowerState(IO80211Controller *,unsigned long,UInt,IOService *);
     virtual IOReturn controllerDidChangePowerState(IO80211Controller *,unsigned long,UInt,IOService *);
     virtual bool handleDebugCmd(apple80211_debug_command *);
+#if __IO80211_TARGET >= __MAC_10_12
     virtual IOReturn postPeerPresence(ether_addr *,int,int,int,char *);
     virtual IOReturn postPeerAbsence(ether_addr *);
+#endif
 #if __IO80211_TARGET >= __MAC_10_15
     virtual IOReturn postPeerPresenceIPv6(ether_addr *,int,int,int,char *,unsigned char *);
 #endif
@@ -75,9 +79,11 @@ public:
     virtual void outputStart(UInt);
     virtual UInt32 configureAQMOutput();
     virtual void setUnitNumber(char const*);
+#if __IO80211_TARGET >= __MAC_10_12
     virtual bool initIfnetEparams(ifnet_init_eparams *);
     virtual bool attachToBpf();
     virtual bool configureIfnet();
+#endif
     OSMetaClassDeclareReservedUnused( IO80211VirtualInterface,  0);
     OSMetaClassDeclareReservedUnused( IO80211VirtualInterface,  1);
     OSMetaClassDeclareReservedUnused( IO80211VirtualInterface,  2);

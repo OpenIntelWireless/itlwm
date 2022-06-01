@@ -38,7 +38,9 @@ public:
                                            unsigned long   stateNumber,
                                            IOService *     whatDevice ) APPLE_KEXT_OVERRIDE;
     virtual bool init(IO80211Controller *,ether_addr *,uint,char const*) APPLE_KEXT_OVERRIDE;
+#if __IO80211_TARGET >= __MAC_10_12
     virtual bool createPeerManager(ether_addr *,IO80211PeerManager **) APPLE_KEXT_OVERRIDE;
+#endif
     virtual IOMediumType getMediumType() APPLE_KEXT_OVERRIDE;
     virtual void setLinkState(IO80211LinkState,uint) APPLE_KEXT_OVERRIDE;
     virtual bool dequeueOutputPacketsWithServiceClass(uint,IOMbufServiceClass,mbuf_t*,mbuf_t*,UInt *,unsigned long long *) APPLE_KEXT_OVERRIDE;
@@ -49,8 +51,10 @@ public:
     virtual IOReturn controllerWillChangePowerState(IO80211Controller *,unsigned long,UInt,IOService *) APPLE_KEXT_OVERRIDE;
     virtual IOReturn controllerDidChangePowerState(IO80211Controller *,unsigned long,UInt,IOService *) APPLE_KEXT_OVERRIDE;
     virtual bool handleDebugCmd(apple80211_debug_command *) APPLE_KEXT_OVERRIDE;
+#if __IO80211_TARGET >= __MAC_10_12
     virtual IOReturn postPeerPresence(ether_addr *,int,int,int,char *) APPLE_KEXT_OVERRIDE;
     virtual IOReturn postPeerAbsence(ether_addr *) APPLE_KEXT_OVERRIDE;
+#endif
 #if __IO80211_TARGET >= __MAC_10_15
     virtual IOReturn postPeerPresenceIPv6(ether_addr *,int,int,int,char *,unsigned char *) APPLE_KEXT_OVERRIDE;
 #endif
@@ -61,9 +65,11 @@ public:
     virtual void outputStart(uint) APPLE_KEXT_OVERRIDE;
     virtual UInt32 configureAQMOutput() APPLE_KEXT_OVERRIDE;
     virtual void setUnitNumber(char const*) APPLE_KEXT_OVERRIDE;
+#if __IO80211_TARGET >= __MAC_10_12
     virtual bool initIfnetEparams(ifnet_init_eparams *) APPLE_KEXT_OVERRIDE;
     virtual bool attachToBpf() APPLE_KEXT_OVERRIDE;
     virtual bool configureIfnet() APPLE_KEXT_OVERRIDE;
+#endif
     OSMetaClassDeclareReservedUnused( IO80211P2PInterface,  0);
     OSMetaClassDeclareReservedUnused( IO80211P2PInterface,  1);
     OSMetaClassDeclareReservedUnused( IO80211P2PInterface,  2);
@@ -93,7 +99,9 @@ public:
 #if __IO80211_TARGET >= __MAC_10_15
     void notifyHostapState(apple80211_hostap_state *);
 #endif
+#if __IO80211_TARGET >= __MAC_10_13
     bool isAwdlAssistedDiscoveryEnabled(void);
+#endif
     void handleChannelSwitchAnnouncement(apple80211_channel_switch_announcement *);
     void awdlSetUnitNumber(char const*);
     void awdlInit(void);

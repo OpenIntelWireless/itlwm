@@ -112,7 +112,9 @@ public:
     virtual void setEnabledBySystem(bool);
 
     virtual bool setLinkState(IO80211LinkState, unsigned int);
+#if __IO80211_TARGET >= __MAC_10_11
     virtual bool setLinkState(IO80211LinkState, int, unsigned int);
+#endif
     virtual UInt32 outputPacket(mbuf_t, void*);
 
     virtual bool setLinkQualityMetric(int);
@@ -213,7 +215,9 @@ public:
     IOReturn reportDataTransferRates(void);
     IOReturn reportDataTransferRatesGated(void);
     IOReturn reportDataTransferRatesStatic(void *);
+#if __IO80211_TARGET >= __MAC_10_13
     IOReturn reportTransmitCompletionStatus(mbuf_t,int,UInt,UInt,UInt);
+#endif
     void reportTransmitStatus(mbuf_t,int,packet_info_tx *);
     void reportTxStatistics(apple80211_txstats *);
     void resetLeakyApStats(void);
@@ -230,11 +234,15 @@ public:
     void setDataPathState(bool);
     IOReturn setDataPointerAndLengthForMessageType(apple80211_postMessage_tlv_types,void **,unsigned long *);
     void setDebugFlags(unsigned long long,UInt);
+#if __IO80211_TARGET >= __MAC_10_13
     bool setFrameStats(apple80211_stat_report *,apple80211_frame_counters *);
+#endif
     bool setInterfaceCCA(apple80211_channel,int);
+#if __IO80211_TARGET >= __MAC_10_13
     bool setInterfaceChipCounters(apple80211_stat_report *,apple80211_chip_counters_tx *,apple80211_chip_error_counters_tx *,apple80211_chip_counters_rx *);
     bool setInterfaceExtendedCCA(apple80211_channel,apple80211_cca_report *);
     bool setInterfaceMIBdot11(apple80211_stat_report *,apple80211_ManagementInformationBasedot11_counters *);
+#endif
     IOReturn setLQM(unsigned long long);
     IOReturn setLQMGated(long long);
     IOReturn setLQMStatic(void *,void *);

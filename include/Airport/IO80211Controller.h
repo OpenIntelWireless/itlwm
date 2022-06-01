@@ -166,8 +166,10 @@ public:
     virtual void requestPacketTx(void*, UInt);
     virtual IOReturn getHardwareAddressForInterface(IO80211Interface *,IOEthernetAddress *);
     virtual void inputMonitorPacket(mbuf_t,UInt,void *,unsigned long);
+#if __IO80211_TARGET >= __MAC_10_11
     virtual int outputRaw80211Packet(IO80211Interface *,mbuf_t);
     virtual int outputActionFrame(IO80211Interface *,mbuf_t);
+#endif
     virtual int bpfOutputPacket(OSObject *,UInt,mbuf_t m);
     virtual SInt32 monitorModeSetEnabled(IO80211Interface*, bool, UInt);
     virtual IO80211Interface* getNetworkInterface(void);
@@ -199,22 +201,28 @@ public:
     virtual bool requiresExplicitMBufRelease() {
         return false;
     }
+#if __IO80211_TARGET >= __MAC_10_12
     virtual bool flowIdSupported() {
         return false;
     }
     virtual IO80211FlowQueueLegacy* requestFlowQueue(FlowIdMetadata const*);
     virtual void releaseFlowQueue(IO80211FlowQueue *);
+#endif
 #if __IO80211_TARGET >= __MAC_10_15
     virtual void getLogPipes(CCPipe**, CCPipe**, CCPipe**) {};
 #endif
+#if __IO80211_TARGET >= __MAC_10_13
     virtual IOReturn enablePacketTimestamping(void) {
         return kIOReturnUnsupported;
     }
     virtual IOReturn disablePacketTimestamping(void) {
         return kIOReturnUnsupported;
     }
+#endif
+#if __IO80211_TARGET >= __MAC_10_12
     virtual UInt32 selfDiagnosticsReport(int,char const*,UInt);
     virtual UInt32 getDataQueueDepth(OSObject *);
+#endif
 #if __IO80211_TARGET >= __MAC_11_0
     virtual bool isAssociatedToMovingNetwork(void) { return false; }
 #endif
@@ -280,8 +288,10 @@ public:
     IOReturn setChanNoiseFloorLTE(apple80211_stat_report *,int);
     IOReturn setChanNoiseFloor(apple80211_stat_report *,int);
     IOReturn setChanCCA(apple80211_stat_report *,int);
+#if __IO80211_TARGET >= __MAC_10_15
     IOReturn setChanExtendedCCA(apple80211_stat_report *,apple80211_cca_report *);
     bool setLTECoexstat(apple80211_stat_report *,apple80211_lteCoex_report *);
+#endif
     bool setBTCoexstat(apple80211_stat_report *,apple80211_btCoex_report *);
     bool setAMPDUstat(apple80211_stat_report *,apple80211_ampdu_stat_report *,apple80211_channel *);
     UInt32 getCountryCode(apple80211_country_code_data *);
@@ -303,7 +313,9 @@ public:
 #if __IO80211_TARGET >= __MAC_10_15
     void notifyHostapState(apple80211_hostap_state *);
 #endif
+#if __IO80211_TARGET >= __MAC_10_13
     bool isAwdlAssistedDiscoveryEnabled(void);
+#endif
     void joinDone(scanSource,joinStatus);
     void joinStarted(scanSource,joinStatus);
     void handleChannelSwitchAnnouncement(apple80211_channel_switch_announcement *);
