@@ -4434,7 +4434,6 @@ int ItlIwx::
 iwx_ampdu_rx_start(struct ieee80211com *ic, struct ieee80211_node *ni,
                    uint8_t tid)
 {
-    struct ieee80211_rx_ba *ba = &ni->ni_rx_ba[tid];
     struct iwx_softc *sc = (struct iwx_softc *)IC2IFP(ic)->if_softc;
     ItlIwx *that = container_of(sc, ItlIwx, com);
     
@@ -4651,13 +4650,6 @@ out:
     return err;
 }
 
-#define UMAG_SB_CPU_1_STATUS        0xA038C0
-#define UMAG_SB_CPU_2_STATUS        0xA038C4
-#define UMAG_GEN_HW_STATUS        0xA038C8
-#define UREG_UMAC_CURRENT_PC        0xa05c18
-#define UREG_LMAC1_CURRENT_PC        0xa05c1c
-#define UREG_LMAC2_CURRENT_PC        0xa05c20
-
 int ItlIwx::
 iwx_load_firmware(struct iwx_softc *sc)
 {
@@ -4685,14 +4677,14 @@ iwx_load_firmware(struct iwx_softc *sc)
     if (err || !sc->sc_uc.uc_ok) {
         if (iwx_nic_lock(sc)) {
             XYLog("SecBoot CPU1 Status: 0x%x, CPU2 Status: 0x%x\n",
-                  iwx_read_umac_prph(sc, UMAG_SB_CPU_1_STATUS),
-                  iwx_read_umac_prph(sc, UMAG_SB_CPU_2_STATUS));
+                  iwx_read_umac_prph(sc, IWX_UMAG_SB_CPU_1_STATUS),
+                  iwx_read_umac_prph(sc, IWX_UMAG_SB_CPU_2_STATUS));
             XYLog("UMAC PC: 0x%x\n",
                   iwx_read_umac_prph(sc,
-                                     UREG_UMAC_CURRENT_PC));
+                                     IWX_UREG_UMAC_CURRENT_PC));
             XYLog("LMAC PC: 0x%x\n",
                   iwx_read_umac_prph(sc,
-                                     UREG_LMAC1_CURRENT_PC));
+                                     IWX_UREG_LMAC1_CURRENT_PC));
             iwx_nic_unlock(sc);
         }
         iwx_ctxt_info_free_paging(sc);

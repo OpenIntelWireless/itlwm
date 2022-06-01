@@ -1068,6 +1068,10 @@ enum iwx_fw_ini_allocation_id {
 #define IWX_SB_MODIFY_CFG_FLAG            0xa03088
 #define IWX_UMAG_SB_CPU_1_STATUS        0xa038c0
 #define IWX_UMAG_SB_CPU_2_STATUS        0xa038c4
+#define IWX_UMAG_GEN_HW_STATUS        0xA038C8
+#define IWX_UREG_UMAC_CURRENT_PC        0xa05c18
+#define IWX_UREG_LMAC1_CURRENT_PC        0xa05c1c
+#define IWX_UREG_LMAC2_CURRENT_PC        0xa05c20
 
 #define IWX_UREG_CHICK                0xa05c00
 #define IWX_UREG_CHICK_MSI_ENABLE        (1 << 24)
