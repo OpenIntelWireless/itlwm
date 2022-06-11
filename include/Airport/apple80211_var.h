@@ -569,11 +569,15 @@ enum apple80211_card_capability
 
 enum apple80211_virtual_interface_type
 {
+#if __IO80211_TARGET < __MAC_13_0
     APPLE80211_VIF_P2P_DEVICE   = 1,
-    APPLE80211_VIF_P2P_CLIENT   = 2,
-    APPLE80211_VIF_P2P_GO       = 3,
-    APPLE80211_VIF_AWDL         = 4,
-    APPLE80211_VIF_SOFT_AP      = 5,
+#else
+    APPLE80211_VIF_P2P_DEVICE   = 3,
+#endif
+    APPLE80211_VIF_P2P_CLIENT,
+    APPLE80211_VIF_P2P_GO,
+    APPLE80211_VIF_AWDL,
+    APPLE80211_VIF_SOFT_AP,
     
     APPLE80211_VIF_MAX
 };
