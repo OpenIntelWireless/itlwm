@@ -126,6 +126,8 @@ SInt32 AirportItlwm::apple80211Request(unsigned int request_type,
             IOCTL(request_type, RSN_IE, apple80211_rsn_ie_data);
             break;
         case APPLE80211_IOC_AP_IE_LIST: // 48
+            if (request_type != SIOCGA80211)
+                return kIOReturnError;
             IOCTL_GET(request_type, AP_IE_LIST, apple80211_ap_ie_data);
             break;
         case APPLE80211_IOC_ASSOCIATION_STATUS:  // 50
@@ -825,6 +827,8 @@ setRSN_IE(OSObject *object, struct apple80211_rsn_ie_data *data)
 {
 #ifdef USE_APPLE_SUPPLICANT
     struct ieee80211com *ic = fHalService->get80211Controller();
+    if (!data)
+        return kIOReturnError;
     static_assert(sizeof(ic->ic_rsn_ie_override) == APPLE80211_MAX_RSN_IE_LEN, "Max RSN IE length mismatch");
     memcpy(ic->ic_rsn_ie_override, data->ie, APPLE80211_MAX_RSN_IE_LEN);
     if (ic->ic_state == IEEE80211_S_RUN && ic->ic_bss != nullptr)
@@ -840,7 +844,9 @@ getAP_IE_LIST(OSObject *object, struct apple80211_ap_ie_data *data)
 {
 #ifdef USE_APPLE_SUPPLICANT
     struct ieee80211com *ic = fHalService->get80211Controller();
-    if (ic->ic_bss == NULL || ic->ic_bss->ni_rsnie_tlv == NULL || ic->ic_bss->ni_rsnie_tlv_len > data->len) {
+    if (!data)
+        return kIOReturnError;
+    if (ic->ic_bss == NULL || ic->ic_bss->ni_rsnie_tlv == NULL || ic->ic_bss->ni_rsnie_tlv_len == 0 || ic->ic_bss->ni_rsnie_tlv_len > data->len || ic->ic_bss->ni_rsnie_tlv_len > 1024) {
         return kIOReturnError;
     }
     data->version = APPLE80211_VERSION;
@@ -872,6 +878,8 @@ getNOISE(OSObject *object,
 IOReturn AirportItlwm::
 getINT_MIT(OSObject *object, struct apple80211_intmit_data *imd)
 {
+    if (!imd)
+        return kIOReturnError;
     imd->version = APPLE80211_VERSION;
     imd->int_mit = APPLE80211_INT_MIT_AUTO;
     return kIOReturnSuccess;
@@ -881,6 +889,8 @@ IOReturn AirportItlwm::
 getPOWER(OSObject *object,
                          struct apple80211_power_data *pd)
 {
+    if (!pd)
+        return kIOReturnError;
     pd->version = APPLE80211_VERSION;
     pd->num_radios = 1;
     pd->power_state[0] = power_state;
@@ -899,6 +909,8 @@ IOReturn AirportItlwm::
 setPOWER(OSObject *object,
                          struct apple80211_power_data *pd)
 {
+    if (!pd)
+        return kIOReturnError;
     if (pd->num_radios > 0) {
         bool isRunning = (fHalService->get80211Controller()->ic_ac.ac_if.if_flags & (IFF_UP | IFF_RUNNING)) != 0;
         if (pd->power_state[0] == 0) {
@@ -934,6 +946,9 @@ setASSOCIATE(OSObject *object,
     struct apple80211_authtype_data auth_type_data;
     struct ieee80211com *ic = fHalService->get80211Controller();
 
+    if (!ad)
+        return kIOReturnError;
+    
     if (ic->ic_state < IEEE80211_S_SCAN) {
         return kIOReturnSuccess;
     }
@@ -963,7 +978,7 @@ getASSOCIATE_RESULT(OSObject *object, struct apple80211_assoc_result_data *ad)
 {
     XYLog("%s\n", __FUNCTION__);
     struct ieee80211com *ic = fHalService->get80211Controller();
-    if (ic->ic_state == IEEE80211_S_RUN) {
+    if (ad && ic->ic_state == IEEE80211_S_RUN) {
         memset(ad, 0, sizeof(struct apple80211_assoc_result_data));
         ad->version = APPLE80211_VERSION;
         ad->result = APPLE80211_RESULT_SUCCESS;
@@ -1004,6 +1019,8 @@ IOReturn AirportItlwm::setDISASSOCIATE(OSObject *object)
 IOReturn AirportItlwm::
 getSUPPORTED_CHANNELS(OSObject *object, struct apple80211_sup_channel_data *ad)
 {
+    if (!ad)
+        return kIOReturnError;
     ad->version = APPLE80211_VERSION;
     ad->num_channels = 0;
     struct ieee80211com *ic = fHalService->get80211Controller();
@@ -1021,6 +1038,8 @@ IOReturn AirportItlwm::
 getLOCALE(OSObject *object,
                           struct apple80211_locale_data *ld)
 {
+    if (!ld)
+        return kIOReturnError;
     ld->version = APPLE80211_VERSION;
     ld->locale  = APPLE80211_LOCALE_FCC;
     
@@ -1031,6 +1050,8 @@ IOReturn AirportItlwm::
 getDEAUTH(OSObject *object,
                           struct apple80211_deauth_data *da)
 {
+    if (!da)
+        return kIOReturnError;
     da->version = APPLE80211_VERSION;
     struct ieee80211com *ic = fHalService->get80211Controller();
     da->deauth_reason = ic->ic_deauth_reason;
@@ -1042,6 +1063,9 @@ IOReturn AirportItlwm::
 getASSOCIATION_STATUS(OSObject *object, struct apple80211_assoc_status_data *hv)
 {
     struct ieee80211com *ic = fHalService->get80211Controller();
+    
+    if (!hv)
+        return kIOReturnError;
     memset(hv, 0, sizeof(*hv));
     hv->version = APPLE80211_VERSION;
     if (ic->ic_state == IEEE80211_S_RUN)
@@ -1107,7 +1131,7 @@ getTX_ANTENNA(OSObject *object,
                               apple80211_antenna_data *ad)
 {
     struct ieee80211com *ic = fHalService->get80211Controller();
-    if (ic->ic_state != IEEE80211_S_RUN ||  ic->ic_bss == NULL)
+    if (ic->ic_state != IEEE80211_S_RUN ||  ic->ic_bss == NULL || !ad)
         return kIOReturnError;
     ad->version = APPLE80211_VERSION;
     ad->num_radios = 1;
@@ -1119,6 +1143,8 @@ IOReturn AirportItlwm::
 getANTENNA_DIVERSITY(OSObject *object,
                                      apple80211_antenna_data *ad)
 {
+    if (!ad)
+        return kIOReturnError;
     ad->version = APPLE80211_VERSION;
     ad->num_radios = 1;
     ad->antenna_index[0] = 1;
@@ -1129,6 +1155,8 @@ IOReturn AirportItlwm::
 getDRIVER_VERSION(OSObject *object,
                                   struct apple80211_version_data *hv)
 {
+    if (!hv)
+        return kIOReturnError;
     hv->version = APPLE80211_VERSION;
     snprintf(hv->string, sizeof(hv->string), "itlwm: %s%s fw: %s", ITLWM_VERSION, GIT_COMMIT, fHalService->getDriverInfo()->getFirmwareVersion());
     hv->string_len = strlen(hv->string);
@@ -1139,6 +1167,8 @@ IOReturn AirportItlwm::
 getHARDWARE_VERSION(OSObject *object,
                                     struct apple80211_version_data *hv)
 {
+    if (!hv)
+        return kIOReturnError;
     hv->version = APPLE80211_VERSION;
     strncpy(hv->string, fHalService->getDriverInfo()->getFirmwareVersion(), sizeof(hv->string));
     hv->string_len = strlen(fHalService->getDriverInfo()->getFirmwareVersion());
@@ -1152,6 +1182,8 @@ getCOUNTRY_CODE(OSObject *object,
     char user_override_cc[3];
     const char *cc_fw = fHalService->getDriverInfo()->getFirmwareCountryCode();
     
+    if (!cd)
+        return kIOReturnError;
     cd->version = APPLE80211_VERSION;
     memset(user_override_cc, 0, sizeof(user_override_cc));
     PE_parse_boot_argn("itlwm_cc", user_override_cc, 3);
@@ -1164,7 +1196,7 @@ IOReturn AirportItlwm::
 setCOUNTRY_CODE(OSObject *object, struct apple80211_country_code_data *data)
 {
     XYLog("%s cc=%s\n", __FUNCTION__, data->cc);
-    if (data->cc[0] != 120 && data->cc[0] != 88) {
+    if (data && data->cc[0] != 120 && data->cc[0] != 88) {
         memcpy(geo_location_cc, data->cc, sizeof(geo_location_cc));
         fNetIf->postMessage(APPLE80211_M_COUNTRY_CODE_CHANGED);
     }
@@ -1175,7 +1207,7 @@ IOReturn AirportItlwm::
 getMCS(OSObject *object, struct apple80211_mcs_data* md)
 {
     struct ieee80211com *ic = fHalService->get80211Controller();
-    if (ic->ic_state != IEEE80211_S_RUN ||  ic->ic_bss == NULL)
+    if (ic->ic_state != IEEE80211_S_RUN ||  ic->ic_bss == NULL || !md)
         return kIOReturnError;
     md->version = APPLE80211_VERSION;
     md->index = ic->ic_bss->ni_txmcs;
@@ -1185,6 +1217,8 @@ getMCS(OSObject *object, struct apple80211_mcs_data* md)
 IOReturn AirportItlwm::
 getROAM_THRESH(OSObject *object, struct apple80211_roam_threshold_data* md)
 {
+    if (!md)
+        return kIOReturnError;
     md->threshold = 100;
     md->count = 0;
     return kIOReturnSuccess;
@@ -1193,6 +1227,8 @@ getROAM_THRESH(OSObject *object, struct apple80211_roam_threshold_data* md)
 IOReturn AirportItlwm::
 getRADIO_INFO(OSObject *object, struct apple80211_radio_info_data* md)
 {
+    if (!md)
+        return kIOReturnError;
     md->version = APPLE80211_VERSION;
     md->count = 1;
     return kIOReturnSuccess;
