@@ -722,7 +722,11 @@ struct apple80211_ap_ie_data
 {
     u_int32_t    version;
     u_int32_t    len;
+#if __IO80211_TARGET < __MAC_13_0
     u_int8_t     *ie_data;
+#else
+    u_int8_t     ie_data[APPLE80211_NETWORK_DATA_MAX_IE_LEN];
+#endif
 };
 
 struct apple80211_stats_data
