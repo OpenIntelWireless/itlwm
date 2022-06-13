@@ -2982,6 +2982,7 @@
 				GCC_PREFIX_HEADER = itlwm/PrivateSPI.pch;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"$(inherited)",
+					USE_APPLE_SUPPLICANT,
 					AIRPORT,
 					"__IO80211_TARGET=__MAC_13_0",
 					__PRIVATE_SPI__,
@@ -3012,6 +3013,7 @@
 				GCC_PREFIX_HEADER = itlwm/PrivateSPI.pch;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"__IO80211_TARGET=__MAC_13_0",
+					USE_APPLE_SUPPLICANT,
 					AIRPORT,
 					__PRIVATE_SPI__,
 					"$(inherited)",
