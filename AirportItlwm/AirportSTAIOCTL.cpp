@@ -1364,11 +1364,8 @@ setVIRTUAL_IF_CREATE(OSObject *object, struct apple80211_virt_if_create_data* da
 {
     struct ether_addr addr;
     struct apple80211_channel chann;
-    IOLog("%s role=%d, bsd_name=%s, mac=%s, unk1=%d\n", __FUNCTION__, data->role, data->bsd_name,
+    XYLog("%s role=%d, bsd_name=%s, mac=%s, unk1=%d\n", __FUNCTION__, data->role, data->bsd_name,
           ether_sprintf(data->mac), data->unk1);
-    if (data->role - 2 < 2) {
-        //TODO check awdl coexist
-    }
     if (data->role == APPLE80211_VIF_P2P_DEVICE) {
         IO80211P2PInterface *inf = new IO80211P2PInterface;
         if (inf == NULL) {
@@ -1377,8 +1374,6 @@ setVIRTUAL_IF_CREATE(OSObject *object, struct apple80211_virt_if_create_data* da
         memcpy(addr.octet, data->mac, 6);
         inf->init(this, &addr, data->role, "p2p");
         fP2PDISCInterface = inf;
-    } else if(data->role == APPLE80211_VIF_P2P_CLIENT) {
-        
     } else if (data->role == APPLE80211_VIF_P2P_GO) {
         IO80211P2PInterface *inf = new IO80211P2PInterface;
         if (inf == NULL) {
@@ -1403,6 +1398,9 @@ setVIRTUAL_IF_CREATE(OSObject *object, struct apple80211_virt_if_create_data* da
         chann.flags = APPLE80211_C_FLAG_5GHZ | APPLE80211_C_FLAG_ACTIVE | APPLE80211_C_FLAG_80MHZ;
         setInfraChannel(&chann);
         fAWDLInterface = inf;
+    } else {
+        XYLog("%s unhandled virtual interface role type: %d\n", __FUNCTION__, data->role);
+        return kIOReturnError;
     }
     return kIOReturnSuccess;
 }
