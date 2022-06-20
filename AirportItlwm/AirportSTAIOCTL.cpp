@@ -369,17 +369,6 @@ IOReturn AirportItlwm::
 setCHANNEL(OSObject *object, struct apple80211_channel_data *data)
 {
     XYLog("%s channel=%d\n", __FUNCTION__, data->channel.channel);
-    struct ieee80211_channel *channel;
-    struct ieee80211com *ic = fHalService->get80211Controller();
-    struct _ifnet *ifp = &ic->ic_ac.ac_if;
-    if (data->channel.channel >= IEEE80211_CHAN_MAX) {
-        XYLog("%s channel set error, channel=%d IEEE80211_CHAN_MAX=%d\n", __FUNCTION__, data->channel.channel, IEEE80211_CHAN_MAX);
-        return kIOReturnError;
-    }
-    channel = &ic->ic_channels[data->channel.channel];
-    if (!ifp->if_ioctl(ifp, SIOCS80211CHANNEL, (caddr_t)channel)) {
-        return kIOReturnSuccess;
-    }
     return kIOReturnError;
 }
 
