@@ -299,57 +299,52 @@ setCIPHER_KEY(OSObject *object, struct apple80211_key *key)
     return kIOReturnSuccess;
 }
 
-static int ieeeChanFlag2apple(int flags, int bw)
+static int bw2appleflags(int flags, int bw)
 {
     int ret = 0;
-    if (flags & IEEE80211_CHAN_2GHZ)
-        ret |= APPLE80211_C_FLAG_2GHZ;
-    if (flags & IEEE80211_CHAN_5GHZ)
-        ret |= APPLE80211_C_FLAG_5GHZ;
-    if (!(flags & IEEE80211_CHAN_PASSIVE))
-        ret |= APPLE80211_C_FLAG_ACTIVE;
-    if (flags & IEEE80211_CHAN_DFS)
-        ret |= APPLE80211_C_FLAG_DFS;
-    if (bw == -1) {
-        if (flags & IEEE80211_CHAN_VHT) {
-            if ((flags & IEEE80211_CHAN_VHT160) || (flags & IEEE80211_CHAN_VHT80_80))
-                ret |= APPLE80211_C_FLAG_160MHZ;
-            if (flags & IEEE80211_CHAN_VHT80)
-                ret |= APPLE80211_C_FLAG_80MHZ;
-        } else if ((flags & IEEE80211_CHAN_HT40) && (flags & IEEE80211_CHAN_HT)) {
+    switch (bw) {
+        case IEEE80211_CHAN_WIDTH_80P80:
+        case IEEE80211_CHAN_WIDTH_160:
+            ret |= APPLE80211_C_FLAG_160MHZ;
+            break;
+        case IEEE80211_CHAN_WIDTH_80:
+            ret |= APPLE80211_C_FLAG_80MHZ;
+            break;
+        case IEEE80211_CHAN_WIDTH_40:
             ret |= APPLE80211_C_FLAG_40MHZ;
             if (flags & IEEE80211_CHAN_HT40U)
                 ret |= APPLE80211_C_FLAG_EXT_ABV;
-        } else if (flags & IEEE80211_CHAN_HT20) {
+            break;
+        case IEEE80211_CHAN_WIDTH_20:
             ret |= APPLE80211_C_FLAG_20MHZ;
-        } else if ((flags & IEEE80211_CHAN_CCK) || (flags & IEEE80211_CHAN_OFDM)) {
-            ret |= APPLE80211_C_FLAG_10MHZ;
-        }
-    } else {
-        switch (bw) {
-            case IEEE80211_CHAN_WIDTH_80P80:
-            case IEEE80211_CHAN_WIDTH_160:
-                ret |= APPLE80211_C_FLAG_160MHZ;
-                break;
-            case IEEE80211_CHAN_WIDTH_80:
-                ret |= APPLE80211_C_FLAG_80MHZ;
-                break;
-            case IEEE80211_CHAN_WIDTH_40:
-                ret |= APPLE80211_C_FLAG_40MHZ;
-                if (flags & IEEE80211_CHAN_HT40U)
-                    ret |= APPLE80211_C_FLAG_EXT_ABV;
-                break;
-            case IEEE80211_CHAN_WIDTH_20:
+            break;
+        default:
+            if (flags & IEEE80211_CHAN_HT20) {
                 ret |= APPLE80211_C_FLAG_20MHZ;
-                break;
-            default:
-                if (flags & IEEE80211_CHAN_HT20) {
-                    ret |= APPLE80211_C_FLAG_20MHZ;
-                } else if ((flags & IEEE80211_CHAN_CCK) || (flags & IEEE80211_CHAN_OFDM)) {
-                    ret |= APPLE80211_C_FLAG_10MHZ;
-                }
-                break;
-        }
+            } else if ((flags & IEEE80211_CHAN_CCK) || (flags & IEEE80211_CHAN_OFDM)) {
+                ret |= APPLE80211_C_FLAG_10MHZ;
+            }
+            break;
+    }
+    return ret;
+}
+
+static int ieeeChanFlag2apple(int flags)
+{
+    int ret = 0;
+    if (flags & IEEE80211_CHAN_VHT) {
+        if ((flags & IEEE80211_CHAN_VHT160) || (flags & IEEE80211_CHAN_VHT80_80))
+            ret |= APPLE80211_C_FLAG_160MHZ;
+        if (flags & IEEE80211_CHAN_VHT80)
+            ret |= APPLE80211_C_FLAG_80MHZ;
+    } else if ((flags & IEEE80211_CHAN_HT40) && (flags & IEEE80211_CHAN_HT)) {
+        ret |= APPLE80211_C_FLAG_40MHZ;
+        if (flags & IEEE80211_CHAN_HT40U)
+            ret |= APPLE80211_C_FLAG_EXT_ABV;
+    } else if (flags & IEEE80211_CHAN_HT20) {
+        ret |= APPLE80211_C_FLAG_20MHZ;
+    } else if ((flags & IEEE80211_CHAN_CCK) || (flags & IEEE80211_CHAN_OFDM)) {
+        ret |= APPLE80211_C_FLAG_10MHZ;
     }
     return ret;
 }
@@ -364,7 +359,7 @@ getCHANNEL(OSObject *object,
         cd->version = APPLE80211_VERSION;
         cd->channel.version = APPLE80211_VERSION;
         cd->channel.channel = ieee80211_chan2ieee(ic, ic->ic_bss->ni_chan);
-        cd->channel.flags = ieeeChanFlag2apple(ic->ic_bss->ni_chan->ic_flags, ic->ic_bss->ni_chw);
+        cd->channel.flags = bw2appleflags(ic->ic_bss->ni_chan->ic_flags, ic->ic_bss->ni_chw);
         return kIOReturnSuccess;
     }
     return kIOReturnError;
@@ -1027,7 +1022,7 @@ getSUPPORTED_CHANNELS(OSObject *object, struct apple80211_sup_channel_data *ad)
     for (int i = 0; i < IEEE80211_CHAN_MAX; i++) {
         if (ic->ic_channels[i].ic_freq != 0) {
             ad->supported_channels[ad->num_channels].channel = ieee80211_chan2ieee(ic, &ic->ic_channels[i]);
-            ad->supported_channels[ad->num_channels].flags = ieeeChanFlag2apple(ic->ic_channels[i].ic_flags, -1);
+            ad->supported_channels[ad->num_channels].flags = ieeeChanFlag2apple(ic->ic_channels[i].ic_flags);
             ad->num_channels++;
         }
     }
@@ -1347,7 +1342,7 @@ getSCAN_RESULT(OSObject *object, struct apple80211_scan_result **sr)
     result->asr_cap = fNextNodeToSend->ni_capinfo;
     result->asr_channel.version = APPLE80211_VERSION;
     result->asr_channel.channel = ieee80211_chan2ieee(ic, fNextNodeToSend->ni_chan);
-    result->asr_channel.flags = ieeeChanFlag2apple(fNextNodeToSend->ni_chan->ic_flags, -1);
+    result->asr_channel.flags = ieeeChanFlag2apple(fNextNodeToSend->ni_chan->ic_flags);
     result->asr_noise = fHalService->getDriverInfo()->getBSSNoise();
     result->asr_rssi = -(0 - IWM_MIN_DBM - fNextNodeToSend->ni_rssi);
     memcpy(result->asr_bssid, fNextNodeToSend->ni_bssid, IEEE80211_ADDR_LEN);
