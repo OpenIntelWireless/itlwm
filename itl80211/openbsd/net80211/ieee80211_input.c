@@ -729,6 +729,7 @@ ieee80211_input(struct _ifnet *ifp, mbuf_t m, struct ieee80211_node *ni,
     if_input(ifp, &ml);
 }
 
+#ifdef notyet
 /*
  * Handle defragmentation (see 9.5 and Annex C).  We support the concurrent
  * reception of fragments of three fragmented MSDUs or MMPDUs.
@@ -818,6 +819,7 @@ ieee80211_defrag_timeout(void *arg)
     
     splx(s);
 }
+#endif
 
 /*
  * Process a received data MPDU related to a specific HT-immediate Block Ack

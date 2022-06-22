@@ -540,8 +540,10 @@ struct ieee80211com {
 	enum ieee80211_cipher	ic_rsngroupcipher;
 	enum ieee80211_cipher	ic_rsngroupmgmtcipher;
 
+#ifdef notyet
 	struct ieee80211_defrag	ic_defrag[IEEE80211_DEFRAG_SIZE];
 	int			ic_defrag_cur;
+#endif
 
 	u_int8_t		*ic_tim_bitmap;
 	u_int			ic_tim_len;
