@@ -526,6 +526,7 @@ setROAM_PROFILE(OSObject *object, struct apple80211_roam_profile_band_data *data
         IOFree(roamProfile, sizeof(struct apple80211_roam_profile_band_data));
     }
     roamProfile = (uint8_t *)IOMalloc(sizeof(struct apple80211_roam_profile_band_data));
+    memcpy(roamProfile, data, sizeof(struct apple80211_roam_profile_band_data));
     return kIOReturnSuccess;
 }
 
