@@ -613,6 +613,10 @@ void AirportItlwm::free()
         IOFree(roamProfile, sizeof(struct apple80211_roam_profile_band_data));
         roamProfile = NULL;
     }
+    if (btcProfile != NULL) {
+        IOFree(btcProfile, sizeof(struct apple80211_btc_profiles_data));
+        btcProfile = NULL;
+    }
     super::free();
 }
 

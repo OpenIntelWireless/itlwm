@@ -214,6 +214,10 @@ public:
     FUNC_IOCTL_SET(P2P_SCAN, apple80211_scan_data)
     FUNC_IOCTL_SET(P2P_LISTEN, apple80211_p2p_listen_data)
     FUNC_IOCTL_SET(P2P_GO_CONF, apple80211_p2p_go_conf_data)
+    FUNC_IOCTL(BTCOEX_PROFILES, apple80211_btc_profiles_data)
+    FUNC_IOCTL(BTCOEX_CONFIG, apple80211_btc_config_data)
+    FUNC_IOCTL(BTCOEX_OPTIONS, apple80211_btc_options_data)
+    FUNC_IOCTL(BTCOEX_MODE, apple80211_btc_mode_data)
     
     
     //-----------------------------------------------------------------------
@@ -277,5 +281,9 @@ public:
     uint16_t awdlMasterChannel;
     uint16_t awdlSecondaryMasterChannel;
     uint8_t *roamProfile;
+    struct apple80211_btc_profiles_data *btcProfile;
+    struct apple80211_btc_config_data btcConfig;
+    uint32_t btcMode;
+    uint32_t btcOptions;
     bool awdlSyncEnable;
 };

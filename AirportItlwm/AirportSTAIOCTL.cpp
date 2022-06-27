@@ -190,6 +190,18 @@ SInt32 AirportItlwm::apple80211Request(unsigned int request_type,
         case APPLE80211_IOC_P2P_GO_CONF:
             IOCTL_SET(request_type, P2P_GO_CONF, apple80211_p2p_go_conf_data);
             break;
+        case APPLE80211_IOC_BTCOEX_PROFILES:
+            IOCTL(request_type, BTCOEX_PROFILES, apple80211_btc_profiles_data);
+            break;
+        case APPLE80211_IOC_BTCOEX_CONFIG:
+            IOCTL(request_type, BTCOEX_CONFIG, apple80211_btc_config_data);
+            break;
+        case APPLE80211_IOC_BTCOEX_OPTIONS:
+            IOCTL(request_type, BTCOEX_OPTIONS, apple80211_btc_options_data);
+            break;
+        case APPLE80211_IOC_BTCOEX_MODE:
+            IOCTL(request_type, BTCOEX_MODE, apple80211_btc_mode_data);
+            break;
         default:
         unhandled:
             if (!ml_at_interrupt_context()) {
@@ -527,6 +539,87 @@ setROAM_PROFILE(OSObject *object, struct apple80211_roam_profile_band_data *data
     }
     roamProfile = (uint8_t *)IOMalloc(sizeof(struct apple80211_roam_profile_band_data));
     memcpy(roamProfile, data, sizeof(struct apple80211_roam_profile_band_data));
+    return kIOReturnSuccess;
+}
+
+IOReturn AirportItlwm::
+getBTCOEX_CONFIG(OSObject *object, struct apple80211_btc_config_data *data)
+{
+    if (!data)
+        return kIOReturnError;
+    memcpy(data, &btcConfig, sizeof(struct apple80211_btc_config_data));
+    return kIOReturnSuccess;
+}
+
+IOReturn AirportItlwm::
+setBTCOEX_CONFIG(OSObject *object, struct apple80211_btc_config_data *data)
+{
+    if (!data)
+        return kIOReturnError;
+    XYLog("%s Setting BTCoex Config: enable_2G:%d, profile_2g:%d, enable_5G:%d, profile_5G:%d\n", __FUNCTION__, data->enable_2G, data->profile_2g, data->enable_5G, data->profile_5G);
+    memcpy(&btcConfig, data, sizeof(struct apple80211_btc_config_data));
+    return kIOReturnSuccess;
+}
+
+IOReturn AirportItlwm::
+getBTCOEX_MODE(OSObject *object, struct apple80211_btc_mode_data *data)
+{
+    if (!data)
+        return kIOReturnError;
+    data->version = APPLE80211_VERSION;
+    data->btc_mode = btcMode;
+    return kIOReturnSuccess;
+}
+
+IOReturn AirportItlwm::
+setBTCOEX_MODE(OSObject *object, struct apple80211_btc_mode_data *data)
+{
+    if (!data)
+        return kIOReturnError;
+    XYLog("%s mode: %d\n", __FUNCTION__, data->btc_mode);
+    btcMode = data->btc_mode;
+    return kIOReturnSuccess;
+}
+
+IOReturn AirportItlwm::
+getBTCOEX_OPTIONS(OSObject *object, struct apple80211_btc_options_data *data)
+{
+    if (!data)
+        return kIOReturnError;
+    data->version = APPLE80211_VERSION;
+    data->btc_options = btcOptions;
+    return kIOReturnSuccess;
+}
+
+IOReturn AirportItlwm::
+setBTCOEX_OPTIONS(OSObject *object, struct apple80211_btc_options_data *data)
+{
+    if (!data)
+        return kIOReturnError;
+    XYLog("%s options: %d\n", __FUNCTION__, data->btc_options);
+    btcOptions = data->btc_options;
+    return kIOReturnSuccess;
+}
+
+IOReturn AirportItlwm::
+getBTCOEX_PROFILES(OSObject *object, struct apple80211_btc_profiles_data *data)
+{
+    if (!data || !btcProfile)
+        return kIOReturnError;
+    memcpy(data, btcProfile, sizeof(struct apple80211_btc_profiles_data));
+    return kIOReturnSuccess;
+}
+
+IOReturn AirportItlwm::
+setBTCOEX_PROFILES(OSObject *object, struct apple80211_btc_profiles_data *data)
+{
+    if (!data)
+        return kIOReturnError;
+    XYLog("%s profiles: %d\n", __FUNCTION__, data->profile_cnt);
+    if (btcProfile)
+        IOFree(btcProfile, sizeof(struct apple80211_btc_profiles_data));
+    btcProfile = (struct apple80211_btc_profiles_data *)IOMalloc(sizeof(struct apple80211_btc_profiles_data));
+    memcpy(btcProfile, data, sizeof(struct apple80211_btc_profiles_data));
     return kIOReturnSuccess;
 }
 
