@@ -1359,5 +1359,29 @@ struct apple80211_sta_roam_data {
     uint8_t     target_bssid[APPLE80211_ADDR_LEN];
 } __attribute__((packed));
 
+struct apple80211_btc_profiles_data {
+    uint32_t    version;
+    uint32_t    profile_cnt;
+    uint8_t     profiles[141][4];
+} __attribute__((packed));
+
+struct apple80211_btc_config_data {
+    uint32_t version;
+    uint32_t enable_2G;
+    uint32_t profile_2g;
+    uint32_t enable_5G;
+    uint32_t profile_5G;
+} __attribute__((packed));
+
+struct apple80211_btc_mode_data {
+    uint32_t    version;
+    uint32_t    btc_mode;
+} __attribute__((packed));
+
+struct apple80211_btc_options_data {
+    uint32_t    version;
+    uint32_t    btc_options;
+} __attribute__((packed));
+
 #endif // _APPLE80211_IOCTL_H_
 
