@@ -23,7 +23,51 @@
 #include <sys/param.h>
 #include <sys/proc.h>
 
+#include <IOKit/IOCommandGate.h>
+
 OSDefineMetaClassAndStructors(pci_intr_handle, OSObject)
+
+extern IOCommandGate *_fCommandGate;
+
+IOReturn tsleepHandler(OSObject *owner, void *arg0, void *arg1, void *arg2, void *arg3) {
+    if (arg1 == 0)
+        return _fCommandGate->commandSleep(arg0, THREAD_INTERRUPTIBLE) == THREAD_AWAKENED ? kIOReturnSuccess : kIOReturnTimeout;
+    else {
+        AbsoluteTime deadline;
+        clock_interval_to_deadline(((int)(uint64_t)arg1), kNanosecondScale, reinterpret_cast<uint64_t*> (&deadline));
+        return _fCommandGate->commandSleep(arg0, deadline, THREAD_INTERRUPTIBLE) == THREAD_AWAKENED ? kIOReturnSuccess : kIOReturnTimeout;
+    }
+}
+
+int
+tsleep_nsec(void *ident, int priority, const char *wmesg, int timo)
+{
+    if (!_fCommandGate) {
+        IOLog("%s No command gate for sleep\n", __FUNCTION__);
+        return 0;
+    }
+    return _fCommandGate->runAction(tsleepHandler, ident, (void *)(uint64_t)timo);
+}
+
+void
+wakeupOn(void *ident)
+{
+    if (!_fCommandGate) {
+        IOLog("%s No command gate for wakeup\n", __FUNCTION__);
+        return;
+    }
+    _fCommandGate->commandWakeup(ident);
+}
+
+void
+wakeup_oneOn(void *ident)
+{
+    if (!_fCommandGate) {
+        IOLog("%s No command gate for wakeup one thread\n", __FUNCTION__);
+        return;
+    }
+    _fCommandGate->commandWakeup(ident, true);
+}
 
 int pci_get_capability(pci_chipset_tag_t chipsettag, pcitag_t pcitag, int capid, int *offsetp, pcireg_t *valuep) {
 	uint8_t offset;

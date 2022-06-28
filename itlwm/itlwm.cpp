@@ -322,7 +322,7 @@ bool itlwm::start(IOService *provider)
         releaseAll();
         return false;
     }
-    _fCommandGate = IOCommandGate::commandGate(this, (IOCommandGate::Action)itlwm::tsleepHandler);
+    _fCommandGate = IOCommandGate::commandGate(this);
     if (_fCommandGate == 0) {
         XYLog("No command gate!!\n");
         super::stop(pciNub);

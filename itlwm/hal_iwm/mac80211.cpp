@@ -4306,7 +4306,7 @@ iwm_intr(OSObject *arg, IOInterruptEventSource* sender, int count)
         handled |= IWM_CSR_INT_BIT_FH_TX;
         
         sc->sc_fw_chunk_done = 1;
-        that->wakeupOn(&sc->sc_fw);
+        wakeupOn(&sc->sc_fw);
     }
     
     if (r1 & (IWM_CSR_INT_BIT_FH_RX | IWM_CSR_INT_BIT_SW_RX |
@@ -4368,7 +4368,7 @@ iwm_intr_msix(OSObject *object, IOInterruptEventSource* sender, int count)
     /* firmware chunk loaded */
     if (inta_fh & IWM_MSIX_FH_INT_CAUSES_D2S_CH0_NUM) {
         sc->sc_fw_chunk_done = 1;
-        that->wakeupOn(&sc->sc_fw);
+        wakeupOn(&sc->sc_fw);
     }
     
     if ((inta_fh & IWM_MSIX_FH_INT_CAUSES_FH_ERR) ||

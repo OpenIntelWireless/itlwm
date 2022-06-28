@@ -376,7 +376,7 @@ bool AirportItlwm::start(IOService *provider)
         releaseAll();
         return false;
     }
-    _fCommandGate = IOCommandGate::commandGate(this, (IOCommandGate::Action)AirportItlwm::tsleepHandler);
+    _fCommandGate = IOCommandGate::commandGate(this);
     if (_fCommandGate == 0) {
         XYLog("No command gate!!\n");
         super::stop(pciNub);
@@ -783,28 +783,6 @@ IOReturn AirportItlwm::getPacketFilters(const OSSymbol *group, UInt32 *filters) 
         rtn = IOEthernetController::getPacketFilters(group, filters);
     }
     return rtn;
-}
-
-IOReturn AirportItlwm::
-tsleepHandler(OSObject* owner, void* arg0, void* arg1, void* arg2, void* arg3)
-{
-    AirportItlwm* dev = OSDynamicCast(AirportItlwm, owner);
-    if (dev == 0)
-        return kIOReturnError;
-    
-    if (arg1 == 0) {
-        if (_fCommandGate->commandSleep(arg0, THREAD_INTERRUPTIBLE) == THREAD_AWAKENED)
-            return kIOReturnSuccess;
-        else
-            return kIOReturnTimeout;
-    } else {
-        AbsoluteTime deadline;
-        clock_interval_to_deadline((*(int*)arg1), kNanosecondScale, reinterpret_cast<uint64_t*> (&deadline));
-        if (_fCommandGate->commandSleep(arg0, deadline, THREAD_INTERRUPTIBLE) == THREAD_AWAKENED)
-            return kIOReturnSuccess;
-        else
-            return kIOReturnTimeout;
-    }
 }
 
 static IOPMPowerState powerStateArray[kPowerStateCount] =

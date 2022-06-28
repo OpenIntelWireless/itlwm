@@ -3303,11 +3303,11 @@ iwn_intr(OSObject *object, IOInterruptEventSource* sender, int count)
     if ((r1 & IWN_INT_FH_TX) || (r2 & IWN_FH_INT_TX)) {
         if (sc->sc_flags & IWN_FLAG_USE_ICT)
             IWN_WRITE(sc, IWN_FH_INT, IWN_FH_INT_TX);
-        that->wakeupOn(sc);    /* FH DMA transfer completed. */
+        wakeupOn(sc);    /* FH DMA transfer completed. */
     }
 
     if (r1 & IWN_INT_ALIVE)
-        that->wakeupOn(sc);    /* Firmware is alive. */
+        wakeupOn(sc);    /* Firmware is alive. */
 
     if (r1 & IWN_INT_WAKEUP)
         that->iwn_wakeup_intr(sc);
@@ -6352,7 +6352,7 @@ iwn5000_query_calibration(struct iwn_softc *sc)
 
     /* Wait at most two seconds for calibration to complete. */
     if (!(sc->sc_flags & IWN_FLAG_CALIB_DONE))
-        error = that->tsleep_nsec(sc, PCATCH, "iwncal", SEC_TO_NSEC(2));
+        error = tsleep_nsec(sc, PCATCH, "iwncal", SEC_TO_NSEC(2));
     return error;
 }
 
@@ -6703,7 +6703,7 @@ iwn4965_load_firmware(struct iwn_softc *sc)
     IWN_WRITE(sc, IWN_RESET, 0);
 
     /* Wait at most one second for first alive notification. */
-    if ((error = that->tsleep_nsec(sc, PCATCH, "iwninit", SEC_TO_NSEC(1))) != 0) {
+    if ((error = tsleep_nsec(sc, PCATCH, "iwninit", SEC_TO_NSEC(1))) != 0) {
         XYLog("%s: timeout waiting for adapter to initialize\n",
             sc->sc_dev.dv_xname);
         return error;
@@ -6772,7 +6772,7 @@ iwn5000_load_firmware_section(struct iwn_softc *sc, uint32_t dst,
     iwn_nic_unlock(sc);
 
     /* Wait at most five seconds for FH DMA transfer to complete. */
-    return that->tsleep_nsec(sc, PCATCH, "iwninit", SEC_TO_NSEC(5));
+    return tsleep_nsec(sc, PCATCH, "iwninit", SEC_TO_NSEC(5));
 }
 
 int ItlIwn::

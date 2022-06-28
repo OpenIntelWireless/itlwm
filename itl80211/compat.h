@@ -108,6 +108,15 @@ TIMESPEC_TO_NSEC(const struct timespec *ts)
     return ts->tv_sec * 1000000000ULL + ts->tv_nsec;
 }
 
+extern int tsleep_nsec(void *ident, int priority, const char *wmesg, int timo);
+
+extern void wakeupOn(void *chan);
+
+extern void wakeup_oneOn(void *chan);
+
+#define wakeup(x) wakeupOn(x)
+#define wakeup_one(x) wakeup_oneOn(x)
+
 #define MHLEN mbuf_get_mhlen()
 #define M_DONTWAIT MBUF_DONTWAIT
 #define M_EXT MBUF_EXT
