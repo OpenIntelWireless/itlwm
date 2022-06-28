@@ -6952,8 +6952,8 @@ iwx_flush_sta(struct iwx_softc *sc, struct iwx_node *in)
     
     err = iwx_flush_sta_tids(sc, IWX_STATION_ID, 0xffff);
     if (err) {
-        printf("%s: could not flush Tx path (error %d)\n",
-               DEVNAME(sc), err);
+        XYLog("%s: could not flush Tx path (error %d)\n",
+               __FUNCTION__, err);
         goto done;
     }
     
@@ -7329,7 +7329,7 @@ iwx_rm_sta(struct iwx_softc *sc, struct iwx_node *in)
     err = iwx_flush_sta(sc, in);
     if (err) {
         XYLog("%s: could not flush Tx path (error %d)\n",
-            DEVNAME(sc), err);
+            __FUNCTION__, err);
         return err;
     }
     err = iwx_rm_sta_cmd(sc, in);
@@ -9438,7 +9438,7 @@ iwx_run_stop(struct iwx_softc *sc)
     err = iwx_flush_sta(sc, in);
     if (err) {
         XYLog("%s: could not flush Tx path (error %d)\n",
-              DEVNAME(sc), err);
+              __FUNCTION__, err);
         return err;
     }
     
