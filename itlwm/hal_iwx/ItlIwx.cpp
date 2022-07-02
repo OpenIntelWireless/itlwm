@@ -7428,7 +7428,7 @@ iwx_fill_probe_req(struct iwx_softc *sc, struct iwx_scan_probe_req *preq)
     
     memset(preq, 0, sizeof(*preq));
     
-    if (remain < sizeof(*wh) + 2 + ic->ic_des_esslen)
+    if (remain < sizeof(*wh) + 2)
         return ENOBUFS;
     
     /*
