@@ -2987,7 +2987,7 @@
 					"__IO80211_TARGET=__MAC_13_0",
 					__PRIVATE_SPI__,
 				);
-				INFOPLIST_FILE = "AirportItlwm-Ventura-Info.plist";
+				INFOPLIST_FILE = "AirportItlwm/AirportItlwm-Ventura-Info.plist";
 				LIBRARY_SEARCH_PATHS = (
 					"$(PROJECT_DIR)/itl80211",
 					"$(inherited)",
@@ -3018,7 +3018,7 @@
 					__PRIVATE_SPI__,
 					"$(inherited)",
 				);
-				INFOPLIST_FILE = "AirportItlwm-Ventura-Info.plist";
+				INFOPLIST_FILE = "AirportItlwm/AirportItlwm-Ventura-Info.plist";
 				LIBRARY_SEARCH_PATHS = (
 					"$(PROJECT_DIR)/itl80211",
 					"$(inherited)",
