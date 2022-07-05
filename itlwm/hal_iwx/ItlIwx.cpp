@@ -3487,8 +3487,7 @@ iwx_tvqm_enable_txq(struct iwx_softc *sc, int tid, int ssn, uint32_t size)
         err = -EIO;
         goto fail;
     }
-    wr_idx &= (ring->ring_count - 1);
-    ring->cur = max(IWX_AGG_SSN_TO_TXQ_IDX(wr_idx, ring->ring_count), IWX_AGG_SSN_TO_TXQ_IDX(ssn, ring->ring_count));
+    ring->cur = wr_idx;
     ring->qid = fwqid;
     iwx_reset_tx_ring(sc, &sc->txq[fwqid]);
     iwx_free_tx_ring(sc, &sc->txq[fwqid]);
@@ -4368,6 +4367,7 @@ iwx_ba_task(void *arg)
     ItlIwx *that = container_of(sc, ItlIwx, com);
     struct ieee80211_node *ni = ic->ic_bss;
     struct ieee80211_tx_ba *ba;
+    struct iwx_tx_ring *ring;
     int s = splnet();
     int err = 0;
     int qid = 0;
@@ -4408,16 +4408,17 @@ iwx_ba_task(void *arg)
                 err = -1;
                 goto out;
             }
-            ba->ba_state = IEEE80211_BA_AGREED;
-            ba->ba_bitmap = 0;
-            err = 0;
-            ic->ic_stats.is_ht_tx_ba_agreements++;
-            XYLog("%s tx queue alloc succeed qid=%d err=%d\n", __FUNCTION__, qid, err);
+            ring = &sc->txq[qid];
+            ba->ba_winstart = IWX_AGG_SSN_TO_TXQ_IDX(ring->cur, ring->ring_count);
+            ba->ba_winend = (ba->ba_winstart + ba->ba_winsize - 1) & 0xfff;
+            ba->ba_timeout_val = 0;
+            ieee80211_addba_resp_accept(ic, ni, tid);
+            XYLog("%s tx queue alloc succeed qid=%d ssn=%d\n", __FUNCTION__, qid, ba->ba_winstart);
         out:
             that->iwx_nic_unlock(sc);
-            if (err) {
-                ba->ba_state = IEEE80211_BA_INIT;
-            }
+            if (err)
+                ieee80211_addba_resp_refuse(ic, ni, tid,
+                                            IEEE80211_STATUS_UNSPECIFIED);
             sc->ba_tx.start_tidmask &= ~(1 << tid);
         }
     }
