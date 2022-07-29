@@ -4638,6 +4638,16 @@ iwm_attach(struct iwm_softc *sc, struct pci_attach_args *pa)
         return false;
     }
     
+    if (!sc->sc_msix) {
+        /* Hardware bug workaround. */
+        reg = pci_conf_read(sc->sc_pct, sc->sc_pcitag,
+            PCI_COMMAND_STATUS_REG);
+        if (reg & PCI_COMMAND_INTERRUPT_DISABLE)
+            reg &= ~PCI_COMMAND_INTERRUPT_DISABLE;
+        pci_conf_write(sc->sc_pct, sc->sc_pcitag,
+            PCI_COMMAND_STATUS_REG, reg);
+    }
+    
     int msiIntrIndex = 0;
     for (int index = 0; ; index++)
     {
