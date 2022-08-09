@@ -12909,22 +12909,6 @@ iwx_attach(struct iwx_softc *sc, struct pci_attach_args *pa)
     if (CSR_HW_REV_TYPE(sc->sc_hw_rev) == IWL_CFG_MAC_TYPE_SNJ)
         sc->sc_cfg_params = &iwl_so_trans_cfg;
     
-    /* TODO: it is never happened. */
-    if (sc->sc_cfg == &iwlax210_2ax_cfg_so_hr_a0) {
-        if (sc->sc_hw_rev == CSR_HW_REV_TYPE_TY) {
-            sc->sc_cfg = &iwlax210_2ax_cfg_ty_gf_a0;
-        } else if (CSR_HW_RF_ID_TYPE_CHIP_ID(sc->sc_hw_rf_id) ==
-                   CSR_HW_RF_ID_TYPE_CHIP_ID(CSR_HW_RF_ID_TYPE_JF)) {
-            sc->sc_cfg = &iwlax210_2ax_cfg_so_jf_a0;
-        } else if (CSR_HW_RF_ID_TYPE_CHIP_ID(sc->sc_hw_rf_id) ==
-                   CSR_HW_RF_ID_TYPE_CHIP_ID(CSR_HW_RF_ID_TYPE_GF)) {
-            sc->sc_cfg = &iwlax211_2ax_cfg_so_gf_a0;
-        } else if (CSR_HW_RF_ID_TYPE_CHIP_ID(sc->sc_hw_rf_id) ==
-                   CSR_HW_RF_ID_TYPE_CHIP_ID(CSR_HW_RF_ID_TYPE_GF4)) {
-            sc->sc_cfg = &iwlax411_2ax_cfg_so_gf4_a0;
-        }
-    }
-    
     /*
      * This is a hack to switch from Qu B0 to Qu C0.  We need to
      * do this for all cfgs that use Qu B0, except for those using
