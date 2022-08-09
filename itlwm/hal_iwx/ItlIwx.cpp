@@ -10790,6 +10790,14 @@ iwx_rx_pkt_valid(struct iwx_rx_packet *pkt)
             pkt->len_n_flags != htole32(IWX_FH_RSCSR_FRAME_INVALID));
 }
 
+/**
+ * struct iwl_pnvm_init_complete_ntfy - PNVM initialization complete
+ * @status: PNVM image loading status
+ */
+struct iwl_pnvm_init_complete_ntfy {
+    uint32_t status;
+} __packed; /* PNVM_INIT_COMPLETE_NTFY_S_VER_1 */
+
 void ItlIwx::
 iwx_rx_pkt(struct iwx_softc *sc, struct iwx_rx_data *data, struct mbuf_list *ml)
 {
@@ -11027,6 +11035,9 @@ iwx_rx_pkt(struct iwx_softc *sc, struct iwx_rx_data *data, struct mbuf_list *ml)
                 
             case IWX_WIDE_ID(IWX_REGULATORY_AND_NVM_GROUP, IWX_PNVM_INIT_COMPLETE_NTFY):
                 wakeupOn(&sc->sc_init_complete);
+                struct iwl_pnvm_init_complete_ntfy *pnvm_ntf;
+                SYNC_RESP_STRUCT(pnvm_ntf, pkt, struct iwl_pnvm_init_complete_ntfy *);
+                XYLog("PNVM complete notification received with status 0x%0x\n", le32toh(pnvm_ntf->status));
                 break;
                 
             case IWX_INIT_COMPLETE_NOTIF:
