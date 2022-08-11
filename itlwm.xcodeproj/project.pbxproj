@@ -100,7 +100,6 @@
 		35CBE671251CB89700435CBC /* _mbuf.cpp in Sources */ = {isa = PBXBuildFile; fileRef = F8D257732495A33500872E4F /* _mbuf.cpp */; };
 		35CBE672251CB89700435CBC /* _task.cpp in Sources */ = {isa = PBXBuildFile; fileRef = F8F9EDE0240B7415009CB8E7 /* _task.cpp */; };
 		35CBE673251CB89700435CBC /* FwBinary.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5076FA7F24CC71E40011B2BB /* FwBinary.cpp */; };
-		35CBE674251CB89700435CBC /* IOTaskQueue.cpp in Sources */ = {isa = PBXBuildFile; fileRef = F8A33572244AED060039DA12 /* IOTaskQueue.cpp */; };
 		35CBE675251CB89700435CBC /* ieee80211_proto.c in Sources */ = {isa = PBXBuildFile; fileRef = F8C2EC2F24080319007A9422 /* ieee80211_proto.c */; };
 		35CBE676251CB89700435CBC /* AirportItlwmInterface.cpp in Sources */ = {isa = PBXBuildFile; fileRef = F8CA44A125091AF60036119A /* AirportItlwmInterface.cpp */; };
 		35CBE677251CB89700435CBC /* _string.c in Sources */ = {isa = PBXBuildFile; fileRef = F8C2EC3024080319007A9422 /* _string.c */; };
@@ -175,7 +174,6 @@
 		35CBE6DB251CB8BF00435CBC /* _mbuf.cpp in Sources */ = {isa = PBXBuildFile; fileRef = F8D257732495A33500872E4F /* _mbuf.cpp */; };
 		35CBE6DC251CB8BF00435CBC /* _task.cpp in Sources */ = {isa = PBXBuildFile; fileRef = F8F9EDE0240B7415009CB8E7 /* _task.cpp */; };
 		35CBE6DD251CB8BF00435CBC /* FwBinary.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5076FA7F24CC71E40011B2BB /* FwBinary.cpp */; };
-		35CBE6DE251CB8BF00435CBC /* IOTaskQueue.cpp in Sources */ = {isa = PBXBuildFile; fileRef = F8A33572244AED060039DA12 /* IOTaskQueue.cpp */; };
 		35CBE6DF251CB8BF00435CBC /* ieee80211_proto.c in Sources */ = {isa = PBXBuildFile; fileRef = F8C2EC2F24080319007A9422 /* ieee80211_proto.c */; };
 		35CBE6E0251CB8BF00435CBC /* AirportItlwmInterface.cpp in Sources */ = {isa = PBXBuildFile; fileRef = F8CA44A125091AF60036119A /* AirportItlwmInterface.cpp */; };
 		35CBE6E1251CB8BF00435CBC /* _string.c in Sources */ = {isa = PBXBuildFile; fileRef = F8C2EC3024080319007A9422 /* _string.c */; };
@@ -250,7 +248,6 @@
 		35CBE746251CB8CA00435CBC /* _mbuf.cpp in Sources */ = {isa = PBXBuildFile; fileRef = F8D257732495A33500872E4F /* _mbuf.cpp */; };
 		35CBE747251CB8CA00435CBC /* _task.cpp in Sources */ = {isa = PBXBuildFile; fileRef = F8F9EDE0240B7415009CB8E7 /* _task.cpp */; };
 		35CBE748251CB8CA00435CBC /* FwBinary.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5076FA7F24CC71E40011B2BB /* FwBinary.cpp */; };
-		35CBE749251CB8CA00435CBC /* IOTaskQueue.cpp in Sources */ = {isa = PBXBuildFile; fileRef = F8A33572244AED060039DA12 /* IOTaskQueue.cpp */; };
 		35CBE74A251CB8CA00435CBC /* ieee80211_proto.c in Sources */ = {isa = PBXBuildFile; fileRef = F8C2EC2F24080319007A9422 /* ieee80211_proto.c */; };
 		35CBE74B251CB8CA00435CBC /* AirportItlwmInterface.cpp in Sources */ = {isa = PBXBuildFile; fileRef = F8CA44A125091AF60036119A /* AirportItlwmInterface.cpp */; };
 		35CBE74C251CB8CA00435CBC /* _string.c in Sources */ = {isa = PBXBuildFile; fileRef = F8C2EC3024080319007A9422 /* _string.c */; };
@@ -350,7 +347,6 @@
 		F897ECCC266EFF93005EE8F7 /* ieee80211_ra.c in Sources */ = {isa = PBXBuildFile; fileRef = F8C594D125FD935B0007D19C /* ieee80211_ra.c */; };
 		F897ECCD266EFF93005EE8F7 /* _task.cpp in Sources */ = {isa = PBXBuildFile; fileRef = F8F9EDE0240B7415009CB8E7 /* _task.cpp */; };
 		F897ECCE266EFF93005EE8F7 /* FwBinary.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5076FA7F24CC71E40011B2BB /* FwBinary.cpp */; };
-		F897ECCF266EFF93005EE8F7 /* IOTaskQueue.cpp in Sources */ = {isa = PBXBuildFile; fileRef = F8A33572244AED060039DA12 /* IOTaskQueue.cpp */; };
 		F897ECD0266EFF93005EE8F7 /* ieee80211_proto.c in Sources */ = {isa = PBXBuildFile; fileRef = F8C2EC2F24080319007A9422 /* ieee80211_proto.c */; };
 		F897ECD1266EFF93005EE8F7 /* AirportItlwmInterface.cpp in Sources */ = {isa = PBXBuildFile; fileRef = F8CA44A125091AF60036119A /* AirportItlwmInterface.cpp */; };
 		F897ECD2266EFF93005EE8F7 /* _string.c in Sources */ = {isa = PBXBuildFile; fileRef = F8C2EC3024080319007A9422 /* _string.c */; };
@@ -444,7 +440,6 @@
 		F89B6BF025023162000F77FF /* ItlIwx.cpp in Sources */ = {isa = PBXBuildFile; fileRef = F8D6CD642442E8F200D2A454 /* ItlIwx.cpp */; };
 		F89B6BF12502316A000F77FF /* ItlHalService.cpp in Sources */ = {isa = PBXBuildFile; fileRef = F8D364F624F93AFD0029340B /* ItlHalService.cpp */; };
 		F89B6BF3250231E3000F77FF /* FwBinary.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5076FA7F24CC71E40011B2BB /* FwBinary.cpp */; };
-		F89B6BF4250231E3000F77FF /* IOTaskQueue.cpp in Sources */ = {isa = PBXBuildFile; fileRef = F8A33572244AED060039DA12 /* IOTaskQueue.cpp */; };
 		F89B6BF5250231E3000F77FF /* ieee80211_proto.c in Sources */ = {isa = PBXBuildFile; fileRef = F8C2EC2F24080319007A9422 /* ieee80211_proto.c */; };
 		F89B6BF6250231E3000F77FF /* _string.c in Sources */ = {isa = PBXBuildFile; fileRef = F8C2EC3024080319007A9422 /* _string.c */; };
 		F89B6BF7250231E3000F77FF /* ieee80211_ioctl.c in Sources */ = {isa = PBXBuildFile; fileRef = F8C2EC3224080319007A9422 /* ieee80211_ioctl.c */; };
@@ -491,8 +486,6 @@
 		F89B6C20250232DC000F77FF /* _mbuf.cpp in Sources */ = {isa = PBXBuildFile; fileRef = F8D257732495A33500872E4F /* _mbuf.cpp */; };
 		F89B6C21250232DC000F77FF /* _task.cpp in Sources */ = {isa = PBXBuildFile; fileRef = F8F9EDE0240B7415009CB8E7 /* _task.cpp */; };
 		F89B6C2325027609000F77FF /* debug.h in Headers */ = {isa = PBXBuildFile; fileRef = F89B6C2225027609000F77FF /* debug.h */; };
-		F8A33574244AED060039DA12 /* IOTaskQueue.cpp in Sources */ = {isa = PBXBuildFile; fileRef = F8A33572244AED060039DA12 /* IOTaskQueue.cpp */; };
-		F8A33577244AED060039DA12 /* IOTaskQueue.hpp in Headers */ = {isa = PBXBuildFile; fileRef = F8A33573244AED060039DA12 /* IOTaskQueue.hpp */; };
 		F8A4307325062CE300EA545E /* zutil.c in Sources */ = {isa = PBXBuildFile; fileRef = F8FA0EED2501E8C100B1822E /* zutil.c */; };
 		F8AE64F9285471560085B4CF /* debug.h in Headers */ = {isa = PBXBuildFile; fileRef = F89B6C2225027609000F77FF /* debug.h */; };
 		F8AE64FA285471560085B4CF /* IOSkywalkEthernetInterface.h in Headers */ = {isa = PBXBuildFile; fileRef = F89B6BD025021E66000F77FF /* IOSkywalkEthernetInterface.h */; };
@@ -514,7 +507,6 @@
 		F8AE650B285471560085B4CF /* ieee80211_ra.c in Sources */ = {isa = PBXBuildFile; fileRef = F8C594D125FD935B0007D19C /* ieee80211_ra.c */; };
 		F8AE650C285471560085B4CF /* _task.cpp in Sources */ = {isa = PBXBuildFile; fileRef = F8F9EDE0240B7415009CB8E7 /* _task.cpp */; };
 		F8AE650D285471560085B4CF /* FwBinary.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5076FA7F24CC71E40011B2BB /* FwBinary.cpp */; };
-		F8AE650E285471560085B4CF /* IOTaskQueue.cpp in Sources */ = {isa = PBXBuildFile; fileRef = F8A33572244AED060039DA12 /* IOTaskQueue.cpp */; };
 		F8AE650F285471560085B4CF /* ieee80211_proto.c in Sources */ = {isa = PBXBuildFile; fileRef = F8C2EC2F24080319007A9422 /* ieee80211_proto.c */; };
 		F8AE6510285471560085B4CF /* AirportItlwmInterface.cpp in Sources */ = {isa = PBXBuildFile; fileRef = F8CA44A125091AF60036119A /* AirportItlwmInterface.cpp */; };
 		F8AE6511285471560085B4CF /* _string.c in Sources */ = {isa = PBXBuildFile; fileRef = F8C2EC3024080319007A9422 /* _string.c */; };
@@ -680,8 +672,6 @@
 		F8F92586240974EF0088B8D5 /* types.h in Headers */ = {isa = PBXBuildFile; fileRef = F8F9257B240974EF0088B8D5 /* types.h */; };
 		F8F9EDE1240B7415009CB8E7 /* _task.cpp in Sources */ = {isa = PBXBuildFile; fileRef = F8F9EDE0240B7415009CB8E7 /* _task.cpp */; };
 		F8FA0EEC2501E7EE00B1822E /* zutil.h in Headers */ = {isa = PBXBuildFile; fileRef = F8FA0EEB2501E7EE00B1822E /* zutil.h */; };
-		F8FC31CF247E797E00FB456B /* itlwm_interface.cpp in Sources */ = {isa = PBXBuildFile; fileRef = F8FC31CD247E797E00FB456B /* itlwm_interface.cpp */; };
-		F8FC31D0247E797E00FB456B /* itlwm_interface.hpp in Headers */ = {isa = PBXBuildFile; fileRef = F8FC31CE247E797E00FB456B /* itlwm_interface.hpp */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -852,8 +842,6 @@
 		F89B6BDE25022FB5000F77FF /* AirportVirtualIOCTL.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = AirportVirtualIOCTL.cpp; sourceTree = "<group>"; };
 		F89B6BE025022FC7000F77FF /* AirportAWDL.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = AirportAWDL.cpp; sourceTree = "<group>"; };
 		F89B6C2225027609000F77FF /* debug.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = debug.h; sourceTree = "<group>"; };
-		F8A33572244AED060039DA12 /* IOTaskQueue.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = IOTaskQueue.cpp; sourceTree = "<group>"; };
-		F8A33573244AED060039DA12 /* IOTaskQueue.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = IOTaskQueue.hpp; sourceTree = "<group>"; };
 		F8A763892766B95F004606BE /* iwlwifi-so-a0-gf4-a0.pnvm */ = {isa = PBXFileReference; lastKnownFileType = file; path = "iwlwifi-so-a0-gf4-a0.pnvm"; sourceTree = "<group>"; };
 		F8AE6558285471560085B4CF /* AirportItlwm.kext */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AirportItlwm.kext; sourceTree = BUILT_PRODUCTS_DIR; };
 		F8AE6559285471560085B4CF /* AirportItlwm-Ventura-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; name = "AirportItlwm-Ventura-Info.plist"; path = "/Users/qcwap/Desktop/github_project/itlwm/AirportItlwm-Ventura-Info.plist"; sourceTree = "<absolute>"; };
@@ -955,8 +943,6 @@
 		F8F9EDE0240B7415009CB8E7 /* _task.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = _task.cpp; sourceTree = "<group>"; };
 		F8FA0EEB2501E7EE00B1822E /* zutil.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = zutil.h; sourceTree = "<group>"; };
 		F8FA0EED2501E8C100B1822E /* zutil.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = zutil.c; sourceTree = "<group>"; };
-		F8FC31CD247E797E00FB456B /* itlwm_interface.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = itlwm_interface.cpp; sourceTree = "<group>"; };
-		F8FC31CE247E797E00FB456B /* itlwm_interface.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = itlwm_interface.hpp; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -1057,8 +1043,6 @@
 				F8AF3A2D24F9F246008911C1 /* hal_iwx */,
 				024A07AF23FCBC3C009FBA6C /* itlwm.hpp */,
 				024A07B123FCBC3C009FBA6C /* itlwm.cpp */,
-				F8FC31CD247E797E00FB456B /* itlwm_interface.cpp */,
-				F8FC31CE247E797E00FB456B /* itlwm_interface.hpp */,
 				024A07B323FCBC3C009FBA6C /* Info.plist */,
 				F8D76361244F21BB00DEA040 /* pm.cpp */,
 				F8E49A12249B923500BE6868 /* ItlNetworkUserClient.cpp */,
@@ -1329,8 +1313,6 @@
 		F8C2EC8624080556007A9422 /* sys */ = {
 			isa = PBXGroup;
 			children = (
-				F8A33572244AED060039DA12 /* IOTaskQueue.cpp */,
-				F8A33573244AED060039DA12 /* IOTaskQueue.hpp */,
 				F8C2EC9B2408062D007A9422 /* pcireg.h */,
 				F8C2EC8724080556007A9422 /* _buf.h */,
 				F8C2EC8824080556007A9422 /* CTimeout.hpp */,
@@ -1419,7 +1401,6 @@
 				024A084A23FCBC6C009FBA6C /* cryptodev.h in Headers */,
 				F8D364FA24F93AFD0029340B /* ItlHalService.hpp in Headers */,
 				024A083E23FCBC6C009FBA6C /* sk.h in Headers */,
-				F8FC31D0247E797E00FB456B /* itlwm_interface.hpp in Headers */,
 				F8AF3A3224F9F35B008911C1 /* ItlIwm.hpp in Headers */,
 				024A084323FCBC6C009FBA6C /* gmac.h in Headers */,
 				F8C2EC9C2408062D007A9422 /* pcireg.h in Headers */,
@@ -1431,7 +1412,6 @@
 				F8C2EC9724080557007A9422 /* tree.h in Headers */,
 				F8C2EC512408031A007A9422 /* ieee80211_amrr.h in Headers */,
 				024A083723FCBC6C009FBA6C /* key_wrap.h in Headers */,
-				F8A33577244AED060039DA12 /* IOTaskQueue.hpp in Headers */,
 				F8C594D825FD935B0007D19C /* ieee80211_ra.h in Headers */,
 				F8F92583240974EF0088B8D5 /* random.h in Headers */,
 				F800DD9B24FBEBF000789320 /* ItlDriverController.hpp in Headers */,
@@ -1884,7 +1864,6 @@
 				024A085023FCBC6C009FBA6C /* arc4.c in Sources */,
 				024A082F23FCBC6C009FBA6C /* hmac.c in Sources */,
 				F8C2EC5D2408031A007A9422 /* ieee80211_crypto_ccmp.c in Sources */,
-				F8FC31CF247E797E00FB456B /* itlwm_interface.cpp in Sources */,
 				F8C2EC552408031A007A9422 /* ieee80211_input.c in Sources */,
 				F8C2EC662408031A007A9422 /* ieee80211_crypto_wep.c in Sources */,
 				F8C2EC692408031A007A9422 /* CTimeout.cpp in Sources */,
@@ -1921,7 +1900,6 @@
 				F8C594D325FD935B0007D19C /* ieee80211_ra.c in Sources */,
 				024A085823FCBC6C009FBA6C /* rmd160.c in Sources */,
 				024A084223FCBC6C009FBA6C /* cmac.c in Sources */,
-				F8A33574244AED060039DA12 /* IOTaskQueue.cpp in Sources */,
 				F8C2EC532408031A007A9422 /* ieee80211.c in Sources */,
 				024A084E23FCBC6C009FBA6C /* chachapoly.c in Sources */,
 				F8F9EDE1240B7415009CB8E7 /* _task.cpp in Sources */,
@@ -1957,7 +1935,6 @@
 				35CBE672251CB89700435CBC /* _task.cpp in Sources */,
 				35CBE673251CB89700435CBC /* FwBinary.cpp in Sources */,
 				F837C9212724577F00B2C499 /* coex.cpp in Sources */,
-				35CBE674251CB89700435CBC /* IOTaskQueue.cpp in Sources */,
 				35CBE675251CB89700435CBC /* ieee80211_proto.c in Sources */,
 				35CBE676251CB89700435CBC /* AirportItlwmInterface.cpp in Sources */,
 				35CBE677251CB89700435CBC /* _string.c in Sources */,
@@ -2035,7 +2012,6 @@
 				35CBE6DC251CB8BF00435CBC /* _task.cpp in Sources */,
 				35CBE6DD251CB8BF00435CBC /* FwBinary.cpp in Sources */,
 				F837C91F2724577F00B2C499 /* coex.cpp in Sources */,
-				35CBE6DE251CB8BF00435CBC /* IOTaskQueue.cpp in Sources */,
 				35CBE6DF251CB8BF00435CBC /* ieee80211_proto.c in Sources */,
 				35CBE6E0251CB8BF00435CBC /* AirportItlwmInterface.cpp in Sources */,
 				35CBE6E1251CB8BF00435CBC /* _string.c in Sources */,
@@ -2113,7 +2089,6 @@
 				35CBE747251CB8CA00435CBC /* _task.cpp in Sources */,
 				35CBE748251CB8CA00435CBC /* FwBinary.cpp in Sources */,
 				F837C91E2724577F00B2C499 /* coex.cpp in Sources */,
-				35CBE749251CB8CA00435CBC /* IOTaskQueue.cpp in Sources */,
 				35CBE74A251CB8CA00435CBC /* ieee80211_proto.c in Sources */,
 				35CBE74B251CB8CA00435CBC /* AirportItlwmInterface.cpp in Sources */,
 				35CBE74C251CB8CA00435CBC /* _string.c in Sources */,
@@ -2190,7 +2165,6 @@
 				F897ECCC266EFF93005EE8F7 /* ieee80211_ra.c in Sources */,
 				F897ECCD266EFF93005EE8F7 /* _task.cpp in Sources */,
 				F897ECCE266EFF93005EE8F7 /* FwBinary.cpp in Sources */,
-				F897ECCF266EFF93005EE8F7 /* IOTaskQueue.cpp in Sources */,
 				F897ECD0266EFF93005EE8F7 /* ieee80211_proto.c in Sources */,
 				F897ECD1266EFF93005EE8F7 /* AirportItlwmInterface.cpp in Sources */,
 				F897ECD2266EFF93005EE8F7 /* _string.c in Sources */,
@@ -2270,7 +2244,6 @@
 				F89B6C21250232DC000F77FF /* _task.cpp in Sources */,
 				F89B6BF3250231E3000F77FF /* FwBinary.cpp in Sources */,
 				F837C9202724577F00B2C499 /* coex.cpp in Sources */,
-				F89B6BF4250231E3000F77FF /* IOTaskQueue.cpp in Sources */,
 				F89B6BF5250231E3000F77FF /* ieee80211_proto.c in Sources */,
 				F8CA44A325091AF60036119A /* AirportItlwmInterface.cpp in Sources */,
 				F89B6BF6250231E3000F77FF /* _string.c in Sources */,
@@ -2347,7 +2320,6 @@
 				F8AE650B285471560085B4CF /* ieee80211_ra.c in Sources */,
 				F8AE650C285471560085B4CF /* _task.cpp in Sources */,
 				F8AE650D285471560085B4CF /* FwBinary.cpp in Sources */,
-				F8AE650E285471560085B4CF /* IOTaskQueue.cpp in Sources */,
 				F8AE650F285471560085B4CF /* ieee80211_proto.c in Sources */,
 				F8AE6510285471560085B4CF /* AirportItlwmInterface.cpp in Sources */,
 				F8AE6511285471560085B4CF /* _string.c in Sources */,

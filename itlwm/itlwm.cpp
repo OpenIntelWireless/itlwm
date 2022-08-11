@@ -128,19 +128,6 @@ bool itlwm::configureInterface(IONetworkInterface *netif) {
     return true;
 }
 
-IONetworkInterface *itlwm::createInterface()
-{
-    itlwm_interface *netif = new itlwm_interface;
-    if (!netif) {
-        return NULL;
-    }
-    if (!netif->init(this)) {
-        netif->release();
-        return NULL;
-    }
-    return netif;
-}
-
 struct _ifnet *itlwm::getIfp()
 {
     return &fHalService->get80211Controller()->ic_ac.ac_if;
