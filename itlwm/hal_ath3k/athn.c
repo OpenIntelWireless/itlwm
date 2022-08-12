@@ -2169,7 +2169,6 @@ athn_set_bss(struct athn_softc *sc, struct ieee80211_node *ni)
 void
 athn_enable_interrupts(struct athn_softc *sc)
 {
-    printf("%s\n", __FUNCTION__);
 	uint32_t mask2;
 
 	athn_disable_interrupts(sc);	/* XXX */

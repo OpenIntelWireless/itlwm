@@ -227,14 +227,12 @@ int pci_intr_map(struct pci_attach_args *paa, pci_intr_handle_t *ih)
 	return 0;
 }
 
-void interruptTrampoline(OSObject *ih, IOInterruptEventSource *, int count);
-void interruptTrampoline(OSObject *ih, IOInterruptEventSource *, int count)
+static void interruptTrampoline(OSObject *object, IOInterruptEventSource *sender, int count)
 {
-    printf("%s\n", __FUNCTION__);
-	pci_intr_handle* _ih = OSDynamicCast(pci_intr_handle, ih);
-	if (_ih == NULL)
-		return;
-	_ih->func(_ih->arg); // jump to actual interrupt handler
+    pci_intr_handle *ih = OSDynamicCast(pci_intr_handle, object);
+    if (!ih || !ih->func)
+        return;
+    ih->func(ih->arg);
 }
 
 void* pci_intr_establish(pci_chipset_tag_t pc, pci_intr_handle_t ih, int level, int (*handler)(void *), void *arg, const char *name)
@@ -256,6 +254,7 @@ void* pci_intr_establish(pci_chipset_tag_t pc, pci_intr_handle_t ih, int level, 
         }
     }
 	ih->arg = arg;
+    ih->func = handler;
 	ih->intr = IOInterruptEventSource::interruptEventSource(ih, &interruptTrampoline, ih->dev, intrIndex);
 	
 	if (ih->intr == NULL)
@@ -264,16 +263,12 @@ void* pci_intr_establish(pci_chipset_tag_t pc, pci_intr_handle_t ih, int level, 
 		return NULL;
 	
 	ih->intr->enable();
-    if (intrIndex == 0)
-        ih->dev->enableInterrupt(intrIndex);
 	return ih;
 }
 
 void pci_intr_disestablish(pci_chipset_tag_t pc, void *ih)
 {
 	pci_intr_handle_t intr = (pci_intr_handle_t) ih;
-    if (!intr->msi && intr->dev)
-        intr->dev->disableInterrupt(0);
     
 	if (intr->workloop)
         intr->workloop->removeEventSource(intr->intr);

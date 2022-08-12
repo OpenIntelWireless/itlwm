@@ -245,7 +245,7 @@ public:
 	IOWorkLoop*		workloop;
 	IOInterruptEventSource*	intr;
 	IOPCIDevice*		dev;
-	void (*func)(void* arg);
+	int (*func)(void* arg);
 	void* arg;
     bool msi;
 };
