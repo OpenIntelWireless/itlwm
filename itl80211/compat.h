@@ -41,6 +41,44 @@
 #define BUS_DMA_ZERO		0
 #define BUS_DMA_COHERENT	0
 #define BUS_DMA_READ		0
+#define BUS_DMA_WRITE       0
+#define BUS_DMA_ALLOCNOW    0
+
+#define M_DEVBUF    0
+
+#define pci_intr_string(x, y)   "MSI"
+
+#define SIMPLEQ_ENTRY   STAILQ_ENTRY
+#define SIMPLEQ_HEAD    STAILQ_HEAD
+#define SIMPLEQ_FIRST   STAILQ_FIRST
+#define SIMPLEQ_REMOVE_HEAD STAILQ_REMOVE_HEAD
+#define SIMPLEQ_INSERT_TAIL STAILQ_INSERT_TAIL
+#define SIMPLEQ_INIT    STAILQ_INIT
+#define SIMPLEQ_EMPTY   STAILQ_EMPTY
+#define SIMPLEQ_NEXT    STAILQ_NEXT
+
+#ifdef DELAY
+#undef DELAY
+#define DELAY(x) IODelay(x)
+#endif
+
+#define __predict_false(x)  (x)
+#define __predict_true(x)   (x)
+
+#define MUL_NO_OVERFLOW    (1UL << (sizeof(size_t) * 4))
+
+#define    M_CANFAIL    0x0004
+static inline void *
+mallocarray(size_t nmemb, size_t size, int type, int flags)
+{
+    if ((nmemb >= MUL_NO_OVERFLOW || size >= MUL_NO_OVERFLOW) &&
+        nmemb > 0 && SIZE_MAX / nmemb < size) {
+        if (flags & M_CANFAIL)
+            return (NULL);
+        panic("mallocarray: overflow %zu * %zu", nmemb, size);
+    }
+    return (malloc(size * nmemb, type, flags));
+}
 
 static inline void
 USEC_TO_TIMEVAL(uint64_t us, struct timeval *tv)
@@ -123,6 +161,33 @@ extern void wakeup_oneOn(void *chan);
 #define m_freem mbuf_freem
 #define m_free mbuf_free
 #define m_copydata mbuf_copydata
+#define m_adj   mbuf_adj
+#define MGETHDR(m, how, type)   mbuf_gethdr((how), (type), &(m))
+#define MCLGET(m, how)          mbuf_mclget((how), MBUF_TYPE_DATA, &(m))
+#define MCLGETL(m, how, len)    mcl_get((m), (how), (len))
+
+static inline mbuf_t
+mcl_get(mbuf_t m, mbuf_how_t how, size_t size)
+{
+    if (!m) {
+        mbuf_gethdr(how, MBUF_TYPE_DATA, &m);
+        if (!m)
+            return NULL;
+    }
+    if (size <= MCLBYTES)
+        mbuf_mclget(how, MBUF_TYPE_DATA, &m);
+    else if (size <= MBIGCLBYTES)
+        mbuf_getcluster(how, MBUF_TYPE_DATA, MBIGCLBYTES, &m);
+    else {
+        mbuf_freem(m);
+        return NULL;
+    }
+    if (!(mbuf_flags(m) & MBUF_EXT)) {
+        mbuf_freem(m);
+        return NULL;
+    }
+    return m;
+}
 
 static inline int
 flsl(long mask)
@@ -158,8 +223,14 @@ enum {
 	BUS_DMASYNC_POSTWRITE
 };
 
-typedef int				bus_dma_tag_t;
-typedef IOBufferMemoryDescriptor*	bus_dma_segment_t;
+typedef int                bus_dma_tag_t;
+typedef struct {
+    IOBufferMemoryDescriptor  *bmd;
+    IODMACommand *cmd;
+    size_t size;
+    mach_vm_address_t paddr;
+    void *vaddr;
+} bus_dma_segment_t;
 typedef caddr_t				bus_space_handle_t; // pointer to device memory
 typedef int				pci_chipset_tag_t;
 typedef mach_vm_address_t		bus_addr_t;
@@ -205,8 +276,12 @@ struct pci_attach_args {
 };
 
 struct bus_dmamap {
+    IOMemoryDescriptor *_loadDesc;
+    IODMACommand    *_loadCmd;
 	IOMbufNaturalMemoryCursor*	cursor;
 	int				dm_nsegs;
+    int             dm_mapsize;
+    int             dm_maxsegs;
 	IOPhysicalSegment		dm_segs[23]; // reserve space for 8 segments
 };
 typedef struct bus_dmamap* bus_dmamap_t;
@@ -275,10 +350,11 @@ void		pci_conf_write(pci_chipset_tag_t pc, pcitag_t tag, int reg, pcireg_t val);
 pcireg_t	pci_mapreg_type(pci_chipset_tag_t pc, pcitag_t tag, int reg);
 int		pci_mapreg_map(const struct pci_attach_args *pa, int reg, pcireg_t type, int busflags, bus_space_tag_t *tagp,
 			       bus_space_handle_t *handlep, bus_addr_t *basep, bus_size_t *sizep, bus_size_t maxsize);
+int     bus_space_unmap(bus_space_tag_t tag, bus_space_handle_t handle, bus_size_t size);
 int     pci_intr_map_msix(struct pci_attach_args *pa, int vec, pci_intr_handle_t *ihp);
 int		pci_intr_map_msi(struct pci_attach_args *paa, pci_intr_handle_t *ih);
 int		pci_intr_map(struct pci_attach_args *paa, pci_intr_handle_t *ih);
-void*		pci_intr_establish(pci_chipset_tag_t pc, pci_intr_handle_t ih, int level, int (*handler)(void *), void *arg);
+void*		pci_intr_establish(pci_chipset_tag_t pc, pci_intr_handle_t ih, int level, int (*handler)(void *), void *arg, const char *name);
 void		pci_intr_disestablish(pci_chipset_tag_t pc, void *ih);
 
 uint64_t    bus_space_read_8(bus_space_tag_t space, bus_space_handle_t handle, bus_size_t offset);
@@ -291,12 +367,15 @@ void		bus_space_barrier(bus_space_tag_t space, bus_space_handle_t handle, bus_si
 int		bus_dmamap_create(bus_dma_tag_t tag, bus_size_t size, int nsegments, bus_size_t maxsegsz, bus_size_t boundary, int flags, bus_dmamap_t *dmamp);
 int		bus_dmamem_alloc(bus_dma_tag_t tag, bus_size_t size, bus_size_t alignment, bus_size_t boundary, bus_dma_segment_t *segs, int nsegs, int *rsegs, int flags);
 int		bus_dmamem_map(bus_dma_tag_t tag, bus_dma_segment_t *segs, int nsegs, size_t size, void **kvap, int flags);
-bus_addr_t	bus_dmamap_get_paddr(bus_dma_segment_t seg); // XXX new
 void		bus_dmamap_sync(bus_dma_tag_t tag, bus_dmamap_t dmam, bus_addr_t offset, bus_size_t len, int ops);
 void		bus_dmamem_unmap(bus_dma_segment_t seg); // XXX changed args
 void		bus_dmamem_free(bus_dma_tag_t tag, bus_dma_segment_t *segs, int nsegs);
 void		bus_dmamap_destroy(bus_dma_tag_t tag, bus_dmamap_t dmam);
-int		bus_dmamap_load(bus_dmamap_t map, mbuf_t m);
-#define bus_dmamap_load_mbuf bus_dmamap_load
+int     bus_dmamap_unload(bus_dma_tag_t tag, bus_dmamap_t dmam);
+int     bus_dmamem_unmap(bus_dma_tag_t tag, void *addr, int length);
+int     bus_dmamap_load_mbuf(bus_dma_tag_t tag, bus_dmamap_t dmam, mbuf_t m, int ops);
+int     bus_dmamap_load(bus_dma_tag_t tag, bus_dmamap_t dmam, void *addr, int size, struct proc *p, int ops);
+int     bus_dmamap_load_raw(bus_dma_tag_t t, bus_dmamap_t map, bus_dma_segment_t *segs, int nsegs, bus_size_t size, int flags);
+int     bus_dmamem_map(bus_dma_tag_t t, bus_dma_segment_t *segs, int nsegs, size_t size, caddr_t *kvap, int flags);
 
 #endif

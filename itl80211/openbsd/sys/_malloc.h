@@ -48,4 +48,10 @@ free(void* addr)
     IOFree(actual_addr, len + sizeof(vm_size_t));
 }
 
+static inline void
+free(void *addr, int type, int flags)
+{
+    free(addr);
+}
+
 #endif /* _malloc_h */

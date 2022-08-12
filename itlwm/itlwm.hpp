@@ -29,6 +29,7 @@
 #include "ItlIwm.hpp"
 #include "ItlIwx.hpp"
 #include "ItlIwn.hpp"
+#include "Athn.hpp"
 
 enum
 {

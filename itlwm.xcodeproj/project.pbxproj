@@ -633,6 +633,216 @@
 		F8C772922443439A00A1B8A0 /* compat.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 024A07BA23FCBC6C009FBA6C /* compat.cpp */; };
 		F8CA44A325091AF60036119A /* AirportItlwmInterface.cpp in Sources */ = {isa = PBXBuildFile; fileRef = F8CA44A125091AF60036119A /* AirportItlwmInterface.cpp */; };
 		F8CA44A425091AF60036119A /* AirportItlwmInterface.hpp in Headers */ = {isa = PBXBuildFile; fileRef = F8CA44A225091AF60036119A /* AirportItlwmInterface.hpp */; };
+		F8CCC19C28A4D7400068BEE6 /* ar5211.c in Sources */ = {isa = PBXBuildFile; fileRef = F8CCC18328A4D73E0068BEE6 /* ar5211.c */; };
+		F8CCC19D28A4D7400068BEE6 /* ar5211.c in Sources */ = {isa = PBXBuildFile; fileRef = F8CCC18328A4D73E0068BEE6 /* ar5211.c */; };
+		F8CCC19E28A4D7400068BEE6 /* ar5211.c in Sources */ = {isa = PBXBuildFile; fileRef = F8CCC18328A4D73E0068BEE6 /* ar5211.c */; };
+		F8CCC19F28A4D7400068BEE6 /* ar5211.c in Sources */ = {isa = PBXBuildFile; fileRef = F8CCC18328A4D73E0068BEE6 /* ar5211.c */; };
+		F8CCC1A028A4D7400068BEE6 /* ar5211.c in Sources */ = {isa = PBXBuildFile; fileRef = F8CCC18328A4D73E0068BEE6 /* ar5211.c */; };
+		F8CCC1A128A4D7400068BEE6 /* ar5211.c in Sources */ = {isa = PBXBuildFile; fileRef = F8CCC18328A4D73E0068BEE6 /* ar5211.c */; };
+		F8CCC1A228A4D7400068BEE6 /* ar5211.c in Sources */ = {isa = PBXBuildFile; fileRef = F8CCC18328A4D73E0068BEE6 /* ar5211.c */; };
+		F8CCC1A328A4D7400068BEE6 /* ar9287reg.h in Headers */ = {isa = PBXBuildFile; fileRef = F8CCC18428A4D73E0068BEE6 /* ar9287reg.h */; };
+		F8CCC1A428A4D7400068BEE6 /* ar9287reg.h in Headers */ = {isa = PBXBuildFile; fileRef = F8CCC18428A4D73E0068BEE6 /* ar9287reg.h */; };
+		F8CCC1A528A4D7400068BEE6 /* ar9287reg.h in Headers */ = {isa = PBXBuildFile; fileRef = F8CCC18428A4D73E0068BEE6 /* ar9287reg.h */; };
+		F8CCC1A628A4D7400068BEE6 /* ar9287reg.h in Headers */ = {isa = PBXBuildFile; fileRef = F8CCC18428A4D73E0068BEE6 /* ar9287reg.h */; };
+		F8CCC1A728A4D7400068BEE6 /* ar9287reg.h in Headers */ = {isa = PBXBuildFile; fileRef = F8CCC18428A4D73E0068BEE6 /* ar9287reg.h */; };
+		F8CCC1A828A4D7400068BEE6 /* ar9287reg.h in Headers */ = {isa = PBXBuildFile; fileRef = F8CCC18428A4D73E0068BEE6 /* ar9287reg.h */; };
+		F8CCC1A928A4D7400068BEE6 /* ar9287reg.h in Headers */ = {isa = PBXBuildFile; fileRef = F8CCC18428A4D73E0068BEE6 /* ar9287reg.h */; };
+		F8CCC1AA28A4D7400068BEE6 /* ar5210reg.h in Headers */ = {isa = PBXBuildFile; fileRef = F8CCC18528A4D73E0068BEE6 /* ar5210reg.h */; };
+		F8CCC1AB28A4D7400068BEE6 /* ar5210reg.h in Headers */ = {isa = PBXBuildFile; fileRef = F8CCC18528A4D73E0068BEE6 /* ar5210reg.h */; };
+		F8CCC1AC28A4D7400068BEE6 /* ar5210reg.h in Headers */ = {isa = PBXBuildFile; fileRef = F8CCC18528A4D73E0068BEE6 /* ar5210reg.h */; };
+		F8CCC1AD28A4D7400068BEE6 /* ar5210reg.h in Headers */ = {isa = PBXBuildFile; fileRef = F8CCC18528A4D73E0068BEE6 /* ar5210reg.h */; };
+		F8CCC1AE28A4D7400068BEE6 /* ar5210reg.h in Headers */ = {isa = PBXBuildFile; fileRef = F8CCC18528A4D73E0068BEE6 /* ar5210reg.h */; };
+		F8CCC1AF28A4D7400068BEE6 /* ar5210reg.h in Headers */ = {isa = PBXBuildFile; fileRef = F8CCC18528A4D73E0068BEE6 /* ar5210reg.h */; };
+		F8CCC1B028A4D7400068BEE6 /* ar5210reg.h in Headers */ = {isa = PBXBuildFile; fileRef = F8CCC18528A4D73E0068BEE6 /* ar5210reg.h */; };
+		F8CCC1B128A4D7400068BEE6 /* ar9285reg.h in Headers */ = {isa = PBXBuildFile; fileRef = F8CCC18628A4D73E0068BEE6 /* ar9285reg.h */; };
+		F8CCC1B228A4D7400068BEE6 /* ar9285reg.h in Headers */ = {isa = PBXBuildFile; fileRef = F8CCC18628A4D73E0068BEE6 /* ar9285reg.h */; };
+		F8CCC1B328A4D7400068BEE6 /* ar9285reg.h in Headers */ = {isa = PBXBuildFile; fileRef = F8CCC18628A4D73E0068BEE6 /* ar9285reg.h */; };
+		F8CCC1B428A4D7400068BEE6 /* ar9285reg.h in Headers */ = {isa = PBXBuildFile; fileRef = F8CCC18628A4D73E0068BEE6 /* ar9285reg.h */; };
+		F8CCC1B528A4D7400068BEE6 /* ar9285reg.h in Headers */ = {isa = PBXBuildFile; fileRef = F8CCC18628A4D73E0068BEE6 /* ar9285reg.h */; };
+		F8CCC1B628A4D7400068BEE6 /* ar9285reg.h in Headers */ = {isa = PBXBuildFile; fileRef = F8CCC18628A4D73E0068BEE6 /* ar9285reg.h */; };
+		F8CCC1B728A4D7400068BEE6 /* ar9285reg.h in Headers */ = {isa = PBXBuildFile; fileRef = F8CCC18628A4D73E0068BEE6 /* ar9285reg.h */; };
+		F8CCC1B828A4D7400068BEE6 /* ar5008.c in Sources */ = {isa = PBXBuildFile; fileRef = F8CCC18728A4D73E0068BEE6 /* ar5008.c */; };
+		F8CCC1B928A4D7400068BEE6 /* ar5008.c in Sources */ = {isa = PBXBuildFile; fileRef = F8CCC18728A4D73E0068BEE6 /* ar5008.c */; };
+		F8CCC1BA28A4D7400068BEE6 /* ar5008.c in Sources */ = {isa = PBXBuildFile; fileRef = F8CCC18728A4D73E0068BEE6 /* ar5008.c */; };
+		F8CCC1BB28A4D7400068BEE6 /* ar5008.c in Sources */ = {isa = PBXBuildFile; fileRef = F8CCC18728A4D73E0068BEE6 /* ar5008.c */; };
+		F8CCC1BC28A4D7400068BEE6 /* ar5008.c in Sources */ = {isa = PBXBuildFile; fileRef = F8CCC18728A4D73E0068BEE6 /* ar5008.c */; };
+		F8CCC1BD28A4D7400068BEE6 /* ar5008.c in Sources */ = {isa = PBXBuildFile; fileRef = F8CCC18728A4D73E0068BEE6 /* ar5008.c */; };
+		F8CCC1BE28A4D7400068BEE6 /* ar5008.c in Sources */ = {isa = PBXBuildFile; fileRef = F8CCC18728A4D73E0068BEE6 /* ar5008.c */; };
+		F8CCC1BF28A4D7400068BEE6 /* ar5416.c in Sources */ = {isa = PBXBuildFile; fileRef = F8CCC18828A4D73E0068BEE6 /* ar5416.c */; };
+		F8CCC1C028A4D7400068BEE6 /* ar5416.c in Sources */ = {isa = PBXBuildFile; fileRef = F8CCC18828A4D73E0068BEE6 /* ar5416.c */; };
+		F8CCC1C128A4D7400068BEE6 /* ar5416.c in Sources */ = {isa = PBXBuildFile; fileRef = F8CCC18828A4D73E0068BEE6 /* ar5416.c */; };
+		F8CCC1C228A4D7400068BEE6 /* ar5416.c in Sources */ = {isa = PBXBuildFile; fileRef = F8CCC18828A4D73E0068BEE6 /* ar5416.c */; };
+		F8CCC1C328A4D7400068BEE6 /* ar5416.c in Sources */ = {isa = PBXBuildFile; fileRef = F8CCC18828A4D73E0068BEE6 /* ar5416.c */; };
+		F8CCC1C428A4D7400068BEE6 /* ar5416.c in Sources */ = {isa = PBXBuildFile; fileRef = F8CCC18828A4D73E0068BEE6 /* ar5416.c */; };
+		F8CCC1C528A4D7400068BEE6 /* ar5416.c in Sources */ = {isa = PBXBuildFile; fileRef = F8CCC18828A4D73E0068BEE6 /* ar5416.c */; };
+		F8CCC1C628A4D7400068BEE6 /* ar9380reg.h in Headers */ = {isa = PBXBuildFile; fileRef = F8CCC18928A4D73F0068BEE6 /* ar9380reg.h */; };
+		F8CCC1C728A4D7400068BEE6 /* ar9380reg.h in Headers */ = {isa = PBXBuildFile; fileRef = F8CCC18928A4D73F0068BEE6 /* ar9380reg.h */; };
+		F8CCC1C828A4D7400068BEE6 /* ar9380reg.h in Headers */ = {isa = PBXBuildFile; fileRef = F8CCC18928A4D73F0068BEE6 /* ar9380reg.h */; };
+		F8CCC1C928A4D7400068BEE6 /* ar9380reg.h in Headers */ = {isa = PBXBuildFile; fileRef = F8CCC18928A4D73F0068BEE6 /* ar9380reg.h */; };
+		F8CCC1CA28A4D7400068BEE6 /* ar9380reg.h in Headers */ = {isa = PBXBuildFile; fileRef = F8CCC18928A4D73F0068BEE6 /* ar9380reg.h */; };
+		F8CCC1CB28A4D7400068BEE6 /* ar9380reg.h in Headers */ = {isa = PBXBuildFile; fileRef = F8CCC18928A4D73F0068BEE6 /* ar9380reg.h */; };
+		F8CCC1CC28A4D7400068BEE6 /* ar9380reg.h in Headers */ = {isa = PBXBuildFile; fileRef = F8CCC18928A4D73F0068BEE6 /* ar9380reg.h */; };
+		F8CCC1CD28A4D7400068BEE6 /* ar5210var.h in Headers */ = {isa = PBXBuildFile; fileRef = F8CCC18A28A4D73F0068BEE6 /* ar5210var.h */; };
+		F8CCC1CE28A4D7400068BEE6 /* ar5210var.h in Headers */ = {isa = PBXBuildFile; fileRef = F8CCC18A28A4D73F0068BEE6 /* ar5210var.h */; };
+		F8CCC1CF28A4D7400068BEE6 /* ar5210var.h in Headers */ = {isa = PBXBuildFile; fileRef = F8CCC18A28A4D73F0068BEE6 /* ar5210var.h */; };
+		F8CCC1D028A4D7400068BEE6 /* ar5210var.h in Headers */ = {isa = PBXBuildFile; fileRef = F8CCC18A28A4D73F0068BEE6 /* ar5210var.h */; };
+		F8CCC1D128A4D7400068BEE6 /* ar5210var.h in Headers */ = {isa = PBXBuildFile; fileRef = F8CCC18A28A4D73F0068BEE6 /* ar5210var.h */; };
+		F8CCC1D228A4D7400068BEE6 /* ar5210var.h in Headers */ = {isa = PBXBuildFile; fileRef = F8CCC18A28A4D73F0068BEE6 /* ar5210var.h */; };
+		F8CCC1D328A4D7400068BEE6 /* ar5210var.h in Headers */ = {isa = PBXBuildFile; fileRef = F8CCC18A28A4D73F0068BEE6 /* ar5210var.h */; };
+		F8CCC1D428A4D7400068BEE6 /* ar9003reg.h in Headers */ = {isa = PBXBuildFile; fileRef = F8CCC18B28A4D73F0068BEE6 /* ar9003reg.h */; };
+		F8CCC1D528A4D7400068BEE6 /* ar9003reg.h in Headers */ = {isa = PBXBuildFile; fileRef = F8CCC18B28A4D73F0068BEE6 /* ar9003reg.h */; };
+		F8CCC1D628A4D7400068BEE6 /* ar9003reg.h in Headers */ = {isa = PBXBuildFile; fileRef = F8CCC18B28A4D73F0068BEE6 /* ar9003reg.h */; };
+		F8CCC1D728A4D7400068BEE6 /* ar9003reg.h in Headers */ = {isa = PBXBuildFile; fileRef = F8CCC18B28A4D73F0068BEE6 /* ar9003reg.h */; };
+		F8CCC1D828A4D7400068BEE6 /* ar9003reg.h in Headers */ = {isa = PBXBuildFile; fileRef = F8CCC18B28A4D73F0068BEE6 /* ar9003reg.h */; };
+		F8CCC1D928A4D7400068BEE6 /* ar9003reg.h in Headers */ = {isa = PBXBuildFile; fileRef = F8CCC18B28A4D73F0068BEE6 /* ar9003reg.h */; };
+		F8CCC1DA28A4D7400068BEE6 /* ar9003reg.h in Headers */ = {isa = PBXBuildFile; fileRef = F8CCC18B28A4D73F0068BEE6 /* ar9003reg.h */; };
+		F8CCC1DB28A4D7400068BEE6 /* ar9380.c in Sources */ = {isa = PBXBuildFile; fileRef = F8CCC18C28A4D73F0068BEE6 /* ar9380.c */; };
+		F8CCC1DC28A4D7400068BEE6 /* ar9380.c in Sources */ = {isa = PBXBuildFile; fileRef = F8CCC18C28A4D73F0068BEE6 /* ar9380.c */; };
+		F8CCC1DD28A4D7400068BEE6 /* ar9380.c in Sources */ = {isa = PBXBuildFile; fileRef = F8CCC18C28A4D73F0068BEE6 /* ar9380.c */; };
+		F8CCC1DE28A4D7400068BEE6 /* ar9380.c in Sources */ = {isa = PBXBuildFile; fileRef = F8CCC18C28A4D73F0068BEE6 /* ar9380.c */; };
+		F8CCC1DF28A4D7400068BEE6 /* ar9380.c in Sources */ = {isa = PBXBuildFile; fileRef = F8CCC18C28A4D73F0068BEE6 /* ar9380.c */; };
+		F8CCC1E028A4D7400068BEE6 /* ar9380.c in Sources */ = {isa = PBXBuildFile; fileRef = F8CCC18C28A4D73F0068BEE6 /* ar9380.c */; };
+		F8CCC1E128A4D7400068BEE6 /* ar9380.c in Sources */ = {isa = PBXBuildFile; fileRef = F8CCC18C28A4D73F0068BEE6 /* ar9380.c */; };
+		F8CCC1E228A4D7400068BEE6 /* ar9280.c in Sources */ = {isa = PBXBuildFile; fileRef = F8CCC18D28A4D73F0068BEE6 /* ar9280.c */; };
+		F8CCC1E328A4D7400068BEE6 /* ar9280.c in Sources */ = {isa = PBXBuildFile; fileRef = F8CCC18D28A4D73F0068BEE6 /* ar9280.c */; };
+		F8CCC1E428A4D7400068BEE6 /* ar9280.c in Sources */ = {isa = PBXBuildFile; fileRef = F8CCC18D28A4D73F0068BEE6 /* ar9280.c */; };
+		F8CCC1E528A4D7400068BEE6 /* ar9280.c in Sources */ = {isa = PBXBuildFile; fileRef = F8CCC18D28A4D73F0068BEE6 /* ar9280.c */; };
+		F8CCC1E628A4D7400068BEE6 /* ar9280.c in Sources */ = {isa = PBXBuildFile; fileRef = F8CCC18D28A4D73F0068BEE6 /* ar9280.c */; };
+		F8CCC1E728A4D7400068BEE6 /* ar9280.c in Sources */ = {isa = PBXBuildFile; fileRef = F8CCC18D28A4D73F0068BEE6 /* ar9280.c */; };
+		F8CCC1E828A4D7400068BEE6 /* ar9280.c in Sources */ = {isa = PBXBuildFile; fileRef = F8CCC18D28A4D73F0068BEE6 /* ar9280.c */; };
+		F8CCC1E928A4D7400068BEE6 /* ar5008reg.h in Headers */ = {isa = PBXBuildFile; fileRef = F8CCC18E28A4D73F0068BEE6 /* ar5008reg.h */; };
+		F8CCC1EA28A4D7400068BEE6 /* ar5008reg.h in Headers */ = {isa = PBXBuildFile; fileRef = F8CCC18E28A4D73F0068BEE6 /* ar5008reg.h */; };
+		F8CCC1EB28A4D7400068BEE6 /* ar5008reg.h in Headers */ = {isa = PBXBuildFile; fileRef = F8CCC18E28A4D73F0068BEE6 /* ar5008reg.h */; };
+		F8CCC1EC28A4D7400068BEE6 /* ar5008reg.h in Headers */ = {isa = PBXBuildFile; fileRef = F8CCC18E28A4D73F0068BEE6 /* ar5008reg.h */; };
+		F8CCC1ED28A4D7400068BEE6 /* ar5008reg.h in Headers */ = {isa = PBXBuildFile; fileRef = F8CCC18E28A4D73F0068BEE6 /* ar5008reg.h */; };
+		F8CCC1EE28A4D7400068BEE6 /* ar5008reg.h in Headers */ = {isa = PBXBuildFile; fileRef = F8CCC18E28A4D73F0068BEE6 /* ar5008reg.h */; };
+		F8CCC1EF28A4D7400068BEE6 /* ar5008reg.h in Headers */ = {isa = PBXBuildFile; fileRef = F8CCC18E28A4D73F0068BEE6 /* ar5008reg.h */; };
+		F8CCC1F028A4D7400068BEE6 /* ar9280reg.h in Headers */ = {isa = PBXBuildFile; fileRef = F8CCC18F28A4D73F0068BEE6 /* ar9280reg.h */; };
+		F8CCC1F128A4D7400068BEE6 /* ar9280reg.h in Headers */ = {isa = PBXBuildFile; fileRef = F8CCC18F28A4D73F0068BEE6 /* ar9280reg.h */; };
+		F8CCC1F228A4D7400068BEE6 /* ar9280reg.h in Headers */ = {isa = PBXBuildFile; fileRef = F8CCC18F28A4D73F0068BEE6 /* ar9280reg.h */; };
+		F8CCC1F328A4D7400068BEE6 /* ar9280reg.h in Headers */ = {isa = PBXBuildFile; fileRef = F8CCC18F28A4D73F0068BEE6 /* ar9280reg.h */; };
+		F8CCC1F428A4D7400068BEE6 /* ar9280reg.h in Headers */ = {isa = PBXBuildFile; fileRef = F8CCC18F28A4D73F0068BEE6 /* ar9280reg.h */; };
+		F8CCC1F528A4D7400068BEE6 /* ar9280reg.h in Headers */ = {isa = PBXBuildFile; fileRef = F8CCC18F28A4D73F0068BEE6 /* ar9280reg.h */; };
+		F8CCC1F628A4D7400068BEE6 /* ar9280reg.h in Headers */ = {isa = PBXBuildFile; fileRef = F8CCC18F28A4D73F0068BEE6 /* ar9280reg.h */; };
+		F8CCC1F728A4D7400068BEE6 /* ar5xxx.h in Headers */ = {isa = PBXBuildFile; fileRef = F8CCC19028A4D73F0068BEE6 /* ar5xxx.h */; };
+		F8CCC1F828A4D7400068BEE6 /* ar5xxx.h in Headers */ = {isa = PBXBuildFile; fileRef = F8CCC19028A4D73F0068BEE6 /* ar5xxx.h */; };
+		F8CCC1F928A4D7400068BEE6 /* ar5xxx.h in Headers */ = {isa = PBXBuildFile; fileRef = F8CCC19028A4D73F0068BEE6 /* ar5xxx.h */; };
+		F8CCC1FA28A4D7400068BEE6 /* ar5xxx.h in Headers */ = {isa = PBXBuildFile; fileRef = F8CCC19028A4D73F0068BEE6 /* ar5xxx.h */; };
+		F8CCC1FB28A4D7400068BEE6 /* ar5xxx.h in Headers */ = {isa = PBXBuildFile; fileRef = F8CCC19028A4D73F0068BEE6 /* ar5xxx.h */; };
+		F8CCC1FC28A4D7400068BEE6 /* ar5xxx.h in Headers */ = {isa = PBXBuildFile; fileRef = F8CCC19028A4D73F0068BEE6 /* ar5xxx.h */; };
+		F8CCC1FD28A4D7400068BEE6 /* ar5xxx.h in Headers */ = {isa = PBXBuildFile; fileRef = F8CCC19028A4D73F0068BEE6 /* ar5xxx.h */; };
+		F8CCC1FE28A4D7400068BEE6 /* ar5xxx.c in Sources */ = {isa = PBXBuildFile; fileRef = F8CCC19128A4D73F0068BEE6 /* ar5xxx.c */; };
+		F8CCC1FF28A4D7400068BEE6 /* ar5xxx.c in Sources */ = {isa = PBXBuildFile; fileRef = F8CCC19128A4D73F0068BEE6 /* ar5xxx.c */; };
+		F8CCC20028A4D7400068BEE6 /* ar5xxx.c in Sources */ = {isa = PBXBuildFile; fileRef = F8CCC19128A4D73F0068BEE6 /* ar5xxx.c */; };
+		F8CCC20128A4D7400068BEE6 /* ar5xxx.c in Sources */ = {isa = PBXBuildFile; fileRef = F8CCC19128A4D73F0068BEE6 /* ar5xxx.c */; };
+		F8CCC20228A4D7400068BEE6 /* ar5xxx.c in Sources */ = {isa = PBXBuildFile; fileRef = F8CCC19128A4D73F0068BEE6 /* ar5xxx.c */; };
+		F8CCC20328A4D7400068BEE6 /* ar5xxx.c in Sources */ = {isa = PBXBuildFile; fileRef = F8CCC19128A4D73F0068BEE6 /* ar5xxx.c */; };
+		F8CCC20428A4D7400068BEE6 /* ar5xxx.c in Sources */ = {isa = PBXBuildFile; fileRef = F8CCC19128A4D73F0068BEE6 /* ar5xxx.c */; };
+		F8CCC20528A4D7400068BEE6 /* ar5212var.h in Headers */ = {isa = PBXBuildFile; fileRef = F8CCC19228A4D73F0068BEE6 /* ar5212var.h */; };
+		F8CCC20628A4D7400068BEE6 /* ar5212var.h in Headers */ = {isa = PBXBuildFile; fileRef = F8CCC19228A4D73F0068BEE6 /* ar5212var.h */; };
+		F8CCC20728A4D7400068BEE6 /* ar5212var.h in Headers */ = {isa = PBXBuildFile; fileRef = F8CCC19228A4D73F0068BEE6 /* ar5212var.h */; };
+		F8CCC20828A4D7400068BEE6 /* ar5212var.h in Headers */ = {isa = PBXBuildFile; fileRef = F8CCC19228A4D73F0068BEE6 /* ar5212var.h */; };
+		F8CCC20928A4D7400068BEE6 /* ar5212var.h in Headers */ = {isa = PBXBuildFile; fileRef = F8CCC19228A4D73F0068BEE6 /* ar5212var.h */; };
+		F8CCC20A28A4D7400068BEE6 /* ar5212var.h in Headers */ = {isa = PBXBuildFile; fileRef = F8CCC19228A4D73F0068BEE6 /* ar5212var.h */; };
+		F8CCC20B28A4D7400068BEE6 /* ar5212var.h in Headers */ = {isa = PBXBuildFile; fileRef = F8CCC19228A4D73F0068BEE6 /* ar5212var.h */; };
+		F8CCC20C28A4D7400068BEE6 /* ar5212reg.h in Headers */ = {isa = PBXBuildFile; fileRef = F8CCC19328A4D73F0068BEE6 /* ar5212reg.h */; };
+		F8CCC20D28A4D7400068BEE6 /* ar5212reg.h in Headers */ = {isa = PBXBuildFile; fileRef = F8CCC19328A4D73F0068BEE6 /* ar5212reg.h */; };
+		F8CCC20E28A4D7400068BEE6 /* ar5212reg.h in Headers */ = {isa = PBXBuildFile; fileRef = F8CCC19328A4D73F0068BEE6 /* ar5212reg.h */; };
+		F8CCC20F28A4D7400068BEE6 /* ar5212reg.h in Headers */ = {isa = PBXBuildFile; fileRef = F8CCC19328A4D73F0068BEE6 /* ar5212reg.h */; };
+		F8CCC21028A4D7400068BEE6 /* ar5212reg.h in Headers */ = {isa = PBXBuildFile; fileRef = F8CCC19328A4D73F0068BEE6 /* ar5212reg.h */; };
+		F8CCC21128A4D7400068BEE6 /* ar5212reg.h in Headers */ = {isa = PBXBuildFile; fileRef = F8CCC19328A4D73F0068BEE6 /* ar5212reg.h */; };
+		F8CCC21228A4D7400068BEE6 /* ar5212reg.h in Headers */ = {isa = PBXBuildFile; fileRef = F8CCC19328A4D73F0068BEE6 /* ar5212reg.h */; };
+		F8CCC21328A4D7400068BEE6 /* ar5212.c in Sources */ = {isa = PBXBuildFile; fileRef = F8CCC19428A4D7400068BEE6 /* ar5212.c */; };
+		F8CCC21428A4D7400068BEE6 /* ar5212.c in Sources */ = {isa = PBXBuildFile; fileRef = F8CCC19428A4D7400068BEE6 /* ar5212.c */; };
+		F8CCC21528A4D7400068BEE6 /* ar5212.c in Sources */ = {isa = PBXBuildFile; fileRef = F8CCC19428A4D7400068BEE6 /* ar5212.c */; };
+		F8CCC21628A4D7400068BEE6 /* ar5212.c in Sources */ = {isa = PBXBuildFile; fileRef = F8CCC19428A4D7400068BEE6 /* ar5212.c */; };
+		F8CCC21728A4D7400068BEE6 /* ar5212.c in Sources */ = {isa = PBXBuildFile; fileRef = F8CCC19428A4D7400068BEE6 /* ar5212.c */; };
+		F8CCC21828A4D7400068BEE6 /* ar5212.c in Sources */ = {isa = PBXBuildFile; fileRef = F8CCC19428A4D7400068BEE6 /* ar5212.c */; };
+		F8CCC21928A4D7400068BEE6 /* ar5212.c in Sources */ = {isa = PBXBuildFile; fileRef = F8CCC19428A4D7400068BEE6 /* ar5212.c */; };
+		F8CCC21A28A4D7400068BEE6 /* ar5211reg.h in Headers */ = {isa = PBXBuildFile; fileRef = F8CCC19528A4D7400068BEE6 /* ar5211reg.h */; };
+		F8CCC21B28A4D7400068BEE6 /* ar5211reg.h in Headers */ = {isa = PBXBuildFile; fileRef = F8CCC19528A4D7400068BEE6 /* ar5211reg.h */; };
+		F8CCC21C28A4D7400068BEE6 /* ar5211reg.h in Headers */ = {isa = PBXBuildFile; fileRef = F8CCC19528A4D7400068BEE6 /* ar5211reg.h */; };
+		F8CCC21D28A4D7400068BEE6 /* ar5211reg.h in Headers */ = {isa = PBXBuildFile; fileRef = F8CCC19528A4D7400068BEE6 /* ar5211reg.h */; };
+		F8CCC21E28A4D7400068BEE6 /* ar5211reg.h in Headers */ = {isa = PBXBuildFile; fileRef = F8CCC19528A4D7400068BEE6 /* ar5211reg.h */; };
+		F8CCC21F28A4D7400068BEE6 /* ar5211reg.h in Headers */ = {isa = PBXBuildFile; fileRef = F8CCC19528A4D7400068BEE6 /* ar5211reg.h */; };
+		F8CCC22028A4D7400068BEE6 /* ar5211reg.h in Headers */ = {isa = PBXBuildFile; fileRef = F8CCC19528A4D7400068BEE6 /* ar5211reg.h */; };
+		F8CCC22128A4D7400068BEE6 /* ar9287.c in Sources */ = {isa = PBXBuildFile; fileRef = F8CCC19628A4D7400068BEE6 /* ar9287.c */; };
+		F8CCC22228A4D7400068BEE6 /* ar9287.c in Sources */ = {isa = PBXBuildFile; fileRef = F8CCC19628A4D7400068BEE6 /* ar9287.c */; };
+		F8CCC22328A4D7400068BEE6 /* ar9287.c in Sources */ = {isa = PBXBuildFile; fileRef = F8CCC19628A4D7400068BEE6 /* ar9287.c */; };
+		F8CCC22428A4D7400068BEE6 /* ar9287.c in Sources */ = {isa = PBXBuildFile; fileRef = F8CCC19628A4D7400068BEE6 /* ar9287.c */; };
+		F8CCC22528A4D7400068BEE6 /* ar9287.c in Sources */ = {isa = PBXBuildFile; fileRef = F8CCC19628A4D7400068BEE6 /* ar9287.c */; };
+		F8CCC22628A4D7400068BEE6 /* ar9287.c in Sources */ = {isa = PBXBuildFile; fileRef = F8CCC19628A4D7400068BEE6 /* ar9287.c */; };
+		F8CCC22728A4D7400068BEE6 /* ar9287.c in Sources */ = {isa = PBXBuildFile; fileRef = F8CCC19628A4D7400068BEE6 /* ar9287.c */; };
+		F8CCC22828A4D7400068BEE6 /* ar9003.c in Sources */ = {isa = PBXBuildFile; fileRef = F8CCC19728A4D7400068BEE6 /* ar9003.c */; };
+		F8CCC22928A4D7400068BEE6 /* ar9003.c in Sources */ = {isa = PBXBuildFile; fileRef = F8CCC19728A4D7400068BEE6 /* ar9003.c */; };
+		F8CCC22A28A4D7400068BEE6 /* ar9003.c in Sources */ = {isa = PBXBuildFile; fileRef = F8CCC19728A4D7400068BEE6 /* ar9003.c */; };
+		F8CCC22B28A4D7400068BEE6 /* ar9003.c in Sources */ = {isa = PBXBuildFile; fileRef = F8CCC19728A4D7400068BEE6 /* ar9003.c */; };
+		F8CCC22C28A4D7400068BEE6 /* ar9003.c in Sources */ = {isa = PBXBuildFile; fileRef = F8CCC19728A4D7400068BEE6 /* ar9003.c */; };
+		F8CCC22D28A4D7400068BEE6 /* ar9003.c in Sources */ = {isa = PBXBuildFile; fileRef = F8CCC19728A4D7400068BEE6 /* ar9003.c */; };
+		F8CCC22E28A4D7400068BEE6 /* ar9003.c in Sources */ = {isa = PBXBuildFile; fileRef = F8CCC19728A4D7400068BEE6 /* ar9003.c */; };
+		F8CCC22F28A4D7400068BEE6 /* ar5210.c in Sources */ = {isa = PBXBuildFile; fileRef = F8CCC19828A4D7400068BEE6 /* ar5210.c */; };
+		F8CCC23028A4D7400068BEE6 /* ar5210.c in Sources */ = {isa = PBXBuildFile; fileRef = F8CCC19828A4D7400068BEE6 /* ar5210.c */; };
+		F8CCC23128A4D7400068BEE6 /* ar5210.c in Sources */ = {isa = PBXBuildFile; fileRef = F8CCC19828A4D7400068BEE6 /* ar5210.c */; };
+		F8CCC23228A4D7400068BEE6 /* ar5210.c in Sources */ = {isa = PBXBuildFile; fileRef = F8CCC19828A4D7400068BEE6 /* ar5210.c */; };
+		F8CCC23328A4D7400068BEE6 /* ar5210.c in Sources */ = {isa = PBXBuildFile; fileRef = F8CCC19828A4D7400068BEE6 /* ar5210.c */; };
+		F8CCC23428A4D7400068BEE6 /* ar5210.c in Sources */ = {isa = PBXBuildFile; fileRef = F8CCC19828A4D7400068BEE6 /* ar5210.c */; };
+		F8CCC23528A4D7400068BEE6 /* ar5210.c in Sources */ = {isa = PBXBuildFile; fileRef = F8CCC19828A4D7400068BEE6 /* ar5210.c */; };
+		F8CCC23628A4D7400068BEE6 /* ar5416reg.h in Headers */ = {isa = PBXBuildFile; fileRef = F8CCC19928A4D7400068BEE6 /* ar5416reg.h */; };
+		F8CCC23728A4D7400068BEE6 /* ar5416reg.h in Headers */ = {isa = PBXBuildFile; fileRef = F8CCC19928A4D7400068BEE6 /* ar5416reg.h */; };
+		F8CCC23828A4D7400068BEE6 /* ar5416reg.h in Headers */ = {isa = PBXBuildFile; fileRef = F8CCC19928A4D7400068BEE6 /* ar5416reg.h */; };
+		F8CCC23928A4D7400068BEE6 /* ar5416reg.h in Headers */ = {isa = PBXBuildFile; fileRef = F8CCC19928A4D7400068BEE6 /* ar5416reg.h */; };
+		F8CCC23A28A4D7400068BEE6 /* ar5416reg.h in Headers */ = {isa = PBXBuildFile; fileRef = F8CCC19928A4D7400068BEE6 /* ar5416reg.h */; };
+		F8CCC23B28A4D7400068BEE6 /* ar5416reg.h in Headers */ = {isa = PBXBuildFile; fileRef = F8CCC19928A4D7400068BEE6 /* ar5416reg.h */; };
+		F8CCC23C28A4D7400068BEE6 /* ar5416reg.h in Headers */ = {isa = PBXBuildFile; fileRef = F8CCC19928A4D7400068BEE6 /* ar5416reg.h */; };
+		F8CCC23D28A4D7400068BEE6 /* ar5211var.h in Headers */ = {isa = PBXBuildFile; fileRef = F8CCC19A28A4D7400068BEE6 /* ar5211var.h */; };
+		F8CCC23E28A4D7400068BEE6 /* ar5211var.h in Headers */ = {isa = PBXBuildFile; fileRef = F8CCC19A28A4D7400068BEE6 /* ar5211var.h */; };
+		F8CCC23F28A4D7400068BEE6 /* ar5211var.h in Headers */ = {isa = PBXBuildFile; fileRef = F8CCC19A28A4D7400068BEE6 /* ar5211var.h */; };
+		F8CCC24028A4D7400068BEE6 /* ar5211var.h in Headers */ = {isa = PBXBuildFile; fileRef = F8CCC19A28A4D7400068BEE6 /* ar5211var.h */; };
+		F8CCC24128A4D7400068BEE6 /* ar5211var.h in Headers */ = {isa = PBXBuildFile; fileRef = F8CCC19A28A4D7400068BEE6 /* ar5211var.h */; };
+		F8CCC24228A4D7400068BEE6 /* ar5211var.h in Headers */ = {isa = PBXBuildFile; fileRef = F8CCC19A28A4D7400068BEE6 /* ar5211var.h */; };
+		F8CCC24328A4D7400068BEE6 /* ar5211var.h in Headers */ = {isa = PBXBuildFile; fileRef = F8CCC19A28A4D7400068BEE6 /* ar5211var.h */; };
+		F8CCC24428A4D7400068BEE6 /* ar9285.c in Sources */ = {isa = PBXBuildFile; fileRef = F8CCC19B28A4D7400068BEE6 /* ar9285.c */; };
+		F8CCC24528A4D7400068BEE6 /* ar9285.c in Sources */ = {isa = PBXBuildFile; fileRef = F8CCC19B28A4D7400068BEE6 /* ar9285.c */; };
+		F8CCC24628A4D7400068BEE6 /* ar9285.c in Sources */ = {isa = PBXBuildFile; fileRef = F8CCC19B28A4D7400068BEE6 /* ar9285.c */; };
+		F8CCC24728A4D7400068BEE6 /* ar9285.c in Sources */ = {isa = PBXBuildFile; fileRef = F8CCC19B28A4D7400068BEE6 /* ar9285.c */; };
+		F8CCC24828A4D7400068BEE6 /* ar9285.c in Sources */ = {isa = PBXBuildFile; fileRef = F8CCC19B28A4D7400068BEE6 /* ar9285.c */; };
+		F8CCC24928A4D7400068BEE6 /* ar9285.c in Sources */ = {isa = PBXBuildFile; fileRef = F8CCC19B28A4D7400068BEE6 /* ar9285.c */; };
+		F8CCC24A28A4D7400068BEE6 /* ar9285.c in Sources */ = {isa = PBXBuildFile; fileRef = F8CCC19B28A4D7400068BEE6 /* ar9285.c */; };
+		F8CCC24E28A4D83C0068BEE6 /* athnreg.h in Headers */ = {isa = PBXBuildFile; fileRef = F8CCC24B28A4D83B0068BEE6 /* athnreg.h */; };
+		F8CCC24F28A4D83C0068BEE6 /* athnreg.h in Headers */ = {isa = PBXBuildFile; fileRef = F8CCC24B28A4D83B0068BEE6 /* athnreg.h */; };
+		F8CCC25028A4D83C0068BEE6 /* athnreg.h in Headers */ = {isa = PBXBuildFile; fileRef = F8CCC24B28A4D83B0068BEE6 /* athnreg.h */; };
+		F8CCC25128A4D83C0068BEE6 /* athnreg.h in Headers */ = {isa = PBXBuildFile; fileRef = F8CCC24B28A4D83B0068BEE6 /* athnreg.h */; };
+		F8CCC25228A4D83C0068BEE6 /* athnreg.h in Headers */ = {isa = PBXBuildFile; fileRef = F8CCC24B28A4D83B0068BEE6 /* athnreg.h */; };
+		F8CCC25328A4D83C0068BEE6 /* athnreg.h in Headers */ = {isa = PBXBuildFile; fileRef = F8CCC24B28A4D83B0068BEE6 /* athnreg.h */; };
+		F8CCC25428A4D83C0068BEE6 /* athnreg.h in Headers */ = {isa = PBXBuildFile; fileRef = F8CCC24B28A4D83B0068BEE6 /* athnreg.h */; };
+		F8CCC25528A4D83C0068BEE6 /* athnvar.h in Headers */ = {isa = PBXBuildFile; fileRef = F8CCC24C28A4D83C0068BEE6 /* athnvar.h */; };
+		F8CCC25628A4D83C0068BEE6 /* athnvar.h in Headers */ = {isa = PBXBuildFile; fileRef = F8CCC24C28A4D83C0068BEE6 /* athnvar.h */; };
+		F8CCC25728A4D83C0068BEE6 /* athnvar.h in Headers */ = {isa = PBXBuildFile; fileRef = F8CCC24C28A4D83C0068BEE6 /* athnvar.h */; };
+		F8CCC25828A4D83C0068BEE6 /* athnvar.h in Headers */ = {isa = PBXBuildFile; fileRef = F8CCC24C28A4D83C0068BEE6 /* athnvar.h */; };
+		F8CCC25928A4D83C0068BEE6 /* athnvar.h in Headers */ = {isa = PBXBuildFile; fileRef = F8CCC24C28A4D83C0068BEE6 /* athnvar.h */; };
+		F8CCC25A28A4D83C0068BEE6 /* athnvar.h in Headers */ = {isa = PBXBuildFile; fileRef = F8CCC24C28A4D83C0068BEE6 /* athnvar.h */; };
+		F8CCC25B28A4D83C0068BEE6 /* athnvar.h in Headers */ = {isa = PBXBuildFile; fileRef = F8CCC24C28A4D83C0068BEE6 /* athnvar.h */; };
+		F8CCC25C28A4D83C0068BEE6 /* athn.c in Sources */ = {isa = PBXBuildFile; fileRef = F8CCC24D28A4D83C0068BEE6 /* athn.c */; };
+		F8CCC25D28A4D83C0068BEE6 /* athn.c in Sources */ = {isa = PBXBuildFile; fileRef = F8CCC24D28A4D83C0068BEE6 /* athn.c */; };
+		F8CCC25E28A4D83C0068BEE6 /* athn.c in Sources */ = {isa = PBXBuildFile; fileRef = F8CCC24D28A4D83C0068BEE6 /* athn.c */; };
+		F8CCC25F28A4D83C0068BEE6 /* athn.c in Sources */ = {isa = PBXBuildFile; fileRef = F8CCC24D28A4D83C0068BEE6 /* athn.c */; };
+		F8CCC26028A4D83C0068BEE6 /* athn.c in Sources */ = {isa = PBXBuildFile; fileRef = F8CCC24D28A4D83C0068BEE6 /* athn.c */; };
+		F8CCC26128A4D83C0068BEE6 /* athn.c in Sources */ = {isa = PBXBuildFile; fileRef = F8CCC24D28A4D83C0068BEE6 /* athn.c */; };
+		F8CCC26228A4D83C0068BEE6 /* athn.c in Sources */ = {isa = PBXBuildFile; fileRef = F8CCC24D28A4D83C0068BEE6 /* athn.c */; };
+		F8CCC26528A4F6920068BEE6 /* Athn.cpp in Sources */ = {isa = PBXBuildFile; fileRef = F8CCC26328A4F6920068BEE6 /* Athn.cpp */; };
+		F8CCC26628A4F6920068BEE6 /* Athn.cpp in Sources */ = {isa = PBXBuildFile; fileRef = F8CCC26328A4F6920068BEE6 /* Athn.cpp */; };
+		F8CCC26728A4F6920068BEE6 /* Athn.cpp in Sources */ = {isa = PBXBuildFile; fileRef = F8CCC26328A4F6920068BEE6 /* Athn.cpp */; };
+		F8CCC26828A4F6920068BEE6 /* Athn.cpp in Sources */ = {isa = PBXBuildFile; fileRef = F8CCC26328A4F6920068BEE6 /* Athn.cpp */; };
+		F8CCC26928A4F6920068BEE6 /* Athn.cpp in Sources */ = {isa = PBXBuildFile; fileRef = F8CCC26328A4F6920068BEE6 /* Athn.cpp */; };
+		F8CCC26A28A4F6920068BEE6 /* Athn.cpp in Sources */ = {isa = PBXBuildFile; fileRef = F8CCC26328A4F6920068BEE6 /* Athn.cpp */; };
+		F8CCC26B28A4F6920068BEE6 /* Athn.cpp in Sources */ = {isa = PBXBuildFile; fileRef = F8CCC26328A4F6920068BEE6 /* Athn.cpp */; };
+		F8CCC26C28A4F6920068BEE6 /* Athn.hpp in Headers */ = {isa = PBXBuildFile; fileRef = F8CCC26428A4F6920068BEE6 /* Athn.hpp */; };
+		F8CCC26D28A4F6920068BEE6 /* Athn.hpp in Headers */ = {isa = PBXBuildFile; fileRef = F8CCC26428A4F6920068BEE6 /* Athn.hpp */; };
+		F8CCC26E28A4F6920068BEE6 /* Athn.hpp in Headers */ = {isa = PBXBuildFile; fileRef = F8CCC26428A4F6920068BEE6 /* Athn.hpp */; };
+		F8CCC26F28A4F6920068BEE6 /* Athn.hpp in Headers */ = {isa = PBXBuildFile; fileRef = F8CCC26428A4F6920068BEE6 /* Athn.hpp */; };
+		F8CCC27028A4F6920068BEE6 /* Athn.hpp in Headers */ = {isa = PBXBuildFile; fileRef = F8CCC26428A4F6920068BEE6 /* Athn.hpp */; };
+		F8CCC27128A4F6920068BEE6 /* Athn.hpp in Headers */ = {isa = PBXBuildFile; fileRef = F8CCC26428A4F6920068BEE6 /* Athn.hpp */; };
+		F8CCC27228A4F6920068BEE6 /* Athn.hpp in Headers */ = {isa = PBXBuildFile; fileRef = F8CCC26428A4F6920068BEE6 /* Athn.hpp */; };
 		F8D257742495A33500872E4F /* _mbuf.cpp in Sources */ = {isa = PBXBuildFile; fileRef = F8D257732495A33500872E4F /* _mbuf.cpp */; };
 		F8D257782495DEFC00872E4F /* Common.h in Headers */ = {isa = PBXBuildFile; fileRef = F8D257762495DEFC00872E4F /* Common.h */; };
 		F8D2577A2495DEFC00872E4F /* IoctlId.h in Headers */ = {isa = PBXBuildFile; fileRef = F8D257772495DEFC00872E4F /* IoctlId.h */; };
@@ -902,6 +1112,37 @@
 		F8C7EF7B263125DE00BA87B6 /* _netstat.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = _netstat.h; sourceTree = "<group>"; };
 		F8CA44A125091AF60036119A /* AirportItlwmInterface.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = AirportItlwmInterface.cpp; sourceTree = "<group>"; };
 		F8CA44A225091AF60036119A /* AirportItlwmInterface.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = AirportItlwmInterface.hpp; sourceTree = "<group>"; };
+		F8CCC18328A4D73E0068BEE6 /* ar5211.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = ar5211.c; sourceTree = "<group>"; };
+		F8CCC18428A4D73E0068BEE6 /* ar9287reg.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ar9287reg.h; sourceTree = "<group>"; };
+		F8CCC18528A4D73E0068BEE6 /* ar5210reg.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ar5210reg.h; sourceTree = "<group>"; };
+		F8CCC18628A4D73E0068BEE6 /* ar9285reg.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ar9285reg.h; sourceTree = "<group>"; };
+		F8CCC18728A4D73E0068BEE6 /* ar5008.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = ar5008.c; sourceTree = "<group>"; };
+		F8CCC18828A4D73E0068BEE6 /* ar5416.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = ar5416.c; sourceTree = "<group>"; };
+		F8CCC18928A4D73F0068BEE6 /* ar9380reg.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ar9380reg.h; sourceTree = "<group>"; };
+		F8CCC18A28A4D73F0068BEE6 /* ar5210var.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ar5210var.h; sourceTree = "<group>"; };
+		F8CCC18B28A4D73F0068BEE6 /* ar9003reg.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ar9003reg.h; sourceTree = "<group>"; };
+		F8CCC18C28A4D73F0068BEE6 /* ar9380.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = ar9380.c; sourceTree = "<group>"; };
+		F8CCC18D28A4D73F0068BEE6 /* ar9280.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = ar9280.c; sourceTree = "<group>"; };
+		F8CCC18E28A4D73F0068BEE6 /* ar5008reg.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ar5008reg.h; sourceTree = "<group>"; };
+		F8CCC18F28A4D73F0068BEE6 /* ar9280reg.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ar9280reg.h; sourceTree = "<group>"; };
+		F8CCC19028A4D73F0068BEE6 /* ar5xxx.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ar5xxx.h; sourceTree = "<group>"; };
+		F8CCC19128A4D73F0068BEE6 /* ar5xxx.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = ar5xxx.c; sourceTree = "<group>"; };
+		F8CCC19228A4D73F0068BEE6 /* ar5212var.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ar5212var.h; sourceTree = "<group>"; };
+		F8CCC19328A4D73F0068BEE6 /* ar5212reg.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ar5212reg.h; sourceTree = "<group>"; };
+		F8CCC19428A4D7400068BEE6 /* ar5212.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = ar5212.c; sourceTree = "<group>"; };
+		F8CCC19528A4D7400068BEE6 /* ar5211reg.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ar5211reg.h; sourceTree = "<group>"; };
+		F8CCC19628A4D7400068BEE6 /* ar9287.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = ar9287.c; sourceTree = "<group>"; };
+		F8CCC19728A4D7400068BEE6 /* ar9003.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = ar9003.c; sourceTree = "<group>"; };
+		F8CCC19828A4D7400068BEE6 /* ar5210.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = ar5210.c; sourceTree = "<group>"; };
+		F8CCC19928A4D7400068BEE6 /* ar5416reg.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ar5416reg.h; sourceTree = "<group>"; };
+		F8CCC19A28A4D7400068BEE6 /* ar5211var.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ar5211var.h; sourceTree = "<group>"; };
+		F8CCC19B28A4D7400068BEE6 /* ar9285.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = ar9285.c; sourceTree = "<group>"; };
+		F8CCC24B28A4D83B0068BEE6 /* athnreg.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = athnreg.h; sourceTree = "<group>"; };
+		F8CCC24C28A4D83C0068BEE6 /* athnvar.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = athnvar.h; sourceTree = "<group>"; };
+		F8CCC24D28A4D83C0068BEE6 /* athn.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = athn.c; sourceTree = "<group>"; };
+		F8CCC26328A4F6920068BEE6 /* Athn.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = Athn.cpp; sourceTree = "<group>"; };
+		F8CCC26428A4F6920068BEE6 /* Athn.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = Athn.hpp; sourceTree = "<group>"; };
+		F8CCC27328A4F7180068BEE6 /* athnhdr.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = athnhdr.h; sourceTree = "<group>"; };
 		F8D257732495A33500872E4F /* _mbuf.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = _mbuf.cpp; sourceTree = "<group>"; };
 		F8D257762495DEFC00872E4F /* Common.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Common.h; sourceTree = "<group>"; };
 		F8D257772495DEFC00872E4F /* IoctlId.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = IoctlId.h; sourceTree = "<group>"; };
@@ -1037,6 +1278,7 @@
 		024A07AE23FCBC3C009FBA6C /* itlwm */ = {
 			isa = PBXGroup;
 			children = (
+				F8CCC18228A4D6E80068BEE6 /* hal_ath3k */,
 				0250B31C23FD768400FF8CEA /* firmware */,
 				17FD7F0B255E496000611406 /* hal_iwn */,
 				F8AF3A2E24F9F25E008911C1 /* hal_iwm */,
@@ -1335,6 +1577,44 @@
 			path = sys;
 			sourceTree = "<group>";
 		};
+		F8CCC18228A4D6E80068BEE6 /* hal_ath3k */ = {
+			isa = PBXGroup;
+			children = (
+				F8CCC19128A4D73F0068BEE6 /* ar5xxx.c */,
+				F8CCC19028A4D73F0068BEE6 /* ar5xxx.h */,
+				F8CCC18728A4D73E0068BEE6 /* ar5008.c */,
+				F8CCC18E28A4D73F0068BEE6 /* ar5008reg.h */,
+				F8CCC19828A4D7400068BEE6 /* ar5210.c */,
+				F8CCC18528A4D73E0068BEE6 /* ar5210reg.h */,
+				F8CCC18A28A4D73F0068BEE6 /* ar5210var.h */,
+				F8CCC18328A4D73E0068BEE6 /* ar5211.c */,
+				F8CCC19528A4D7400068BEE6 /* ar5211reg.h */,
+				F8CCC19A28A4D7400068BEE6 /* ar5211var.h */,
+				F8CCC19428A4D7400068BEE6 /* ar5212.c */,
+				F8CCC19328A4D73F0068BEE6 /* ar5212reg.h */,
+				F8CCC19228A4D73F0068BEE6 /* ar5212var.h */,
+				F8CCC18828A4D73E0068BEE6 /* ar5416.c */,
+				F8CCC19928A4D7400068BEE6 /* ar5416reg.h */,
+				F8CCC19728A4D7400068BEE6 /* ar9003.c */,
+				F8CCC18B28A4D73F0068BEE6 /* ar9003reg.h */,
+				F8CCC18D28A4D73F0068BEE6 /* ar9280.c */,
+				F8CCC18F28A4D73F0068BEE6 /* ar9280reg.h */,
+				F8CCC19B28A4D7400068BEE6 /* ar9285.c */,
+				F8CCC18628A4D73E0068BEE6 /* ar9285reg.h */,
+				F8CCC19628A4D7400068BEE6 /* ar9287.c */,
+				F8CCC18428A4D73E0068BEE6 /* ar9287reg.h */,
+				F8CCC18C28A4D73F0068BEE6 /* ar9380.c */,
+				F8CCC18928A4D73F0068BEE6 /* ar9380reg.h */,
+				F8CCC24D28A4D83C0068BEE6 /* athn.c */,
+				F8CCC24B28A4D83B0068BEE6 /* athnreg.h */,
+				F8CCC24C28A4D83C0068BEE6 /* athnvar.h */,
+				F8CCC26328A4F6920068BEE6 /* Athn.cpp */,
+				F8CCC26428A4F6920068BEE6 /* Athn.hpp */,
+				F8CCC27328A4F7180068BEE6 /* athnhdr.h */,
+			);
+			path = hal_ath3k;
+			sourceTree = "<group>";
+		};
 		F8D364FC24F93EE20029340B /* HAL */ = {
 			isa = PBXGroup;
 			children = (
@@ -1381,6 +1661,7 @@
 				F8F9257F240974EF0088B8D5 /* kernel.h in Headers */,
 				024A084D23FCBC6C009FBA6C /* sha1.h in Headers */,
 				024A084B23FCBC6C009FBA6C /* rijndael.h in Headers */,
+				F8CCC1F028A4D7400068BEE6 /* ar9280reg.h in Headers */,
 				024A083923FCBC6C009FBA6C /* md5.h in Headers */,
 				17FD7F11255E4AC800611406 /* ItlIwn.hpp in Headers */,
 				F8C2EC5F2408031A007A9422 /* ieee80211_radiotap.h in Headers */,
@@ -1399,7 +1680,9 @@
 				024A088B23FCBE38009FBA6C /* if_iwmreg.h in Headers */,
 				17FD7F7F255E549500611406 /* if_iwnvar.h in Headers */,
 				024A084A23FCBC6C009FBA6C /* cryptodev.h in Headers */,
+				F8CCC23D28A4D7400068BEE6 /* ar5211var.h in Headers */,
 				F8D364FA24F93AFD0029340B /* ItlHalService.hpp in Headers */,
+				F8CCC1B128A4D7400068BEE6 /* ar9285reg.h in Headers */,
 				024A083E23FCBC6C009FBA6C /* sk.h in Headers */,
 				F8AF3A3224F9F35B008911C1 /* ItlIwm.hpp in Headers */,
 				024A084323FCBC6C009FBA6C /* gmac.h in Headers */,
@@ -1412,6 +1695,7 @@
 				F8C2EC9724080557007A9422 /* tree.h in Headers */,
 				F8C2EC512408031A007A9422 /* ieee80211_amrr.h in Headers */,
 				024A083723FCBC6C009FBA6C /* key_wrap.h in Headers */,
+				F8CCC26C28A4F6920068BEE6 /* Athn.hpp in Headers */,
 				F8C594D825FD935B0007D19C /* ieee80211_ra.h in Headers */,
 				F8F92583240974EF0088B8D5 /* random.h in Headers */,
 				F800DD9B24FBEBF000789320 /* ItlDriverController.hpp in Headers */,
@@ -1424,23 +1708,36 @@
 				024A088C23FCBE38009FBA6C /* if_iwmvar.h in Headers */,
 				024A083A23FCBC6C009FBA6C /* blf.h in Headers */,
 				F8C2EC9224080557007A9422 /* CTimeout.hpp in Headers */,
+				F8CCC24E28A4D83C0068BEE6 /* athnreg.h in Headers */,
+				F8CCC1AA28A4D7400068BEE6 /* ar5210reg.h in Headers */,
 				F8C2EC612408031A007A9422 /* ieee80211_proto.h in Headers */,
+				F8CCC23628A4D7400068BEE6 /* ar5416reg.h in Headers */,
+				F8CCC1E928A4D7400068BEE6 /* ar5008reg.h in Headers */,
 				024A084723FCBC6C009FBA6C /* cast.h in Headers */,
 				F8C2EC622408031A007A9422 /* ieee80211_rssadapt.h in Headers */,
+				F8CCC1CD28A4D7400068BEE6 /* ar5210var.h in Headers */,
 				F8D2577A2495DEFC00872E4F /* IoctlId.h in Headers */,
 				F8C2EC652408031A007A9422 /* ieee80211_ioctl.h in Headers */,
 				024A083C23FCBC6C009FBA6C /* chachapoly.h in Headers */,
+				F8CCC21A28A4D7400068BEE6 /* ar5211reg.h in Headers */,
 				024A084C23FCBC6C009FBA6C /* chacha_private.h in Headers */,
 				024A083B23FCBC6C009FBA6C /* arc4.h in Headers */,
+				F8CCC25528A4D83C0068BEE6 /* athnvar.h in Headers */,
+				F8CCC1C628A4D7400068BEE6 /* ar9380reg.h in Headers */,
+				F8CCC1F728A4D7400068BEE6 /* ar5xxx.h in Headers */,
 				024A084623FCBC6C009FBA6C /* aes.h in Headers */,
 				F8E49A15249B923500BE6868 /* ItlNetworkUserClient.hpp in Headers */,
 				F8C2EC632408031A007A9422 /* ieee80211.h in Headers */,
 				024A085623FCBC6C009FBA6C /* cmac.h in Headers */,
+				F8CCC1D428A4D7400068BEE6 /* ar9003reg.h in Headers */,
 				F8F9257E240974EF0088B8D5 /* bitfield.h in Headers */,
+				F8CCC20528A4D7400068BEE6 /* ar5212var.h in Headers */,
+				F8CCC20C28A4D7400068BEE6 /* ar5212reg.h in Headers */,
 				F8FA0EEC2501E7EE00B1822E /* zutil.h in Headers */,
 				F8C2EC642408031A007A9422 /* ieee80211_priv.h in Headers */,
 				024A07B023FCBC3C009FBA6C /* itlwm.hpp in Headers */,
 				F8C2EC5A2408031A007A9422 /* ieee80211_crypto.h in Headers */,
+				F8CCC1A328A4D7400068BEE6 /* ar9287reg.h in Headers */,
 				F8C2EC582408031A007A9422 /* ieee80211_regdomain.h in Headers */,
 				024A085323FCBC6C009FBA6C /* spr.h in Headers */,
 				17FD7F86255E549900611406 /* if_iwnreg.h in Headers */,
@@ -1453,17 +1750,34 @@
 			files = (
 				35CBE659251CB89700435CBC /* debug.h in Headers */,
 				35CBE65A251CB89700435CBC /* IOSkywalkEthernetInterface.h in Headers */,
+				F8CCC1B528A4D7400068BEE6 /* ar9285reg.h in Headers */,
 				35CBE65B251CB89700435CBC /* apple80211_ioctl.h in Headers */,
+				F8CCC1CA28A4D7400068BEE6 /* ar9380reg.h in Headers */,
+				F8CCC21E28A4D7400068BEE6 /* ar5211reg.h in Headers */,
+				F8CCC23A28A4D7400068BEE6 /* ar5416reg.h in Headers */,
+				F8CCC25928A4D83C0068BEE6 /* athnvar.h in Headers */,
+				F8CCC1F428A4D7400068BEE6 /* ar9280reg.h in Headers */,
 				F8F7EA45252D834600520FD4 /* IO80211P2PInterface.h in Headers */,
+				F8CCC27028A4F6920068BEE6 /* Athn.hpp in Headers */,
 				F8F7EA51252D834600520FD4 /* IO80211WorkLoop.h in Headers */,
+				F8CCC1FB28A4D7400068BEE6 /* ar5xxx.h in Headers */,
 				35CBE661251CB89700435CBC /* apple80211_var.h in Headers */,
 				35CBE664251CB89700435CBC /* AirportItlwmInterface.hpp in Headers */,
+				F8CCC21028A4D7400068BEE6 /* ar5212reg.h in Headers */,
+				F8CCC1D128A4D7400068BEE6 /* ar5210var.h in Headers */,
+				F8CCC1A728A4D7400068BEE6 /* ar9287reg.h in Headers */,
 				F8F7EA4D252D834600520FD4 /* IO80211Interface.h in Headers */,
 				F8F7EA49252D834600520FD4 /* IO80211SkywalkInterface.h in Headers */,
+				F8CCC24128A4D7400068BEE6 /* ar5211var.h in Headers */,
+				F8CCC20928A4D7400068BEE6 /* ar5212var.h in Headers */,
+				F8CCC1AE28A4D7400068BEE6 /* ar5210reg.h in Headers */,
+				F8CCC25228A4D83C0068BEE6 /* athnreg.h in Headers */,
 				35CBE666251CB89700435CBC /* AirportItlwm.hpp in Headers */,
 				F8F7EA3D252D834600520FD4 /* IO80211VirtualInterface.h in Headers */,
+				F8CCC1ED28A4D7400068BEE6 /* ar5008reg.h in Headers */,
 				F8F7EA41252D834600520FD4 /* IO80211Controller.h in Headers */,
 				F8C594DC25FD935B0007D19C /* ieee80211_ra.h in Headers */,
+				F8CCC1D828A4D7400068BEE6 /* ar9003reg.h in Headers */,
 				35CBE66F251CB89700435CBC /* apple80211_wps.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -1474,17 +1788,34 @@
 			files = (
 				35CBE6C3251CB8BF00435CBC /* debug.h in Headers */,
 				35CBE6C4251CB8BF00435CBC /* IOSkywalkEthernetInterface.h in Headers */,
+				F8CCC1B328A4D7400068BEE6 /* ar9285reg.h in Headers */,
 				35CBE6C5251CB8BF00435CBC /* apple80211_ioctl.h in Headers */,
+				F8CCC1C828A4D7400068BEE6 /* ar9380reg.h in Headers */,
+				F8CCC21C28A4D7400068BEE6 /* ar5211reg.h in Headers */,
+				F8CCC23828A4D7400068BEE6 /* ar5416reg.h in Headers */,
+				F8CCC25728A4D83C0068BEE6 /* athnvar.h in Headers */,
+				F8CCC1F228A4D7400068BEE6 /* ar9280reg.h in Headers */,
 				F8F7EA43252D834600520FD4 /* IO80211P2PInterface.h in Headers */,
+				F8CCC26E28A4F6920068BEE6 /* Athn.hpp in Headers */,
 				F8F7EA4F252D834600520FD4 /* IO80211WorkLoop.h in Headers */,
+				F8CCC1F928A4D7400068BEE6 /* ar5xxx.h in Headers */,
 				35CBE6CB251CB8BF00435CBC /* apple80211_var.h in Headers */,
 				35CBE6CE251CB8BF00435CBC /* AirportItlwmInterface.hpp in Headers */,
+				F8CCC20E28A4D7400068BEE6 /* ar5212reg.h in Headers */,
+				F8CCC1CF28A4D7400068BEE6 /* ar5210var.h in Headers */,
+				F8CCC1A528A4D7400068BEE6 /* ar9287reg.h in Headers */,
 				F8F7EA4B252D834600520FD4 /* IO80211Interface.h in Headers */,
 				F8F7EA47252D834600520FD4 /* IO80211SkywalkInterface.h in Headers */,
+				F8CCC23F28A4D7400068BEE6 /* ar5211var.h in Headers */,
+				F8CCC20728A4D7400068BEE6 /* ar5212var.h in Headers */,
+				F8CCC1AC28A4D7400068BEE6 /* ar5210reg.h in Headers */,
+				F8CCC25028A4D83C0068BEE6 /* athnreg.h in Headers */,
 				35CBE6D0251CB8BF00435CBC /* AirportItlwm.hpp in Headers */,
 				F8F7EA3B252D834600520FD4 /* IO80211VirtualInterface.h in Headers */,
+				F8CCC1EB28A4D7400068BEE6 /* ar5008reg.h in Headers */,
 				F8F7EA3F252D834600520FD4 /* IO80211Controller.h in Headers */,
 				F8C594DA25FD935B0007D19C /* ieee80211_ra.h in Headers */,
+				F8CCC1D628A4D7400068BEE6 /* ar9003reg.h in Headers */,
 				35CBE6D9251CB8BF00435CBC /* apple80211_wps.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -1495,17 +1826,34 @@
 			files = (
 				35CBE72E251CB8CA00435CBC /* debug.h in Headers */,
 				35CBE72F251CB8CA00435CBC /* IOSkywalkEthernetInterface.h in Headers */,
+				F8CCC1B228A4D7400068BEE6 /* ar9285reg.h in Headers */,
 				35CBE730251CB8CA00435CBC /* apple80211_ioctl.h in Headers */,
+				F8CCC1C728A4D7400068BEE6 /* ar9380reg.h in Headers */,
+				F8CCC21B28A4D7400068BEE6 /* ar5211reg.h in Headers */,
+				F8CCC23728A4D7400068BEE6 /* ar5416reg.h in Headers */,
+				F8CCC25628A4D83C0068BEE6 /* athnvar.h in Headers */,
+				F8CCC1F128A4D7400068BEE6 /* ar9280reg.h in Headers */,
 				F8F7EA42252D834600520FD4 /* IO80211P2PInterface.h in Headers */,
+				F8CCC26D28A4F6920068BEE6 /* Athn.hpp in Headers */,
 				F8F7EA4E252D834600520FD4 /* IO80211WorkLoop.h in Headers */,
+				F8CCC1F828A4D7400068BEE6 /* ar5xxx.h in Headers */,
 				35CBE736251CB8CA00435CBC /* apple80211_var.h in Headers */,
 				35CBE739251CB8CA00435CBC /* AirportItlwmInterface.hpp in Headers */,
+				F8CCC20D28A4D7400068BEE6 /* ar5212reg.h in Headers */,
+				F8CCC1CE28A4D7400068BEE6 /* ar5210var.h in Headers */,
+				F8CCC1A428A4D7400068BEE6 /* ar9287reg.h in Headers */,
 				F8F7EA4A252D834600520FD4 /* IO80211Interface.h in Headers */,
 				F8F7EA46252D834600520FD4 /* IO80211SkywalkInterface.h in Headers */,
+				F8CCC23E28A4D7400068BEE6 /* ar5211var.h in Headers */,
+				F8CCC20628A4D7400068BEE6 /* ar5212var.h in Headers */,
+				F8CCC1AB28A4D7400068BEE6 /* ar5210reg.h in Headers */,
+				F8CCC24F28A4D83C0068BEE6 /* athnreg.h in Headers */,
 				35CBE73B251CB8CA00435CBC /* AirportItlwm.hpp in Headers */,
 				F8F7EA3A252D834600520FD4 /* IO80211VirtualInterface.h in Headers */,
+				F8CCC1EA28A4D7400068BEE6 /* ar5008reg.h in Headers */,
 				F8F7EA3E252D834600520FD4 /* IO80211Controller.h in Headers */,
 				F8C594D925FD935B0007D19C /* ieee80211_ra.h in Headers */,
+				F8CCC1D528A4D7400068BEE6 /* ar9003reg.h in Headers */,
 				35CBE744251CB8CA00435CBC /* apple80211_wps.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -1514,22 +1862,39 @@
 			isa = PBXHeadersBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				F8CCC1A828A4D7400068BEE6 /* ar9287reg.h in Headers */,
 				F897ECBA266EFF93005EE8F7 /* debug.h in Headers */,
 				F897ECBB266EFF93005EE8F7 /* IOSkywalkEthernetInterface.h in Headers */,
+				F8CCC21128A4D7400068BEE6 /* ar5212reg.h in Headers */,
+				F8CCC25328A4D83C0068BEE6 /* athnreg.h in Headers */,
+				F8CCC1D228A4D7400068BEE6 /* ar5210var.h in Headers */,
 				F897ECBC266EFF93005EE8F7 /* apple80211_ioctl.h in Headers */,
 				F897ECBD266EFF93005EE8F7 /* IO80211P2PInterface.h in Headers */,
 				F897ECBE266EFF93005EE8F7 /* IO80211WorkLoop.h in Headers */,
+				F8CCC1CB28A4D7400068BEE6 /* ar9380reg.h in Headers */,
+				F8CCC1AF28A4D7400068BEE6 /* ar5210reg.h in Headers */,
 				F897ECBF266EFF93005EE8F7 /* apple80211_var.h in Headers */,
+				F8CCC21F28A4D7400068BEE6 /* ar5211reg.h in Headers */,
+				F8CCC24228A4D7400068BEE6 /* ar5211var.h in Headers */,
+				F8CCC1FC28A4D7400068BEE6 /* ar5xxx.h in Headers */,
+				F8CCC1D928A4D7400068BEE6 /* ar9003reg.h in Headers */,
 				F897ECC0266EFF93005EE8F7 /* AirportItlwmInterface.hpp in Headers */,
 				F897ECC1266EFF93005EE8F7 /* IO80211Interface.h in Headers */,
+				F8CCC1F528A4D7400068BEE6 /* ar9280reg.h in Headers */,
+				F8CCC25A28A4D83C0068BEE6 /* athnvar.h in Headers */,
 				F897ECC2266EFF93005EE8F7 /* (null) in Headers */,
 				F897ECC3266EFF93005EE8F7 /* IO80211SkywalkInterface.h in Headers */,
+				F8CCC1B628A4D7400068BEE6 /* ar9285reg.h in Headers */,
+				F8CCC1EE28A4D7400068BEE6 /* ar5008reg.h in Headers */,
 				F897ECC4266EFF93005EE8F7 /* AirportItlwm.hpp in Headers */,
 				F897ECC5266EFF93005EE8F7 /* IO80211VirtualInterface.h in Headers */,
+				F8CCC20A28A4D7400068BEE6 /* ar5212var.h in Headers */,
 				F897ECC6266EFF93005EE8F7 /* IO80211Controller.h in Headers */,
 				F897ECC7266EFF93005EE8F7 /* (null) in Headers */,
 				F897ECC8266EFF93005EE8F7 /* ieee80211_ra.h in Headers */,
 				F897ECC9266EFF93005EE8F7 /* apple80211_wps.h in Headers */,
+				F8CCC27128A4F6920068BEE6 /* Athn.hpp in Headers */,
+				F8CCC23B28A4D7400068BEE6 /* ar5416reg.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1539,17 +1904,34 @@
 			files = (
 				F89B6C2325027609000F77FF /* debug.h in Headers */,
 				F89B6BD725021E66000F77FF /* IOSkywalkEthernetInterface.h in Headers */,
+				F8CCC1B428A4D7400068BEE6 /* ar9285reg.h in Headers */,
 				F89B6BCB25021DED000F77FF /* apple80211_ioctl.h in Headers */,
+				F8CCC1C928A4D7400068BEE6 /* ar9380reg.h in Headers */,
+				F8CCC21D28A4D7400068BEE6 /* ar5211reg.h in Headers */,
+				F8CCC23928A4D7400068BEE6 /* ar5416reg.h in Headers */,
+				F8CCC25828A4D83C0068BEE6 /* athnvar.h in Headers */,
+				F8CCC1F328A4D7400068BEE6 /* ar9280reg.h in Headers */,
 				F8F7EA44252D834600520FD4 /* IO80211P2PInterface.h in Headers */,
+				F8CCC26F28A4F6920068BEE6 /* Athn.hpp in Headers */,
 				F8F7EA50252D834600520FD4 /* IO80211WorkLoop.h in Headers */,
+				F8CCC1FA28A4D7400068BEE6 /* ar5xxx.h in Headers */,
 				F89B6BC925021DED000F77FF /* apple80211_var.h in Headers */,
 				F8CA44A425091AF60036119A /* AirportItlwmInterface.hpp in Headers */,
+				F8CCC20F28A4D7400068BEE6 /* ar5212reg.h in Headers */,
+				F8CCC1D028A4D7400068BEE6 /* ar5210var.h in Headers */,
+				F8CCC1A628A4D7400068BEE6 /* ar9287reg.h in Headers */,
 				F8F7EA4C252D834600520FD4 /* IO80211Interface.h in Headers */,
 				F8F7EA48252D834600520FD4 /* IO80211SkywalkInterface.h in Headers */,
+				F8CCC24028A4D7400068BEE6 /* ar5211var.h in Headers */,
+				F8CCC20828A4D7400068BEE6 /* ar5212var.h in Headers */,
+				F8CCC1AD28A4D7400068BEE6 /* ar5210reg.h in Headers */,
+				F8CCC25128A4D83C0068BEE6 /* athnreg.h in Headers */,
 				F89B6BBC25021C9C000F77FF /* AirportItlwm.hpp in Headers */,
 				F8F7EA3C252D834600520FD4 /* IO80211VirtualInterface.h in Headers */,
+				F8CCC1EC28A4D7400068BEE6 /* ar5008reg.h in Headers */,
 				F8F7EA40252D834600520FD4 /* IO80211Controller.h in Headers */,
 				F8C594DB25FD935B0007D19C /* ieee80211_ra.h in Headers */,
+				F8CCC1D728A4D7400068BEE6 /* ar9003reg.h in Headers */,
 				F89B6BC725021DED000F77FF /* apple80211_wps.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -1558,22 +1940,39 @@
 			isa = PBXHeadersBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				F8CCC1A928A4D7400068BEE6 /* ar9287reg.h in Headers */,
 				F8AE64F9285471560085B4CF /* debug.h in Headers */,
 				F8AE64FA285471560085B4CF /* IOSkywalkEthernetInterface.h in Headers */,
+				F8CCC21228A4D7400068BEE6 /* ar5212reg.h in Headers */,
+				F8CCC25428A4D83C0068BEE6 /* athnreg.h in Headers */,
+				F8CCC1D328A4D7400068BEE6 /* ar5210var.h in Headers */,
 				F8AE64FB285471560085B4CF /* apple80211_ioctl.h in Headers */,
 				F8AE64FC285471560085B4CF /* IO80211P2PInterface.h in Headers */,
 				F8AE64FD285471560085B4CF /* IO80211WorkLoop.h in Headers */,
+				F8CCC1CC28A4D7400068BEE6 /* ar9380reg.h in Headers */,
+				F8CCC1B028A4D7400068BEE6 /* ar5210reg.h in Headers */,
 				F8AE64FE285471560085B4CF /* apple80211_var.h in Headers */,
+				F8CCC22028A4D7400068BEE6 /* ar5211reg.h in Headers */,
+				F8CCC24328A4D7400068BEE6 /* ar5211var.h in Headers */,
+				F8CCC1FD28A4D7400068BEE6 /* ar5xxx.h in Headers */,
+				F8CCC1DA28A4D7400068BEE6 /* ar9003reg.h in Headers */,
 				F8AE64FF285471560085B4CF /* AirportItlwmInterface.hpp in Headers */,
 				F8AE6500285471560085B4CF /* IO80211Interface.h in Headers */,
+				F8CCC1F628A4D7400068BEE6 /* ar9280reg.h in Headers */,
+				F8CCC25B28A4D83C0068BEE6 /* athnvar.h in Headers */,
 				F8AE6501285471560085B4CF /* (null) in Headers */,
 				F8AE6502285471560085B4CF /* IO80211SkywalkInterface.h in Headers */,
+				F8CCC1B728A4D7400068BEE6 /* ar9285reg.h in Headers */,
+				F8CCC1EF28A4D7400068BEE6 /* ar5008reg.h in Headers */,
 				F8AE6503285471560085B4CF /* AirportItlwm.hpp in Headers */,
 				F8AE6504285471560085B4CF /* IO80211VirtualInterface.h in Headers */,
+				F8CCC20B28A4D7400068BEE6 /* ar5212var.h in Headers */,
 				F8AE6505285471560085B4CF /* IO80211Controller.h in Headers */,
 				F8AE6506285471560085B4CF /* (null) in Headers */,
 				F8AE6507285471560085B4CF /* ieee80211_ra.h in Headers */,
 				F8AE6508285471560085B4CF /* apple80211_wps.h in Headers */,
+				F8CCC27228A4F6920068BEE6 /* Athn.hpp in Headers */,
+				F8CCC23C28A4D7400068BEE6 /* ar5416reg.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1855,11 +2254,13 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				F8CCC26528A4F6920068BEE6 /* Athn.cpp in Sources */,
 				F8A4307325062CE300EA545E /* zutil.c in Sources */,
 				F8294FE424FCBF5100239253 /* FwBinary.cpp in Sources */,
 				F8ED134424FBB5B70068C831 /* ItlIwx.cpp in Sources */,
 				F8C772922443439A00A1B8A0 /* compat.cpp in Sources */,
 				024A085223FCBC6C009FBA6C /* poly1305.c in Sources */,
+				F8CCC19C28A4D7400068BEE6 /* ar5211.c in Sources */,
 				024A083023FCBC6C009FBA6C /* sha2.c in Sources */,
 				024A085023FCBC6C009FBA6C /* arc4.c in Sources */,
 				024A082F23FCBC6C009FBA6C /* hmac.c in Sources */,
@@ -1869,15 +2270,21 @@
 				F8C2EC692408031A007A9422 /* CTimeout.cpp in Sources */,
 				F8C2EC682408031A007A9422 /* ieee80211_crypto.c in Sources */,
 				F8C2EC602408031A007A9422 /* ieee80211_amrr.c in Sources */,
+				F8CCC1E228A4D7400068BEE6 /* ar9280.c in Sources */,
 				F8C2EC6B2408031A007A9422 /* ieee80211_regdomain.c in Sources */,
+				F8CCC1DB28A4D7400068BEE6 /* ar9380.c in Sources */,
+				F8CCC1BF28A4D7400068BEE6 /* ar5416.c in Sources */,
+				F8CCC21328A4D7400068BEE6 /* ar5212.c in Sources */,
 				F8C2EC5B2408031A007A9422 /* ieee80211_crypto_bip.c in Sources */,
 				F8C2EC572408031A007A9422 /* timeout.c in Sources */,
 				F837C91D2724577F00B2C499 /* coex.cpp in Sources */,
 				F8AF3A3124F9F35B008911C1 /* ItlIwm.cpp in Sources */,
 				F88D2B3D2414E64000BBE700 /* sha1-pbkdf2.c in Sources */,
+				F8CCC1B828A4D7400068BEE6 /* ar5008.c in Sources */,
 				024A08D623FCF4D7009FBA6C /* scan.cpp in Sources */,
 				F8D364F824F93AFD0029340B /* ItlHalService.cpp in Sources */,
 				F8C2EC6C2408031A007A9422 /* ieee80211_node.c in Sources */,
+				F8CCC22828A4D7400068BEE6 /* ar9003.c in Sources */,
 				024A08C623FCDC3B009FBA6C /* tx.cpp in Sources */,
 				024A083423FCBC6C009FBA6C /* cast.c in Sources */,
 				024A08CA23FCE537009FBA6C /* phy.cpp in Sources */,
@@ -1898,11 +2305,14 @@
 				024A085923FCBC6C009FBA6C /* idgen.c in Sources */,
 				F8C2EC522408031A007A9422 /* ieee80211_ioctl.c in Sources */,
 				F8C594D325FD935B0007D19C /* ieee80211_ra.c in Sources */,
+				F8CCC25C28A4D83C0068BEE6 /* athn.c in Sources */,
 				024A085823FCBC6C009FBA6C /* rmd160.c in Sources */,
 				024A084223FCBC6C009FBA6C /* cmac.c in Sources */,
 				F8C2EC532408031A007A9422 /* ieee80211.c in Sources */,
+				F8CCC24428A4D7400068BEE6 /* ar9285.c in Sources */,
 				024A084E23FCBC6C009FBA6C /* chachapoly.c in Sources */,
 				F8F9EDE1240B7415009CB8E7 /* _task.cpp in Sources */,
+				F8CCC22128A4D7400068BEE6 /* ar9287.c in Sources */,
 				024A085523FCBC6C009FBA6C /* key_wrap.c in Sources */,
 				F8E49A14249B923500BE6868 /* ItlNetworkUserClient.cpp in Sources */,
 				F8C2EC6D2408031A007A9422 /* ieee80211_pae_output.c in Sources */,
@@ -1913,8 +2323,10 @@
 				024A085723FCBC6C009FBA6C /* gmac.c in Sources */,
 				F8C2EC592408031A007A9422 /* ieee80211_mira.c in Sources */,
 				024A083223FCBC6C009FBA6C /* ecb3_enc.c in Sources */,
+				F8CCC22F28A4D7400068BEE6 /* ar5210.c in Sources */,
 				024A08D023FCEE88009FBA6C /* ctxt.cpp in Sources */,
 				F8D76362244F21BB00DEA040 /* pm.cpp in Sources */,
+				F8CCC1FE28A4D7400068BEE6 /* ar5xxx.c in Sources */,
 				024A08C023FCD4E2009FBA6C /* utils.cpp in Sources */,
 				024A08D223FCF395009FBA6C /* led.cpp in Sources */,
 				F8C2EC542408031A007A9422 /* ieee80211_rssadapt.c in Sources */,
@@ -1932,12 +2344,16 @@
 			files = (
 				35CBE671251CB89700435CBC /* _mbuf.cpp in Sources */,
 				F8C594D725FD935B0007D19C /* ieee80211_ra.c in Sources */,
+				F8CCC21728A4D7400068BEE6 /* ar5212.c in Sources */,
 				35CBE672251CB89700435CBC /* _task.cpp in Sources */,
 				35CBE673251CB89700435CBC /* FwBinary.cpp in Sources */,
+				F8CCC1DF28A4D7400068BEE6 /* ar9380.c in Sources */,
 				F837C9212724577F00B2C499 /* coex.cpp in Sources */,
+				F8CCC1A028A4D7400068BEE6 /* ar5211.c in Sources */,
 				35CBE675251CB89700435CBC /* ieee80211_proto.c in Sources */,
 				35CBE676251CB89700435CBC /* AirportItlwmInterface.cpp in Sources */,
 				35CBE677251CB89700435CBC /* _string.c in Sources */,
+				F8CCC24828A4D7400068BEE6 /* ar9285.c in Sources */,
 				35CBE678251CB89700435CBC /* ieee80211_ioctl.c in Sources */,
 				35CBE679251CB89700435CBC /* ieee80211.c in Sources */,
 				35CBE67A251CB89700435CBC /* ieee80211_rssadapt.c in Sources */,
@@ -1948,7 +2364,10 @@
 				35CBE67F251CB89700435CBC /* ieee80211_crypto_tkip.c in Sources */,
 				35CBE680251CB89700435CBC /* ieee80211_crypto_ccmp.c in Sources */,
 				35CBE681251CB89700435CBC /* ieee80211_crypto_wep.c in Sources */,
+				F8CCC22C28A4D7400068BEE6 /* ar9003.c in Sources */,
 				35CBE682251CB89700435CBC /* ieee80211_pae_input.c in Sources */,
+				F8CCC20228A4D7400068BEE6 /* ar5xxx.c in Sources */,
+				F8CCC1C328A4D7400068BEE6 /* ar5416.c in Sources */,
 				35CBE683251CB89700435CBC /* ieee80211_amrr.c in Sources */,
 				35CBE684251CB89700435CBC /* ieee80211_output.c in Sources */,
 				35CBE685251CB89700435CBC /* ieee80211_crypto.c in Sources */,
@@ -1973,6 +2392,7 @@
 				35CBE698251CB89700435CBC /* arc4.c in Sources */,
 				35CBE699251CB89700435CBC /* blf.c in Sources */,
 				35CBE69A251CB89700435CBC /* poly1305.c in Sources */,
+				F8CCC26928A4F6920068BEE6 /* Athn.cpp in Sources */,
 				35CBE69B251CB89700435CBC /* key_wrap.c in Sources */,
 				35CBE69C251CB89700435CBC /* gmac.c in Sources */,
 				35CBE69D251CB89700435CBC /* rmd160.c in Sources */,
@@ -1986,16 +2406,21 @@
 				35CBE6A5251CB89700435CBC /* io.cpp in Sources */,
 				35CBE6A6251CB89700435CBC /* rx.cpp in Sources */,
 				35CBE6A7251CB89700435CBC /* tx.cpp in Sources */,
+				F8CCC1BC28A4D7400068BEE6 /* ar5008.c in Sources */,
 				35CBE6A8251CB89700435CBC /* hw.cpp in Sources */,
 				17FD7F78255E547200611406 /* ItlIwn.cpp in Sources */,
 				35CBE6A9251CB89700435CBC /* phy.cpp in Sources */,
 				35CBE6AA251CB89700435CBC /* mac80211.cpp in Sources */,
 				35CBE6AB251CB89700435CBC /* nvm.cpp in Sources */,
+				F8CCC23328A4D7400068BEE6 /* ar5210.c in Sources */,
 				35CBE6AC251CB89700435CBC /* ctxt.cpp in Sources */,
 				35CBE6AD251CB89700435CBC /* led.cpp in Sources */,
 				35CBE6AE251CB89700435CBC /* power.cpp in Sources */,
 				35CBE6AF251CB89700435CBC /* scan.cpp in Sources */,
+				F8CCC26028A4D83C0068BEE6 /* athn.c in Sources */,
 				35CBE6B0251CB89700435CBC /* ItlIwm.cpp in Sources */,
+				F8CCC22528A4D7400068BEE6 /* ar9287.c in Sources */,
+				F8CCC1E628A4D7400068BEE6 /* ar9280.c in Sources */,
 				35CBE6B1251CB89700435CBC /* AirportSTAIOCTL.cpp in Sources */,
 				35CBE6B2251CB89700435CBC /* AirportItlwm.cpp in Sources */,
 				35CBE6B3251CB89700435CBC /* AirportVirtualIOCTL.cpp in Sources */,
@@ -2009,12 +2434,16 @@
 			files = (
 				35CBE6DB251CB8BF00435CBC /* _mbuf.cpp in Sources */,
 				F8C594D525FD935B0007D19C /* ieee80211_ra.c in Sources */,
+				F8CCC21528A4D7400068BEE6 /* ar5212.c in Sources */,
 				35CBE6DC251CB8BF00435CBC /* _task.cpp in Sources */,
 				35CBE6DD251CB8BF00435CBC /* FwBinary.cpp in Sources */,
+				F8CCC1DD28A4D7400068BEE6 /* ar9380.c in Sources */,
 				F837C91F2724577F00B2C499 /* coex.cpp in Sources */,
+				F8CCC19E28A4D7400068BEE6 /* ar5211.c in Sources */,
 				35CBE6DF251CB8BF00435CBC /* ieee80211_proto.c in Sources */,
 				35CBE6E0251CB8BF00435CBC /* AirportItlwmInterface.cpp in Sources */,
 				35CBE6E1251CB8BF00435CBC /* _string.c in Sources */,
+				F8CCC24628A4D7400068BEE6 /* ar9285.c in Sources */,
 				35CBE6E2251CB8BF00435CBC /* ieee80211_ioctl.c in Sources */,
 				35CBE6E3251CB8BF00435CBC /* ieee80211.c in Sources */,
 				35CBE6E4251CB8BF00435CBC /* ieee80211_rssadapt.c in Sources */,
@@ -2025,7 +2454,10 @@
 				35CBE6E9251CB8BF00435CBC /* ieee80211_crypto_tkip.c in Sources */,
 				35CBE6EA251CB8BF00435CBC /* ieee80211_crypto_ccmp.c in Sources */,
 				35CBE6EB251CB8BF00435CBC /* ieee80211_crypto_wep.c in Sources */,
+				F8CCC22A28A4D7400068BEE6 /* ar9003.c in Sources */,
 				35CBE6EC251CB8BF00435CBC /* ieee80211_pae_input.c in Sources */,
+				F8CCC20028A4D7400068BEE6 /* ar5xxx.c in Sources */,
+				F8CCC1C128A4D7400068BEE6 /* ar5416.c in Sources */,
 				35CBE6ED251CB8BF00435CBC /* ieee80211_amrr.c in Sources */,
 				35CBE6EE251CB8BF00435CBC /* ieee80211_output.c in Sources */,
 				35CBE6EF251CB8BF00435CBC /* ieee80211_crypto.c in Sources */,
@@ -2050,6 +2482,7 @@
 				35CBE702251CB8BF00435CBC /* arc4.c in Sources */,
 				35CBE703251CB8BF00435CBC /* blf.c in Sources */,
 				35CBE704251CB8BF00435CBC /* poly1305.c in Sources */,
+				F8CCC26728A4F6920068BEE6 /* Athn.cpp in Sources */,
 				35CBE705251CB8BF00435CBC /* key_wrap.c in Sources */,
 				35CBE706251CB8BF00435CBC /* gmac.c in Sources */,
 				35CBE707251CB8BF00435CBC /* rmd160.c in Sources */,
@@ -2063,16 +2496,21 @@
 				35CBE70F251CB8BF00435CBC /* io.cpp in Sources */,
 				35CBE710251CB8BF00435CBC /* rx.cpp in Sources */,
 				35CBE711251CB8BF00435CBC /* tx.cpp in Sources */,
+				F8CCC1BA28A4D7400068BEE6 /* ar5008.c in Sources */,
 				35CBE712251CB8BF00435CBC /* hw.cpp in Sources */,
 				17FD7F6A255E547100611406 /* ItlIwn.cpp in Sources */,
 				35CBE713251CB8BF00435CBC /* phy.cpp in Sources */,
 				35CBE714251CB8BF00435CBC /* mac80211.cpp in Sources */,
 				35CBE715251CB8BF00435CBC /* nvm.cpp in Sources */,
+				F8CCC23128A4D7400068BEE6 /* ar5210.c in Sources */,
 				35CBE716251CB8BF00435CBC /* ctxt.cpp in Sources */,
 				35CBE717251CB8BF00435CBC /* led.cpp in Sources */,
 				35CBE718251CB8BF00435CBC /* power.cpp in Sources */,
 				35CBE719251CB8BF00435CBC /* scan.cpp in Sources */,
+				F8CCC25E28A4D83C0068BEE6 /* athn.c in Sources */,
 				35CBE71A251CB8BF00435CBC /* ItlIwm.cpp in Sources */,
+				F8CCC22328A4D7400068BEE6 /* ar9287.c in Sources */,
+				F8CCC1E428A4D7400068BEE6 /* ar9280.c in Sources */,
 				35CBE71B251CB8BF00435CBC /* AirportSTAIOCTL.cpp in Sources */,
 				35CBE71C251CB8BF00435CBC /* AirportItlwm.cpp in Sources */,
 				35CBE71D251CB8BF00435CBC /* AirportVirtualIOCTL.cpp in Sources */,
@@ -2086,12 +2524,16 @@
 			files = (
 				35CBE746251CB8CA00435CBC /* _mbuf.cpp in Sources */,
 				F8C594D425FD935B0007D19C /* ieee80211_ra.c in Sources */,
+				F8CCC21428A4D7400068BEE6 /* ar5212.c in Sources */,
 				35CBE747251CB8CA00435CBC /* _task.cpp in Sources */,
 				35CBE748251CB8CA00435CBC /* FwBinary.cpp in Sources */,
+				F8CCC1DC28A4D7400068BEE6 /* ar9380.c in Sources */,
 				F837C91E2724577F00B2C499 /* coex.cpp in Sources */,
+				F8CCC19D28A4D7400068BEE6 /* ar5211.c in Sources */,
 				35CBE74A251CB8CA00435CBC /* ieee80211_proto.c in Sources */,
 				35CBE74B251CB8CA00435CBC /* AirportItlwmInterface.cpp in Sources */,
 				35CBE74C251CB8CA00435CBC /* _string.c in Sources */,
+				F8CCC24528A4D7400068BEE6 /* ar9285.c in Sources */,
 				35CBE74D251CB8CA00435CBC /* ieee80211_ioctl.c in Sources */,
 				35CBE74E251CB8CA00435CBC /* ieee80211.c in Sources */,
 				35CBE74F251CB8CA00435CBC /* ieee80211_rssadapt.c in Sources */,
@@ -2102,7 +2544,10 @@
 				35CBE754251CB8CA00435CBC /* ieee80211_crypto_tkip.c in Sources */,
 				35CBE755251CB8CA00435CBC /* ieee80211_crypto_ccmp.c in Sources */,
 				35CBE756251CB8CA00435CBC /* ieee80211_crypto_wep.c in Sources */,
+				F8CCC22928A4D7400068BEE6 /* ar9003.c in Sources */,
 				35CBE757251CB8CA00435CBC /* ieee80211_pae_input.c in Sources */,
+				F8CCC1FF28A4D7400068BEE6 /* ar5xxx.c in Sources */,
+				F8CCC1C028A4D7400068BEE6 /* ar5416.c in Sources */,
 				35CBE758251CB8CA00435CBC /* ieee80211_amrr.c in Sources */,
 				35CBE759251CB8CA00435CBC /* ieee80211_output.c in Sources */,
 				35CBE75A251CB8CA00435CBC /* ieee80211_crypto.c in Sources */,
@@ -2127,6 +2572,7 @@
 				35CBE76D251CB8CA00435CBC /* arc4.c in Sources */,
 				35CBE76E251CB8CA00435CBC /* blf.c in Sources */,
 				35CBE76F251CB8CA00435CBC /* poly1305.c in Sources */,
+				F8CCC26628A4F6920068BEE6 /* Athn.cpp in Sources */,
 				35CBE770251CB8CA00435CBC /* key_wrap.c in Sources */,
 				35CBE771251CB8CA00435CBC /* gmac.c in Sources */,
 				35CBE772251CB8CA00435CBC /* rmd160.c in Sources */,
@@ -2140,16 +2586,21 @@
 				35CBE77A251CB8CA00435CBC /* io.cpp in Sources */,
 				35CBE77B251CB8CA00435CBC /* rx.cpp in Sources */,
 				35CBE77C251CB8CA00435CBC /* tx.cpp in Sources */,
+				F8CCC1B928A4D7400068BEE6 /* ar5008.c in Sources */,
 				35CBE77D251CB8CA00435CBC /* hw.cpp in Sources */,
 				17FD7F63255E547100611406 /* ItlIwn.cpp in Sources */,
 				35CBE77E251CB8CA00435CBC /* phy.cpp in Sources */,
 				35CBE77F251CB8CA00435CBC /* mac80211.cpp in Sources */,
 				35CBE780251CB8CA00435CBC /* nvm.cpp in Sources */,
+				F8CCC23028A4D7400068BEE6 /* ar5210.c in Sources */,
 				35CBE781251CB8CA00435CBC /* ctxt.cpp in Sources */,
 				35CBE782251CB8CA00435CBC /* led.cpp in Sources */,
 				35CBE783251CB8CA00435CBC /* power.cpp in Sources */,
 				35CBE784251CB8CA00435CBC /* scan.cpp in Sources */,
+				F8CCC25D28A4D83C0068BEE6 /* athn.c in Sources */,
 				35CBE785251CB8CA00435CBC /* ItlIwm.cpp in Sources */,
+				F8CCC22228A4D7400068BEE6 /* ar9287.c in Sources */,
+				F8CCC1E328A4D7400068BEE6 /* ar9280.c in Sources */,
 				35CBE786251CB8CA00435CBC /* AirportSTAIOCTL.cpp in Sources */,
 				35CBE787251CB8CA00435CBC /* AirportItlwm.cpp in Sources */,
 				35CBE788251CB8CA00435CBC /* AirportVirtualIOCTL.cpp in Sources */,
@@ -2165,7 +2616,9 @@
 				F897ECCC266EFF93005EE8F7 /* ieee80211_ra.c in Sources */,
 				F897ECCD266EFF93005EE8F7 /* _task.cpp in Sources */,
 				F897ECCE266EFF93005EE8F7 /* FwBinary.cpp in Sources */,
+				F8CCC20328A4D7400068BEE6 /* ar5xxx.c in Sources */,
 				F897ECD0266EFF93005EE8F7 /* ieee80211_proto.c in Sources */,
+				F8CCC1A128A4D7400068BEE6 /* ar5211.c in Sources */,
 				F897ECD1266EFF93005EE8F7 /* AirportItlwmInterface.cpp in Sources */,
 				F897ECD2266EFF93005EE8F7 /* _string.c in Sources */,
 				F897ECD3266EFF93005EE8F7 /* ieee80211_ioctl.c in Sources */,
@@ -2173,8 +2626,11 @@
 				F897ECD5266EFF93005EE8F7 /* ieee80211_rssadapt.c in Sources */,
 				F897ECD6266EFF93005EE8F7 /* ieee80211_input.c in Sources */,
 				F897ECD7266EFF93005EE8F7 /* timeout.c in Sources */,
+				F8CCC24928A4D7400068BEE6 /* ar9285.c in Sources */,
 				F897ECD8266EFF93005EE8F7 /* ieee80211_mira.c in Sources */,
+				F8CCC23428A4D7400068BEE6 /* ar5210.c in Sources */,
 				F897ECD9266EFF93005EE8F7 /* ieee80211_crypto_bip.c in Sources */,
+				F8CCC22628A4D7400068BEE6 /* ar9287.c in Sources */,
 				F897ECDA266EFF93005EE8F7 /* ieee80211_crypto_tkip.c in Sources */,
 				F897ECDB266EFF93005EE8F7 /* ieee80211_crypto_ccmp.c in Sources */,
 				F897ECDC266EFF93005EE8F7 /* ieee80211_crypto_wep.c in Sources */,
@@ -2187,6 +2643,7 @@
 				F897ECE3266EFF93005EE8F7 /* ieee80211_node.c in Sources */,
 				F897ECE4266EFF93005EE8F7 /* ieee80211_pae_output.c in Sources */,
 				F897ECE5266EFF93005EE8F7 /* sha1-pbkdf2.c in Sources */,
+				F8CCC1E728A4D7400068BEE6 /* ar9280.c in Sources */,
 				F897ECE6266EFF93005EE8F7 /* aes.c in Sources */,
 				F897ECE7266EFF93005EE8F7 /* hmac.c in Sources */,
 				F897ECE8266EFF93005EE8F7 /* sha2.c in Sources */,
@@ -2204,6 +2661,7 @@
 				F897ECF4266EFF93005EE8F7 /* arc4.c in Sources */,
 				F897ECF5266EFF93005EE8F7 /* blf.c in Sources */,
 				F897ECF6266EFF93005EE8F7 /* poly1305.c in Sources */,
+				F8CCC26128A4D83C0068BEE6 /* athn.c in Sources */,
 				F897ECF7266EFF93005EE8F7 /* key_wrap.c in Sources */,
 				F897ECF8266EFF93005EE8F7 /* gmac.c in Sources */,
 				F897ECF9266EFF93005EE8F7 /* rmd160.c in Sources */,
@@ -2211,14 +2669,20 @@
 				F897ECFB266EFF93005EE8F7 /* compat.cpp in Sources */,
 				F897ECFC266EFF93005EE8F7 /* zutil.c in Sources */,
 				F897ECFD266EFF93005EE8F7 /* ItlHalService.cpp in Sources */,
+				F8CCC1BD28A4D7400068BEE6 /* ar5008.c in Sources */,
+				F8CCC1C428A4D7400068BEE6 /* ar5416.c in Sources */,
+				F8CCC22D28A4D7400068BEE6 /* ar9003.c in Sources */,
+				F8CCC26A28A4F6920068BEE6 /* Athn.cpp in Sources */,
 				F897ECFE266EFF93005EE8F7 /* ItlIwx.cpp in Sources */,
 				F897ECFF266EFF93005EE8F7 /* utils.cpp in Sources */,
+				F8CCC1E028A4D7400068BEE6 /* ar9380.c in Sources */,
 				F897ED00266EFF93005EE8F7 /* fw.cpp in Sources */,
 				F897ED01266EFF93005EE8F7 /* io.cpp in Sources */,
 				F897ED02266EFF93005EE8F7 /* rx.cpp in Sources */,
 				F837C9222724577F00B2C499 /* coex.cpp in Sources */,
 				F897ED03266EFF93005EE8F7 /* tx.cpp in Sources */,
 				F897ED04266EFF93005EE8F7 /* hw.cpp in Sources */,
+				F8CCC21828A4D7400068BEE6 /* ar5212.c in Sources */,
 				F897ED05266EFF93005EE8F7 /* ItlIwn.cpp in Sources */,
 				F897ED06266EFF93005EE8F7 /* phy.cpp in Sources */,
 				F897ED07266EFF93005EE8F7 /* mac80211.cpp in Sources */,
@@ -2241,12 +2705,16 @@
 			files = (
 				F89B6C20250232DC000F77FF /* _mbuf.cpp in Sources */,
 				F8C594D625FD935B0007D19C /* ieee80211_ra.c in Sources */,
+				F8CCC21628A4D7400068BEE6 /* ar5212.c in Sources */,
 				F89B6C21250232DC000F77FF /* _task.cpp in Sources */,
 				F89B6BF3250231E3000F77FF /* FwBinary.cpp in Sources */,
+				F8CCC1DE28A4D7400068BEE6 /* ar9380.c in Sources */,
 				F837C9202724577F00B2C499 /* coex.cpp in Sources */,
+				F8CCC19F28A4D7400068BEE6 /* ar5211.c in Sources */,
 				F89B6BF5250231E3000F77FF /* ieee80211_proto.c in Sources */,
 				F8CA44A325091AF60036119A /* AirportItlwmInterface.cpp in Sources */,
 				F89B6BF6250231E3000F77FF /* _string.c in Sources */,
+				F8CCC24728A4D7400068BEE6 /* ar9285.c in Sources */,
 				F89B6BF7250231E3000F77FF /* ieee80211_ioctl.c in Sources */,
 				F89B6BF8250231E3000F77FF /* ieee80211.c in Sources */,
 				F89B6BF9250231E3000F77FF /* ieee80211_rssadapt.c in Sources */,
@@ -2257,7 +2725,10 @@
 				F89B6BFE250231E3000F77FF /* ieee80211_crypto_tkip.c in Sources */,
 				F89B6BFF250231E3000F77FF /* ieee80211_crypto_ccmp.c in Sources */,
 				F89B6C00250231E3000F77FF /* ieee80211_crypto_wep.c in Sources */,
+				F8CCC22B28A4D7400068BEE6 /* ar9003.c in Sources */,
 				F89B6C01250231E3000F77FF /* ieee80211_pae_input.c in Sources */,
+				F8CCC20128A4D7400068BEE6 /* ar5xxx.c in Sources */,
+				F8CCC1C228A4D7400068BEE6 /* ar5416.c in Sources */,
 				F89B6C02250231E3000F77FF /* ieee80211_amrr.c in Sources */,
 				F89B6C03250231E3000F77FF /* ieee80211_output.c in Sources */,
 				F89B6C04250231E3000F77FF /* ieee80211_crypto.c in Sources */,
@@ -2282,6 +2753,7 @@
 				F89B6C17250231E4000F77FF /* arc4.c in Sources */,
 				F89B6C18250231E4000F77FF /* blf.c in Sources */,
 				F89B6C19250231E4000F77FF /* poly1305.c in Sources */,
+				F8CCC26828A4F6920068BEE6 /* Athn.cpp in Sources */,
 				F89B6C1A250231E4000F77FF /* key_wrap.c in Sources */,
 				F89B6C1B250231E4000F77FF /* gmac.c in Sources */,
 				F89B6C1C250231E4000F77FF /* rmd160.c in Sources */,
@@ -2295,16 +2767,21 @@
 				F89B6BE42502315B000F77FF /* io.cpp in Sources */,
 				F89B6BE52502315B000F77FF /* rx.cpp in Sources */,
 				F89B6BE62502315B000F77FF /* tx.cpp in Sources */,
+				F8CCC1BB28A4D7400068BEE6 /* ar5008.c in Sources */,
 				F89B6BE72502315B000F77FF /* hw.cpp in Sources */,
 				17FD7F71255E547200611406 /* ItlIwn.cpp in Sources */,
 				F89B6BE82502315B000F77FF /* phy.cpp in Sources */,
 				F89B6BE92502315B000F77FF /* mac80211.cpp in Sources */,
 				F89B6BEA2502315B000F77FF /* nvm.cpp in Sources */,
+				F8CCC23228A4D7400068BEE6 /* ar5210.c in Sources */,
 				F89B6BEB2502315B000F77FF /* ctxt.cpp in Sources */,
 				F89B6BEC2502315B000F77FF /* led.cpp in Sources */,
 				F89B6BED2502315B000F77FF /* power.cpp in Sources */,
 				F89B6BEE2502315B000F77FF /* scan.cpp in Sources */,
+				F8CCC25F28A4D83C0068BEE6 /* athn.c in Sources */,
 				F89B6BEF2502315B000F77FF /* ItlIwm.cpp in Sources */,
+				F8CCC22428A4D7400068BEE6 /* ar9287.c in Sources */,
+				F8CCC1E528A4D7400068BEE6 /* ar9280.c in Sources */,
 				F89B6BDD25022F8C000F77FF /* AirportSTAIOCTL.cpp in Sources */,
 				F89B6BBE25021C9C000F77FF /* AirportItlwm.cpp in Sources */,
 				F89B6BDF25022FB5000F77FF /* AirportVirtualIOCTL.cpp in Sources */,
@@ -2320,7 +2797,9 @@
 				F8AE650B285471560085B4CF /* ieee80211_ra.c in Sources */,
 				F8AE650C285471560085B4CF /* _task.cpp in Sources */,
 				F8AE650D285471560085B4CF /* FwBinary.cpp in Sources */,
+				F8CCC20428A4D7400068BEE6 /* ar5xxx.c in Sources */,
 				F8AE650F285471560085B4CF /* ieee80211_proto.c in Sources */,
+				F8CCC1A228A4D7400068BEE6 /* ar5211.c in Sources */,
 				F8AE6510285471560085B4CF /* AirportItlwmInterface.cpp in Sources */,
 				F8AE6511285471560085B4CF /* _string.c in Sources */,
 				F8AE6512285471560085B4CF /* ieee80211_ioctl.c in Sources */,
@@ -2328,8 +2807,11 @@
 				F8AE6514285471560085B4CF /* ieee80211_rssadapt.c in Sources */,
 				F8AE6515285471560085B4CF /* ieee80211_input.c in Sources */,
 				F8AE6516285471560085B4CF /* timeout.c in Sources */,
+				F8CCC24A28A4D7400068BEE6 /* ar9285.c in Sources */,
 				F8AE6517285471560085B4CF /* ieee80211_mira.c in Sources */,
+				F8CCC23528A4D7400068BEE6 /* ar5210.c in Sources */,
 				F8AE6518285471560085B4CF /* ieee80211_crypto_bip.c in Sources */,
+				F8CCC22728A4D7400068BEE6 /* ar9287.c in Sources */,
 				F8AE6519285471560085B4CF /* ieee80211_crypto_tkip.c in Sources */,
 				F8AE651A285471560085B4CF /* ieee80211_crypto_ccmp.c in Sources */,
 				F8AE651B285471560085B4CF /* ieee80211_crypto_wep.c in Sources */,
@@ -2342,6 +2824,7 @@
 				F8AE6522285471560085B4CF /* ieee80211_node.c in Sources */,
 				F8AE6523285471560085B4CF /* ieee80211_pae_output.c in Sources */,
 				F8AE6524285471560085B4CF /* sha1-pbkdf2.c in Sources */,
+				F8CCC1E828A4D7400068BEE6 /* ar9280.c in Sources */,
 				F8AE6525285471560085B4CF /* aes.c in Sources */,
 				F8AE6526285471560085B4CF /* hmac.c in Sources */,
 				F8AE6527285471560085B4CF /* sha2.c in Sources */,
@@ -2359,6 +2842,7 @@
 				F8AE6533285471560085B4CF /* arc4.c in Sources */,
 				F8AE6534285471560085B4CF /* blf.c in Sources */,
 				F8AE6535285471560085B4CF /* poly1305.c in Sources */,
+				F8CCC26228A4D83C0068BEE6 /* athn.c in Sources */,
 				F8AE6536285471560085B4CF /* key_wrap.c in Sources */,
 				F8AE6537285471560085B4CF /* gmac.c in Sources */,
 				F8AE6538285471560085B4CF /* rmd160.c in Sources */,
@@ -2366,14 +2850,20 @@
 				F8AE653A285471560085B4CF /* compat.cpp in Sources */,
 				F8AE653B285471560085B4CF /* zutil.c in Sources */,
 				F8AE653C285471560085B4CF /* ItlHalService.cpp in Sources */,
+				F8CCC1BE28A4D7400068BEE6 /* ar5008.c in Sources */,
+				F8CCC1C528A4D7400068BEE6 /* ar5416.c in Sources */,
+				F8CCC22E28A4D7400068BEE6 /* ar9003.c in Sources */,
+				F8CCC26B28A4F6920068BEE6 /* Athn.cpp in Sources */,
 				F8AE653D285471560085B4CF /* ItlIwx.cpp in Sources */,
 				F8AE653E285471560085B4CF /* utils.cpp in Sources */,
+				F8CCC1E128A4D7400068BEE6 /* ar9380.c in Sources */,
 				F8AE653F285471560085B4CF /* fw.cpp in Sources */,
 				F8AE6540285471560085B4CF /* io.cpp in Sources */,
 				F8AE6541285471560085B4CF /* rx.cpp in Sources */,
 				F8AE6542285471560085B4CF /* coex.cpp in Sources */,
 				F8AE6543285471560085B4CF /* tx.cpp in Sources */,
 				F8AE6544285471560085B4CF /* hw.cpp in Sources */,
+				F8CCC21928A4D7400068BEE6 /* ar5212.c in Sources */,
 				F8AE6545285471560085B4CF /* ItlIwn.cpp in Sources */,
 				F8AE6546285471560085B4CF /* phy.cpp in Sources */,
 				F8AE6547285471560085B4CF /* mac80211.cpp in Sources */,
@@ -2578,6 +3068,7 @@
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"$(inherited)",
 					__PRIVATE_SPI__,
+					ATHN_DEBUG,
 				);
 				INFOPLIST_FILE = itlwm/Info.plist;
 				LIBRARY_SEARCH_PATHS = (

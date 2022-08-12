@@ -258,6 +258,28 @@ struct  arpcom {
     void    *ac_trunkport;
 };
 
+struct ether_multistep {
+    struct ether_multi  *e_enm;
+};
+
+#define ETHER_FIRST_MULTI(step, ac, enm)    (0)
+#define ETHER_NEXT_MULTI(step, enm) (0)
+#define ETHER_LOOKUP_MULTI(addrlo, addrhi, ac, enm) (0)
+
+static inline int
+ether_addmulti(struct ifreq *, struct arpcom *)
+{
+    IOLog("TODO: %s\n", __FUNCTION__);
+    return 0;
+}
+
+static inline int
+ether_delmulti(struct ifreq *, struct arpcom *)
+{
+    IOLog("TODO: %s\n", __FUNCTION__);
+    return 0;
+}
+
 static inline u_int8_t etherbroadcastaddr[ETHER_ADDR_LEN] =
     { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff };
 static inline u_int8_t etheranyaddr[ETHER_ADDR_LEN] =
