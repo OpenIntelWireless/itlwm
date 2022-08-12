@@ -37,12 +37,12 @@
 // the following isn't actually used
 #define BUS_SPACE_BARRIER_READ	0
 #define BUS_SPACE_BARRIER_WRITE	0
-#define BUS_DMA_NOWAIT		0
-#define BUS_DMA_ZERO		0
-#define BUS_DMA_COHERENT	0
-#define BUS_DMA_READ		0
-#define BUS_DMA_WRITE       0
-#define BUS_DMA_ALLOCNOW    0
+#define BUS_DMA_NOWAIT		1
+#define BUS_DMA_ZERO		2
+#define BUS_DMA_COHERENT	4
+#define BUS_DMA_READ		8
+#define BUS_DMA_WRITE       10
+#define BUS_DMA_ALLOCNOW    20
 
 #define M_DEVBUF    0
 
@@ -165,6 +165,49 @@ extern void wakeup_oneOn(void *chan);
 #define MGETHDR(m, how, type)   mbuf_gethdr((how), (type), &(m))
 #define MCLGET(m, how)          mbuf_mclget((how), MBUF_TYPE_DATA, &(m))
 #define MCLGETL(m, how, len)    mcl_get((m), (how), (len))
+
+static inline mbuf_t
+m_makespace(mbuf_t m0, int skip, int hlen, int *off)
+{
+    mbuf_t m;
+    unsigned remain;
+
+    for (m = m0; m && skip > mbuf_len(m); m = mbuf_next(m))
+        skip -= mbuf_len(m);
+    if (m == NULL)
+        return (NULL);
+    /*
+     * At this point skip is the offset into the mbuf m
+     * where the new header should be placed.  Figure out
+     * if there's space to insert the new header.  If so,
+     * and copying the remainder makes sense then do so.
+     * Otherwise insert a new mbuf in the chain, splitting
+     * the contents of m as needed.
+     */
+    remain = mbuf_len(m) - skip;        /* data to move */
+    if (skip < remain && hlen <= mbuf_leadingspace(m)) {
+        if (skip)
+            memmove((uint8_t *)mbuf_data(m)-hlen, mbuf_data(m), skip);
+        int len = mbuf_len(m) + hlen;
+        mbuf_setdata(m, (uint8_t *)mbuf_data(m) - hlen, len);
+        mbuf_setlen(m, len);
+        *off = skip;
+    } else if (hlen > mbuf_trailingspace(m)) {
+        return (NULL);
+    } else {
+        /*
+         * Copy the remainder to the back of the mbuf
+         * so there's space to write the new header.
+         */
+        if (remain > 0)
+            memmove(mtod(m, caddr_t) + skip + hlen,
+                  mtod(m, caddr_t) + skip, remain);
+        mbuf_setlen(m, mbuf_len(m) + hlen);
+        *off = skip;
+    }
+    mbuf_pkthdr_setlen(m0, mbuf_pkthdr_len(m0) + hlen);        /* adjust packet length */
+    return m;
+}
 
 static inline mbuf_t
 mcl_get(mbuf_t m, mbuf_how_t how, size_t size)

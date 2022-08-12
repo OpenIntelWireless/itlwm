@@ -312,7 +312,7 @@ void bus_space_barrier(bus_space_tag_t space, bus_space_handle_t handle, bus_siz
 
 int bus_dmamap_create(bus_dma_tag_t tag, bus_size_t size, int nsegments, bus_size_t maxsegsz, bus_size_t boundary, int flags, bus_dmamap_t *dmamp) {
 	if (dmamp == 0)
-		return 1;
+		return -EINVAL;
 	*dmamp = new bus_dmamap;
 	(*dmamp)->cursor = IOMbufNaturalMemoryCursor::withSpecification(maxsegsz, nsegments);
     (*dmamp)->dm_maxsegs = nsegments;
@@ -326,7 +326,7 @@ int bus_dmamem_alloc(bus_dma_tag_t tag, bus_size_t size, bus_size_t alignment, b
     UInt32 numSegs = 1;
     IODMACommand::Segment64 seg;
 
-    segs->bmd = IOBufferMemoryDescriptor::inTaskWithPhysicalMask(kernel_task, kIODirectionInOut | kIOMemoryPhysicallyContiguous | kIOMapInhibitCache, size, DMA_BIT_MASK(36));
+    segs->bmd = IOBufferMemoryDescriptor::inTaskWithPhysicalMask(kernel_task, kIODirectionInOut | kIOMemoryPhysicallyContiguous | kIOMapInhibitCache, size, 0xFFFFFFFFFFFFFF00ULL);
     if (segs->bmd == NULL) {
         XYLog("%s alloc DMA memory failed.\n", __FUNCTION__);
         return -ENOMEM;
@@ -352,6 +352,7 @@ int bus_dmamem_alloc(bus_dma_tag_t tag, bus_size_t size, bus_size_t alignment, b
     segs->paddr = seg.fIOVMAddr;
     segs->vaddr = segs->bmd->getBytesNoCopy();
     segs->size = size;
+    memset(segs->vaddr, 0, segs->size);
     *rsegs = numSegs;
     return 0;
 }
@@ -426,18 +427,18 @@ void bus_dmamap_destroy(bus_dma_tag_t tag, bus_dmamap_t dmam) {
 int bus_dmamap_load_mbuf(bus_dma_tag_t tag, bus_dmamap_t dmam, mbuf_t m, int ops)
 {
     if (dmam == NULL || m == NULL)
-        return 1;
+        return -EINVAL;
     if (ops & BUS_DMA_WRITE)
-        dmam->dm_nsegs = dmam->cursor->getPhysicalSegmentsWithCoalesce(m, dmam->dm_segs, dmam->dm_maxsegs);
+        dmam->dm_nsegs = dmam->cursor->getPhysicalSegmentsWithCoalesce(m, &dmam->dm_segs[0], dmam->dm_maxsegs);
     else
-        dmam->dm_nsegs = dmam->cursor->getPhysicalSegments(m, dmam->dm_segs, 1);
+        dmam->dm_nsegs = dmam->cursor->getPhysicalSegments(m, &dmam->dm_segs[0], 1);
     return dmam->dm_nsegs == 0;
 }
 
 int bus_dmamap_load_raw(bus_dma_tag_t t, bus_dmamap_t map, bus_dma_segment_t *segs, int nsegs, bus_size_t size, int flags)
 {
     if (map == NULL)
-        return 1;
+        return -EINVAL;
     map->dm_segs[0].location = segs->paddr;
     map->dm_segs[0].length = segs->size;
     return 0;
@@ -448,7 +449,7 @@ int bus_dmamap_load(bus_dma_tag_t tag, bus_dmamap_t dmam, void *addr, int size, 
     UInt64 ofs = 0;
     UInt32 numSegs = 1;
     if (dmam == NULL)
-        return 1;
+        return -EINVAL;
     dmam->_loadDesc = IOBufferMemoryDescriptor::withAddress(addr, size, kIODirectionInOut);
     if (dmam->_loadDesc == NULL) {
         XYLog("%s alloc DMA memory failed.\n", __FUNCTION__);

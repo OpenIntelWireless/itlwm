@@ -335,53 +335,54 @@ m_cat(mbuf_t m, mbuf_t n)
 static inline int
 m_defrag(mbuf_t m, int how)
 {
-    mbuf_t m0;
-
-    if (mbuf_next(m) == NULL)
-        return (0);
-
-//    KASSERT(m->m_flags & M_PKTHDR);
-    mbuf_gethdr(how, mbuf_type(m), &m0);
-    if (m0 == NULL)
-        return (ENOBUFS);
-    if (mbuf_pkthdr_len(m) > mbuf_get_mhlen()) {
-        mbuf_getcluster(how, mbuf_type(m), mbuf_pkthdr_len(m), &m0);
-//        if (!(m0->m_flags & M_EXT)) {
-//            m_free(m0);
-//            return (ENOBUFS);
-//        }
-    }
-    mbuf_copydata(m, 0, mbuf_pkthdr_len(m), mtod(m0, void*));
-    mbuf_pkthdr_setlen(m0, mbuf_pkthdr_len(m));
-    mbuf_setlen(m0, mbuf_pkthdr_len(m));
-
-    /* free chain behind and possible ext buf on the first mbuf */
-    mbuf_freem(mbuf_next(m));
-    mbuf_setnext(m, NULL);
-//    if (m->m_flags & M_EXT)
-//        m_extfree(m);
-
-    /*
-     * Bounce copy mbuf over to the original mbuf and set everything up.
-     * This needs to reset or clear all pointers that may go into the
-     * original mbuf chain.
-     */
-    if (mbuf_flags(m0) & MBUF_EXT) {
-//        memcpy(&m->m_ext, &m0->m_ext, sizeof(struct mbuf_ext));
-//        MCLINITREFERENCE(m);
-//        m->m_flags |= m0->m_flags & (M_EXT|M_EXTWR);
-//        m->m_data = m->m_ext.ext_buf;
-    } else {
-        mbuf_setdata(m, mbuf_pkthdr_header(m), mbuf_pkthdr_len(m));
-        memcpy(mbuf_data(m), mbuf_data(m0), mbuf_len(m0));
-    }
-    mbuf_pkthdr_setlen(m, mbuf_len(m0));
-    mbuf_setlen(m, mbuf_len(m0));
-
-    mbuf_setflags(m0, mbuf_flags(m0) & ~(MBUF_EXT | M_EXTWR));    /* cluster is gone */
-    mbuf_free(m0);
-
     return (0);
+//    mbuf_t m0;
+//
+//    if (mbuf_next(m) == NULL)
+//        return (0);
+//
+////    KASSERT(m->m_flags & M_PKTHDR);
+//    mbuf_gethdr(how, mbuf_type(m), &m0);
+//    if (m0 == NULL)
+//        return (ENOBUFS);
+//    if (mbuf_pkthdr_len(m) > mbuf_get_mhlen()) {
+//        mbuf_getcluster(how, mbuf_type(m), mbuf_pkthdr_len(m), &m0);
+////        if (!(m0->m_flags & M_EXT)) {
+////            m_free(m0);
+////            return (ENOBUFS);
+////        }
+//    }
+//    mbuf_copydata(m, 0, mbuf_pkthdr_len(m), mtod(m0, void*));
+//    mbuf_pkthdr_setlen(m0, mbuf_pkthdr_len(m));
+//    mbuf_setlen(m0, mbuf_pkthdr_len(m));
+//
+//    /* free chain behind and possible ext buf on the first mbuf */
+//    mbuf_freem(mbuf_next(m));
+//    mbuf_setnext(m, NULL);
+////    if (m->m_flags & M_EXT)
+////        m_extfree(m);
+//
+//    /*
+//     * Bounce copy mbuf over to the original mbuf and set everything up.
+//     * This needs to reset or clear all pointers that may go into the
+//     * original mbuf chain.
+//     */
+//    if (mbuf_flags(m0) & MBUF_EXT) {
+////        memcpy(&m->m_ext, &m0->m_ext, sizeof(struct mbuf_ext));
+////        MCLINITREFERENCE(m);
+////        m->m_flags |= m0->m_flags & (M_EXT|M_EXTWR);
+////        m->m_data = m->m_ext.ext_buf;
+//    } else {
+//        mbuf_setdata(m, mbuf_pkthdr_header(m), mbuf_pkthdr_len(m));
+//        memcpy(mbuf_data(m), mbuf_data(m0), mbuf_len(m0));
+//    }
+//    mbuf_pkthdr_setlen(m, mbuf_len(m0));
+//    mbuf_setlen(m, mbuf_len(m0));
+//
+//    mbuf_setflags(m0, mbuf_flags(m0) & ~(MBUF_EXT | M_EXTWR));    /* cluster is gone */
+//    mbuf_free(m0);
+//
+//    return (0);
 }
 
 /*

@@ -898,6 +898,7 @@ void
 ieee80211_ra_node_init(struct ieee80211com *ic, struct ieee80211_ra_node *rn, struct ieee80211_node *ni)
 {
     memset(rn, 0, sizeof(*rn));
+    ni->ni_ic = ic;
     build_rateset(rn, (enum ieee80211_phymode)ic->ic_curmode);
     rn->bw = ni->ni_chw;
     rn->sgi = ieee80211_node_supports_sgi(ni);

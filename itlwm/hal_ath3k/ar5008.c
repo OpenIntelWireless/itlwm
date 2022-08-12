@@ -941,7 +941,8 @@ ar5008_rx_process(struct athn_softc *sc, struct mbuf_list *ml)
 	}
 
 	/* Allocate a new Rx buffer. */
-	m1 = MCLGETL(NULL, M_DONTWAIT, ATHN_RXBUFSZ);
+//	m1 = MCLGETL(NULL, M_DONTWAIT, ATHN_RXBUFSZ);
+    m1 = sc->sc_ic.ic_ac.ac_if.controller->allocatePacket(ATHN_RXBUFSZ);
 	if (__predict_false(m1 == NULL)) {
 		ic->ic_stats.is_rx_nombuf++;
 		ifp->if_ierrors++;
@@ -1453,20 +1454,26 @@ ar5008_intr(struct athn_softc *sc)
 int
 ar5008_ccmp_encap(mbuf_t m, u_int hdrlen, struct ieee80211_key *k)
 {
-	uint8_t *ivp;
+	mbuf_t n;
+    uint8_t *ivp;
+    int off;
 
-	/* Insert IV for CCMP hardware encryption. */
-    mbuf_adj(m, hdrlen - IEEE80211_CCMP_HDRLEN);
-	ivp = mtod(m, uint8_t *);
-	k->k_tsc++;
-	ivp[0] = k->k_tsc;
-	ivp[1] = k->k_tsc >> 8;
-	ivp[2] = 0;
-	ivp[3] = k->k_id << 6 | IEEE80211_WEP_EXTIV;
-	ivp[4] = k->k_tsc >> 16;
-	ivp[5] = k->k_tsc >> 24;
-	ivp[6] = k->k_tsc >> 32;
-	ivp[7] = k->k_tsc >> 40;
+    /* Insert IV for CCMP hardware encryption. */
+    n = m_makespace(m, hdrlen, IEEE80211_CCMP_HDRLEN, &off);
+    if (n == NULL) {
+        m_freem(m);
+        return (ENOBUFS);
+    }
+    ivp = mtod(n, uint8_t *) + off;
+    k->k_tsc++;
+    ivp[0] = k->k_tsc;
+    ivp[1] = k->k_tsc >> 8;
+    ivp[2] = 0;
+    ivp[3] = k->k_id << 6 | IEEE80211_WEP_EXTIV;
+    ivp[4] = k->k_tsc >> 16;
+    ivp[5] = k->k_tsc >> 24;
+    ivp[6] = k->k_tsc >> 32;
+    ivp[7] = k->k_tsc >> 40;
 
 	return 0;
 }

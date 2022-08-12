@@ -368,6 +368,9 @@ bool itlwm::start(IOService *provider)
 void itlwm::watchdogAction(IOTimerEventSource *timer)
 {
     struct _ifnet *ifp = getIfp();
+    fpNetStats->inputErrors = ifp->if_ierrors;
+    fpNetStats->inputPackets = ifp->if_ipackets;
+    fpNetStats->outputErrors = ifp->if_oerrors;
     (*ifp->if_watchdog)(ifp);
     watchdogTimer->setTimeoutMS(kWatchDogTimerPeriod);
 }
