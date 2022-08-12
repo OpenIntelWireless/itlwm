@@ -247,6 +247,7 @@ public:
 	IOPCIDevice*		dev;
 	void (*func)(void* arg);
 	void* arg;
+    bool msi;
 };
 typedef pci_intr_handle* pci_intr_handle_t;
 

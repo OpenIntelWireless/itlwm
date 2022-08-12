@@ -33,34 +33,6 @@ bool AirportItlwm::init(OSDictionary *properties)
     return ret;
 }
 
-#define  PCI_MSI_FLAGS        2    /* Message Control */
-#define  PCI_CAP_ID_MSI        0x05    /* Message Signalled Interrupts */
-#define  PCI_MSIX_FLAGS        2    /* Message Control */
-#define  PCI_CAP_ID_MSIX    0x11    /* MSI-X */
-#define  PCI_MSIX_FLAGS_ENABLE    0x8000    /* MSI-X enable */
-#define  PCI_MSI_FLAGS_ENABLE    0x0001    /* MSI feature enabled */
-
-static void pciMsiSetEnable(IOPCIDevice *device, UInt8 msiCap, int enable)
-{
-    u16 control;
-    
-    control = device->configRead16(msiCap + PCI_MSI_FLAGS);
-    control &= ~PCI_MSI_FLAGS_ENABLE;
-    if (enable)
-        control |= PCI_MSI_FLAGS_ENABLE;
-    device->configWrite16(msiCap + PCI_MSI_FLAGS, control);
-}
-
-static void pciMsiXClearAndSet(IOPCIDevice *device, UInt8 msixCap, UInt16 clear, UInt16 set)
-{
-    u16 ctrl;
-    
-    ctrl = device->configRead16(msixCap + PCI_MSIX_FLAGS);
-    ctrl &= ~clear;
-    ctrl |= set;
-    device->configWrite16(msixCap + PCI_MSIX_FLAGS, ctrl);
-}
-
 IOService* AirportItlwm::probe(IOService *provider, SInt32 *score)
 {
     bool isMatch = false;
@@ -83,24 +55,11 @@ IOService* AirportItlwm::probe(IOService *provider, SInt32 *score)
         isMatch = true;
         fHalService = new ItlIwn;
     }
-    if (isMatch) {
-        device->findPCICapability(PCI_CAP_ID_MSIX, &msixCap);
-        if (msixCap) {
-            pciMsiXClearAndSet(device, msixCap, PCI_MSIX_FLAGS_ENABLE, 0);
-        }
-        device->findPCICapability(PCI_CAP_ID_MSI, &msiCap);
-        if (msiCap) {
-            pciMsiSetEnable(device, msiCap, 1);
-        }
-        if (!msiCap && !msixCap) {
-            XYLog("%s No MSI cap\n", __FUNCTION__);
-            fHalService->release();
-            fHalService = NULL;
-            return NULL;
-        }
-        return this;
+    if (!isMatch && athn_pci_match(device)) {
+        isMatch = true;
+        fHalService = new Athn();
     }
-    return NULL;
+    return isMatch ? this : NULL;
 }
 
 bool AirportItlwm::configureInterface(IONetworkInterface *netif) {

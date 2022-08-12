@@ -137,7 +137,39 @@ pci_intr_map_msix(struct pci_attach_args *pa, int vec, pci_intr_handle_t *ihp)
     return pci_intr_map_msi(pa, ihp);
 }
 
-int pci_intr_map_msi(struct pci_attach_args *paa, pci_intr_handle_t *ih) {
+#define  PCI_MSI_FLAGS        2    /* Message Control */
+#define  PCI_CAP_ID_MSI        0x05    /* Message Signalled Interrupts */
+#define  PCI_MSIX_FLAGS        2    /* Message Control */
+#define  PCI_CAP_ID_MSIX    0x11    /* MSI-X */
+#define  PCI_MSIX_FLAGS_ENABLE    0x8000    /* MSI-X enable */
+#define  PCI_MSI_FLAGS_ENABLE    0x0001    /* MSI feature enabled */
+
+static void pciMsiSetEnable(IOPCIDevice *device, UInt8 msiCap, int enable)
+{
+    u16 control;
+    
+    control = device->configRead16(msiCap + PCI_MSI_FLAGS);
+    control &= ~PCI_MSI_FLAGS_ENABLE;
+    if (enable)
+        control |= PCI_MSI_FLAGS_ENABLE;
+    device->configWrite16(msiCap + PCI_MSI_FLAGS, control);
+}
+
+static void pciMsiXClearAndSet(IOPCIDevice *device, UInt8 msixCap, UInt16 clear, UInt16 set)
+{
+    u16 ctrl;
+    
+    ctrl = device->configRead16(msixCap + PCI_MSIX_FLAGS);
+    ctrl &= ~clear;
+    ctrl |= set;
+    device->configWrite16(msixCap + PCI_MSIX_FLAGS, ctrl);
+}
+
+int pci_intr_map_msi(struct pci_attach_args *paa, pci_intr_handle_t *ih)
+{
+    UInt8 msiCap;
+    UInt8 msixCap;
+
 	if (paa == 0 || ih == 0)
 		return 1;
 	
@@ -149,12 +181,50 @@ int pci_intr_map_msi(struct pci_attach_args *paa, pci_intr_handle_t *ih) {
 	(*ih)->dev = paa->pa_tag;  // pci device reference
 	
 	(*ih)->workloop = paa->workloop;
+    
+    (*ih)->msi = true;
+    
+    paa->pa_tag->findPCICapability(PCI_CAP_ID_MSIX, &msixCap);
+    if (msixCap) {
+        pciMsiXClearAndSet(paa->pa_tag, msixCap, PCI_MSIX_FLAGS_ENABLE, 0);
+    }
+    paa->pa_tag->findPCICapability(PCI_CAP_ID_MSI, &msiCap);
+    if (msiCap) {
+        pciMsiSetEnable(paa->pa_tag, msiCap, 1);
+    }
 	
 	return 0; // XXX not required on OS X
 }
 
-int pci_intr_map(struct pci_attach_args *paa, pci_intr_handle_t *ih) {
-	return pci_intr_map_msi(paa, ih);
+int pci_intr_map(struct pci_attach_args *paa, pci_intr_handle_t *ih)
+{
+    UInt8 msiCap;
+    UInt8 msixCap;
+
+    if (paa == 0 || ih == 0)
+        return 1;
+    
+    *ih = new pci_intr_handle();
+    
+    if (*ih == 0)
+        return 1;
+    
+    (*ih)->dev = paa->pa_tag;  // pci device reference
+    
+    (*ih)->workloop = paa->workloop;
+    
+    (*ih)->msi = false;
+    
+    paa->pa_tag->findPCICapability(PCI_CAP_ID_MSIX, &msixCap);
+    if (msixCap) {
+        pciMsiXClearAndSet(paa->pa_tag, msixCap, PCI_MSIX_FLAGS_ENABLE, 0);
+    }
+    paa->pa_tag->findPCICapability(PCI_CAP_ID_MSI, &msiCap);
+    if (msiCap) {
+        pciMsiSetEnable(paa->pa_tag, msiCap, 0);
+    }
+
+	return 0;
 }
 
 void interruptTrampoline(OSObject *ih, IOInterruptEventSource *, int count);
@@ -169,21 +239,24 @@ void interruptTrampoline(OSObject *ih, IOInterruptEventSource *, int count)
 
 void* pci_intr_establish(pci_chipset_tag_t pc, pci_intr_handle_t ih, int level, int (*handler)(void *), void *arg, const char *name)
 {
-    int msiIntrIndex = 0;
-    for (int index = 0; ; index++)
-    {
-        int interruptType;
-        int ret = ih->dev->getInterruptType(index, &interruptType);
-        if (ret != kIOReturnSuccess)
-            break;
-        if (interruptType & kIOInterruptTypePCIMessaged)
+    int intrIndex = 0;
+
+    if (ih->msi) {
+        for (int index = 0; ; index++)
         {
-            msiIntrIndex = index;
-            break;
+            int interruptType;
+            int ret = ih->dev->getInterruptType(index, &interruptType);
+            if (ret != kIOReturnSuccess)
+                break;
+            if (interruptType & kIOInterruptTypePCIMessaged)
+            {
+                intrIndex = index;
+                break;
+            }
         }
     }
 	ih->arg = arg;
-	ih->intr = IOInterruptEventSource::interruptEventSource(ih, &interruptTrampoline, ih->dev, msiIntrIndex);
+	ih->intr = IOInterruptEventSource::interruptEventSource(ih, &interruptTrampoline, ih->dev, intrIndex);
 	
 	if (ih->intr == NULL)
 		return NULL;
@@ -191,16 +264,24 @@ void* pci_intr_establish(pci_chipset_tag_t pc, pci_intr_handle_t ih, int level, 
 		return NULL;
 	
 	ih->intr->enable();
+    if (intrIndex == 0)
+        ih->dev->enableInterrupt(intrIndex);
 	return ih;
 }
 
-void pci_intr_disestablish(pci_chipset_tag_t pc, void *ih) {
+void pci_intr_disestablish(pci_chipset_tag_t pc, void *ih)
+{
 	pci_intr_handle_t intr = (pci_intr_handle_t) ih;
+    if (!intr->msi && intr->dev)
+        intr->dev->disableInterrupt(0);
+    
+	if (intr->workloop)
+        intr->workloop->removeEventSource(intr->intr);
 	
-	intr->workloop->removeEventSource(intr->intr);
-	
-	intr->intr->release();
-	intr->intr = NULL;
+    if (intr->intr) {
+        intr->intr->release();
+        intr->intr = NULL;
+    }
 	intr->dev = NULL;
 	intr->workloop = NULL;
 	
