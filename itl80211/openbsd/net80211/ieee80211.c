@@ -284,6 +284,7 @@ ieee80211_ifdetach(struct _ifnet *ifp)
     }
     if (ifp->if_sadl) {
         ::free(ifp->if_sadl);
+        ifp->if_sadl = NULL;
     }
     ifp->netStat = NULL;
     ifp->controller = NULL;
