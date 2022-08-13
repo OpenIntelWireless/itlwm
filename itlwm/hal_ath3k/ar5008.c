@@ -258,8 +258,10 @@ ar5008_attach(struct athn_softc *sc)
 	kc_entries_log = MS(base->deviceCap, AR_EEP_DEVCAP_KC_ENTRIES);
 	sc->kc_entries = (kc_entries_log != 0) ?
 	    1 << kc_entries_log : AR_KEYTABLE_SIZE;
+#ifdef CCMP_OFFLOAD
 	if (sc->kc_entries > AR_KEYTABLE_SIZE)
 		sc->kc_entries = AR_KEYTABLE_SIZE;
+#endif
 
 	sc->txchainmask = base->txMask;
 	if (sc->mac_ver == AR_SREV_VERSION_5416_PCI &&
@@ -1053,6 +1055,7 @@ ar5008_rx_process(struct athn_softc *sc, struct mbuf_list *ml)
 	rxi.rxi_rssi = MS(ds->ds_status4, AR_RXS4_RSSI_COMBINED);
 	rxi.rxi_rssi += AR_DEFAULT_NOISE_FLOOR;
 	rxi.rxi_tstamp = ds->ds_status2;
+#ifdef CCMP_OFFLOAD
 	if (!(wh->i_fc[0] & IEEE80211_FC0_TYPE_CTL) &&
 	    (wh->i_fc[1] & IEEE80211_FC1_PROTECTED) &&
 	    (ic->ic_flags & IEEE80211_F_RSNON) &&
@@ -1069,6 +1072,7 @@ ar5008_rx_process(struct athn_softc *sc, struct mbuf_list *ml)
 		}
 		rxi.rxi_flags |= IEEE80211_RXI_HWDEC;
 	}
+#endif
 	ieee80211_inputm(ifp, m, ni, &rxi, ml);
 
 	/* Node is no longer needed. */
@@ -1521,6 +1525,7 @@ ar5008_tx(struct athn_softc *sc, mbuf_t m, struct ieee80211_node *ni,
 
 	if (wh->i_fc[1] & IEEE80211_FC1_PROTECTED) {
 		k = ieee80211_get_txkey(ic, wh, ni);
+#ifdef CCMP_OFFLOAD
 		if (k->k_cipher == IEEE80211_CIPHER_CCMP) {
 			u_int hdrlen = ieee80211_get_hdrlen(wh);
 			if (ar5008_ccmp_encap(m, hdrlen, k) != 0)
@@ -1530,6 +1535,10 @@ ar5008_tx(struct athn_softc *sc, mbuf_t m, struct ieee80211_node *ni,
 				return (ENOBUFS);
 			k = NULL; /* skip hardware crypto further below */
 		}
+#else
+        if ((m = ieee80211_encrypt(ic, m, k)) == NULL)
+            return (ENOBUFS);
+#endif
 		wh = mtod(m, struct ieee80211_frame *);
 	}
 
@@ -1654,6 +1663,7 @@ ar5008_tx(struct athn_softc *sc, mbuf_t m, struct ieee80211_node *ni,
 	     IEEE80211_QOS_ACK_POLICY_NOACK))
 		ds->ds_ctl1 |= AR_TXC1_NO_ACK;
 
+#ifdef CCMP_OFFLOAD
 	if (k != NULL) {
 		/* Map 802.11 cipher to hardware encryption type. */
 		if (k->k_cipher == IEEE80211_CIPHER_CCMP) {
@@ -1669,6 +1679,7 @@ ar5008_tx(struct athn_softc *sc, mbuf_t m, struct ieee80211_node *ni,
 		ds->ds_ctl1 |= SM(AR_TXC1_DEST_IDX, entry);
 		ds->ds_ctl0 |= AR_TXC0_DEST_IDX_VALID;
 	} else
+#endif
 		encrtype = AR_ENCR_TYPE_CLEAR;
 	ds->ds_ctl6 = SM(AR_TXC6_ENCR_TYPE, encrtype);
 

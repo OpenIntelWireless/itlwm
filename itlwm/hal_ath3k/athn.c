@@ -292,7 +292,11 @@ athn_attach(struct athn_softc *sc)
 	 * TKIP keys would consume 2 entries in this cache but we
 	 * only use the hardware crypto engine for CCMP.
 	 */
+#ifdef CCMP_OFFLOAD
 	ic->ic_max_nnodes = sc->kc_entries - IEEE80211_WEP_NKID;
+#else
+    ic->ic_max_nnodes = (sc->kc_entries / 2) - IEEE80211_WEP_NKID;
+#endif
 	if (ic->ic_max_nnodes > IEEE80211_CACHE_SIZE)
 		ic->ic_max_nnodes = IEEE80211_CACHE_SIZE;
 
@@ -377,13 +381,15 @@ athn_attach(struct athn_softc *sc)
 	memcpy(ifp->if_xname, sc->sc_dev.dv_xname, IFNAMSIZ);
 
 	if_attach(ifp);
-	ieee80211_ifattach(ifp);
+	ieee80211_ifattach(ifp, ifp->controller);
 	ic->ic_node_alloc = athn_node_alloc;
 	ic->ic_newassoc = athn_newassoc;
 	ic->ic_updateslot = athn_updateslot;
 	ic->ic_updateedca = athn_updateedca;
+#ifdef CCMP_OFFLOAD
 	ic->ic_set_key = athn_set_key;
 	ic->ic_delete_key = athn_delete_key;
+#endif
 
 	/* Override 802.11 state transition machine. */
 	sc->sc_newstate = ic->ic_newstate;
