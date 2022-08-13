@@ -671,7 +671,7 @@ struct ieee80211_ess {
 #define IEEE80211_EVT_COUNTRY_CODE_UPDATE       3
 #define IEEE80211_EVT_SCAN_DONE                 4
 
-void	ieee80211_ifattach(struct _ifnet *);
+void	ieee80211_ifattach(struct _ifnet *, IOEthernetController *controller);
 void	ieee80211_ifdetach(struct _ifnet *);
 void	ieee80211_channel_init(struct _ifnet *);
 void	ieee80211_media_init(struct _ifnet *);

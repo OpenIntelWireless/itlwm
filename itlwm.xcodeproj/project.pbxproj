@@ -317,6 +317,13 @@
 		5088ECBF252884AF0068A63D /* libkmod.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 5088ECBC252884870068A63D /* libkmod.a */; };
 		5088ECC0252884C10068A63D /* libkmod.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 5088ECBC252884870068A63D /* libkmod.a */; };
 		5088ECC1252884D70068A63D /* libkmod.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 5088ECBC252884870068A63D /* libkmod.a */; };
+		A5FA2AE428A797B200847103 /* _ifq.cpp in Sources */ = {isa = PBXBuildFile; fileRef = A5FA2AE328A797B200847103 /* _ifq.cpp */; };
+		A5FA2AE528A797B200847103 /* _ifq.cpp in Sources */ = {isa = PBXBuildFile; fileRef = A5FA2AE328A797B200847103 /* _ifq.cpp */; };
+		A5FA2AE628A797B200847103 /* _ifq.cpp in Sources */ = {isa = PBXBuildFile; fileRef = A5FA2AE328A797B200847103 /* _ifq.cpp */; };
+		A5FA2AE728A797B200847103 /* _ifq.cpp in Sources */ = {isa = PBXBuildFile; fileRef = A5FA2AE328A797B200847103 /* _ifq.cpp */; };
+		A5FA2AE828A797B200847103 /* _ifq.cpp in Sources */ = {isa = PBXBuildFile; fileRef = A5FA2AE328A797B200847103 /* _ifq.cpp */; };
+		A5FA2AE928A797B200847103 /* _ifq.cpp in Sources */ = {isa = PBXBuildFile; fileRef = A5FA2AE328A797B200847103 /* _ifq.cpp */; };
+		A5FA2AEA28A797B200847103 /* _ifq.cpp in Sources */ = {isa = PBXBuildFile; fileRef = A5FA2AE328A797B200847103 /* _ifq.cpp */; };
 		F800DD9B24FBEBF000789320 /* ItlDriverController.hpp in Headers */ = {isa = PBXBuildFile; fileRef = F800DD9A24FBEBF000789320 /* ItlDriverController.hpp */; };
 		F8294FE424FCBF5100239253 /* FwBinary.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5076FA7F24CC71E40011B2BB /* FwBinary.cpp */; };
 		F837C91D2724577F00B2C499 /* coex.cpp in Sources */ = {isa = PBXBuildFile; fileRef = F837C91C2724577F00B2C499 /* coex.cpp */; };
@@ -1031,6 +1038,7 @@
 		A5213EBC27A0C3ED00D7EAB1 /* iwm-8000C-36 */ = {isa = PBXFileReference; lastKnownFileType = file; path = "iwm-8000C-36"; sourceTree = "<group>"; };
 		A5213EBD27A0C3ED00D7EAB1 /* iwm-9260-46 */ = {isa = PBXFileReference; lastKnownFileType = file; path = "iwm-9260-46"; sourceTree = "<group>"; };
 		A5213EBE27A0C3ED00D7EAB1 /* iwm-8265-36 */ = {isa = PBXFileReference; lastKnownFileType = file; path = "iwm-8265-36"; sourceTree = "<group>"; };
+		A5FA2AE328A797B200847103 /* _ifq.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = _ifq.cpp; sourceTree = "<group>"; };
 		F800DD9A24FBEBF000789320 /* ItlDriverController.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = ItlDriverController.hpp; sourceTree = "<group>"; };
 		F837C91C2724577F00B2C499 /* coex.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = coex.cpp; sourceTree = "<group>"; };
 		F837C9252724732B00B2C499 /* iwlwifi-so-a0-gf-a0.pnvm */ = {isa = PBXFileReference; lastKnownFileType = file; path = "iwlwifi-so-a0-gf-a0.pnvm"; sourceTree = "<group>"; };
@@ -1570,6 +1578,7 @@
 				F8F9EDDF240B4741009CB8E7 /* _task.h */,
 				F8F9EDE0240B7415009CB8E7 /* _task.cpp */,
 				F8B783AF240B9F87004C9777 /* _ifq.h */,
+				A5FA2AE328A797B200847103 /* _ifq.cpp */,
 				F8BEFA9124CA93E900F6D938 /* _malloc.h */,
 				F8C7EF7B263125DE00BA87B6 /* _netstat.h */,
 				F8BB56172647FDF500F180EC /* _clock.h */,
@@ -2282,6 +2291,7 @@
 				F88D2B3D2414E64000BBE700 /* sha1-pbkdf2.c in Sources */,
 				F8CCC1B828A4D7400068BEE6 /* ar5008.c in Sources */,
 				024A08D623FCF4D7009FBA6C /* scan.cpp in Sources */,
+				A5FA2AE428A797B200847103 /* _ifq.cpp in Sources */,
 				F8D364F824F93AFD0029340B /* ItlHalService.cpp in Sources */,
 				F8C2EC6C2408031A007A9422 /* ieee80211_node.c in Sources */,
 				F8CCC22828A4D7400068BEE6 /* ar9003.c in Sources */,
@@ -2398,6 +2408,7 @@
 				35CBE69D251CB89700435CBC /* rmd160.c in Sources */,
 				35CBE69E251CB89700435CBC /* idgen.c in Sources */,
 				35CBE69F251CB89700435CBC /* compat.cpp in Sources */,
+				A5FA2AE828A797B200847103 /* _ifq.cpp in Sources */,
 				35CBE6A0251CB89700435CBC /* zutil.c in Sources */,
 				35CBE6A1251CB89700435CBC /* ItlHalService.cpp in Sources */,
 				35CBE6A2251CB89700435CBC /* ItlIwx.cpp in Sources */,
@@ -2488,6 +2499,7 @@
 				35CBE707251CB8BF00435CBC /* rmd160.c in Sources */,
 				35CBE708251CB8BF00435CBC /* idgen.c in Sources */,
 				35CBE709251CB8BF00435CBC /* compat.cpp in Sources */,
+				A5FA2AE628A797B200847103 /* _ifq.cpp in Sources */,
 				35CBE70A251CB8BF00435CBC /* zutil.c in Sources */,
 				35CBE70B251CB8BF00435CBC /* ItlHalService.cpp in Sources */,
 				35CBE70C251CB8BF00435CBC /* ItlIwx.cpp in Sources */,
@@ -2578,6 +2590,7 @@
 				35CBE772251CB8CA00435CBC /* rmd160.c in Sources */,
 				35CBE773251CB8CA00435CBC /* idgen.c in Sources */,
 				35CBE774251CB8CA00435CBC /* compat.cpp in Sources */,
+				A5FA2AE528A797B200847103 /* _ifq.cpp in Sources */,
 				35CBE775251CB8CA00435CBC /* zutil.c in Sources */,
 				35CBE776251CB8CA00435CBC /* ItlHalService.cpp in Sources */,
 				35CBE777251CB8CA00435CBC /* ItlIwx.cpp in Sources */,
@@ -2660,6 +2673,7 @@
 				F897ECF3266EFF93005EE8F7 /* md5.c in Sources */,
 				F897ECF4266EFF93005EE8F7 /* arc4.c in Sources */,
 				F897ECF5266EFF93005EE8F7 /* blf.c in Sources */,
+				A5FA2AE928A797B200847103 /* _ifq.cpp in Sources */,
 				F897ECF6266EFF93005EE8F7 /* poly1305.c in Sources */,
 				F8CCC26128A4D83C0068BEE6 /* athn.c in Sources */,
 				F897ECF7266EFF93005EE8F7 /* key_wrap.c in Sources */,
@@ -2759,6 +2773,7 @@
 				F89B6C1C250231E4000F77FF /* rmd160.c in Sources */,
 				F89B6C1D250231E4000F77FF /* idgen.c in Sources */,
 				F89B6C1E250231E4000F77FF /* compat.cpp in Sources */,
+				A5FA2AE728A797B200847103 /* _ifq.cpp in Sources */,
 				F89B6C1F250231E4000F77FF /* zutil.c in Sources */,
 				F89B6BF12502316A000F77FF /* ItlHalService.cpp in Sources */,
 				F89B6BF025023162000F77FF /* ItlIwx.cpp in Sources */,
@@ -2841,6 +2856,7 @@
 				F8AE6532285471560085B4CF /* md5.c in Sources */,
 				F8AE6533285471560085B4CF /* arc4.c in Sources */,
 				F8AE6534285471560085B4CF /* blf.c in Sources */,
+				A5FA2AEA28A797B200847103 /* _ifq.cpp in Sources */,
 				F8AE6535285471560085B4CF /* poly1305.c in Sources */,
 				F8CCC26228A4D83C0068BEE6 /* athn.c in Sources */,
 				F8AE6536285471560085B4CF /* key_wrap.c in Sources */,
@@ -3067,8 +3083,8 @@
 				GCC_PREFIX_HEADER = itlwm/PrivateSPI.pch;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"$(inherited)",
-					__PRIVATE_SPI__,
 					ATHN_DEBUG,
+					__PRIVATE_SPI__,
 				);
 				INFOPLIST_FILE = itlwm/Info.plist;
 				LIBRARY_SEARCH_PATHS = (

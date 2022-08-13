@@ -37,8 +37,6 @@ IOService* AirportItlwm::probe(IOService *provider, SInt32 *score)
 {
     bool isMatch = false;
     super::probe(provider, score);
-    UInt8 msiCap;
-    UInt8 msixCap;
     IOPCIDevice* device = OSDynamicCast(IOPCIDevice, provider);
     if (!device) {
         return NULL;

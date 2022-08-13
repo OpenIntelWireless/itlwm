@@ -1245,6 +1245,9 @@ ar5008_tx_intr(struct athn_softc *sc)
 		ifq_clr_oactive(&ifp->if_snd);
 		ifp->if_start(ifp);
 	}
+#ifdef __PRIVATE_SPI__
+    ifp->iface->signalOutputThread();
+#endif
 }
 
 #ifndef IEEE80211_STA_ONLY

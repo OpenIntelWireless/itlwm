@@ -372,7 +372,6 @@ athn_attach(struct athn_softc *sc)
 	/* IBSS channel undefined for now. */
 	ic->ic_ibss_chan = &ic->ic_channels[0];
 
-    ifp->if_snd = IOPacketQueue::withCapacity(2048);
 	ifp->if_softc = sc;
 	ifp->if_flags = IFF_BROADCAST | IFF_SIMPLEX | IFF_MULTICAST | IFF_DEBUG;
 	ifp->if_ioctl = athn_ioctl;
@@ -2814,62 +2813,62 @@ athn_updateslot(struct ieee80211com *ic)
 void
 athn_start(struct _ifnet *ifp)
 {
-	struct athn_softc *sc = (struct athn_softc *)ifp->if_softc;
-	struct ieee80211com *ic = &sc->sc_ic;
-	struct ieee80211_node *ni;
-	mbuf_t m;
+    struct athn_softc *sc = (struct athn_softc *)ifp->if_softc;
+    struct ieee80211com *ic = &sc->sc_ic;
+    struct ieee80211_node *ni;
+    mbuf_t m;
 
-	if (!(ifp->if_flags & IFF_RUNNING) || ifq_is_oactive(&ifp->if_snd))
-		return;
+    if (!(ifp->if_flags & IFF_RUNNING) || ifq_is_oactive(&ifp->if_snd))
+        return;
 
-	for (;;) {
-		if (SIMPLEQ_EMPTY(&sc->txbufs)) {
-			ifq_set_oactive(&ifp->if_snd);
-			break;
-		}
-		/* Send pending management frames first. */
-		m = mq_dequeue(&ic->ic_mgtq);
-		if (m != NULL) {
-//			ni = m->m_pkthdr.ph_cookie;
+    for (;;) {
+        if (SIMPLEQ_EMPTY(&sc->txbufs)) {
+            ifq_set_oactive(&ifp->if_snd);
+            break;
+        }
+        /* Send pending management frames first. */
+        m = mq_dequeue(&ic->ic_mgtq);
+        if (m != NULL) {
+            //            ni = m->m_pkthdr.ph_cookie;
             ni = (struct ieee80211_node *)mbuf_pkthdr_rcvif(m);
-			goto sendit;
-		}
-		if (ic->ic_state != IEEE80211_S_RUN)
-			break;
+            goto sendit;
+        }
+        if (ic->ic_state != IEEE80211_S_RUN)
+            break;
 
-		m = mq_dequeue(&ic->ic_pwrsaveq);
-		if (m != NULL) {
-//			ni = m->m_pkthdr.ph_cookie;
+        m = mq_dequeue(&ic->ic_pwrsaveq);
+        if (m != NULL) {
+            //            ni = m->m_pkthdr.ph_cookie;
             ni = (struct ieee80211_node *)mbuf_pkthdr_rcvif(m);
-			goto sendit;
-		}
-		if (ic->ic_state != IEEE80211_S_RUN)
-			break;
+            goto sendit;
+        }
+        if (ic->ic_state != IEEE80211_S_RUN)
+            break;
 
-		/* Encapsulate and send data frames. */
-		m = ifq_dequeue(&ifp->if_snd);
-		if (m == NULL)
-			break;
+        /* Encapsulate and send data frames. */
+        m = ifq_dequeue(&ifp->if_snd);
+        if (m == NULL)
+            break;
 #if NBPFILTER > 0
-		if (ifp->if_bpf != NULL)
-			bpf_mtap(ifp->if_bpf, m, BPF_DIRECTION_OUT);
+        if (ifp->if_bpf != NULL)
+            bpf_mtap(ifp->if_bpf, m, BPF_DIRECTION_OUT);
 #endif
-		if ((m = ieee80211_encap(ifp, m, &ni)) == NULL)
-			continue;
- sendit:
+        if ((m = ieee80211_encap(ifp, m, &ni)) == NULL)
+            continue;
+    sendit:
 #if NBPFILTER > 0
-		if (ic->ic_rawbpf != NULL)
-			bpf_mtap(ic->ic_rawbpf, m, BPF_DIRECTION_OUT);
+        if (ic->ic_rawbpf != NULL)
+            bpf_mtap(ic->ic_rawbpf, m, BPF_DIRECTION_OUT);
 #endif
-		if (sc->ops.tx(sc, m, ni, 0) != 0) {
-			ieee80211_release_node(ic, ni);
-			ifp->if_oerrors++;
-			continue;
-		}
+        if (sc->ops.tx(sc, m, ni, 0) != 0) {
+            ieee80211_release_node(ic, ni);
+            ifp->if_oerrors++;
+            continue;
+        }
 
-		sc->sc_tx_timer = 5;
-		ifp->if_timer = 1;
-	}
+        sc->sc_tx_timer = 5;
+        ifp->if_timer = 1;
+    }
 }
 
 void
@@ -3075,6 +3074,7 @@ athn_init(struct _ifnet *ifp)
 #endif
 
 	ifq_clr_oactive(&ifp->if_snd);
+    ifq_flush(&ifp->if_snd);
 	ifp->if_flags |= IFF_RUNNING;
 
 #ifdef notyet
