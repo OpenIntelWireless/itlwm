@@ -1625,7 +1625,6 @@ ieee80211_set_link_state(struct ieee80211com *ic, int nstate)
 {
 	struct _ifnet *ifp = &ic->ic_if;
     int link_state;
-    XYLog("%s nstate=%d, old_state=%d\n", __FUNCTION__, nstate, ifp->if_link_state);
     
 	switch (ic->ic_opmode) {
 #ifndef IEEE80211_STA_ONLY
