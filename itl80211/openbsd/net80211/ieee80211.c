@@ -288,7 +288,6 @@ ieee80211_ifdetach(struct _ifnet *ifp)
     }
     ifp->netStat = NULL;
     ifp->controller = NULL;
-    ifp->output_queue = NULL;
     ifp->iface = NULL;
     //	ether_ifdetach(ifp);
 }

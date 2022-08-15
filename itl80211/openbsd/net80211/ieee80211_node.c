@@ -3463,7 +3463,6 @@ ieee80211_notify_dtim(struct ieee80211com *ic)
         }
         mq_enqueue(&ic->ic_pwrsaveq, m);
         (*ifp->if_start)(ifp);
-        //        ifp->output_queue->start();
     }
     /* XXX assumes everything has been sent */
     ic->ic_tim_mcast_pending = 0;

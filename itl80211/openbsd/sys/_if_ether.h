@@ -64,7 +64,6 @@
 
 #include <IOKit/network/IOPacketQueue.h>
 #include <IOKit/network/IOEthernetInterface.h>
-#include <IOKit/network/IOOutputQueue.h>
 
 #define    ETHER_IS_MULTICAST(addr) (*(addr) & 0x01) /* is address mcast/bcast? */
 #define    ETHER_IS_BROADCAST(addr) \
@@ -159,7 +158,6 @@ struct ether_multi {
 
 struct _ifnet {                /* and the entries */
     IOEthernetInterface *iface;
-    IOOutputQueue* output_queue;
     IOEthernetController* controller;
     int if_link_state;
     void *if_softc;
