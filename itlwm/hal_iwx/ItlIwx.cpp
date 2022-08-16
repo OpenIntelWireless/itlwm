@@ -8346,7 +8346,7 @@ iwx_mac_ctxt_cmd_common(struct iwx_softc *sc, struct iwx_node *in,
     if (ic->ic_flags & IEEE80211_F_USEPROT)
         cmd->protection_flags |= htole32(IWX_MAC_PROT_FLG_TGG_PROTECT);
     
-    cmd->filter_flags = htole32(0);
+    cmd->filter_flags = htole32(IWX_MAC_FILTER_ACCEPT_GRP);
 #undef IWX_EXP2
 }
 
