@@ -474,5 +474,5 @@ int bus_dmamap_load(bus_dma_tag_t tag, bus_dmamap_t dmam, void *addr, int size, 
         return -ENOMEM;
     }
     dmam->dm_nsegs = numSegs;
-    return numSegs == 0;
+    return 0;
 }
