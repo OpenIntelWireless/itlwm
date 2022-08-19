@@ -212,16 +212,19 @@ m_makespace(mbuf_t m0, int skip, int hlen, int *off)
 static inline mbuf_t
 mcl_get(mbuf_t m, mbuf_how_t how, size_t size)
 {
+    size_t real_size;
     if (!m) {
         mbuf_gethdr(how, MBUF_TYPE_DATA, &m);
         if (!m)
             return NULL;
     }
-    if (size <= MCLBYTES)
+    if (size <= MCLBYTES) {
         mbuf_mclget(how, MBUF_TYPE_DATA, &m);
-    else if (size <= MBIGCLBYTES)
+        real_size = MCLBYTES;
+    } else if (size <= MBIGCLBYTES) {
         mbuf_getcluster(how, MBUF_TYPE_DATA, MBIGCLBYTES, &m);
-    else {
+        real_size = MBIGCLBYTES;
+    } else {
         mbuf_freem(m);
         return NULL;
     }
@@ -229,6 +232,8 @@ mcl_get(mbuf_t m, mbuf_how_t how, size_t size)
         mbuf_freem(m);
         return NULL;
     }
+    mbuf_setlen(m, real_size);
+    mbuf_pkthdr_setlen(m, real_size);
     return m;
 }
 
