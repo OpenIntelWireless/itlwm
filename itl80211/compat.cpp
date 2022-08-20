@@ -326,7 +326,7 @@ int bus_dmamem_alloc(bus_dma_tag_t tag, bus_size_t size, bus_size_t alignment, b
     UInt32 numSegs = 1;
     IODMACommand::Segment64 seg;
 
-    segs->bmd = IOBufferMemoryDescriptor::inTaskWithPhysicalMask(kernel_task, kIODirectionInOut | kIOMemoryPhysicallyContiguous | kIOMapInhibitCache, size, 0xFFFFFFFFFFFFFF00ULL);
+    segs->bmd = IOBufferMemoryDescriptor::inTaskWithPhysicalMask(kernel_task, kIODirectionInOut | kIOMemoryPhysicallyContiguous | kIOMapInhibitCache, size, DMA_BIT_MASK(36));
     if (segs->bmd == NULL) {
         XYLog("%s alloc DMA memory failed.\n", __FUNCTION__);
         return -ENOMEM;
@@ -393,21 +393,25 @@ void bus_dmamem_unmap(bus_dma_segment_t seg)
 
 void bus_dmamem_free(bus_dma_tag_t tag, bus_dma_segment_t *dma, int nsegs)
 {
-	if (dma == NULL || dma->cmd == NULL)
+	if (dma == NULL)
         return;
     if (dma->vaddr == NULL)
         return;
-    dma->cmd->clearMemoryDescriptor();
-    dma->cmd->release();
-    dma->cmd = NULL;
-    dma->bmd->complete();
-    dma->bmd->release();
-    dma->bmd = NULL;
+    if (dma->cmd) {
+        dma->cmd->clearMemoryDescriptor();
+        dma->cmd->release();
+        dma->cmd = NULL;
+    }
+    if (dma->bmd) {
+        dma->bmd->complete();
+        dma->bmd->release();
+        dma->bmd = NULL;
+    }
     dma->vaddr = NULL;
 }
 
 void bus_dmamap_destroy(bus_dma_tag_t tag, bus_dmamap_t dmam) {
-	if (dmam == 0)
+	if (dmam == NULL)
 		return;
     if (dmam->_loadCmd) {
         dmam->_loadCmd->release();
@@ -417,10 +421,10 @@ void bus_dmamap_destroy(bus_dma_tag_t tag, bus_dmamap_t dmam) {
         dmam->_loadDesc->release();
         dmam->_loadDesc = NULL;
     }
-	if (dmam->cursor == 0)
+	if (dmam->cursor == NULL)
 		return;
 	dmam->cursor->release();
-	dmam->cursor = 0;
+	dmam->cursor = NULL;
 	delete dmam;
 }
 
