@@ -60,6 +60,7 @@
 #include <sys/queue.h>
 #include <sys/CTimeout.hpp>
 #include <sys/_if_media.h>
+#include <sys/_ifq.h>
 #include <net/if_dl.h>
 
 #include <IOKit/network/IOPacketQueue.h>
@@ -225,9 +226,9 @@ struct _ifnet {                /* and the entries */
     int    (*if_wol)(struct _ifnet *, int);    /* WoL routine **/
 
     /* queues */
-    IOPacketQueue *if_snd;        /* transmit queue */
-    struct    ifqueue **if_ifqs;    /* [I] pointer to an array of sndqs */
-    void    (*if_qstart)(struct ifqueue *);
+    struct    _ifqueue if_snd;        /* transmit queue */
+    struct    _ifqueue **if_ifqs;    /* [I] pointer to an array of sndqs */
+    void    (*if_qstart)(struct _ifqueue *);
     unsigned int if_nifqs;        /* [I] number of output queues */
     unsigned int if_txmit;        /* [c] txmitigation amount */
 
@@ -281,6 +282,18 @@ if_detach(struct _ifnet *ifp)
 {
     ifp->if_link_state = -1;
     return 0;
+}
+
+static inline int
+ether_ifattach(struct _ifnet *ifp, IOEthernetInterface *iface)
+{
+    ifp->iface = iface;
+}
+
+static inline void
+ether_ifdetach(struct _ifnet *ifp)
+{
+    ifp->iface = NULL;
 }
 
 #endif /* _if_ether_h */

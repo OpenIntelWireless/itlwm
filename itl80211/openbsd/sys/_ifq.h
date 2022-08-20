@@ -24,30 +24,31 @@
 #include <net/if_var.h>
 #include <IOKit/network/IOPacketQueue.h>
 
-static int ifq_oactive;
+struct _ifqueue {
+    unsigned int ifq_oactive;
+    IOPacketQueue *queue;
+};
 
-static inline void
-ifq_set_oactive(IOPacketQueue **ifq)
-{
-    ifq_oactive = 1;
-}
+void ifq_init(struct _ifqueue *ifq, struct _ifnet *ifp, unsigned int maxLen);
 
-static inline void
-ifq_clr_oactive(IOPacketQueue **ifq)
-{
-    ifq_oactive = 0;
-}
+void ifq_destroy(struct _ifqueue *ifq);
 
-static inline unsigned int
-ifq_is_oactive(IOPacketQueue **ifq)
-{
-    return (ifq_oactive);
-}
+void ifq_flush(struct _ifqueue *ifq);
 
-static inline mbuf_t
-ifq_dequeue(IOPacketQueue **ifq)
-{
-    return (*ifq)->lockDequeue();
-}
+bool ifq_empty(struct _ifqueue *ifq);
+
+uint32_t ifq_len(struct _ifqueue *ifq);
+
+void ifq_set_maxlen(struct _ifqueue *ifq, uint32_t maxLen);
+
+void ifq_set_oactive(struct _ifqueue *ifq);
+
+unsigned int ifq_is_oactive(struct _ifqueue *ifq);
+
+void ifq_clr_oactive(struct _ifqueue *ifq);
+
+mbuf_t ifq_dequeue(struct _ifqueue *ifq);
+
+int ifq_enqueue(struct _ifqueue *ifq, mbuf_t m);
 
 #endif /* _ifq_h */

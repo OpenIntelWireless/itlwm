@@ -569,8 +569,6 @@ iwn_attach(struct iwn_softc *sc, struct pci_attach_args *pa)
     
     ic->ic_max_rssi = IWN_MAX_DBM - IWN_MIN_DBM;
 
-    ifp->controller = getController();
-    ifp->if_snd = IOPacketQueue::withCapacity(getTxQueueSize());
     ifp->if_softc = sc;
     ifp->if_flags = IFF_BROADCAST | IFF_SIMPLEX | IFF_MULTICAST | IFF_DEBUG;
     ifp->if_ioctl = iwn_ioctl;
@@ -579,7 +577,7 @@ iwn_attach(struct iwn_softc *sc, struct pci_attach_args *pa)
     memcpy(ifp->if_xname, sc->sc_dev.dv_xname, IFNAMSIZ);
 
     if_attach(ifp);
-    ieee80211_ifattach(ifp);
+    ieee80211_ifattach(ifp, getController());
     ic->ic_node_alloc = iwn_node_alloc;
     ic->ic_bgscan_start = iwn_bgscan;
     ic->ic_newassoc = iwn_newassoc;
@@ -3797,8 +3795,7 @@ _iwn_start_task(OSObject *target, void *arg0, void *arg1, void *arg2, void *arg3
             break;
 
         /* Encapsulate and send data frames. */
-//        m = ifq_dequeue(&ifp->if_snd);
-        m = ifp->if_snd->lockDequeue();
+        m = ifq_dequeue(&ifp->if_snd);
         if (m == NULL)
             break;
 #if NBPFILTER > 0

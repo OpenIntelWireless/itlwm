@@ -105,8 +105,10 @@ IOService* itlwm::probe(IOService *provider, SInt32 *score)
     return NULL;
 }
 
-bool itlwm::configureInterface(IONetworkInterface *netif) {
+bool itlwm::configureInterface(IONetworkInterface *netif)
+{
     IONetworkData *nd;
+    struct _ifnet *ifp = &fHalService->get80211Controller()->ic_ac.ac_if;
     
     if (super::configureInterface(netif) == false) {
         XYLog("super failed\n");
@@ -118,8 +120,8 @@ bool itlwm::configureInterface(IONetworkInterface *netif) {
         XYLog("network statistics buffer unavailable?\n");
         return false;
     }
-    fHalService->get80211Controller()->ic_ac.ac_if.netStat = fpNetStats;
-    fHalService->get80211Controller()->ic_ac.ac_if.iface = OSDynamicCast(IOEthernetInterface, netif);
+    ifp->netStat = fpNetStats;
+    ether_ifattach(ifp, OSDynamicCast(IOEthernetInterface, netif));
     fpNetStats->collisions = 0;
 #ifdef __PRIVATE_SPI__
     netif->configureOutputPullModel(fHalService->getDriverInfo()->getTxQueueSize(), 0, 0, IOEthernetInterface::kOutputPacketSchedulingModelNormal, 0);
@@ -474,9 +476,9 @@ void itlwm::stop(IOService *provider)
     super::stop(provider);
     setLinkStatus(kIONetworkLinkValid);
     fHalService->detach(pciNub);
+    ether_ifdetach(ifp);
     detachInterface(fNetIf, true);
     OSSafeReleaseNULL(fNetIf);
-    ifp->iface = NULL;
     releaseAll();
 }
 
@@ -549,15 +551,13 @@ setLinkStatus(UInt32 status, const IONetworkMedium * activeMedium, UInt64 speed,
 #ifdef __PRIVATE_SPI__
             fNetIf->startOutputThread();
 #endif
-            ifq_set_oactive(&ifq->if_snd);
         } else if (!(status & kIONetworkLinkNoNetworkChange)) {
 #ifdef __PRIVATE_SPI__
             fNetIf->stopOutputThread();
             fNetIf->flushOutputQueue();
 #endif
-            ifq->if_snd->lockFlush();
+            ifq_flush(&ifq->if_snd);
             mq_purge(&fHalService->get80211Controller()->ic_mgtq);
-            ifq_clr_oactive(&ifq->if_snd);
         }
     }
     return ret;
@@ -588,16 +588,14 @@ IOReturn itlwm::setHardwareAddress(const IOEthernetAddress *addrP)
 #ifdef __PRIVATE_SPI__
 IOReturn itlwm::outputStart(IONetworkInterface *interface, IOOptionBits options)
 {
-    _ifnet *ifp = &fHalService->get80211Controller()->ic_ac.ac_if;
+    struct _ifnet *ifp = &fHalService->get80211Controller()->ic_ac.ac_if;
     mbuf_t m = NULL;
-    if (!ifq_is_oactive(&ifp->if_snd)) {
+    if (ifq_is_oactive(&ifp->if_snd))
         return kIOReturnNoResources;
-    }
     while (kIOReturnSuccess == interface->dequeueOutputPackets(1, &m)) {
         outputPacket(m, NULL);
-        if (!ifq_is_oactive(&ifp->if_snd)) {
+        if (ifq_is_oactive(&ifp->if_snd))
             return kIOReturnNoResources;
-        }
     }
     return kIOReturnSuccess;
 }
@@ -609,7 +607,7 @@ UInt32 itlwm::outputPacket(mbuf_t m, void *param)
     IOReturn ret = kIOReturnOutputSuccess;
     _ifnet *ifp = &fHalService->get80211Controller()->ic_ac.ac_if;
 
-    if (fHalService->get80211Controller()->ic_state != IEEE80211_S_RUN || ifp->if_snd == NULL) {
+    if (fHalService->get80211Controller()->ic_state != IEEE80211_S_RUN || ifp->if_snd.queue == NULL) {
         if (m && mbuf_type(m) != MBUF_TYPE_FREE) {
             freePacket(m);
         }
@@ -631,7 +629,7 @@ UInt32 itlwm::outputPacket(mbuf_t m, void *param)
         ifp->netStat->outputErrors++;
         ret = kIOReturnOutputDropped;
     }
-    if (!ifp->if_snd->lockEnqueue(m)) {
+    if (!ifp->if_snd.queue->lockEnqueue(m)) {
         freePacket(m);
         ret = kIOReturnOutputDropped;
     }

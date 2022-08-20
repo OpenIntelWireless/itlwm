@@ -215,14 +215,15 @@ ieee80211_channel_init(struct _ifnet *ifp)
 }
 
 void
-ieee80211_ifattach(struct _ifnet *ifp)
+ieee80211_ifattach(struct _ifnet *ifp, IOEthernetController *controller)
 {
     IOLog("ieee80211_ifattach\n");
     struct ieee80211com *ic = (struct ieee80211com *)ifp;
     
+    ifp->controller = controller;
+    ifq_init(&ifp->if_snd, ifp, 2048);
     memcpy(((struct arpcom *)ifp)->ac_enaddr, ic->ic_myaddr,
            ETHER_ADDR_LEN);
-    //	ether_ifattach(ifp);
     if (ifp->if_sadl) {
         ::free(ifp->if_sadl);
     }
@@ -273,11 +274,7 @@ ieee80211_ifdetach(struct _ifnet *ifp)
     ieee80211_crypto_detach(ifp);
     ieee80211_node_detach(ifp);
     ifmedia_delete_instance(&ic->ic_media, IFM_INST_ANY);
-    if (ifp->if_snd) {
-        ifp->if_snd->flush();
-        ifp->if_snd->release();
-        ifp->if_snd = NULL;
-    }
+    ifq_destroy(&ifp->if_snd);
     if (ifp->if_slowtimo) {
         ifp->if_slowtimo->release();
         ifp->if_slowtimo = NULL;
@@ -289,7 +286,6 @@ ieee80211_ifdetach(struct _ifnet *ifp)
     ifp->netStat = NULL;
     ifp->controller = NULL;
     ifp->iface = NULL;
-    //	ether_ifdetach(ifp);
 }
 
 /*

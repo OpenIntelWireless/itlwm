@@ -10225,7 +10225,7 @@ iwx_init(struct _ifnet *ifp)
         iwx_setup_he_rates(sc);
     
     ifq_clr_oactive(&ifp->if_snd);
-    ifp->if_snd->flush();
+    ifq_flush(&ifp->if_snd);
     ifp->if_flags |= IFF_RUNNING;
     
     if (ic->ic_opmode == IEEE80211_M_MONITOR) {
@@ -10296,8 +10296,7 @@ _iwx_start_task(OSObject *target, void *arg0, void *arg1, void *arg2, void *arg3
             (ic->ic_xflags & IEEE80211_F_TX_MGMT_ONLY))
             break;
         
-        //        IFQ_DEQUEUE(&ifp->if_snd, m);
-        m = ifp->if_snd->lockDequeue();
+        m = ifq_dequeue(&ifp->if_snd);
         if (!m)
             break;
         if (mbuf_len(m) < sizeof (*eh) &&
@@ -10376,7 +10375,7 @@ iwx_stop(struct _ifnet *ifp)
     }
     ifp->if_flags &= ~IFF_RUNNING;
     ifq_clr_oactive(&ifp->if_snd);
-    ifp->if_snd->flush();
+    ifq_flush(&ifp->if_snd);
     
     if (in != NULL) {
         in->in_phyctxt = NULL;
@@ -13045,8 +13044,6 @@ iwx_attach(struct iwx_softc *sc, struct pci_attach_args *pa)
     
     ic->ic_max_rssi = IWX_MAX_DBM - IWX_MIN_DBM;
     
-    ifp->controller = getController();
-    ifp->if_snd = IOPacketQueue::withCapacity(getTxQueueSize());
     ifp->if_softc = sc;
     ifp->if_flags = IFF_BROADCAST | IFF_SIMPLEX | IFF_MULTICAST | IFF_DEBUG;
     ifp->if_ioctl = iwx_ioctl;
@@ -13055,7 +13052,7 @@ iwx_attach(struct iwx_softc *sc, struct pci_attach_args *pa)
     memcpy(ifp->if_xname, DEVNAME(sc), IFNAMSIZ);
     
     if_attach(ifp);
-    ieee80211_ifattach(ifp);
+    ieee80211_ifattach(ifp, getController());
     ieee80211_media_init(ifp);
     
 #if NBPFILTER > 0

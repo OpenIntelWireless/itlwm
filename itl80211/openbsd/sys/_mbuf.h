@@ -58,6 +58,7 @@
 
 #include <linux/types.h>
 #include <sys/_if_ether.h>
+#include <sys/_ifq.h>
 #include <sys/mbuf.h>
 #include <sys/kpi_mbuf.h>
 #include <sys/errno.h>
@@ -442,10 +443,9 @@ int if_input(struct _ifnet *ifq, struct mbuf_list *ml);
 
 static inline int if_enqueue(struct _ifnet *ifq, mbuf_t m)
 {
-    if (!ifq->if_snd->lockEnqueue(m)) {
+    if (ifq_enqueue(&ifq->if_snd, m)) {
         XYLog("%s if_enqueue fail!!\n", __FUNCTION__);
-        mbuf_freem(m);
-        return -1;
+        return -ENOSPC;
     }
     return 0;
 }
