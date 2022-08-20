@@ -419,8 +419,10 @@ athn_detach(struct athn_softc *sc)
 		sc->ops.dma_free(sc);
 	}
 	/* Free ROM copy. */
-	if (sc->eep != NULL)
+    if (sc->eep != NULL) {
 		free(sc->eep, M_DEVBUF, 0);
+        sc->eep = NULL;
+    }
 
 	ieee80211_ifdetach(ifp);
 	if_detach(ifp);

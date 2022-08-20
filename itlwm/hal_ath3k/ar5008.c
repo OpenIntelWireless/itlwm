@@ -563,8 +563,10 @@ ar5008_tx_free(struct athn_softc *sc)
 	for (i = 0; i < ATHN_NTXBUFS; i++) {
 		bf = &sc->txpool[i];
 
-		if (bf->bf_map != NULL)
+        if (bf->bf_map != NULL) {
 			bus_dmamap_destroy(sc->sc_dmat, bf->bf_map);
+            bf->bf_map = NULL;
+        }
 	}
 	/* Free Tx descriptors. */
 	if (sc->map != NULL) {
@@ -576,6 +578,7 @@ ar5008_tx_free(struct athn_softc *sc)
 			bus_dmamem_free(sc->sc_dmat, &sc->seg, 1);
 		}
 		bus_dmamap_destroy(sc->sc_dmat, sc->map);
+        sc->map = NULL;
 	}
 }
 
@@ -675,11 +678,17 @@ ar5008_rx_free(struct athn_softc *sc)
 	for (i = 0; i < ATHN_NRXBUFS; i++) {
 		bf = &rxq->bf[i];
 
-		if (bf->bf_map != NULL)
+        if (bf->bf_map != NULL) {
 			bus_dmamap_destroy(sc->sc_dmat, bf->bf_map);
-		m_freem(bf->bf_m);
+            bf->bf_map = NULL;
+        }
+        if (bf->bf_m) {
+            m_freem(bf->bf_m);
+            bf->bf_m = NULL;
+        }
 	}
 	free(rxq->bf, M_DEVBUF, 0);
+    rxq->bf = NULL;
 
 	/* Free Rx descriptors. */
 	if (rxq->map != NULL) {
@@ -690,6 +699,7 @@ ar5008_rx_free(struct athn_softc *sc)
 			bus_dmamem_free(sc->sc_dmat, &rxq->seg, 1);
 		}
 		bus_dmamap_destroy(sc->sc_dmat, rxq->map);
+        rxq->map = NULL;
 	}
 }
 
