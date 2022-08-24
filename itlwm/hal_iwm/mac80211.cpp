@@ -5077,12 +5077,12 @@ iwm_ba_task(void *arg)
             that->iwm_nic_unlock(sc);
             sc->ba_tx.start_tidmask &= ~(1 << tid);
         } else if (sc->ba_tx.stop_tidmask & (1 << tid)) {
+            sc->agg_tid_disable |= (1 << tid);
             that->iwm_sta_tx_agg(sc, ni, tid, 0, 0, 0);
             that->iwm_ampdu_txq_advance(sc, ring, ring->cur);
             that->iwm_clear_oactive(sc, ring);
             /* In DQA-mode the queue isn't removed on agg termination */
             tx_ba = &sc->sc_tx_ba[tid];
-            sc->agg_tid_disable |= (1 << tid);
             tx_ba->wn = NULL;
             tx_ba->lq_color = 0;
             tx_ba->rate_n_flags = 0;
