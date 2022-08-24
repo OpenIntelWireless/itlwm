@@ -295,6 +295,10 @@ iwm_enable_txq(struct iwm_softc *sc, int sta_id, int qid, int fifo, int ssn, int
     struct iwm_tx_ring *ring = &sc->txq[qid];
     bool scd_bug = false;
     
+    if (agg &&
+        (sc->agg_queue_mask & (1 << qid)))
+        return 0;
+    
     iwm_nic_assert_locked(sc);
     
     /*
