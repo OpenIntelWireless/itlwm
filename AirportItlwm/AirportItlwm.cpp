@@ -558,6 +558,9 @@ setLinkStateGated(OSObject *target, void *arg0, void *arg1, void *arg2, void *ar
     AirportItlwm *that = OSDynamicCast(AirportItlwm, target);
     IOReturn ret = that->getNetworkInterface()->setLinkState((IO80211LinkState)(uint64_t)arg0, (unsigned int)(uint64_t)arg1);
     if (that->fAWDLInterface) {
+#if __IO80211_TARGET >= __MAC_13_0
+        that->fAWDLInterface->setEnabledBySystem(true);
+#endif
         that->fAWDLInterface->setLinkState((IO80211LinkState)(uint64_t)arg0, (unsigned int)(uint64_t)arg1);
     }
     return ret;
@@ -992,6 +995,9 @@ enableVirtualInterface(IO80211VirtualInterface *interface)
     XYLog("%s interface=%s role=%d\n", __FUNCTION__, interface->getBSDName(), interface->getInterfaceRole());
     SInt32 ret = super::enableVirtualInterface(interface);
     if (!ret) {
+#if __IO80211_TARGET >= __MAC_13_0
+        interface->setEnabledBySystem(true);
+#endif
         interface->setLinkState(kIO80211NetworkLinkUp, 0);
         interface->postMessage(APPLE80211_M_LINK_CHANGED);
         return kIOReturnSuccess;
