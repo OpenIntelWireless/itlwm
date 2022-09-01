@@ -621,6 +621,13 @@ iwm_read_firmware(struct iwm_softc *sc, enum iwm_ucode_type ucode_type)
                 goto parse_out;
         }
         
+        /*
+         * Check for size_t overflow and ignore missing padding at
+         * end of firmware file.
+         */
+        if (roundup(tlv_len, 4) > len)
+            break;
+        
         len -= roundup(tlv_len, 4);
         data += roundup(tlv_len, 4);
     }
