@@ -593,8 +593,8 @@ IOReturn itlwm::outputStart(IONetworkInterface *interface, IOOptionBits options)
     if (ifq_is_oactive(&ifp->if_snd))
         return kIOReturnNoResources;
     while (kIOReturnSuccess == interface->dequeueOutputPackets(1, &m)) {
-        outputPacket(m, NULL);
-        if (ifq_is_oactive(&ifp->if_snd))
+        if (outputPacket(m, NULL)!= kIOReturnOutputSuccess ||
+            ifq_is_oactive(&ifp->if_snd))
             return kIOReturnNoResources;
     }
     return kIOReturnSuccess;
