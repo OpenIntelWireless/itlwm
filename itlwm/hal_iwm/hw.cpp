@@ -11,7 +11,7 @@
 * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 * GNU General Public License for more details.
 */
-/*    $OpenBSD: if_iwm.c,v 1.313 2020/07/10 13:22:20 patrick Exp $    */
+/*    $OpenBSD: if_iwm.c,v 1.316 2020/12/07 20:09:24 tobhe Exp $    */
 
 /*
  * Copyright (c) 2014, 2016 genua gmbh <info@genua.de>
@@ -164,6 +164,8 @@ iwm_check_rfkill(struct iwm_softc *sc)
         sc->sc_flags &= ~IWM_FLAG_RFKILL;
     }
     
+    XYLog("%s RF_KILL hw: %d\n", __FUNCTION__, rv);
+
     splx(s);
     return rv;
 }
@@ -201,12 +203,6 @@ iwm_enable_fwload_interrupt(struct iwm_softc *sc)
                   ~IWM_MSIX_FH_INT_CAUSES_D2S_CH0_NUM);
         sc->sc_fh_mask = IWM_MSIX_FH_INT_CAUSES_D2S_CH0_NUM;
     }
-}
-
-void
-iwm_restore_interrupts(struct iwm_softc *sc)
-{
-    IWM_WRITE(sc, IWM_CSR_INT_MASK, sc->sc_intmask);
 }
 
 void ItlIwm::
@@ -278,6 +274,7 @@ iwm_prepare_card_hw(struct iwm_softc *sc)
 {
     XYLog("%s\n", __FUNCTION__);
     int t = 0;
+    int ntries;
     
     if (iwm_set_hw_ready(sc))
         return 0;
@@ -286,17 +283,18 @@ iwm_prepare_card_hw(struct iwm_softc *sc)
                 IWM_CSR_RESET_LINK_PWR_MGMT_DISABLED);
     DELAY(1000);
     
-    
-    /* If HW is not ready, prepare the conditions to check again */
-    IWM_SETBITS(sc, IWM_CSR_HW_IF_CONFIG_REG,
-                IWM_CSR_HW_IF_CONFIG_REG_PREPARE);
-    
-    do {
-        if (iwm_set_hw_ready(sc))
-            return 0;
-        DELAY(200);
-        t += 200;
-    } while (t < 150000);
+    for (ntries = 0; ntries < 10; ntries++) {
+        /* If HW is not ready, prepare the conditions to check again */
+        IWM_SETBITS(sc, IWM_CSR_HW_IF_CONFIG_REG,
+                    IWM_CSR_HW_IF_CONFIG_REG_PREPARE);
+        do {
+            if (iwm_set_hw_ready(sc))
+                return 0;
+            DELAY(200);
+            t += 200;
+        } while (t < 150000);
+        DELAY(25000);
+    }
     
     return ETIMEDOUT;
 }
@@ -314,6 +312,12 @@ iwm_apm_config(struct iwm_softc *sc)
     lctl = pci_conf_read(sc->sc_pct, sc->sc_pcitag,
                          sc->sc_cap_off + PCI_PCIE_LCSR);
     IWM_SETBITS(sc, IWM_CSR_GIO_REG, IWM_CSR_GIO_REG_VAL_L0S_DISABLED);
+    /*
+    * Disable L0s and L1s in PCIE register because we don't support ASPM now.
+    */
+    lctl &= ~(PCI_PCIE_LCSR_ASPM_L0S | PCI_PCIE_LCSR_ASPM_L1);
+    pci_conf_write(sc->sc_pct, sc->sc_pcitag, sc->sc_cap_off + PCI_PCIE_LCSR, lctl);
+    lctl = pci_conf_read(sc->sc_pct, sc->sc_pcitag, sc->sc_cap_off + PCI_PCIE_LCSR);
     
     cap = pci_conf_read(sc->sc_pct, sc->sc_pcitag,
                         sc->sc_cap_off + PCI_PCIE_DCSR2);
@@ -579,6 +583,26 @@ iwm_conf_msix_hw(struct iwm_softc *sc, int stopped)
 }
 
 int ItlIwm::
+iwm_clear_persistence_bit(struct iwm_softc *sc)
+{
+    uint32_t hpm, wprot;
+    
+    hpm = iwm_read_prph_unlocked(sc, IWM_HPM_DEBUG);
+    if (hpm != 0xa5a5a5a0 && (hpm & IWM_HPM_PERSISTENCE_BIT)) {
+        wprot = iwm_read_prph_unlocked(sc, IWM_PREG_PRPH_WPROT_9000);
+        if (wprot & IWM_PREG_WFPM_ACCESS) {
+            printf("%s: cannot clear persistence bit\n",
+                   DEVNAME(sc));
+            return EPERM;
+        }
+        iwm_write_prph_unlocked(sc, IWM_HPM_DEBUG,
+                                hpm & ~IWM_HPM_PERSISTENCE_BIT);
+    }
+    
+    return 0;
+}
+
+int ItlIwm::
 iwm_start_hw(struct iwm_softc *sc)
 {
     XYLog("%s\n", __FUNCTION__);
@@ -587,6 +611,12 @@ iwm_start_hw(struct iwm_softc *sc)
     err = iwm_prepare_card_hw(sc);
     if (err)
         return err;
+    
+    if (sc->sc_device_family == IWM_DEVICE_FAMILY_9000) {
+        err = iwm_clear_persistence_bit(sc);
+        if (err)
+            return err;
+    }
     
     /* Reset the entire device */
     IWM_WRITE(sc, IWM_CSR_RESET, IWM_CSR_RESET_REG_FLAG_SW_RESET);

@@ -11,7 +11,7 @@
 * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 * GNU General Public License for more details.
 */
-/*    $OpenBSD: if_iwm.c,v 1.313 2020/07/10 13:22:20 patrick Exp $    */
+/*    $OpenBSD: if_iwm.c,v 1.316 2020/12/07 20:09:24 tobhe Exp $    */
 
 /*
  * Copyright (c) 2014, 2016 genua gmbh <info@genua.de>
@@ -120,6 +120,7 @@
  */
 
 #include "ItlIwm.hpp"
+#include <net80211/ieee80211_priv.h>
 
 void ItlIwm::
 iwm_disable_rx_dma(struct iwm_softc *sc)
@@ -184,8 +185,10 @@ iwm_free_rx_ring(struct iwm_softc *sc, struct iwm_rx_ring *ring)
             mbuf_freem(data->m);
             data->m = NULL;
         }
-        if (data->map != NULL)
+        if (data->map != NULL) {
             bus_dmamap_destroy(sc->sc_dmat, data->map);
+            data->map = NULL;
+        }
     }
 }
 
@@ -359,6 +362,8 @@ iwm_rx_mpdu(struct iwm_softc *sc, mbuf_t m, void *pktdata,
     uint32_t rx_pkt_status;
     int rssi, chanidx, rate_n_flags;
     
+    memset(&rxi, 0, sizeof(rxi));
+    
     phy_info = &sc->sc_last_phy_info;
     rx_res = (struct iwm_rx_mpdu_res_start *)pktdata;
     len = le16toh(rx_res->byte_count);
@@ -400,6 +405,11 @@ iwm_rx_mpdu(struct iwm_softc *sc, mbuf_t m, void *pktdata,
     mbuf_pkthdr_setlen(m, len);
     mbuf_setlen(m, len);
     
+    if (iwm_rx_hwdecrypt(sc, m, rx_pkt_status, &rxi)) {
+        mbuf_freem(m);
+        return;
+    }
+    
     chanidx = letoh32(phy_info->channel);
     device_timestamp = le32toh(phy_info->system_timestamp);
     phy_flags = letoh16(phy_info->phy_flags);
@@ -409,13 +419,402 @@ iwm_rx_mpdu(struct iwm_softc *sc, mbuf_t m, void *pktdata,
     rssi = (0 - IWM_MIN_DBM) + rssi;    /* normalize */
     rssi = MIN(rssi, ic->ic_max_rssi);    /* clip to max. 100% */
 
-    memset(&rxi, 0, sizeof(rxi));
     rxi.rxi_rssi = rssi;
     rxi.rxi_tstamp = device_timestamp;
+    rxi.rxi_chan = chanidx;
     
     iwm_rx_frame(sc, m, chanidx, rx_pkt_status,
                  (phy_flags & IWM_PHY_INFO_FLAG_SHPREAMBLE),
                  rate_n_flags, device_timestamp, &rxi, ml);
+}
+
+void ItlIwm::
+iwm_flip_address(uint8_t *addr)
+{
+    int i;
+    uint8_t mac_addr[ETHER_ADDR_LEN];
+    
+    for (i = 0; i < ETHER_ADDR_LEN; i++)
+        mac_addr[i] = addr[ETHER_ADDR_LEN - i - 1];
+    IEEE80211_ADDR_COPY(addr, mac_addr);
+}
+
+/*
+ * Drop duplicate 802.11 retransmissions
+ * (IEEE 802.11-2012: 9.3.2.10 "Duplicate detection and recovery")
+ * and handle pseudo-duplicate frames which result from deaggregation
+ * of A-MSDU frames in hardware.
+ */
+int ItlIwm::
+iwm_detect_duplicate(struct iwm_softc *sc, mbuf_t m,
+                     struct iwm_rx_mpdu_desc *desc, struct ieee80211_rxinfo *rxi)
+{
+    struct ieee80211com *ic = &sc->sc_ic;
+    struct iwm_node *in = (struct iwm_node *)ic->ic_bss;
+    struct iwm_rxq_dup_data *dup_data = &in->dup_data;
+    uint8_t tid = IWM_MAX_TID_COUNT, subframe_idx;
+    struct ieee80211_frame *wh = mtod(m, struct ieee80211_frame *);
+    uint8_t type = wh->i_fc[0] & IEEE80211_FC0_TYPE_MASK;
+    uint8_t subtype = wh->i_fc[0] & IEEE80211_FC0_SUBTYPE_MASK;
+    int hasqos = ieee80211_has_qos(wh);
+    uint16_t seq;
+    
+    if (type == IEEE80211_FC0_TYPE_CTL ||
+        (hasqos && (subtype & IEEE80211_FC0_SUBTYPE_NODATA)) ||
+        IEEE80211_IS_MULTICAST(wh->i_addr1))
+        return 0;
+    
+    if (hasqos) {
+        tid = (ieee80211_get_qos(wh) & IEEE80211_QOS_TID);
+        if (tid > IWM_MAX_TID_COUNT)
+            tid = IWM_MAX_TID_COUNT;
+    }
+    
+    /* If this wasn't a part of an A-MSDU the sub-frame index will be 0 */
+    subframe_idx = desc->amsdu_info &
+    IWM_RX_MPDU_AMSDU_SUBFRAME_IDX_MASK;
+    
+    seq = letoh16(*(u_int16_t *)wh->i_seq) >> IEEE80211_SEQ_SEQ_SHIFT;
+    if ((wh->i_fc[1] & IEEE80211_FC1_RETRY) &&
+        dup_data->last_seq[tid] == seq &&
+        dup_data->last_sub_frame[tid] >= subframe_idx)
+        return 1;
+    
+    /*
+     * Allow the same frame sequence number for all A-MSDU subframes
+     * following the first subframe.
+     * Otherwise these subframes would be discarded as replays.
+     */
+    if (dup_data->last_seq[tid] == seq &&
+        subframe_idx > dup_data->last_sub_frame[tid] &&
+        (desc->mac_flags2 & IWM_RX_MPDU_MFLG2_AMSDU)) {
+        rxi->rxi_flags |= IEEE80211_RXI_SAME_SEQ;
+    }
+    
+    dup_data->last_seq[tid] = seq;
+    dup_data->last_sub_frame[tid] = subframe_idx;
+    
+    return 0;
+}
+
+/*
+ * Returns true if sn2 - buffer_size < sn1 < sn2.
+ * To be used only in order to compare reorder buffer head with NSSN.
+ * We fully trust NSSN unless it is behind us due to reorder timeout.
+ * Reorder timeout can only bring us up to buffer_size SNs ahead of NSSN.
+ */
+int ItlIwm::
+iwm_is_sn_less(uint16_t sn1, uint16_t sn2, uint16_t buffer_size)
+{
+    return SEQ_LT(sn1, sn2) && !SEQ_LT(sn1, sn2 - buffer_size);
+}
+
+void ItlIwm::
+iwm_release_frames(struct iwm_softc *sc, struct ieee80211_node *ni,
+                   struct iwm_rxba_data *rxba, struct iwm_reorder_buffer *reorder_buf,
+                   uint16_t nssn, struct mbuf_list *ml)
+{
+    struct iwm_reorder_buf_entry *entries = &rxba->entries[0];
+    uint16_t ssn = reorder_buf->head_sn;
+    
+    /* ignore nssn smaller than head sn - this can happen due to timeout */
+    if (iwm_is_sn_less(nssn, ssn, reorder_buf->buf_size))
+        goto set_timer;
+    
+    while (iwm_is_sn_less(ssn, nssn, reorder_buf->buf_size)) {
+        int index = ssn % reorder_buf->buf_size;
+        mbuf_t m;
+        int chanidx, is_shortpre;
+        uint32_t rx_pkt_status, rate_n_flags, device_timestamp;
+        struct ieee80211_rxinfo *rxi;
+        
+        /* This data is the same for all A-MSDU subframes. */
+        chanidx = entries[index].chanidx;
+        rx_pkt_status = entries[index].rx_pkt_status;
+        is_shortpre = entries[index].is_shortpre;
+        rate_n_flags = entries[index].rate_n_flags;
+        device_timestamp = entries[index].device_timestamp;
+        rxi = &entries[index].rxi;
+        
+        /*
+         * Empty the list. Will have more than one frame for A-MSDU.
+         * Empty list is valid as well since nssn indicates frames were
+         * received.
+         */
+        while ((m = ml_dequeue(&entries[index].frames)) != NULL) {
+            iwm_rx_frame(sc, m, chanidx, rx_pkt_status, is_shortpre,
+                         rate_n_flags, device_timestamp, rxi, ml);
+            reorder_buf->num_stored--;
+            
+            /*
+             * Allow the same frame sequence number and CCMP PN for
+             * all A-MSDU subframes following the first subframe.
+             * Otherwise they would be discarded as replays.
+             */
+            rxi->rxi_flags |= IEEE80211_RXI_SAME_SEQ;
+            rxi->rxi_flags |= IEEE80211_RXI_HWDEC_SAME_PN;
+        }
+        
+        ssn = (ssn + 1) & 0xfff;
+    }
+    reorder_buf->head_sn = nssn;
+    
+set_timer:
+    if (reorder_buf->num_stored && !reorder_buf->removed) {
+        timeout_add_usec(&reorder_buf->reorder_timer,
+                         RX_REORDER_BUF_TIMEOUT_MQ_USEC);
+    } else
+        timeout_del(&reorder_buf->reorder_timer);
+}
+
+int ItlIwm::
+iwm_oldsn_workaround(struct iwm_softc *sc, struct ieee80211_node *ni, int tid,
+                     struct iwm_reorder_buffer *buffer, uint32_t reorder_data, uint32_t gp2)
+{
+    struct ieee80211com *ic = &sc->sc_ic;
+    
+    if (gp2 != buffer->consec_oldsn_ampdu_gp2) {
+        /* we have a new (A-)MPDU ... */
+        
+        /*
+         * reset counter to 0 if we didn't have any oldsn in
+         * the last A-MPDU (as detected by GP2 being identical)
+         */
+        if (!buffer->consec_oldsn_prev_drop)
+            buffer->consec_oldsn_drops = 0;
+        
+        /* either way, update our tracking state */
+        buffer->consec_oldsn_ampdu_gp2 = gp2;
+    } else if (buffer->consec_oldsn_prev_drop) {
+        /*
+         * tracking state didn't change, and we had an old SN
+         * indication before - do nothing in this case, we
+         * already noted this one down and are waiting for the
+         * next A-MPDU (by GP2)
+         */
+        return 0;
+    }
+    
+    /* return unless this MPDU has old SN */
+    if (!(reorder_data & IWM_RX_MPDU_REORDER_BA_OLD_SN))
+        return 0;
+    
+    /* update state */
+    buffer->consec_oldsn_prev_drop = 1;
+    buffer->consec_oldsn_drops++;
+    
+    /* if limit is reached, send del BA and reset state */
+    if (buffer->consec_oldsn_drops == IWM_AMPDU_CONSEC_DROPS_DELBA) {
+        XYLog("reached %d old SN frames, stopping BA session on TID %d\n",
+              IWM_AMPDU_CONSEC_DROPS_DELBA, tid);
+        ieee80211_delba_request(ic, ni, IEEE80211_REASON_UNSPECIFIED,
+                                0, tid);
+        buffer->consec_oldsn_prev_drop = 0;
+        buffer->consec_oldsn_drops = 0;
+        return 1;
+    }
+    
+    return 0;
+}
+
+/*
+ * Handle re-ordering of frames which were de-aggregated in hardware.
+ * Returns 1 if the MPDU was consumed (buffered or dropped).
+ * Returns 0 if the MPDU should be passed to upper layer.
+ */
+int ItlIwm::
+iwm_rx_reorder(struct iwm_softc *sc, mbuf_t m, int chanidx,
+               struct iwm_rx_mpdu_desc *desc, int is_shortpre, int rate_n_flags,
+               uint32_t device_timestamp, struct ieee80211_rxinfo *rxi,
+               struct mbuf_list *ml)
+{
+    struct ieee80211com *ic = &sc->sc_ic;
+    struct ieee80211_frame *wh;
+    struct ieee80211_node *ni;
+    struct iwm_rxba_data *rxba;
+    struct iwm_reorder_buffer *buffer;
+    uint32_t reorder_data = le32toh(desc->reorder_data);
+    int is_amsdu = (desc->mac_flags2 & IWM_RX_MPDU_MFLG2_AMSDU);
+    int last_subframe =
+    (desc->amsdu_info & IWM_RX_MPDU_AMSDU_LAST_SUBFRAME);
+    uint8_t tid;
+    uint8_t subframe_idx = (desc->amsdu_info &
+                            IWM_RX_MPDU_AMSDU_SUBFRAME_IDX_MASK);
+    struct iwm_reorder_buf_entry *entries;
+    int index;
+    uint16_t nssn, sn;
+    uint8_t baid, type, subtype;
+    int hasqos;
+    
+    wh = mtod(m, struct ieee80211_frame *);
+    hasqos = ieee80211_has_qos(wh);
+    tid = hasqos ? ieee80211_get_qos(wh) & IEEE80211_QOS_TID : 0;
+    
+    type = wh->i_fc[0] & IEEE80211_FC0_TYPE_MASK;
+    subtype = wh->i_fc[0] & IEEE80211_FC0_SUBTYPE_MASK;
+    
+    /*
+     * We are only interested in Block Ack requests and unicast QoS data.
+     */
+    if (IEEE80211_IS_MULTICAST(wh->i_addr1))
+        return 0;
+    if (hasqos) {
+        if (subtype & IEEE80211_FC0_SUBTYPE_NODATA)
+            return 0;
+    } else {
+        if (type != IEEE80211_FC0_TYPE_CTL ||
+            subtype != IEEE80211_FC0_SUBTYPE_BAR)
+            return 0;
+    }
+    
+    baid = (reorder_data & IWM_RX_MPDU_REORDER_BAID_MASK) >>
+    IWM_RX_MPDU_REORDER_BAID_SHIFT;
+    if (baid == IWM_RX_REORDER_DATA_INVALID_BAID ||
+        baid >= nitems(sc->sc_rxba_data))
+        return 0;
+    
+    rxba = &sc->sc_rxba_data[baid];
+    if (rxba->reorder_buf.buf_size == 0 || tid != rxba->tid || rxba->sta_id != IWM_STATION_ID)
+        return 0;
+    
+    if (rxba->timeout != 0)
+        getmicrouptime(&rxba->last_rx);
+    
+    /* Bypass A-MPDU re-ordering in net80211. */
+    rxi->rxi_flags |= IEEE80211_RXI_AMPDU_DONE;
+    
+    nssn = reorder_data & IWM_RX_MPDU_REORDER_NSSN_MASK;
+    sn = (reorder_data & IWM_RX_MPDU_REORDER_SN_MASK) >>
+    IWM_RX_MPDU_REORDER_SN_SHIFT;
+    
+    buffer = &rxba->reorder_buf;
+    entries = &rxba->entries[0];
+    
+    if (!buffer->valid) {
+        if (reorder_data & IWM_RX_MPDU_REORDER_BA_OLD_SN)
+            return 0;
+        buffer->valid = 1;
+    }
+    
+    ni = ieee80211_find_rxnode(ic, wh);
+    if (type == IEEE80211_FC0_TYPE_CTL &&
+        subtype == IEEE80211_FC0_SUBTYPE_BAR) {
+        iwm_release_frames(sc, ni, rxba, buffer, nssn, ml);
+        goto drop;
+    }
+    
+    /*
+     * If there was a significant jump in the nssn - adjust.
+     * If the SN is smaller than the NSSN it might need to first go into
+     * the reorder buffer, in which case we just release up to it and the
+     * rest of the function will take care of storing it and releasing up to
+     * the nssn.
+     */
+    if (!iwm_is_sn_less(nssn, buffer->head_sn + buffer->buf_size,
+                        buffer->buf_size) ||
+        !SEQ_LT(sn, buffer->head_sn + buffer->buf_size)) {
+        uint16_t min_sn = SEQ_LT(sn, nssn) ? sn : nssn;
+        ic->ic_stats.is_ht_rx_frame_above_ba_winend++;
+        iwm_release_frames(sc, ni, rxba, buffer, min_sn, ml);
+    }
+    
+    if (iwm_oldsn_workaround(sc, ni, tid, buffer, reorder_data,
+                             device_timestamp)) {
+        /* BA session will be torn down. */
+        ic->ic_stats.is_ht_rx_ba_window_jump++;
+        goto drop;
+        
+    }
+    
+    /* drop any outdated packets */
+    if (SEQ_LT(sn, buffer->head_sn)) {
+        ic->ic_stats.is_ht_rx_frame_below_ba_winstart++;
+        goto drop;
+    }
+    
+    /* release immediately if allowed by nssn and no stored frames */
+    if (!buffer->num_stored && SEQ_LT(sn, nssn)) {
+        if (iwm_is_sn_less(buffer->head_sn, nssn, buffer->buf_size) &&
+            (!is_amsdu || last_subframe))
+            buffer->head_sn = nssn;
+        ieee80211_release_node(ic, ni);
+        return 0;
+    }
+    
+    /*
+     * release immediately if there are no stored frames, and the sn is
+     * equal to the head.
+     * This can happen due to reorder timer, where NSSN is behind head_sn.
+     * When we released everything, and we got the next frame in the
+     * sequence, according to the NSSN we can't release immediately,
+     * while technically there is no hole and we can move forward.
+     */
+    if (!buffer->num_stored && sn == buffer->head_sn) {
+        if (!is_amsdu || last_subframe)
+            buffer->head_sn = (buffer->head_sn + 1) & 0xfff;
+        ieee80211_release_node(ic, ni);
+        return 0;
+    }
+    
+    index = sn % buffer->buf_size;
+    
+    /*
+     * Check if we already stored this frame
+     * As AMSDU is either received or not as whole, logic is simple:
+     * If we have frames in that position in the buffer and the last frame
+     * originated from AMSDU had a different SN then it is a retransmission.
+     * If it is the same SN then if the subframe index is incrementing it
+     * is the same AMSDU - otherwise it is a retransmission.
+     */
+    if (!ml_empty(&entries[index].frames)) {
+        if (!is_amsdu) {
+            ic->ic_stats.is_ht_rx_ba_no_buf++;
+            goto drop;
+        } else if (sn != buffer->last_amsdu ||
+                   buffer->last_sub_index >= subframe_idx) {
+            ic->ic_stats.is_ht_rx_ba_no_buf++;
+            goto drop;
+        }
+    } else {
+        /* This data is the same for all A-MSDU subframes. */
+        entries[index].chanidx = chanidx;
+        entries[index].is_shortpre = is_shortpre;
+        entries[index].rate_n_flags = rate_n_flags;
+        entries[index].device_timestamp = device_timestamp;
+        memcpy(&entries[index].rxi, rxi, sizeof(entries[index].rxi));
+    }
+    
+    /* put in reorder buffer */
+    ml_enqueue(&entries[index].frames, m);
+    buffer->num_stored++;
+    getmicrouptime(&entries[index].reorder_time);
+    
+    if (is_amsdu) {
+        buffer->last_amsdu = sn;
+        buffer->last_sub_index = subframe_idx;
+    }
+    
+    /*
+     * We cannot trust NSSN for AMSDU sub-frames that are not the last.
+     * The reason is that NSSN advances on the first sub-frame, and may
+     * cause the reorder buffer to advance before all the sub-frames arrive.
+     * Example: reorder buffer contains SN 0 & 2, and we receive AMSDU with
+     * SN 1. NSSN for first sub frame will be 3 with the result of driver
+     * releasing SN 0,1, 2. When sub-frame 1 arrives - reorder buffer is
+     * already ahead and it will be dropped.
+     * If the last sub-frame is not on this queue - we will get frame
+     * release notification with up to date NSSN.
+     */
+    if (!is_amsdu || last_subframe)
+        iwm_release_frames(sc, ni, rxba, buffer, nssn, ml);
+    
+    ieee80211_release_node(ic, ni);
+    return 1;
+    
+drop:
+    mbuf_freem(m);
+    ieee80211_release_node(ic, ni);
+    return 1;
 }
 
 void ItlIwm::
@@ -430,8 +829,10 @@ iwm_rx_mpdu_mq(struct iwm_softc *sc, mbuf_t m, void *pktdata,
     uint8_t chanidx;
     uint16_t phy_info;
     
+    memset(&rxi, 0, sizeof(rxi));
+    
     desc = (struct iwm_rx_mpdu_desc *)pktdata;
-
+    
     if (!(desc->status & htole16(IWM_RX_MPDU_RES_STATUS_CRC_OK)) ||
         !(desc->status & htole16(IWM_RX_MPDU_RES_STATUS_OVERRUN_OK))) {
         mbuf_freem(m);
@@ -486,31 +887,85 @@ iwm_rx_mpdu_mq(struct iwm_softc *sc, mbuf_t m, void *pktdata,
         
         if ((le16toh(desc->status) &
              IWM_RX_MPDU_RES_STATUS_SEC_ENC_MSK) ==
-             IWM_RX_MPDU_RES_STATUS_SEC_CCM_ENC) {
-             /* Padding is inserted after the IV. */
-             hdrlen += IEEE80211_CCMP_HDRLEN;
-         }
+            IWM_RX_MPDU_RES_STATUS_SEC_CCM_ENC) {
+            /* Padding is inserted after the IV. */
+            hdrlen += IEEE80211_CCMP_HDRLEN;
+        }
         
         memmove((uint8_t*)mbuf_data(m) + 2, mbuf_data(m), hdrlen);
         mbuf_adj(m, 2);
+    }
+    
+    /*
+     * Hardware de-aggregates A-MSDUs and copies the same MAC header
+     * in place for each subframe. But it leaves the 'A-MSDU present'
+     * bit set in the frame header. We need to clear this bit ourselves.
+     *
+     * And we must allow the same CCMP PN for subframes following the
+     * first subframe. Otherwise they would be discarded as replays.
+     */
+    if (desc->mac_flags2 & IWM_RX_MPDU_MFLG2_AMSDU) {
+        struct ieee80211_frame *wh = mtod(m, struct ieee80211_frame *);
+        uint8_t subframe_idx = (desc->amsdu_info &
+                                IWM_RX_MPDU_AMSDU_SUBFRAME_IDX_MASK);
+        if (subframe_idx > 0)
+            rxi.rxi_flags |= IEEE80211_RXI_HWDEC_SAME_PN;
+        if (ieee80211_has_qos(wh) && ieee80211_has_addr4(wh) &&
+            mbuf_len(m) >= sizeof(struct ieee80211_qosframe_addr4)) {
+            struct ieee80211_qosframe_addr4 *qwh4 = mtod(m,
+                                                         struct ieee80211_qosframe_addr4 *);
+            qwh4->i_qos[0] &= htole16(~IEEE80211_QOS_AMSDU);
+            
+            /* HW reverses addr3 and addr4. */
+            iwm_flip_address(qwh4->i_addr3);
+            iwm_flip_address(qwh4->i_addr4);
+        } else if (ieee80211_has_qos(wh) &&
+                   mbuf_len(m) >= sizeof(struct ieee80211_qosframe)) {
+            struct ieee80211_qosframe *qwh = mtod(m,
+                                                  struct ieee80211_qosframe *);
+            qwh->i_qos[0] &= htole16(~IEEE80211_QOS_AMSDU);
+            
+            /* HW reverses addr3. */
+            iwm_flip_address(qwh->i_addr3);
+        }
+    }
+    
+    /*
+     * Verify decryption before duplicate detection. The latter uses
+     * the TID supplied in QoS frame headers and this TID is implicitly
+     * verified as part of the CCMP nonce.
+     */
+    if (iwm_rx_hwdecrypt(sc, m, le16toh(desc->status), &rxi)) {
+        mbuf_freem(m);
+        return;
+    }
+    
+    if (iwm_detect_duplicate(sc, m, desc, &rxi)) {
+        mbuf_freem(m);
+        return;
     }
     
     phy_info = le16toh(desc->phy_info);
     rate_n_flags = le32toh(desc->v1.rate_n_flags);
     chanidx = desc->v1.channel;
     device_timestamp = desc->v1.gp2_on_air_rise;
-
+    
     rssi = iwm_rxmq_get_signal_strength(sc, desc);
     rssi = (0 - IWM_MIN_DBM) + rssi;    /* normalize */
     rssi = MIN(rssi, ic->ic_max_rssi);    /* clip to max. 100% */
-
-    memset(&rxi, 0, sizeof(rxi));
+    
     rxi.rxi_rssi = rssi;
     rxi.rxi_tstamp = le64toh(desc->v1.tsf_on_air_rise);
-
+    rxi.rxi_chan = chanidx;
+    
+    if (iwm_rx_reorder(sc, m, chanidx, desc,
+                       (phy_info & IWM_RX_MPDU_PHY_SHORT_PREAMBLE),
+                       rate_n_flags, device_timestamp, &rxi, ml))
+        return;
+    
     iwm_rx_frame(sc, m, chanidx, le16toh(desc->status),
-        (phy_info & IWM_RX_MPDU_PHY_SHORT_PREAMBLE),
-        rate_n_flags, device_timestamp, &rxi, ml);
+                 (phy_info & IWM_RX_MPDU_PHY_SHORT_PREAMBLE),
+                 rate_n_flags, device_timestamp, &rxi, ml);
 }
 
 int ItlIwm::
@@ -541,9 +996,7 @@ iwm_rx_pkt(struct iwm_softc *sc, struct iwm_rx_data *data, struct mbuf_list *ml)
     uint32_t offset = 0, nextoff = 0, nmpdu = 0, len;
     mbuf_t m0, m = NULL;
     const size_t minsz = sizeof(pkt->len_n_flags) + sizeof(pkt->hdr);
-    size_t remain = IWM_RBUF_SIZE;
     int qid, idx, code, handled = 1;
-    bool replaced = false;
     
     //    bus_dmamap_sync(sc->sc_dmat, data->map, 0, IWM_RBUF_SIZE,
     //        BUS_DMASYNC_POSTREAD);
@@ -559,39 +1012,11 @@ iwm_rx_pkt(struct iwm_softc *sc, struct iwm_rx_data *data, struct mbuf_list *ml)
             break;
         
         len = sizeof(pkt->len_n_flags) + iwm_rx_packet_len(pkt);
-        if (len < sizeof(pkt->hdr) ||
-            len > (IWM_RBUF_SIZE - offset - minsz))
+        if (len < minsz || len > (IWM_RBUF_SIZE - offset))
             break;
         
         if (code == IWM_REPLY_RX_MPDU_CMD && ++nmpdu == 1) {
             /* Take mbuf m0 off the RX ring. */
-//            mbuf_t mm;
-//            mm = replaceOrCopyPacket(&m0, IWM_RBUF_SIZE, &replaced);
-//            if (!mm) {
-//                XYLog("%s replaceOrCopyPacket fail\n", __FUNCTION__);
-//                ifp->netStat->inputErrors++;
-//                break;
-//            }
-//            if (replaced) {
-//                struct iwm_rx_ring *ring = &sc->rxq;
-//                struct iwm_rx_data *data = &ring->data[sc->rxq.cur];
-//                data->map->dm_nsegs = data->map->cursor->getPhysicalSegments(mm, &data->map->dm_segs[0], 1);
-//                if (data->map->dm_nsegs == 0) {
-//                    XYLog("%s data->map->dm_nsegs == 0\n", __FUNCTION__);
-//                    freePacket(mm);
-//                    ifp->netStat->inputErrors++;
-//                    break;
-//                }
-//                if (sc->sc_mqrx_supported) {
-//                    ((uint64_t *)ring->desc)[sc->rxq.cur] =
-//                    htole64(data->map->dm_segs[0].location);
-//                } else {
-//                    ((uint32_t *)ring->desc)[sc->rxq.cur] =
-//                    htole32(data->map->dm_segs[0].location >> 8);
-//                }
-//                mbuf_setlen(mm, IWM_RBUF_SIZE);
-//                data->m = mm;
-//            }
             if (iwm_rx_addbuf(sc, IWM_RBUF_SIZE, sc->rxq.cur)) {
                 ifp->netStat->inputErrors++;
                 break;
@@ -606,7 +1031,7 @@ iwm_rx_pkt(struct iwm_softc *sc, struct iwm_rx_data *data, struct mbuf_list *ml)
                 break;
                 
             case IWM_REPLY_RX_MPDU_CMD: {
-                size_t maxlen = remain - minsz;
+                size_t maxlen = IWM_RBUF_SIZE - offset - minsz;
                 nextoff = offset +
                 roundup(len, IWM_FH_RSCSR_FRAME_ALIGN);
                 nextpkt = (struct iwm_rx_packet *)
@@ -646,15 +1071,14 @@ iwm_rx_pkt(struct iwm_softc *sc, struct iwm_rx_data *data, struct mbuf_list *ml)
                                     maxlen, ml);
                 }
                 
-                if (offset + minsz < remain)
-                    remain -= offset;
-                else
-                    remain = minsz;
                 break;
             }
                 
             case IWM_TX_CMD:
                 iwm_rx_tx_cmd(sc, pkt, data);
+                break;
+            case IWM_BA_NOTIF:
+                iwm_rx_tx_ba_notif(sc, pkt, data);
                 break;
                 
             case IWM_MISSED_BEACONS_NOTIFICATION:
@@ -669,7 +1093,7 @@ iwm_rx_pkt(struct iwm_softc *sc, struct iwm_rx_data *data, struct mbuf_list *ml)
                 struct iwm_alive_resp_v2 *resp2;
                 struct iwm_alive_resp_v3 *resp3;
 
-                XYLog("%s: firmware alive, size=%d\n", __FUNCTION__, iwm_rx_packet_payload_len(pkt));
+//                XYLog("%s: firmware alive, size=%d\n", __FUNCTION__, iwm_rx_packet_payload_len(pkt));
 
                 if (iwm_rx_packet_payload_len(pkt) == sizeof(*resp1)) {
                     SYNC_RESP_STRUCT(resp1, pkt, struct iwm_alive_resp_v1 *);
@@ -739,22 +1163,28 @@ iwm_rx_pkt(struct iwm_softc *sc, struct iwm_rx_data *data, struct mbuf_list *ml)
             case IWM_MCC_CHUB_UPDATE_CMD: {
                 struct iwm_mcc_chub_notif *notif;
                 SYNC_RESP_STRUCT(notif, pkt, struct iwm_mcc_chub_notif *);
-                
-                sc->sc_fw_mcc[0] = (notif->mcc & 0xff00) >> 8;
-                sc->sc_fw_mcc[1] = notif->mcc & 0xff;
-                sc->sc_fw_mcc[2] = '\0';
-
-                if (sc->sc_fw_mcc_int != notif->mcc && sc->sc_ic.ic_event_handler) {
-                    (*sc->sc_ic.ic_event_handler)(&sc->sc_ic, IEEE80211_EVT_COUNTRY_CODE_UPDATE, NULL);
-                }
-
-                sc->sc_fw_mcc_int = notif->mcc;
+                iwm_mcc_update(sc, notif);
+                break;
             }
                 
             case IWM_DTS_MEASUREMENT_NOTIFICATION:
             case IWM_WIDE_ID(IWM_PHY_OPS_GROUP,
                              IWM_DTS_MEASUREMENT_NOTIF_WIDE):
+            case IWM_WIDE_ID(IWM_PHY_OPS_GROUP,
+                             IWM_TEMP_REPORTING_THRESHOLDS_CMD):
                 break;
+
+            case IWM_WIDE_ID(IWM_PHY_OPS_GROUP,
+                             IWM_CT_KILL_NOTIFICATION): {
+                struct iwm_ct_kill_notif *notif;
+                SYNC_RESP_STRUCT(notif, pkt, struct iwm_ct_kill_notif *);
+                XYLog("%s: device at critical temperature (%u degC), "
+                       "stopping device\n",
+                       DEVNAME(sc), le16toh(notif->temperature));
+                sc->sc_flags |= IWM_FLAG_HW_ERR;
+                task_add(systq, &sc->init_task);
+                break;
+            }
                 
             case IWM_ADD_STA_KEY:
             case IWM_PHY_CONFIGURATION_CMD:
@@ -889,6 +1319,9 @@ iwm_rx_pkt(struct iwm_softc *sc, struct iwm_rx_data *data, struct mbuf_list *ml)
             }
                 
             case IWM_WIDE_ID(IWM_DATA_PATH_GROUP, IWM_DQA_ENABLE_CMD):
+                break;
+
+            case IWM_WIDE_ID(IWM_SYSTEM_GROUP, IWM_SOC_CONFIGURATION_CMD):
                 break;
                 
             default:

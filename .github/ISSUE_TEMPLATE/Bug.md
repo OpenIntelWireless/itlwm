@@ -17,7 +17,7 @@ assignees: ''
 
 - Kext Version: 
 - WiFi Card Model: 
-- Product ID: 
+- PCI Product ID: 
 - macOS Version: 
 
 **Description**
@@ -25,7 +25,7 @@ assignees: ''
 
 **Bug Report Archive**
 <!---Open HeliPort while clicking Option, click "create diagnostic report", then drag and drop the zip file into this window--->
-<!---Read this guide if you are using AirportItlwm http://localhost:8080/itlwm/Troubleshooting.html#manually-for-airportitlwm--->
+<!---Read this guide if you are using AirportItlwm http://docs.oiw.workers.dev/itlwm/Troubleshooting.html#manually-for-airportitlwm--->
 
 **Kext Download Source**
 <!---To help us identify your issue, please tell us where did you download the kext and whether it's custom built--->

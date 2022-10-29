@@ -20,7 +20,7 @@
 * GNU General Public License for more details.
 */
 
-#include "CTimeout.hpp"
+#include <sys/CTimeout.hpp>
 
 void CTimeout::timeoutOccurred(OSObject* owner, IOTimerEventSource* timer)
 {
@@ -34,19 +34,24 @@ void CTimeout::timeoutOccurred(OSObject* owner, IOTimerEventSource* timer)
         return;
     }
     //callback
-    tm->to_func(tm->to_arg);
     tm->isPending = false;
+    tm->to_func(tm->to_arg);
 }
 
 IOReturn CTimeout::timeout_add_msec(OSObject *target, void *arg0, void *arg1, void *arg2, void *arg3)
 {
     IOWorkLoop *wl = (IOWorkLoop*)arg1;
     int msecs = *(int*)arg2;
-    CTimeout *cto = (CTimeout *)arg0;
+    CTimeout **ccto = (CTimeout **)arg0;
+    
+    if (ccto == NULL || *ccto == NULL) {
+        return kIOReturnError;
+    }
+    CTimeout *cto = *ccto;
     if (cto->tm == NULL) {
         cto->tm = IOTimerEventSource::timerEventSource(cto, &CTimeout::timeoutOccurred);
         if (cto->tm == NULL) {
-            return 0;
+            return kIOReturnError;
         }
         cto->tm->enable();
         wl->addEventSource(cto->tm);
@@ -58,13 +63,15 @@ IOReturn CTimeout::timeout_add_msec(OSObject *target, void *arg0, void *arg1, vo
 
 IOReturn CTimeout::timeout_del(OSObject *target, void *arg0, void *arg1, void *arg2, void *arg3)
 {
-    CTimeout *cto = (CTimeout *)arg0;
-    if (cto == NULL) {
+    CTimeout **ccto = (CTimeout **)arg0;
+    if (ccto == NULL || *ccto == NULL) {
         return kIOReturnSuccess;
     }
-    if (cto->tm != NULL) {
-        cto->tm->cancelTimeout();
+    CTimeout *cto = *ccto;
+    if (cto->tm == NULL || !cto->isPending) {
+        return kIOReturnSuccess;
     }
+    cto->tm->cancelTimeout();
     cto->isPending = false;
     return kIOReturnSuccess;
 }
@@ -74,7 +81,7 @@ IOReturn CTimeout::timeout_free(OSObject *target, void *arg0, void *arg1, void *
     CTimeout **cto = (CTimeout **)arg0;
     IOWorkLoop *wl = (IOWorkLoop*)arg1;
     if (cto == NULL || *cto == NULL) {
-        return 0;
+        return kIOReturnSuccess;
     }
     CTimeout *tm = *cto;
     if (tm->tm != NULL) {
@@ -111,7 +118,7 @@ IOReturn CTimeout::timeout_pending(OSObject *target, void *arg0, void *arg1, voi
     CTimeout **cto = (CTimeout **)arg0;
     CTimeout *tm;
     if (cto == NULL) {
-        return kIOReturnSuccess;
+        return kIOReturnError;
     }
     tm = *cto;
     if (tm != NULL && tm->isPending) {

@@ -11,7 +11,8 @@
 #define super IO80211Interface
 OSDefineMetaClassAndStructors(AirportItlwmInterface, IO80211Interface);
 
-const char* hexdump(uint8_t *buf, size_t len) {
+const char* hexdump(uint8_t *buf, size_t len)
+{
     ssize_t str_len = len * 3 + 1;
     char *str = (char*)IOMalloc(str_len);
     if (!str)
@@ -35,11 +36,13 @@ init(IO80211Controller *controller, ItlHalService *halService)
 UInt32 AirportItlwmInterface::
 inputPacket(mbuf_t packet, UInt32 length, IOOptionBits options, void *param)
 {
-    uint16_t ether_type;
+    ether_header_t *eh;
     size_t len = mbuf_len(packet);
-    if (len >= 14 && mbuf_copydata(packet, 12, 2, &ether_type) == 0 && ether_type == _OSSwapInt16(ETHERTYPE_PAE)) { // EAPOL packet
+    
+    eh = (ether_header_t *)mbuf_data(packet);
+    if (len >= sizeof(ether_header_t) && eh->ether_type == htons(ETHERTYPE_PAE)) { // EAPOL packet
         const char* dump = hexdump((uint8_t*)mbuf_data(packet), len);
-        IOLog("itlwm: input EAPOL packet, len: %zu, data: %s\n", len, dump ? dump : "Failed to allocate memory");
+        XYLog("input EAPOL packet, len: %zu, data: %s\n", len, dump ? dump : "Failed to allocate memory");
         if (dump)
             IOFree((void*)dump, 3 * len + 1);
         return IO80211Interface::inputPacket(packet, (UInt32)len, 0, param);

@@ -348,7 +348,6 @@
 
 
 /* CSR GIO */
-#define IWM_CSR_GIO_REG_VAL_L0S_ENABLED    (0x00000002)
 #define IWM_CSR_GIO_REG_VAL_L0S_DISABLED    (0x00000002)
 
 /*
@@ -839,6 +838,7 @@ enum iwm_msix_ivar_for_cause {
 #define IWM_UCODE_TLV_API_NAN2_VER2        31
 #define IWM_UCODE_TLV_API_ADAPTIVE_DWELL    32
 #define IWM_UCODE_TLV_API_NEW_RX_STATS        35
+#define IWM_UCODE_TLV_API_QUOTA_LOW_LATENCY    38
 #define IWM_UCODE_TLV_API_ADAPTIVE_DWELL_V2    42
 #define IWM_UCODE_TLV_API_SCAN_EXT_CHAN_VER    58
 #define IWM_NUM_UCODE_TLV_API            128
@@ -929,13 +929,18 @@ enum iwm_msix_ivar_for_cause {
 #define IWM_UCODE_TLV_CAPA_GSCAN_SUPPORT        31
 #define IWM_UCODE_TLV_CAPA_NAN_SUPPORT            34
 #define IWM_UCODE_TLV_CAPA_UMAC_UPLOAD            35
+#define IWM_UCODE_TLV_CAPA_SOC_LATENCY_SUPPORT        37
+#define IWM_UCODE_TLV_CAPA_BINDING_CDB_SUPPORT        39
+#define IWM_UCODE_TLV_CAPA_CDB_SUPPORT            40
+#define IWM_UCODE_TLV_CAPA_DYNAMIC_QUOTA                44
+#define IWM_UCODE_TLV_CAPA_ULTRA_HB_CHANNELS        48
 #define IWM_UCODE_TLV_CAPA_EXTENDED_DTS_MEASURE        64
 #define IWM_UCODE_TLV_CAPA_SHORT_PM_TIMEOUTS        65
 #define IWM_UCODE_TLV_CAPA_BT_MPLUT_SUPPORT        67
 #define IWM_UCODE_TLV_CAPA_MULTI_QUEUE_RX_SUPPORT    68
 #define IWM_UCODE_TLV_CAPA_BEACON_ANT_SELECTION        71
 #define IWM_UCODE_TLV_CAPA_BEACON_STORING        72
-#define IWM_UCODE_TLV_CAPA_LAR_SUPPORT_V2        73
+#define IWM_UCODE_TLV_CAPA_LAR_SUPPORT_V3        73
 #define IWM_UCODE_TLV_CAPA_CT_KILL_BY_FW        74
 #define IWM_UCODE_TLV_CAPA_TEMP_THS_REPORT_SUPPORT    75
 #define IWM_UCODE_TLV_CAPA_CTDP_SUPPORT            76
@@ -1104,8 +1109,21 @@ struct iwm_ucode_header {
 #define IWM_UCODE_TLV_FW_DBG_DEST    38
 #define IWM_UCODE_TLV_FW_DBG_CONF    39
 #define IWM_UCODE_TLV_FW_DBG_TRIGGER    40
+#define IWM_UCODE_TLV_CMD_VERSIONS    48
 #define IWM_UCODE_TLV_FW_GSCAN_CAPA    50
 #define IWM_UCODE_TLV_FW_MEM_SEG    51
+
+#define IWM_UCODE_TLV_UMAC_DEBUG_ADDRS    54
+#define IWM_UCODE_TLV_LMAC_DEBUG_ADDRS    55
+#define IWM_UCODE_TLV_HW_TYPE        58
+
+#define IWM_UCODE_TLV_DEBUG_BASE        0x1000005
+#define IWM_UCODE_TLV_TYPE_DEBUG_INFO        (IWM_UCODE_TLV_DEBUG_BASE + 0)
+#define IWM_UCODE_TLV_TYPE_BUFFER_ALLOCATION    (IWM_UCODE_TLV_DEBUG_BASE + 1)
+#define IWM_UCODE_TLV_TYPE_HCMD            (IWM_UCODE_TLV_DEBUG_BASE + 2)
+#define IWM_UCODE_TLV_TYPE_REGIONS        (IWM_UCODE_TLV_DEBUG_BASE + 3)
+#define IWM_UCODE_TLV_TYPE_TRIGGERS        (IWM_UCODE_TLV_DEBUG_BASE + 4)
+#define IWM_UCODE_TLV_DEBUG_MAX            IWM_UCODE_TLV_TYPE_TRIGGERS
 
 struct iwm_ucode_tlv {
     uint32_t type;        /* see above */
@@ -1889,6 +1907,11 @@ struct iwm_agn_scd_bc_tbl {
 #define IWM_DQA_MIN_DATA_QUEUE        10
 #define IWM_DQA_MAX_DATA_QUEUE        31
 
+/* Reserve 8 DQA Tx queues, from 10 up to 17, for A-MPDU aggregation. */
+#define IWM_MAX_TID_COUNT      8
+#define IWM_FIRST_AGG_TX_QUEUE IWM_DQA_MIN_DATA_QUEUE
+#define IWM_LAST_AGG_TX_QUEUE  (IWM_FIRST_AGG_TX_QUEUE + IWM_MAX_TID_COUNT - 1)
+
 /* legacy non-DQA queues; the legacy command queue uses a different number! */
 #define IWM_OFFCHANNEL_QUEUE    8
 #define IWM_CMD_QUEUE        9
@@ -1933,6 +1956,11 @@ struct iwm_agn_scd_bc_tbl {
 
 /* scheduler config */
 #define IWM_SCD_QUEUE_CFG    0x1d
+
+/* Available options for the SCD_QUEUE_CFG HCMD */
+#define IWM_SCD_CFG_DISABLE_QUEUE   0
+#define IWM_SCD_CFG_ENABLE_QUEUE    1
+#define IWM_SCD_CFG_UPDATE_QUEUE_TID    2
 
 /* global key */
 #define IWM_WEP_KEY    0x20
@@ -2072,6 +2100,13 @@ struct iwm_agn_scd_bc_tbl {
 #define IWM_DATA_PATH_GROUP    0x5
 #define IWM_PROT_OFFLOAD_GROUP    0xb
 
+/* SYSTEM_GROUP group subcommand IDs */
+
+#define IWM_SHARED_MEM_CFG_CMD        0x00
+#define IWM_SOC_CONFIGURATION_CMD    0x01
+#define IWM_INIT_EXTENDED_CFG_CMD    0x03
+#define IWM_FW_ERROR_RECOVERY_CMD    0x07
+
 /* DATA_PATH group subcommand IDs */
 #define IWM_DQA_ENABLE_CMD    0x00
 
@@ -2166,6 +2201,31 @@ struct iwm_phy_cfg_cmd {
 #define IWM_PHY_CFG_RX_CHAIN_A    (1 << 12)
 #define IWM_PHY_CFG_RX_CHAIN_B    (1 << 13)
 #define IWM_PHY_CFG_RX_CHAIN_C    (1 << 14)
+
+#define IWM_MAX_DTS_TRIPS    8
+
+/**
+ * struct iwm_ct_kill_notif - CT-kill entry notification
+ *
+ * @temperature: the current temperature in celsius
+ * @reserved: reserved
+ */
+struct iwm_ct_kill_notif {
+    uint16_t temperature;
+    uint16_t reserved;
+} __packed; /* GRP_PHY_CT_KILL_NTF */
+
+/**
+ * struct iwm_temp_report_ths_cmd - set temperature thresholds
+ * (IWM_TEMP_REPORTING_THRESHOLDS_CMD)
+ *
+ * @num_temps: number of temperature thresholds passed
+ * @thresholds: array with the thresholds to be configured
+ */
+struct iwm_temp_report_ths_cmd {
+    uint32_t num_temps;
+    uint16_t thresholds[IWM_MAX_DTS_TRIPS];
+} __packed; /* GRP_PHY_TEMP_REPORTING_THRESHOLDS_CMD */
 
 /*
  * PHY db
@@ -2505,6 +2565,31 @@ struct iwm_alive_resp_v3 {
     uint32_t dbg_print_buff_addr;
 } __packed; /* ALIVE_RES_API_S_VER_3 */
 
+#define IWM_SOC_CONFIG_CMD_FLAGS_DISCRETE    (1 << 0)
+#define IWM_SOC_CONFIG_CMD_FLAGS_LOW_LATENCY    (1 << 1)
+
+#define IWM_SOC_FLAGS_LTR_APPLY_DELAY_MASK        0xc
+#define IWM_SOC_FLAGS_LTR_APPLY_DELAY_NONE        0
+#define IWM_SOC_FLAGS_LTR_APPLY_DELAY_200        1
+#define IWM_SOC_FLAGS_LTR_APPLY_DELAY_2500        2
+#define IWM_SOC_FLAGS_LTR_APPLY_DELAY_1820        3
+
+/**
+ * struct iwm_soc_configuration_cmd - Set device stabilization latency
+ *
+ * @flags: soc settings flags.  In VER_1, we can only set the DISCRETE
+ *    flag, because the FW treats the whole value as an integer. In
+ *    VER_2, we can set the bits independently.
+ * @latency: time for SOC to ensure stable power & XTAL
+ */
+struct iwm_soc_configuration_cmd {
+    uint32_t flags;
+    uint32_t latency;
+} __packed; /*
+             * SOC_CONFIGURATION_CMD_S_VER_1 (see description above)
+             * SOC_CONFIGURATION_CMD_S_VER_2
+             */
+
 /* Error response/notification */
 #define IWM_FW_ERR_UNKNOWN_CMD        0x0
 #define IWM_FW_ERR_INVALID_CMD_PARAM    0x1
@@ -2535,6 +2620,22 @@ struct iwm_error_resp {
     uint16_t bad_cmd_seq_num;
     uint32_t error_service;
     uint64_t timestamp;
+} __packed;
+
+#define IWM_FW_CMD_VER_UNKNOWN 99
+
+/**
+ * struct iwm_fw_cmd_version - firmware command version entry
+ * @cmd: command ID
+ * @group: group ID
+ * @cmd_ver: command version
+ * @notif_ver: notification version
+ */
+struct iwm_fw_cmd_version {
+    uint8_t cmd;
+    uint8_t group;
+    uint8_t cmd_ver;
+    uint8_t notif_ver;
 } __packed;
 
 
@@ -2847,12 +2948,31 @@ struct iwm_time_event_notif {
 /* Bindings and Time Quota */
 
 /**
+ * struct iwm_binding_cmd_v1 - configuring bindings
+ * ( IWM_BINDING_CONTEXT_CMD = 0x2b )
+ * @id_and_color: ID and color of the relevant Binding
+ * @action: action to perform, one of IWM_FW_CTXT_ACTION_*
+ * @macs: array of MAC id and colors which belong to the binding
+ * @phy: PHY id and color which belongs to the binding
+ * @lmac_id: the lmac id the binding belongs to
+ */
+struct iwm_binding_cmd_v1 {
+    /* COMMON_INDEX_HDR_API_S_VER_1 */
+    uint32_t id_and_color;
+    uint32_t action;
+    /* IWM_BINDING_DATA_API_S_VER_1 */
+    uint32_t macs[IWM_MAX_MACS_IN_BINDING];
+    uint32_t phy;
+} __packed; /* IWM_BINDING_CMD_API_S_VER_1 */
+
+/**
  * struct iwm_binding_cmd - configuring bindings
  * ( IWM_BINDING_CONTEXT_CMD = 0x2b )
  * @id_and_color: ID and color of the relevant Binding
  * @action: action to perform, one of IWM_FW_CTXT_ACTION_*
  * @macs: array of MAC id and colors which belong to the binding
  * @phy: PHY id and color which belongs to the binding
+ * @lmac_id: the lmac id the binding belongs to
  */
 struct iwm_binding_cmd {
     /* COMMON_INDEX_HDR_API_S_VER_1 */
@@ -2861,7 +2981,11 @@ struct iwm_binding_cmd {
     /* IWM_BINDING_DATA_API_S_VER_1 */
     uint32_t macs[IWM_MAX_MACS_IN_BINDING];
     uint32_t phy;
-} __packed; /* IWM_BINDING_CMD_API_S_VER_1 */
+    uint32_t lmac_id;
+} __packed; /* IWM_BINDING_CMD_API_S_VER_2 */
+
+#define IWM_LMAC_24G_INDEX        0
+#define IWM_LMAC_5G_INDEX        1
 
 /* The maximal number of fragments in the FW's schedule session */
 #define IWM_MAX_QUOTA 128
@@ -2873,7 +2997,7 @@ struct iwm_binding_cmd {
  *    remainig quota (after Time Events) according to this quota.
  * @max_duration: max uninterrupted context duration in TU
  */
-struct iwm_time_quota_data {
+struct iwm_time_quota_data_v1 {
     uint32_t id_and_color;
     uint32_t quota;
     uint32_t max_duration;
@@ -2884,9 +3008,40 @@ struct iwm_time_quota_data {
  * ( IWM_TIME_QUOTA_CMD = 0x2c )
  * @quotas: allocations per binding
  */
+struct iwm_time_quota_cmd_v1 {
+    struct iwm_time_quota_data_v1 quotas[IWM_MAX_BINDINGS];
+} __packed; /* IWM_TIME_QUOTA_ALLOCATION_CMD_API_S_VER_1 */
+
+#define IWM_QUOTA_LOW_LATENCY_NONE    0
+#define IWM_QUOTA_LOW_LATENCY_TX    (1 << 0)
+#define IWM_QUOTA_LOW_LATENCY_RX    (1 << 1)
+
+/**
+ * struct iwm_time_quota_data - configuration of time quota per binding
+ * @id_and_color: ID and color of the relevant Binding.
+ * @quota: absolute time quota in TU. The scheduler will try to divide the
+ *    remainig quota (after Time Events) according to this quota.
+ * @max_duration: max uninterrupted context duration in TU
+ * @low_latency: low latency status IWM_QUOTA_LOW_LATENCY_*
+ */
+struct iwm_time_quota_data {
+    uint32_t id_and_color;
+    uint32_t quota;
+    uint32_t max_duration;
+    uint32_t low_latency;
+}; /* TIME_QUOTA_DATA_API_S_VER_2 */
+
+/**
+ * struct iwm_time_quota_cmd - configuration of time quota between bindings
+ * ( TIME_QUOTA_CMD = 0x2c )
+ * Note: on non-CDB the fourth one is the auxilary mac and is essentially zero.
+ * On CDB the fourth one is a regular binding.
+ *
+ * @quotas: allocations per binding
+ */
 struct iwm_time_quota_cmd {
     struct iwm_time_quota_data quotas[IWM_MAX_BINDINGS];
-} __packed; /* IWM_TIME_QUOTA_ALLOCATION_CMD_API_S_VER_1 */
+} __packed; /* IWM_TIME_QUOTA_ALLOCATION_CMD_API_S_VER_2 */
 
 
 /* PHY context */
@@ -2928,12 +3083,29 @@ struct iwm_time_quota_cmd {
  * @width: PHY_[VHT|LEGACY]_CHANNEL_*
  * @ctrl channel: PHY_[VHT|LEGACY]_CTRL_*
  */
-struct iwm_fw_channel_info {
+struct iwm_fw_channel_info_v1 {
     uint8_t band;
     uint8_t channel;
     uint8_t width;
     uint8_t ctrl_pos;
-} __packed;
+} __packed; /* CHANNEL_CONFIG_API_S_VER_1 */
+
+/*
+ * struct iwm_fw_channel_info - channel information
+ *
+ * @channel: channel number
+ * @band: PHY_BAND_*
+ * @width: PHY_[VHT|LEGACY]_CHANNEL_*
+ * @ctrl channel: PHY_[VHT|LEGACY]_CTRL_*
+ * @reserved: for future use and alignment
+ */
+struct iwm_fw_channel_info {
+    uint32_t channel;
+    uint8_t band;
+    uint8_t width;
+    uint8_t ctrl_pos;
+    uint8_t reserved;
+} __packed; /* CHANNEL_CONFIG_API_S_VER_2 */
 
 #define IWM_PHY_RX_CHAIN_DRIVER_FORCE_POS    (0)
 #define IWM_PHY_RX_CHAIN_DRIVER_FORCE_MSK \
@@ -2975,7 +3147,15 @@ struct iwm_fw_channel_info {
  * @acquisition_data: ???
  * @dsp_cfg_flags: set to 0
  */
-struct iwm_phy_context_cmd {
+/*
+ * XXX Intel forgot to bump the PHY_CONTEXT command API when they increased
+ * the size of fw_channel_info from v1 to v2.
+ * To keep things simple we define two versions of this struct, and both
+ * are labled as CMD_API_VER_1. (The Linux iwlwifi driver performs dark
+ * magic with pointers to struct members instead.)
+ */
+/* This version must be used if IWM_UCODE_TLV_CAPA_ULTRA_HB_CHANNELS is set: */
+struct iwm_phy_context_cmd_uhb {
     /* COMMON_INDEX_HDR_API_S_VER_1 */
     uint32_t id_and_color;
     uint32_t action;
@@ -2983,6 +3163,20 @@ struct iwm_phy_context_cmd {
     uint32_t apply_time;
     uint32_t tx_param_color;
     struct iwm_fw_channel_info ci;
+    uint32_t txchain_info;
+    uint32_t rxchain_info;
+    uint32_t acquisition_data;
+    uint32_t dsp_cfg_flags;
+} __packed; /* IWM_PHY_CONTEXT_CMD_API_VER_1 */
+/* This version must be used otherwise: */
+struct iwm_phy_context_cmd {
+    /* COMMON_INDEX_HDR_API_S_VER_1 */
+    uint32_t id_and_color;
+    uint32_t action;
+    /* IWM_PHY_CONTEXT_DATA_API_S_VER_1 */
+    uint32_t apply_time;
+    uint32_t tx_param_color;
+    struct iwm_fw_channel_info_v1 ci;
     uint32_t txchain_info;
     uint32_t rxchain_info;
     uint32_t acquisition_data;
@@ -3151,6 +3345,9 @@ struct iwm_rx_mpdu_res_start {
 #define    IWM_RX_MPDU_MFLG2_PAD            0x20
 #define IWM_RX_MPDU_MFLG2_AMSDU            0x40
 
+#define IWM_RX_MPDU_AMSDU_SUBFRAME_IDX_MASK    0x7f
+#define IWM_RX_MPDU_AMSDU_LAST_SUBFRAME                0x80
+
 #define IWM_RX_MPDU_PHY_AMPDU            (1 << 5)
 #define IWM_RX_MPDU_PHY_AMPDU_TOGGLE        (1 << 6)
 #define IWM_RX_MPDU_PHY_SHORT_PREAMBLE        (1 << 7)
@@ -3180,6 +3377,15 @@ struct iwm_rx_mpdu_desc_v1 {
         };
     };
 } __packed;
+
+#define IWM_RX_REORDER_DATA_INVALID_BAID       0x7f
+
+#define IWM_RX_MPDU_REORDER_NSSN_MASK          0x00000fff
+#define IWM_RX_MPDU_REORDER_SN_MASK            0x00fff000
+#define IWM_RX_MPDU_REORDER_SN_SHIFT           12
+#define IWM_RX_MPDU_REORDER_BAID_MASK          0x7f000000
+#define IWM_RX_MPDU_REORDER_BAID_SHIFT         24
+#define IWM_RX_MPDU_REORDER_BA_OLD_SN          0x80000000
 
 struct iwm_rx_mpdu_desc {
     uint16_t mpdu_len;
@@ -4229,7 +4435,7 @@ struct iwm_beacon_filter_cmd {
 #define IWM_RATE_VHT_MIMO2_MCS_7_PLCP    0x17
 #define IWM_RATE_VHT_MIMO2_MCS_8_PLCP    0x18
 #define IWM_RATE_VHT_MIMO2_MCS_9_PLCP    0x19
-#define IWM_RATE_HT_SISO_MCS_INV_PLCP    0x20
+#define IWM_RATE_HT_SISO_MCS_INV_PLCP    0x1A
 #define IWM_RATE_HT_MIMO2_MCS_INV_PLCP    IWM_RATE_HT_SISO_MCS_INV_PLCP
 #define IWM_RATE_VHT_SISO_MCS_INV_PLCP    IWM_RATE_HT_SISO_MCS_INV_PLCP
 #define IWM_RATE_VHT_MIMO2_MCS_INV_PLCP    IWM_RATE_HT_SISO_MCS_INV_PLCP
@@ -4276,10 +4482,11 @@ enum {
     IWM_RATE_MCS_13_INDEX,
     IWM_RATE_MCS_14_INDEX,
     IWM_RATE_MCS_15_INDEX,
+    IWM_LAST_VHT_SISO_RATE = IWM_RATE_MCS_13_INDEX,
     IWM_LAST_HT_RATE = IWM_RATE_MCS_15_INDEX,
-    IWM_LAST_VHT_RATE = IWM_RATE_MCS_9_INDEX,
+    IWM_LAST_VHT_RATE = IWM_RATE_MCS_15_INDEX + 3,
     IWM_RATE_COUNT_LEGACY = IWM_LAST_NON_HT_RATE + 1,
-    IWM_RATE_COUNT = IWM_LAST_HT_RATE + 1,
+    IWM_RATE_COUNT = IWM_LAST_VHT_RATE + 1,
 };
 
 #define IWM_RATE_BIT_MSK(r) (1 << (IWM_RATE_##r##M_INDEX))
@@ -4576,6 +4783,7 @@ struct iwm_lq_cmd {
 #define IWM_TX_CMD_FLG_VHT_NDPA        (1 << 8)
 #define IWM_TX_CMD_FLG_HT_NDPA        (1 << 9)
 #define IWM_TX_CMD_FLG_CSI_FDBK2HOST    (1 << 10)
+#define IWM_TX_CMD_FLG_BT_PRIO_POS      11
 #define IWM_TX_CMD_FLG_BT_DIS        (1 << 12)
 #define IWM_TX_CMD_FLG_SEQ_CTL        (1 << 13)
 #define IWM_TX_CMD_FLG_MORE_FRAG    (1 << 14)
@@ -4638,10 +4846,14 @@ struct iwm_lq_cmd {
 #define IWM_TX_CMD_LIFE_TIME_PROBE_RESP    40000 /* 40 ms */
 #define IWM_TX_CMD_LIFE_TIME_EXPIRED_FRAME    0
 
+#define RX_REORDER_BUF_TIMEOUT_MQ_USEC (100000ULL)
+
 /*
  * TID for non QoS frames - to be written in tid_tspec
  */
-#define IWM_TID_NON_QOS    IWM_MAX_TID_COUNT
+#define IWM_MAX_TID_COUNT      8
+#define IWM_TID_NON_QOS    0
+#define IWM_TID_MGMT   15
 
 /*
  * Limits on the retransmissions - to be written in {data,rts}_retry_limit
@@ -4652,13 +4864,38 @@ struct iwm_lq_cmd {
 #define IWM_BAR_DFAULT_RETRY_LIMIT        60
 #define IWM_LOW_RETRY_LIMIT            7
 
+/**
+ * %iwl_tx_cmd offload_assist values
+ * @TX_CMD_OFFLD_IP_HDR: offset to start of IP header (in words)
+ *    from mac header end. For normal case it is 4 words for SNAP.
+ *    note: tx_cmd, mac header and pad are not counted in the offset.
+ *    This is used to help the offload in case there is tunneling such as
+ *    IPv6 in IPv4, in such case the ip header offset should point to the
+ *    inner ip header and IPv4 checksum of the external header should be
+ *    calculated by driver.
+ * @TX_CMD_OFFLD_L4_EN: enable TCP/UDP checksum
+ * @TX_CMD_OFFLD_L3_EN: enable IP header checksum
+ * @TX_CMD_OFFLD_MH_SIZE: size of the mac header in words. Includes the IV
+ *    field. Doesn't include the pad.
+ * @TX_CMD_OFFLD_PAD: mark 2-byte pad was inserted after the mac header for
+ *    alignment
+ * @TX_CMD_OFFLD_AMSDU: mark TX command is A-MSDU
+ */
+#define IWM_TX_CMD_OFFLD_IP_HDR(x)    ((x) << 0)
+#define IWM_TX_CMD_OFFLD_L4_EN        (1 << 6)
+#define IWM_TX_CMD_OFFLD_L3_EN        (1 << 7)
+#define IWM_TX_CMD_OFFLD_MH_SIZE(x)    ((x) << 8)
+#define IWM_TX_CMD_OFFLD_PAD        (1 << 13)
+#define IWM_TX_CMD_OFFLD_AMSDU        (1 << 14)
+#define IWM_TX_CMD_OFFLD_MH_MASK    0x1f
+#define IWM_TX_CMD_OFFLD_IP_HDR_MASK    0x3f
+
 /* TODO: complete documentation for try_cnt and btkill_cnt */
 /**
  * struct iwm_tx_cmd - TX command struct to FW
  * ( IWM_TX_CMD = 0x1c )
  * @len: in bytes of the payload, see below for details
- * @next_frame_len: same as len, but for next frame (0 if not applicable)
- *    Used for fragmentation and bursting, but not in 11n aggregation.
+ * @offload_assist: TX offload configuration
  * @tx_flags: combination of IWM_TX_CMD_FLG_*
  * @rate_n_flags: rate for *all* Tx attempts, if IWM_TX_CMD_FLG_STA_RATE_MSK is
  *    cleared. Combination of IWM_RATE_MCS_*
@@ -4694,7 +4931,7 @@ struct iwm_lq_cmd {
  */
 struct iwm_tx_cmd {
     uint16_t len;
-    uint16_t next_frame_len;
+    uint16_t offload_assist;
     uint32_t tx_flags;
     struct {
         uint8_t try_cnt;
@@ -4720,6 +4957,9 @@ struct iwm_tx_cmd {
     uint8_t payload[0];
     struct ieee80211_frame hdr[0];
 } __packed; /* IWM_TX_CMD_API_S_VER_3 */
+
+/* For aggregation queues, index must be aligned to frame sequence number. */
+#define IWM_AGG_SSN_TO_TXQ_IDX(x)    ((x) & (IWM_TX_RING_COUNT - 1))
 
 /*
  * TX response related data
@@ -4782,7 +5022,7 @@ struct iwm_tx_cmd {
 #define IWM_AGG_TX_STATE_BT_PRIO        0x0002
 #define IWM_AGG_TX_STATE_FEW_BYTES        0x0004
 #define IWM_AGG_TX_STATE_ABORT            0x0008
-#define IWM_AGG_TX_STATE_LAST_SENT_TTL        0x0010
+#define IWM_AGG_TX_STATE_TX_ON_AIR_DROP        0x0010
 #define IWM_AGG_TX_STATE_LAST_SENT_TRY_CNT    0x0020
 #define IWM_AGG_TX_STATE_LAST_SENT_BT_KILL    0x0040
 #define IWM_AGG_TX_STATE_SCD_QUERY        0x0080
@@ -4912,21 +5152,23 @@ struct iwm_tx_resp {
 /**
  * struct iwm_ba_notif - notifies about reception of BA
  * ( IWM_BA_NOTIF = 0xc5 )
- * @sta_addr_lo32: lower 32 bits of the MAC address
- * @sta_addr_hi16: upper 16 bits of the MAC address
+ * @sta_addr: MAC address
  * @sta_id: Index of recipient (BA-sending) station in fw's station table
  * @tid: tid of the session
- * @seq_ctl: sequence control field from IEEE80211 frame header (it is unclear
- *  which frame this relates to; info or reverse engineering welcome)
+ * @seq_ctl: sequence control field from IEEE80211 frame header (the first
+ * bit in @bitmap corresponds to the sequence number stored here)
  * @bitmap: the bitmap of the BA notification as seen in the air
  * @scd_flow: the tx queue this BA relates to
  * @scd_ssn: the index of the last contiguously sent packet
  * @txed: number of Txed frames in this batch
  * @txed_2_done: number of Acked frames in this batch
+ * @reduced_txp: power reduced according to TPC. This is the actual value and
+ *     not a copy from the LQ command. Thus, if not the first rate was used
+ *     for Tx-ing then this value will be set to 0 by FW.
+ * @reserved1: reserved
  */
 struct iwm_ba_notif {
-    uint32_t sta_addr_lo32;
-    uint16_t sta_addr_hi16;
+    uint8_t sta_addr[ETHER_ADDR_LEN];
     uint16_t reserved;
 
     uint8_t sta_id;
@@ -4937,7 +5179,8 @@ struct iwm_ba_notif {
     uint16_t scd_ssn;
     uint8_t txed;
     uint8_t txed_2_done;
-    uint16_t reserved1;
+    uint8_t reduced_txp;
+    uint8_t reserved1;
 } __packed;
 
 /*
@@ -4976,11 +5219,23 @@ struct iwm_beacon_notif {
  * @flush_ctl: control flags
  * @reserved: reserved
  */
-struct iwm_tx_path_flush_cmd {
+struct iwm_tx_path_flush_cmd_v1 {
     uint32_t queues_ctl;
     uint16_t flush_ctl;
     uint16_t reserved;
 } __packed; /* IWM_TX_PATH_FLUSH_CMD_API_S_VER_1 */
+
+/**
+ * struct iwl_tx_path_flush_cmd -- queue/FIFO flush command
+ * @sta_id: station ID to flush
+ * @tid_mask: TID mask to flush
+ * @reserved: reserved
+ */
+struct iwm_tx_path_flush_cmd {
+    uint32_t sta_id;
+    uint16_t tid_mask;
+    uint16_t reserved;
+} __packed; /* TX_PATH_FLUSH_CMD_API_S_VER_2 */
 
 /**
  * iwm_get_scd_ssn - returns the SSN of the SCD
@@ -5040,6 +5295,25 @@ struct iwm_scd_txq_cfg_rsp {
     uint8_t scd_queue;
 } __packed; /* SCD_QUEUE_CFG_RSP_API_S_VER_1 */
 
+struct iwm_txq_scd_cfg {
+    uint8_t fifo;
+    uint8_t sta_id;
+    uint8_t tid;
+    bool aggregate;
+    int frame_limit;
+};
+
+const uint8_t tid_to_mac80211_ac[] = {
+    EDCA_AC_BE,
+    EDCA_AC_BK,
+    EDCA_AC_BK,
+    EDCA_AC_BE,
+    EDCA_AC_VI,
+    EDCA_AC_VI,
+    EDCA_AC_VO,
+    EDCA_AC_VO,
+    EDCA_AC_VO, /* We treat MGMT as TID 8, which is set as AC_VO */
+};
 
 /* Scan Commands, Responses, Notifications */
 
@@ -5503,6 +5777,16 @@ struct iwm_scan_config {
 #define IWM_UMAC_SCAN_GEN_FLAGS_PROB_REQ_HIGH_TX_RATE    (1 << 15)
 
 /**
+ * UMAC scan general flags #2
+ * @IWM_UMAC_SCAN_GEN_FLAGS2_NOTIF_PER_CHNL: Whether to send a complete
+ *    notification per channel or not.
+ * @IWM_UMAC_SCAN_GEN_FLAGS2_ALLOW_CHNL_REORDER: Whether to allow channel
+ *    reorder optimization or not.
+ */
+#define IWM_UMAC_SCAN_GEN_FLAGS2_NOTIF_PER_CHNL        (1 << 0)
+#define IWM_UMAC_SCAN_GEN_FLAGS2_ALLOW_CHNL_REORDER    (1 << 1)
+
+/**
  * struct iwm_scan_channel_cfg_umac
  * @flags:        bitmap - 0-19:    directed scan to i'th ssid.
  * @channel_num:    channel number 1-13 etc.
@@ -5848,7 +6132,9 @@ struct iwm_umac_scan_iter_complete_notif {
 #define IWM_STA_FLG_MAX_AGG_SIZE_256K    (5 << IWM_STA_FLG_MAX_AGG_SIZE_SHIFT)
 #define IWM_STA_FLG_MAX_AGG_SIZE_512K    (6 << IWM_STA_FLG_MAX_AGG_SIZE_SHIFT)
 #define IWM_STA_FLG_MAX_AGG_SIZE_1024K    (7 << IWM_STA_FLG_MAX_AGG_SIZE_SHIFT)
-#define IWM_STA_FLG_MAX_AGG_SIZE_MSK    (7 << IWM_STA_FLG_MAX_AGG_SIZE_SHIFT)
+#define IWM_STA_FLG_MAX_AGG_SIZE_2M    (8 << IWM_STA_FLG_MAX_AGG_SIZE_SHIFT)
+#define IWM_STA_FLG_MAX_AGG_SIZE_4M    (9 << IWM_STA_FLG_MAX_AGG_SIZE_SHIFT)
+#define IWM_STA_FLG_MAX_AGG_SIZE_MSK    (0xf << IWM_STA_FLG_MAX_AGG_SIZE_SHIFT)
 
 #define IWM_STA_FLG_AGG_MPDU_DENS_SHIFT    23
 #define IWM_STA_FLG_AGG_MPDU_DENS_2US    (4 << IWM_STA_FLG_AGG_MPDU_DENS_SHIFT)
@@ -6336,7 +6622,7 @@ struct iwm_mcc_update_resp_v1  {
 } __packed; /* LAR_UPDATE_MCC_CMD_RESP_S_VER_1 */
 
 /**
- * iwm_mcc_update_resp - response to MCC_UPDATE_CMD.
+ * iwm_mcc_update_resp_v2 - response to MCC_UPDATE_CMD.
  * Contains the new channel control profile map, if changed, and the new MCC
  * (mobile country code).
  * The new MCC may be different than what was requested in MCC_UPDATE_CMD.
@@ -6351,7 +6637,7 @@ struct iwm_mcc_update_resp_v1  {
  * @channels: channel control data map, DWORD for each channel. Only the first
  *    16bits are used.
  */
-struct iwm_mcc_update_resp {
+struct iwm_mcc_update_resp_v2 {
     uint32_t status;
     uint16_t mcc;
     uint8_t cap;
@@ -6361,6 +6647,36 @@ struct iwm_mcc_update_resp {
     uint32_t n_channels;
     uint32_t channels[0];
 } __packed; /* LAR_UPDATE_MCC_CMD_RESP_S_VER_2 */
+
+#define IWM_GEO_NO_INFO            0
+#define IWM_GEO_WMM_ETSI_5GHZ_INFO    (1 << 0)
+
+/**
+ * iwm_mcc_update_resp_v3 - response to MCC_UPDATE_CMD.
+ * Contains the new channel control profile map, if changed, and the new MCC
+ * (mobile country code).
+ * The new MCC may be different than what was requested in MCC_UPDATE_CMD.
+ * @status: see &enum iwm_mcc_update_status
+ * @mcc: the new applied MCC
+ * @cap: capabilities for all channels which matches the MCC
+ * @source_id: the MCC source, see IWM_MCC_SOURCE_*
+ * @time: time elapsed from the MCC test start (in 30 seconds TU)
+ * @geo_info: geographic specific profile information
+ * @n_channels: number of channels in @channels_data (may be 14, 39, 50 or 51
+ *        channels, depending on platform)
+ * @channels: channel control data map, DWORD for each channel. Only the first
+ *    16bits are used.
+ */
+struct iwm_mcc_update_resp_v3 {
+    uint32_t status;
+    uint16_t mcc;
+    uint8_t cap;
+    uint8_t source_id;
+    uint16_t time;
+    uint16_t geo_info;
+    uint32_t n_channels;
+    uint32_t channels[0];
+} __packed; /* LAR_UPDATE_MCC_CMD_RESP_S_VER_3 */
 
 /**
  * struct iwm_mcc_chub_notif - chub notifies of mcc change

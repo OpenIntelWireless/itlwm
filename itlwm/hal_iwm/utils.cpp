@@ -11,7 +11,7 @@
 * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 * GNU General Public License for more details.
 */
-/*    $OpenBSD: if_iwm.c,v 1.313 2020/07/10 13:22:20 patrick Exp $    */
+/*    $OpenBSD: if_iwm.c,v 1.316 2020/12/07 20:09:24 tobhe Exp $    */
 
 /*
  * Copyright (c) 2014, 2016 genua gmbh <info@genua.de>
@@ -128,8 +128,11 @@ iwm_send_bt_init_conf(struct iwm_softc *sc)
     XYLog("%s\n", __FUNCTION__);
     struct iwm_bt_coex_cmd bt_cmd;
     
-    bt_cmd.mode = htole32(IWM_BT_COEX_WIFI);
-    bt_cmd.enabled_modules = htole32(IWM_BT_COEX_HIGH_BAND_RET);
+    bt_cmd.mode = htole32(IWM_BT_COEX_NW);
+    bt_cmd.enabled_modules = htole32(IWM_BT_COEX_HIGH_BAND_RET | IWM_BT_COEX_SYNC2SCO_ENABLED);
+    
+    if (isset(sc->sc_enabled_capa, IWM_UCODE_TLV_CAPA_BT_MPLUT_SUPPORT))
+        bt_cmd.enabled_modules |= IWM_BT_COEX_MPLUT_ENABLED;
     
     return iwm_send_cmd_pdu(sc, IWM_BT_CONFIG, 0, sizeof(bt_cmd),
                             &bt_cmd);

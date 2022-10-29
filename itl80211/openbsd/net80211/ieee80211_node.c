@@ -96,6 +96,7 @@ void ieee80211_node_join_ht(struct ieee80211com *, struct ieee80211_node *);
 void ieee80211_node_join_rsn(struct ieee80211com *, struct ieee80211_node *);
 void ieee80211_node_join_11g(struct ieee80211com *, struct ieee80211_node *);
 void ieee80211_node_leave_ht(struct ieee80211com *, struct ieee80211_node *);
+void ieee80211_node_leave_vht(struct ieee80211com *, struct ieee80211_node *);
 void ieee80211_node_leave_rsn(struct ieee80211com *, struct ieee80211_node *);
 void ieee80211_node_leave_11g(struct ieee80211com *, struct ieee80211_node *);
 void ieee80211_inact_timeout(void *);
@@ -491,6 +492,12 @@ ieee80211_ess_calculate_score(struct ieee80211com *ic,
         ni->ni_rssi > min_5ghz_rssi)
         score += 2;
     
+    /* HT/VHT available */
+    if (ieee80211_node_supports_ht(ni))
+        score++;
+    if (ieee80211_node_supports_vht(ni))
+        score++;
+    
     /* Boost this AP if it had no auth/assoc failures in the past. */
     if (ni->ni_fails == 0)
         score += 21;
@@ -504,6 +511,7 @@ ieee80211_ess_calculate_score(struct ieee80211com *ic,
  *
  *  crypto: wpa2 > wpa1 > wep > open
  *  band: 5 GHz > 2 GHz provided 5 GHz rssi is above threshold
+ *  supported standard revisions: 11ac > 11n > 11a/b/g
  *  rssi: rssi1 > rssi2 as a numeric comparison with a slight
  *         disadvantage for 2 GHz APs
  *
@@ -968,8 +976,8 @@ ieee80211_create_ibss(struct ieee80211com* ic, struct ieee80211_channel *chan)
         ni->ni_htop1 = IEEE80211_HTPROT_NONE;
         /* Disallow Greenfield mode. None of our drivers support it. */
         ni->ni_htop1 |= IEEE80211_HTOP1_NONGF_STA;
-        if (ic->ic_update_htprot)
-            ic->ic_update_htprot(ic, ni);
+        if (ic->ic_updateprot)
+            ic->ic_updateprot(ic);
         
         /* Configure QoS EDCA parameters. */
         for (aci = 0; aci < EDCA_NUM_AC; aci++) {
@@ -1049,7 +1057,8 @@ ieee80211_match_bss(struct ieee80211com *ic, struct ieee80211_node *ni,
     int fail;
     
     fail = 0;
-    if (isclr(ic->ic_chan_active, ieee80211_chan2ieee(ic, ni->ni_chan)))
+    if ((ic->ic_flags & IEEE80211_F_BGSCAN) == 0 &&
+        isclr(ic->ic_chan_active, ieee80211_chan2ieee(ic, ni->ni_chan)))
         fail |= IEEE80211_NODE_ASSOCFAIL_CHAN;
     if (ic->ic_des_chan != IEEE80211_CHAN_ANYC &&
         ni->ni_chan != ic->ic_des_chan)
@@ -1327,7 +1336,7 @@ ieee80211_node_choose_bss(struct ieee80211com *ic, int bgscan,
              */
             if (ni->ni_fails++ > 2)
                 ieee80211_free_node(ic, ni);
-            DPRINTF(("%s ni->ni_fails==TRUE\n", __FUNCTION__));
+            DPRINTF(("%s %s ni->ni_fails=%d\n", __FUNCTION__, ni->ni_essid, ni->ni_fails));
             continue;
         }
         
@@ -1367,7 +1376,7 @@ ieee80211_node_choose_bss(struct ieee80211com *ic, int bgscan,
     if (selbs2 != NULL) {
         XYLog("%s 2ghz ssid=%s mac=%s rssi=%d\n", __FUNCTION__, selbs2->ni_essid, ether_sprintf(selbs2->ni_bssid), selbs2->ni_rssi);
     }
-    if (selbs5 && selbs5->ni_rssi > min_5ghz_rssi)
+    if (selbs5 && (*ic->ic_node_checkrssi)(ic, selbs5))
         selbs = selbs5;
     else if (selbs5 && selbs2)
         selbs = (selbs5->ni_rssi >= selbs2->ni_rssi ? selbs5 : selbs2);
@@ -1390,6 +1399,9 @@ ieee80211_end_scan(struct _ifnet *ifp)
     int bgscan = ((ic->ic_flags & IEEE80211_F_BGSCAN) &&
                   ic->ic_opmode == IEEE80211_M_STA &&
                   ic->ic_state == IEEE80211_S_RUN);
+    
+    if (ic->ic_event_handler)
+        (*ic->ic_event_handler)(ic, IEEE80211_EVT_SCAN_DONE, NULL);
     
     if (ifp->if_flags & IFF_DEBUG)
         XYLog("%s: end %s scan\n", ifp->if_xname,
@@ -1446,19 +1458,21 @@ ieee80211_end_scan(struct _ifnet *ifp)
             return;
         }
 #endif
-        /*
-         * Reset the list of channels to scan and scan the next mode
-         * if nothing has been found.
-         * If the device scans all bands in one fell swoop, return
-         * current scan results to userspace regardless of mode.
-         * This will loop forever until an access point is found.
-         */
-        ieee80211_reset_scan(ifp);
-        if (ieee80211_next_mode(ifp) == IEEE80211_MODE_AUTO ||
-            (ic->ic_caps & IEEE80211_C_SCANALLBAND))
-            ic->ic_scan_count++;
-        
-        ieee80211_next_scan(ifp);
+        if (ic->ic_state != IEEE80211_S_RUN) {
+            /*
+             * Reset the list of channels to scan and scan the next mode
+             * if nothing has been found.
+             * If the device scans all bands in one fell swoop, return
+             * current scan results to userspace regardless of mode.
+             * This will loop forever until an access point is found.
+             */
+            ieee80211_reset_scan(ifp);
+            if (ieee80211_next_mode(ifp) == IEEE80211_MODE_AUTO ||
+                (ic->ic_caps & IEEE80211_C_SCANALLBAND))
+                ic->ic_scan_count++;
+            
+            ieee80211_next_scan(ifp);
+        }
         return;
     }
     
@@ -1474,6 +1488,7 @@ ieee80211_end_scan(struct _ifnet *ifp)
         if (selbs == NULL || curbs == NULL) {
             ic->ic_flags &= ~IEEE80211_F_BGSCAN;
             ic->ic_flags &= ~IEEE80211_F_DISABLE_BG_AUTO_CONNECT;
+            XYLog("%s %d AP disappeared? Should not happen.\n", __FUNCTION__, __LINE__);
             goto notfound;
         }
         
@@ -1494,8 +1509,10 @@ ieee80211_end_scan(struct _ifnet *ifp)
               * may not carry HT information.
               */
              ni = ic->ic_bss;
-             if (ni->ni_flags & IEEE80211_NODE_VHT)
-                 ieee80211_setmode(ic, IEEE80211_MODE_11AC);
+             if (ni->ni_flags & IEEE80211_NODE_HE)
+                 ieee80211_setmode(ic, IEEE80211_MODE_11AX);
+             else if (ni->ni_flags & IEEE80211_NODE_VHT)
+                ieee80211_setmode(ic, IEEE80211_MODE_11AC);
              else if (ni->ni_flags & IEEE80211_NODE_HT)
                  ieee80211_setmode(ic, IEEE80211_MODE_11N);
              else
@@ -1743,7 +1760,7 @@ ieee80211_setup_node(struct ieee80211com *ic,
 {
     int i, s;
     
-    XYLog("%s %s\n", __FUNCTION__, ether_sprintf((u_int8_t *)macaddr));
+    DPRINTF(("%s %s\n", __FUNCTION__, ether_sprintf((u_int8_t *)macaddr)));
     IEEE80211_ADDR_COPY(ni->ni_macaddr, macaddr);
     ieee80211_node_newstate(ni, IEEE80211_STA_CACHE);
     
@@ -1999,30 +2016,6 @@ ieee80211_find_rxnode(struct ieee80211com *ic,
     return ieee80211_ref_node(ni);
 }
 
-struct ieee80211_node *
-ieee80211_find_node_for_beacon(struct ieee80211com *ic,
-                               const u_int8_t *macaddr, const struct ieee80211_channel *chan,
-                               const char *ssid, u_int8_t rssi)
-{
-    struct ieee80211_node *ni, *keep = NULL;
-    int s, score = 0;
-    
-    if ((ni = ieee80211_find_node(ic, macaddr)) != NULL) {
-        s = splnet();
-        
-        if (ni->ni_chan != chan && ni->ni_rssi >= rssi)
-            score++;
-        if (ssid[1] == 0 && ni->ni_esslen != 0)
-            score++;
-        if (score > 0)
-            keep = ni;
-        
-        splx(s);
-    }
-    
-    return (keep);
-}
-
 void
 ieee80211_ba_del(struct ieee80211_node *ni)
 {
@@ -2078,7 +2071,7 @@ void ieee80211_ba_free(struct ieee80211_node *ni)
 void
 ieee80211_free_node(struct ieee80211com *ic, struct ieee80211_node *ni)
 {
-    XYLog("%s\n", __FUNCTION__);
+    DPRINTF(("%s %s %s\n", __FUNCTION__, ni->ni_essid, ether_sprintf(ni->ni_bssid)));
     if (ni == ic->ic_bss)
         panic("freeing bss node");
     
@@ -2165,6 +2158,27 @@ ieee80211_clean_cached(struct ieee80211com *ic)
         next_ni = RB_NEXT(ieee80211_tree, &ic->ic_tree, ni);
         if (ni->ni_state == IEEE80211_STA_CACHE)
             ieee80211_free_node(ic, ni);
+    }
+    splx(s);
+}
+
+void
+ieee80211_clean_sta_bss_node(struct ieee80211com *ic)
+{
+    struct ieee80211_node *ni, *next_ni;
+    int s;
+    
+    s = splnet();
+    if (ic->ic_bss == NULL)
+        return;
+
+    for (ni = RB_MIN(ieee80211_tree, &ic->ic_tree);
+         ni != NULL; ni = next_ni) {
+        next_ni = RB_NEXT(ieee80211_tree, &ic->ic_tree, ni);
+        if (ni->ni_state == IEEE80211_STA_BSS) {
+            if (memcmp(ic->ic_bss->ni_bssid, ni->ni_bssid, IEEE80211_ADDR_LEN) != 0)
+                ieee80211_node_newstate(ni, IEEE80211_STA_CACHE);
+        }
     }
     splx(s);
 }
@@ -2294,8 +2308,8 @@ ieee80211_clean_nodes(struct ieee80211com *ic, int cache_timeout)
             htop1 |= htprot;
             ic->ic_bss->ni_htop1 = htop1;
             ic->ic_protmode = protmode;
-            if (ic->ic_update_htprot)
-                ic->ic_update_htprot(ic, ic->ic_bss);
+            if (ic->ic_updateprot)
+                ic->ic_updateprot(ic);
         }
     }
     
@@ -2365,6 +2379,18 @@ ieee80211_setup_htcaps(struct ieee80211_node *ni, const uint8_t *data,
         return;
     
     ni->ni_htcaps = (data[0] | (data[1] << 8));
+    ni->ni_htcaps &= le16toh(ni->ni_ic->ic_htcaps |
+                             ~(IEEE80211_HTCAP_CBW20_40 |
+                               IEEE80211_HTCAP_SGI40 |
+                               IEEE80211_HTCAP_SGI20 |
+                               IEEE80211_HTCAP_GF |
+                               IEEE80211_HTCAP_LDPC |
+                               IEEE80211_HTCAP_DSSSCCK40));
+    if (!(ni->ni_ic->ic_htcaps & IEEE80211_HTCAP_TXSTBC))
+        ni->ni_htcaps &= ~IEEE80211_HTCAP_RXSTBC_MASK;
+    if (!(ni->ni_ic->ic_htcaps & IEEE80211_HTCAP_RXSTBC_MASK))
+        ni->ni_htcaps &= ~IEEE80211_HTCAP_TXSTBC;
+    
     ni->ni_ampdu_param = data[2];
     
     memcpy(ni->ni_rxmcs, &data[3], sizeof(ni->ni_rxmcs));
@@ -2433,6 +2459,370 @@ ieee80211_setup_htop(struct ieee80211_node *ni, const uint8_t *data,
     if (isprobe)
         memcpy(ni->ni_basic_mcs, &data[6], sizeof(ni->ni_basic_mcs));
     
+    return 1;
+}
+
+/*
+ * Parse an 802.11ac VHT operation IE.
+ */
+void
+ieee80211_setup_vhtopmode(struct ieee80211_node *ni, const uint8_t *ie)
+{
+    /* vht operation */
+    struct ieee80211_ie_vht_operation *op = (struct ieee80211_ie_vht_operation *)ie;
+    ni->ni_vht_chanwidth = op->chan_width;
+    ni->ni_vht_chan1 = op->center_freq_seg1_idx;
+    ni->ni_vht_chan2 = op->center_freq_seg2_idx;
+    ni->ni_vht_basicmcs = op->basic_mcs_set;
+
+    DPRINTF(("%s: chan1=%d, chan2=%d, chanwidth=%d, basicmcs=0x%04x\n",
+        __func__,
+        ni->ni_vht_chan1,
+        ni->ni_vht_chan2,
+        ni->ni_vht_chanwidth,
+        ni->ni_vht_basicmcs));
+}
+
+/*
+ * Parse an 802.11ac VHT capability IE.
+ */
+void
+ieee80211_setup_vhtcaps(struct ieee80211com *ic, struct ieee80211_node *ni, const uint8_t *ie)
+{
+    uint32_t val, val1, val2;
+    int i;
+    uint16_t rx_mcs_map;
+    uint16_t rx_highest;
+    uint16_t tx_mcs_map;
+    uint16_t tx_highest;
+    
+    uint32_t own_vhtcap = ic->ic_vhtcaps;
+    uint32_t new_vhtcap = 0, peer_vhtcap;
+    /* vht capability */
+    peer_vhtcap = le32dec(ie + 2);
+    /* suppmcs */
+    rx_mcs_map = le16dec(ie + 6);
+    rx_highest = le16dec(ie + 8);
+    tx_mcs_map = le16dec(ie + 10);
+    tx_highest = le16dec(ie + 12);
+    
+#define    MS(_v, _f)    (((_v) & _f) >> _f##_S)
+#define    SM(_v, _f)    (((_v) << _f##_S) & _f)
+    
+    val1 = MS(own_vhtcap, IEEE80211_VHTCAP_MAX_MPDU_MASK);
+    val2 = MS(peer_vhtcap, IEEE80211_VHTCAP_MAX_MPDU_MASK);
+    val = MIN(val1, val2);
+    new_vhtcap |= SM(val, IEEE80211_VHTCAP_MAX_MPDU_MASK);
+    
+    /* Supported Channel Width */
+    val1 = MS(own_vhtcap,
+              IEEE80211_VHTCAP_SUPP_CHAN_WIDTH_MASK);
+    val2 = MS(peer_vhtcap,
+              IEEE80211_VHTCAP_SUPP_CHAN_WIDTH_MASK);
+    if ((val2 == 2) &&
+        ((own_vhtcap & IEEE80211_VHTCAP_SUPP_CHAN_WIDTH_160_80P80MHZ) == 0))
+        val2 = 1;
+    if ((val2 == 1) &&
+        ((own_vhtcap & IEEE80211_VHTCAP_SUPP_CHAN_WIDTH_160MHZ) == 0))
+        val2 = 0;
+    val = MIN(val1, val2);
+    new_vhtcap |= SM(val, IEEE80211_VHTCAP_SUPP_CHAN_WIDTH_MASK);
+    
+    /* RX LDPC */
+    val1 = MS(own_vhtcap, IEEE80211_VHTCAP_RXLDPC);
+    val2 = MS(peer_vhtcap, IEEE80211_VHTCAP_RXLDPC);
+    val = MIN(val1, val2);
+    new_vhtcap |= SM(val, IEEE80211_VHTCAP_RXLDPC);
+    
+    /* Short-GI 80 */
+    val1 = MS(own_vhtcap, IEEE80211_VHTCAP_SHORT_GI_80);
+    val2 = MS(peer_vhtcap, IEEE80211_VHTCAP_SHORT_GI_80);
+    val = MIN(val1, val2);
+    new_vhtcap |= SM(val, IEEE80211_VHTCAP_SHORT_GI_80);
+    
+    /* Short-GI 160 */
+    val2 = val1 = MS(own_vhtcap, IEEE80211_VHTCAP_SHORT_GI_160);
+    val2 = MS(peer_vhtcap, IEEE80211_VHTCAP_SHORT_GI_160);
+    val = MIN(val1, val2);
+    new_vhtcap |= SM(val, IEEE80211_VHTCAP_SHORT_GI_160);
+    
+    /*
+     * STBC is slightly more complicated.
+     *
+     * In non-STA mode, we just announce our capabilities and that
+     * is that.
+     *
+     * In STA mode, we should calculate our capabilities based on
+     * local capabilities /and/ what the remote says. So:
+     *
+     * + Only TX STBC if we support it and the remote supports RX STBC;
+     * + Only announce RX STBC if we support it and the remote supports
+     *   TX STBC;
+     * + RX STBC should be the minimum of local and remote RX STBC;
+     */
+    
+    /* TX STBC */
+    val1 = MS(own_vhtcap, IEEE80211_VHTCAP_TXSTBC);
+    /* STA mode - enable it only if node RXSTBC is non-zero */
+    val2 = !! MS(peer_vhtcap, IEEE80211_VHTCAP_RXSTBC_MASK);
+    val = MIN(val1, val2);
+    /* XXX For now, use the 11n config flag */
+    if ((ic->ic_htcaps & IEEE80211_HTCAP_TXSTBC) == 0)
+        val = 0;
+    new_vhtcap |= SM(val, IEEE80211_VHTCAP_TXSTBC);
+    
+    /* RX STBC1..4 */
+    val1 = MS(own_vhtcap, IEEE80211_VHTCAP_RXSTBC_MASK);
+    /* STA mode - enable it only if node TXSTBC is non-zero */
+    val2 = MS(peer_vhtcap, IEEE80211_VHTCAP_TXSTBC);
+    val = MIN(val1, val2);
+    /* XXX For now, use the 11n config flag */
+    if ((ic->ic_htcaps & IEEE80211_HTCAP_RXSTBC_MASK) == 0)
+        val = 0;
+    new_vhtcap |= SM(val, IEEE80211_VHTCAP_RXSTBC_MASK);
+    
+    /*
+     * Finally - if RXSTBC is 0, then don't enable TXSTBC.
+     * Strictly speaking a device can TXSTBC and not RXSTBC, but
+     * it would be silly.
+     */
+    if (val == 0)
+        new_vhtcap &= ~IEEE80211_VHTCAP_TXSTBC;
+    
+    /*
+     * Some of these fields require other fields to exist.
+     * So before using it, the parent field needs to be checked
+     * otherwise the overridden value may be wrong.
+     *
+     * For example, if SU beamformee is set to 0, then BF STS
+     * needs to be 0.
+     */
+    
+    /* SU Beamformer capable */
+    val1 = MS(own_vhtcap,
+              IEEE80211_VHTCAP_SU_BEAMFORMER_CAPABLE);
+    val2 = MS(peer_vhtcap,
+              IEEE80211_VHTCAP_SU_BEAMFORMER_CAPABLE);
+    val = MIN(val1, val2);
+    new_vhtcap |= SM(val, IEEE80211_VHTCAP_SU_BEAMFORMER_CAPABLE);
+    
+    /* SU Beamformee capable */
+    val1 = MS(own_vhtcap,
+              IEEE80211_VHTCAP_SU_BEAMFORMEE_CAPABLE);
+    val2 = MS(peer_vhtcap,
+              IEEE80211_VHTCAP_SU_BEAMFORMEE_CAPABLE);
+    val = MIN(val1, val2);
+    new_vhtcap |= SM(val, IEEE80211_VHTCAP_SU_BEAMFORMEE_CAPABLE);
+    
+    /* Beamformee STS capability - only if SU beamformee capable */
+    val1 = MS(own_vhtcap, IEEE80211_VHTCAP_BEAMFORMEE_STS_MASK);
+    val2 = MS(peer_vhtcap, IEEE80211_VHTCAP_BEAMFORMEE_STS_MASK);
+    val = MIN(val1, val2);
+    if ((new_vhtcap & IEEE80211_VHTCAP_SU_BEAMFORMEE_CAPABLE) == 0)
+        val = 0;
+    new_vhtcap |= SM(val, IEEE80211_VHTCAP_BEAMFORMEE_STS_MASK);
+    
+    /* Sounding dimensions - only if SU beamformer capable */
+    val1 = MS(own_vhtcap,
+              IEEE80211_VHTCAP_SOUNDING_DIMENSIONS_MASK);
+    val2 = MS(peer_vhtcap,
+              IEEE80211_VHTCAP_SOUNDING_DIMENSIONS_MASK);
+    val = MIN(val1, val2);
+    if ((new_vhtcap & IEEE80211_VHTCAP_SU_BEAMFORMER_CAPABLE) == 0)
+        val = 0;
+    new_vhtcap |= SM(val, IEEE80211_VHTCAP_SOUNDING_DIMENSIONS_MASK);
+    
+    /*
+     * MU Beamformer capable - only if SU BFF capable, MU BFF capable
+     * and STA (not AP)
+     */
+    val1 = MS(own_vhtcap,
+              IEEE80211_VHTCAP_MU_BEAMFORMER_CAPABLE);
+    val2 = MS(peer_vhtcap,
+              IEEE80211_VHTCAP_MU_BEAMFORMER_CAPABLE);
+    val = MIN(val1, val2);
+    if ((new_vhtcap & IEEE80211_VHTCAP_SU_BEAMFORMER_CAPABLE) == 0)
+        val = 0;
+    /* Only enable for STA mode */
+    new_vhtcap |= SM(val, IEEE80211_VHTCAP_SU_BEAMFORMER_CAPABLE);
+    
+    /*
+     * MU Beamformee capable - only if SU BFE capable, MU BFE capable
+     * and AP (not STA)
+     */
+    /* Only enable for AP mode */
+    val = 0;
+    new_vhtcap |= SM(val, IEEE80211_VHTCAP_SU_BEAMFORMEE_CAPABLE);
+    
+    /* VHT TXOP PS */
+    val1 = MS(own_vhtcap, IEEE80211_VHTCAP_VHT_TXOP_PS);
+    val2 = MS(peer_vhtcap, IEEE80211_VHTCAP_VHT_TXOP_PS);
+    val = MIN(val1, val2);
+    new_vhtcap |= SM(val, IEEE80211_VHTCAP_VHT_TXOP_PS);
+    
+    /* HTC_VHT */
+    val1 = MS(own_vhtcap, IEEE80211_VHTCAP_HTC_VHT);
+    val2 = MS(peer_vhtcap, IEEE80211_VHTCAP_HTC_VHT);
+    val = MIN(val1, val2);
+    new_vhtcap |= SM(val, IEEE80211_VHTCAP_HTC_VHT);
+    
+    /* A-MPDU length max */
+    val1 = MS(own_vhtcap,
+              IEEE80211_VHTCAP_MAX_A_MPDU_LENGTH_EXPONENT_MASK);
+    val2 = MS(peer_vhtcap,
+              IEEE80211_VHTCAP_MAX_A_MPDU_LENGTH_EXPONENT_MASK);
+    val = MIN(val1, val2);
+    new_vhtcap |= SM(val, IEEE80211_VHTCAP_MAX_A_MPDU_LENGTH_EXPONENT_MASK);
+    
+    /*
+     * Link adaptation is only valid if HTC-VHT capable is 1.
+     * Otherwise, always set it to 0.
+     */
+    val1 = MS(own_vhtcap,
+              IEEE80211_VHTCAP_VHT_LINK_ADAPTATION_VHT_MASK);
+    val2 = MS(peer_vhtcap,
+              IEEE80211_VHTCAP_VHT_LINK_ADAPTATION_VHT_MASK);
+    val = MIN(val1, val2);
+    if ((new_vhtcap & IEEE80211_VHTCAP_HTC_VHT) == 0)
+        val = 0;
+    new_vhtcap |= SM(val, IEEE80211_VHTCAP_VHT_LINK_ADAPTATION_VHT_MASK);
+    
+    /*
+     * The following two options are 0 if the pattern may change, 1 if it
+     * does not change.  So, downgrade to the higher value.
+     */
+    
+    /* RX antenna pattern */
+    val1 = MS(own_vhtcap, IEEE80211_VHTCAP_RX_ANTENNA_PATTERN);
+    val2 = MS(peer_vhtcap, IEEE80211_VHTCAP_RX_ANTENNA_PATTERN);
+    val = MAX(val1, val2);
+    new_vhtcap |= SM(val, IEEE80211_VHTCAP_RX_ANTENNA_PATTERN);
+    
+    /* TX antenna pattern */
+    val1 = MS(own_vhtcap, IEEE80211_VHTCAP_TX_ANTENNA_PATTERN);
+    val2 = MS(peer_vhtcap, IEEE80211_VHTCAP_TX_ANTENNA_PATTERN);
+    val = MAX(val1, val2);
+    new_vhtcap |= SM(val, IEEE80211_VHTCAP_TX_ANTENNA_PATTERN);
+    
+    /* copy EXT_NSS_BW Support value or remove the capability */
+    if (ic->ic_caps & IEEE80211_C_SUPPORTS_VHT_EXT_NSS_BW) {
+        new_vhtcap |= IEEE80211_VHTCAP_EXT_NSS_BW_MASK;
+    } else {
+        tx_highest &= ~htole16(IEEE80211_VHT_EXT_NSS_BW_CAPABLE);
+    }
+    
+#undef SM
+#undef MS
+    ni->ni_vhtcaps = new_vhtcap;
+    
+    /*
+     * MCS set - again, we announce what we want to use
+     * based on configuration, device capabilities and
+     * already-learnt vhtcap/vhtinfo IE information.
+     */
+
+    /* MCS set - start with whatever the device supports */
+    for (i = 0; i < 8; i++) {
+        uint16_t own_rx, own_tx, peer_rx, peer_tx;
+        
+        own_rx = le16toh(ic->ic_vht_rx_mcs_map);
+        own_rx = (own_rx >> i * 2) & IEEE80211_VHT_MCS_NOT_SUPPORTED;
+
+        own_tx = le16toh(ic->ic_vht_tx_mcs_map);
+        own_tx = (own_tx >> i * 2) & IEEE80211_VHT_MCS_NOT_SUPPORTED;
+
+        peer_rx = le16toh(rx_mcs_map);
+        peer_rx = (peer_rx >> i * 2) & IEEE80211_VHT_MCS_NOT_SUPPORTED;
+
+        peer_tx = le16toh(tx_mcs_map);
+        peer_tx = (peer_tx >> i * 2) & IEEE80211_VHT_MCS_NOT_SUPPORTED;
+
+        if (peer_tx != IEEE80211_VHT_MCS_NOT_SUPPORTED) {
+            if (own_rx == IEEE80211_VHT_MCS_NOT_SUPPORTED)
+                peer_tx = IEEE80211_VHT_MCS_NOT_SUPPORTED;
+            else if (own_rx < peer_tx)
+                peer_tx = own_rx;
+        }
+
+        if (peer_rx != IEEE80211_VHT_MCS_NOT_SUPPORTED) {
+            if (own_tx == IEEE80211_VHT_MCS_NOT_SUPPORTED)
+                peer_rx = IEEE80211_VHT_MCS_NOT_SUPPORTED;
+            else if (own_tx < peer_rx)
+                peer_rx = own_tx;
+        }
+
+        rx_mcs_map &=
+            ~cpu_to_le16(IEEE80211_VHT_MCS_NOT_SUPPORTED << i * 2);
+        rx_mcs_map |= cpu_to_le16(peer_rx << i * 2);
+
+        tx_mcs_map &=
+            ~cpu_to_le16(IEEE80211_VHT_MCS_NOT_SUPPORTED << i * 2);
+        tx_mcs_map |= cpu_to_le16(peer_tx << i * 2);
+    }
+    ni->ni_vht_mcsinfo.rx_mcs_map = rx_mcs_map;
+    ni->ni_vht_mcsinfo.tx_mcs_map = tx_mcs_map;
+    ni->ni_vht_mcsinfo.tx_highest = tx_highest;
+    ni->ni_vht_mcsinfo.rx_highest = rx_highest;
+    
+    ni->ni_flags |= IEEE80211_NODE_VHTCAP;
+}
+
+#ifndef IEEE80211_STA_ONLY
+/*
+ * Handle nodes switching from 11ac into legacy modes.
+ */
+void
+ieee80211_clear_vhtcaps(struct ieee80211_node *ni)
+{
+    ni->ni_vhtcaps = 0;
+    memset(&ni->ni_vht_mcsinfo, 0, sizeof(ni->ni_vht_mcsinfo));
+    
+    ni->ni_flags &= ~(IEEE80211_NODE_VHT | IEEE80211_NODE_VHT_SGI80 |
+                      IEEE80211_NODE_VHT_SGI160 | IEEE80211_NODE_VHTCAP);
+    
+}
+#endif
+
+void
+ieee80211_setup_hecaps(struct ieee80211_node *ni, const uint8_t *data,
+                       uint8_t len)
+{
+    struct ieee80211_he_cap_elem *he_cap_ie_elem = (struct ieee80211_he_cap_elem *)data;
+    uint8_t mcs_nss_size, he_ppe_size, he_total_size;
+    
+    mcs_nss_size = ieee80211_he_mcs_nss_size(he_cap_ie_elem);
+    he_ppe_size =
+        ieee80211_he_ppe_size(data[sizeof(ni->ni_he_cap_elem) +
+                        mcs_nss_size],
+                      he_cap_ie_elem->phy_cap_info);
+    he_total_size = sizeof(ni->ni_he_cap_elem) + mcs_nss_size +
+            he_ppe_size;
+    
+    if (len < he_total_size)
+        return;
+    
+    memcpy(&ni->ni_he_cap_elem, data, sizeof(ni->ni_he_cap_elem));
+    
+    /* HE Tx/Rx HE MCS NSS Support Field */
+    memcpy(&ni->ni_he_mcs_nss_supp,
+           &data[sizeof(ni->ni_he_cap_elem)], mcs_nss_size);
+    
+    /* Check if there are (optional) PPE Thresholds */
+    if (ni->ni_he_cap_elem.phy_cap_info[6] &
+        IEEE80211_HE_PHY_CAP6_PPE_THRESHOLD_PRESENT)
+        memcpy(ni->ni_ppe_thres,
+               &data[sizeof(ni->ni_he_cap_elem) + mcs_nss_size],
+               he_ppe_size);
+}
+
+int
+ieee80211_setup_heop(struct ieee80211_node *ni, const uint8_t *data,
+                     uint8_t len)
+{
+    struct ieee80211_he_operation *he_op_ie = (struct ieee80211_he_operation *)data;
+    
+    ni->ni_he_oper_params = le32toh(he_op_ie->he_oper_params);
+    ni->ni_he_oper_nss_set = le16toh(he_op_ie->he_mcs_nss_set);
     return 1;
 }
 
@@ -2568,8 +2958,8 @@ ieee80211_node_join_ht(struct ieee80211com *ic, struct ieee80211_node *ni)
         htop1 &= ~IEEE80211_HTOP1_PROT_MASK;
         htop1 |= IEEE80211_HTPROT_NONHT_MIXED;
         ic->ic_bss->ni_htop1 = htop1;
-        if (ic->ic_update_htprot)
-            ic->ic_update_htprot(ic, ic->ic_bss);
+        if (ic->ic_updateprot)
+            ic->ic_updateprot(ic);
     }
 }
 
@@ -2770,6 +3160,15 @@ ieee80211_node_join(struct ieee80211com *ic, struct ieee80211_node *ni,
 }
 
 /*
+ * Handle a VHT STA leaving a VHT network.
+ */
+void
+ieee80211_node_leave_vht(struct ieee80211com *ic, struct ieee80211_node *ni)
+{
+    ieee80211_clear_vhtcaps(ni);
+}
+
+/*
  * Handle an HT STA leaving an HT network.
  */
 void
@@ -2911,6 +3310,9 @@ ieee80211_node_leave(struct ieee80211com *ic, struct ieee80211_node *ni)
     if (ni->ni_flags & IEEE80211_NODE_HT)
         ieee80211_node_leave_ht(ic, ni);
     
+    if (ni->ni_flags & IEEE80211_NODE_VHT)
+        ieee80211_node_leave_vht(ic, ni);
+
     if (ic->ic_node_leave != NULL)
         (*ic->ic_node_leave)(ic, ni);
     
@@ -3059,10 +3461,8 @@ ieee80211_notify_dtim(struct ieee80211com *ic)
             wh = mtod(m, struct ieee80211_frame *);
             wh->i_fc[1] |= IEEE80211_FC1_MORE_DATA;
         }
-        //        ifp->output_queue->enqueue(m, &TX_TYPE_MGMT);
         mq_enqueue(&ic->ic_pwrsaveq, m);
         (*ifp->if_start)(ifp);
-        //        ifp->output_queue->start();
     }
     /* XXX assumes everything has been sent */
     ic->ic_tim_mcast_pending = 0;

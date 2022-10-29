@@ -139,9 +139,10 @@ ieee80211_send_eapol_key(struct ieee80211com *ic, mbuf_t m,
         timeout_add_msec(&ni->ni_eapol_to, 100);
 #endif
     
-    if (!ifp->if_snd->lockEnqueue(m)) {
-        XYLog("%s 啊啊啊啊 enqueue fail!!\n", __FUNCTION__);
-        return -1;
+    error = ifq_enqueue(&ifp->if_snd, m);
+    if (error) {
+        XYLog("%s enqueue fail!!\n", __FUNCTION__);
+        return (error);
     }
     (*ifp->if_start)(ifp);
     return 0;

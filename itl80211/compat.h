@@ -29,9 +29,9 @@
 #include <IOKit/IOBufferMemoryDescriptor.h>
 #include <sys/kpi_mbuf.h>
 #include <IOKit/network/IOMbufMemoryCursor.h>
-#include "ieee80211_var.h"
-#include "ieee80211_mira.h"
-#include "ieee80211_amrr.h"
+#include <net80211/ieee80211_var.h>
+#include <net80211/ieee80211_mira.h>
+#include <net80211/ieee80211_amrr.h>
 #include <sys/pcireg.h>
 
 // the following isn't actually used
@@ -42,7 +42,41 @@
 #define BUS_DMA_COHERENT	0
 #define BUS_DMA_READ		0
 
-static __inline uint64_t
+static inline void
+USEC_TO_TIMEVAL(uint64_t us, struct timeval *tv)
+{
+    tv->tv_sec = us / 1000000;
+    tv->tv_usec = us % 1000000;
+}
+
+static inline void
+NSEC_TO_TIMEVAL(uint64_t ns, struct timeval *tv)
+{
+    tv->tv_sec = ns / 1000000000L;
+    tv->tv_usec = (ns % 1000000000L) / 1000;
+}
+
+static inline uint64_t
+TIMEVAL_TO_NSEC(const struct timeval *tv)
+{
+    uint64_t nsecs;
+
+    if (tv->tv_sec > UINT64_MAX / 1000000000ULL)
+        return UINT64_MAX;
+    nsecs = tv->tv_sec * 1000000000ULL;
+    if (tv->tv_usec * 1000ULL > UINT64_MAX - nsecs)
+        return UINT64_MAX;
+    return nsecs + tv->tv_usec * 1000ULL;
+}
+
+static inline void
+NSEC_TO_TIMESPEC(uint64_t ns, struct timespec *ts)
+{
+    ts->tv_sec = ns / 1000000000L;
+    ts->tv_nsec = ns % 1000000000L;
+}
+
+static inline uint64_t
 SEC_TO_NSEC(uint64_t seconds)
 {
     if (seconds > UINT64_MAX / 1000000000ULL)
@@ -50,13 +84,36 @@ SEC_TO_NSEC(uint64_t seconds)
     return seconds * 1000000000ULL;
 }
 
-static __inline uint64_t
+static inline uint64_t
 MSEC_TO_NSEC(uint64_t milliseconds)
 {
     if (milliseconds > UINT64_MAX / 1000000ULL)
         return UINT64_MAX;
     return milliseconds * 1000000ULL;
 }
+
+static inline uint64_t
+USEC_TO_NSEC(uint64_t microseconds)
+{
+    if (microseconds > UINT64_MAX / 1000ULL)
+        return UINT64_MAX;
+    return microseconds * 1000ULL;
+}
+
+static inline uint64_t
+TIMESPEC_TO_NSEC(const struct timespec *ts)
+{
+    if (ts->tv_sec > (UINT64_MAX - ts->tv_nsec) / 1000000000ULL)
+        return UINT64_MAX;
+    return ts->tv_sec * 1000000000ULL + ts->tv_nsec;
+}
+
+#define MHLEN mbuf_get_mhlen()
+#define M_DONTWAIT MBUF_DONTWAIT
+#define M_EXT MBUF_EXT
+#define m_freem mbuf_freem
+#define m_free mbuf_free
+#define m_copydata mbuf_copydata
 
 static inline int
 flsl(long mask)
@@ -153,9 +210,14 @@ typedef struct bus_dmamap* bus_dmamap_t;
 #define IWM_TX_RING_HIMARK    224
 
 struct pci_matchid {
-    int        pm_vid;
-    int    pm_pid;
+    int     pm_vid;
+    int     pm_pid;
+    int     pm_sub_dev;
+    int     pm_sub_vid;
+    void    *drv_data;
 };
+
+#define PCI_ANY_ID 0xffff
 
 static inline int
 pci_matchbyid(int vid, int pid, const struct pci_matchid *ids, int nent)
@@ -168,6 +230,29 @@ pci_matchbyid(int vid, int pid, const struct pci_matchid *ids, int nent)
             pid == pm->pm_pid)
             return (1);
     return (0);
+}
+
+static inline int
+pci_match(int vid, int pid, int sub_vid, int sub_dev, const struct pci_matchid *ids, int nent, void **drv_data)
+{
+    const struct pci_matchid *pm;
+    int i;
+
+    for (i = 0, pm = ids; i < nent; i++, pm++) {
+        if (vid == pm->pm_vid && pid == pm->pm_pid) {
+            if (pm->pm_sub_dev != PCI_ANY_ID && sub_dev != pm->pm_sub_dev) {
+                return 0;
+            }
+            if (pm->pm_sub_vid != PCI_ANY_ID && sub_vid != pm->pm_sub_vid) {
+                return 0;
+            }
+            if (drv_data) {
+                *drv_data = pm->drv_data;
+            }
+            return 1;
+        }
+    }
+    return 0;
 }
 
 /*

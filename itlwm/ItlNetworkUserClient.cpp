@@ -13,6 +13,7 @@
 */
 
 #include "ItlNetworkUserClient.hpp"
+#include <sys/_netstat.h>
 
 #define super IOUserClient
 OSDefineMetaClassAndStructors( ItlNetworkUserClient, IOUserClient );
@@ -30,6 +31,7 @@ const IOControlMethodAction ItlNetworkUserClient::sMethods[IOCTL_ID_MAX] {
     sSCAN,
     sSCAN_RESULT,
     sTX_POWER_LEVEL,
+    sNW_BSSID,
 };
 
 bool ItlNetworkUserClient::initWithTask(task_t owningTask, void *securityID, UInt32 type, OSDictionary *properties)
@@ -98,7 +100,7 @@ sDRIVER_INFO(OSObject* target, void* data, bool isSet)
     drv_info->version = IOCTL_VERSION;
     snprintf(drv_info->bsd_name, sizeof(drv_info->bsd_name), "%s%d", ifnet_name(that->fInf->getIfnet()), ifnet_unit(that->fInf->getIfnet()));
     strncpy(drv_info->fw_version, that->fDriverInfo->getFirmwareVersion(), sizeof(drv_info->fw_version));
-    memcpy(drv_info->driver_version, ITLWM_VERSION, sizeof(drv_info->driver_version));
+    snprintf(drv_info->driver_version, sizeof(drv_info->driver_version), "%s%s", ITLWM_VERSION, GIT_COMMIT);
     return kIOReturnSuccess;
 }
 
@@ -109,6 +111,9 @@ sSTA_INFO(OSObject* target, void* data, bool isSet)
     struct ioctl_sta_info *st = (struct ioctl_sta_info *)data;
     struct ieee80211com *ic = that->fDriver->fHalService->get80211Controller();
     struct ieee80211_node *ic_bss = ic->ic_bss;
+    int nss;
+    int sgi;
+    int index = 0;
     if (isSet) {
         return kIOReturnError;
     }
@@ -118,16 +123,71 @@ sSTA_INFO(OSObject* target, void* data, bool isSet)
     if (ic_bss->ni_chan == NULL) {
         return kIOReturnError;
     }
+    if (ic->ic_state != IEEE80211_S_RUN) {
+        return kIOReturnError;
+    }
     st->version = IOCTL_VERSION;
-    st->op_mode = ITL80211_MODE_11N;
+    st->op_mode = ic->ic_curmode > 0 ? (enum itl_phy_mode)(ic->ic_curmode - 1) : ITL80211_MODE_11A;
     st->max_mcs = ic_bss->ni_txmcs;
     st->cur_mcs = ic_bss->ni_txmcs;
     st->channel = ieee80211_chan2ieee(ic, ic_bss->ni_chan);
-    //TODO only support 20mhz band width now
-    st->band_width = 20;
+    switch (ic->ic_bss->ni_chw) {
+        case IEEE80211_CHAN_WIDTH_40:
+            st->band_width = 40;
+            break;
+        case IEEE80211_CHAN_WIDTH_80:
+            st->band_width = 80;
+            break;
+        case IEEE80211_CHAN_WIDTH_80P80:
+        case IEEE80211_CHAN_WIDTH_160:
+            st->band_width = 160;
+            break;
+            
+        default:
+            st->band_width = 20;
+            break;
+    }
     st->rssi = -(0 - IWM_MIN_DBM - ic_bss->ni_rssi);
-    st->noise = that->fDriverInfo->getBSSNoise();
-    st->rate = ic_bss->ni_rates.rs_rates[ic_bss->ni_txrate];
+    st->noise = that->fDriver->fHalService->getDriverInfo()->getBSSNoise();
+    sgi = ieee80211_node_supports_sgi(ic_bss);
+    if (ic->ic_curmode == IEEE80211_MODE_11AC) {
+        if (sgi) {
+            index += 1;
+        }
+        nss = that->fDriverInfo->getTxNSS();
+        switch (ic_bss->ni_chw) {
+            case IEEE80211_CHAN_WIDTH_40:
+                index += 4;
+                break;
+            case IEEE80211_CHAN_WIDTH_80:
+                index += 8;
+                break;
+            case IEEE80211_CHAN_WIDTH_80P80:
+            case IEEE80211_CHAN_WIDTH_160:
+                index += 12;
+                break;
+
+            default:
+                break;
+        }
+        index += 2 * (nss - 1);
+        const struct ieee80211_vht_rateset *rs = &ieee80211_std_ratesets_11ac[index];
+        st->rate = rs->rates[ic_bss->ni_txmcs % rs->nrates] / 2;
+    } else if (ic->ic_curmode == IEEE80211_MODE_11N) {
+        int is_40mhz = ic_bss->ni_chw == IEEE80211_CHAN_WIDTH_40;
+        if (sgi) {
+            index += 1;
+        }
+        if (is_40mhz) {
+            index += (IEEE80211_HT_RATESET_MIMO4_SGI + 1);
+        }
+        index += (ic_bss->ni_txmcs / 16);
+        nss = ic_bss->ni_txmcs / 8 + 1;
+        index += 2 * (nss - 1);
+        st->rate = ieee80211_std_ratesets_11n[index].rates[ic_bss->ni_txmcs % 8] / 2;
+    } else {
+        st->rate = ic_bss->ni_rates.rs_rates[ic_bss->ni_txrate];
+    }
     memset(st->ssid, 0, sizeof(st->ssid));
     bcopy(ic->ic_des_essid, st->ssid, ic->ic_des_esslen);
     memset(st->bssid, 0, sizeof(st->bssid));
@@ -144,13 +204,13 @@ sPOWER(OSObject* target, void* data, bool isSet)
         if (ip->enabled) {
             that->fDriver->enable(that->fInf);
         } else {
+            net80211_ifstats(that->fDriver->fHalService->get80211Controller());
             that->fDriver->disable(that->fInf);
         }
     } else {
         memset(ip, 0, sizeof(*ip));
         ip->version = IOCTL_VERSION;
-        ip->enabled = (that->fIfp->if_flags & (IFF_UP | IFF_RUNNING)) ==
-        (IFF_UP | IFF_RUNNING) ? 1 : 0;
+        ip->enabled = (that->fIfp->if_flags & (IFF_UP | IFF_RUNNING)) != 0;
     }
     return kIOReturnSuccess;
 }
@@ -170,8 +230,85 @@ sSTATE(OSObject* target, void* data, bool isSet)
 }
 
 IOReturn ItlNetworkUserClient::
+sNW_BSSID(OSObject* target, void* data, bool isSet)
+{
+    ItlNetworkUserClient *that = OSDynamicCast(ItlNetworkUserClient, target);
+    struct ioctl_nw_bssid *nwid = (struct ioctl_nw_bssid *)data;
+    struct ieee80211com *ic = that->fDriver->fHalService->get80211Controller();
+    
+    if (isSet) {
+        if (IEEE80211_ADDR_EQ(nwid->bssid, etheranyaddr))
+            ic->ic_flags &= ~IEEE80211_F_DESBSSID;
+        else {
+            ic->ic_flags |= IEEE80211_F_DESBSSID;
+            IEEE80211_ADDR_COPY(ic->ic_des_bssid, nwid->bssid);
+        }
+        return kIOReturnSuccess;
+    }
+    memset(nwid, 0, sizeof(*nwid));
+    nwid->version = IOCTL_VERSION;
+    switch (ic->ic_state) {
+        case IEEE80211_S_INIT:
+        case IEEE80211_S_SCAN:
+#ifndef IEEE80211_STA_ONLY
+            if (ic->ic_opmode == IEEE80211_M_HOSTAP)
+                IEEE80211_ADDR_COPY(nwid->bssid,
+                                    ic->ic_myaddr);
+            else
+#endif
+                if (ic->ic_flags & IEEE80211_F_DESBSSID)
+                    IEEE80211_ADDR_COPY(nwid->bssid,
+                                        ic->ic_des_bssid);
+                else
+                    memset(nwid->bssid, 0, IEEE80211_ADDR_LEN);
+            break;
+        default:
+            IEEE80211_ADDR_COPY(nwid->bssid,
+                                ic->ic_bss->ni_bssid);
+            break;
+    }
+    return kIOReturnSuccess;
+}
+
+IOReturn ItlNetworkUserClient::
 sNW_ID(OSObject* target, void* data, bool isSet)
 {
+    ItlNetworkUserClient *that = OSDynamicCast(ItlNetworkUserClient, target);
+    struct ioctl_nw_id *nwid = (struct ioctl_nw_id *)data;
+    struct ieee80211com *ic = that->fDriver->fHalService->get80211Controller();
+    
+    if (isSet) {
+        if (nwid->len > IEEE80211_NWID_LEN) {
+            return kIOReturnError;
+        }
+        memset(ic->ic_des_essid, 0, IEEE80211_NWID_LEN);
+        ic->ic_des_esslen = nwid->len;
+        memcpy(ic->ic_des_essid, nwid->nwid, nwid->len);
+        if (ic->ic_des_esslen > 0) {
+            /* 'nwid' disables auto-join magic */
+            ic->ic_flags &= ~IEEE80211_F_AUTO_JOIN;
+        } else if (!TAILQ_EMPTY(&ic->ic_ess)) {
+            /* '-nwid' re-enables auto-join */
+            ic->ic_flags |= IEEE80211_F_AUTO_JOIN;
+        }
+        /* disable WPA/WEP */
+        ieee80211_disable_rsn(ic);
+        ieee80211_disable_wep(ic);
+        return kIOReturnSuccess;
+    }
+    memset(nwid, 0, sizeof(*nwid));
+    nwid->version = IOCTL_VERSION;
+    switch (ic->ic_state) {
+    case IEEE80211_S_INIT:
+    case IEEE80211_S_SCAN:
+        nwid->len = ic->ic_des_esslen;
+        memcpy(nwid->nwid, ic->ic_des_essid, nwid->len);
+        break;
+    default:
+        nwid->len = ic->ic_bss->ni_esslen;
+        memcpy(nwid->nwid, ic->ic_bss->ni_essid, nwid->len);
+        break;
+    }
     return kIOReturnSuccess;
 }
 
@@ -196,6 +333,8 @@ sDISASSOCIATE(OSObject* target, void* data, bool isSet)
     ItlNetworkUserClient *that = OSDynamicCast(ItlNetworkUserClient, target);
     struct ioctl_disassociate *dis = (struct ioctl_disassociate *)data;
     struct ieee80211com *ic = that->fDriver->fHalService->get80211Controller();
+    if (ic->ic_state > IEEE80211_S_AUTH && ic->ic_bss != NULL)
+        IEEE80211_SEND_MGMT(ic, ic->ic_bss, IEEE80211_FC0_SUBTYPE_DEAUTH, IEEE80211_REASON_AUTH_LEAVE);
     ieee80211_del_ess(ic, (char *)dis->ssid, strlen((char *)dis->ssid), 0);
     ieee80211_deselect_ess(ic);
     if (TAILQ_EMPTY(&ic->ic_ess)) {

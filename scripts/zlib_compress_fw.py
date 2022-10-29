@@ -8,6 +8,7 @@
 import zlib
 import os
 import struct
+import sys
 
 copyright = '''
 //  itlwm
@@ -94,4 +95,4 @@ def process_files(target_file, dir):
     target_file_handle.close()
 
 if __name__ == '__main__':
-    print compress("test");
+    process_files(sys.argv[1], sys.argv[2])

@@ -60,11 +60,11 @@
 #include <sys/queue.h>
 #include <sys/CTimeout.hpp>
 #include <sys/_if_media.h>
+#include <sys/_ifq.h>
 #include <net/if_dl.h>
 
 #include <IOKit/network/IOPacketQueue.h>
 #include <IOKit/network/IOEthernetInterface.h>
-#include <IOKit/network/IOOutputQueue.h>
 
 #define    ETHER_IS_MULTICAST(addr) (*(addr) & 0x01) /* is address mcast/bcast? */
 #define    ETHER_IS_BROADCAST(addr) \
@@ -74,9 +74,6 @@
     (((addr)[0] | (addr)[1] | (addr)[2] | \
       (addr)[3] | (addr)[4] | (addr)[5]) == 0x00)
 #define    ETHER_IS_EQ(a1, a2)    (memcmp((a1), (a2), ETHER_ADDR_LEN) == 0)
-
-#define    ETHERMTU    (ETHER_MAX_LEN - ETHER_HDR_LEN - ETHER_CRC_LEN)
-#define    ETHERMIN    (ETHER_MIN_LEN - ETHER_HDR_LEN - ETHER_CRC_LEN)
 
 #define ETHER_ADDR_LEN 6
 
@@ -162,7 +159,6 @@ struct ether_multi {
 
 struct _ifnet {                /* and the entries */
     IOEthernetInterface *iface;
-    IOOutputQueue* output_queue;
     IOEthernetController* controller;
     int if_link_state;
     void *if_softc;
@@ -230,9 +226,9 @@ struct _ifnet {                /* and the entries */
     int    (*if_wol)(struct _ifnet *, int);    /* WoL routine **/
 
     /* queues */
-    IOPacketQueue *if_snd;        /* transmit queue */
-    struct    ifqueue **if_ifqs;    /* [I] pointer to an array of sndqs */
-    void    (*if_qstart)(struct ifqueue *);
+    struct    _ifqueue if_snd;        /* transmit queue */
+    struct    _ifqueue **if_ifqs;    /* [I] pointer to an array of sndqs */
+    void    (*if_qstart)(struct _ifqueue *);
     unsigned int if_nifqs;        /* [I] number of output queues */
     unsigned int if_txmit;        /* [c] txmitigation amount */
 
@@ -279,6 +275,25 @@ if_attach(struct _ifnet *ifp)
 {
     ifp->if_link_state = -1;
     return 0;
+}
+
+static inline int
+if_detach(struct _ifnet *ifp)
+{
+    ifp->if_link_state = -1;
+    return 0;
+}
+
+static inline int
+ether_ifattach(struct _ifnet *ifp, IOEthernetInterface *iface)
+{
+    ifp->iface = iface;
+}
+
+static inline void
+ether_ifdetach(struct _ifnet *ifp)
+{
+    ifp->iface = NULL;
 }
 
 #endif /* _if_ether_h */

@@ -74,17 +74,17 @@
 	<key>OSBundleLibraries</key>
 	<dict>
 		<key>com.apple.iokit.IONetworkingFamily</key>
-		<string>3.2</string>
+		<string>1.5.0</string>
 		<key>com.apple.iokit.IOPCIFamily</key>
-		<string>2.9</string>
+		<string>1.7</string>
 		<key>com.apple.kpi.bsd</key>
-		<string>16.7</string>
+		<string>8.10.0</string>
 		<key>com.apple.kpi.iokit</key>
-		<string>16.7</string>
+		<string>8.10.0</string>
 		<key>com.apple.kpi.libkern</key>
-		<string>16.7</string>
+		<string>8.10.0</string>
 		<key>com.apple.kpi.mach</key>
-		<string>16.7</string>
+		<string>8.10.0</string>
 	</dict>
 	<key>OSBundleRequired</key>
 	<string>Network-Root</string>

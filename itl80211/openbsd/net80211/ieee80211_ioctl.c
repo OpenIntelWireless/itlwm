@@ -272,8 +272,14 @@ ieee80211_ioctl_setnwkeys(struct ieee80211com *ic,
 		error = kernel_copyin((const user_addr_t)nwkey->i_key[i].i_keydat, k->k_key, k->k_len);
 		if (error != 0)
 			return error;
-		if ((error = (*ic->ic_set_key)(ic, NULL, k)) != 0)
-			return error;
+        error = (*ic->ic_set_key)(ic, NULL, k);
+        switch (error) {
+            case 0:
+            case EBUSY:
+                break;
+            default:
+                return error;
+        }
 	}
 
 	ic->ic_def_txkey = nwkey->i_defkid - 1;

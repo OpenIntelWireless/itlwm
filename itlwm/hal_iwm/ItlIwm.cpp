@@ -21,6 +21,15 @@ void ItlIwm::
 detach(IOPCIDevice *device)
 {
     struct _ifnet *ifp = &com.sc_ic.ic_ac.ac_if;
+    struct iwm_softc *sc = &com;
+    
+    for (int txq_i = 0; txq_i < nitems(sc->txq); txq_i++)
+        iwm_free_tx_ring(sc, &sc->txq[txq_i]);
+    iwm_free_rx_ring(sc, &sc->rxq);
+    iwm_dma_contig_free(&sc->ict_dma);
+    iwm_dma_contig_free(&sc->kw_dma);
+    iwm_dma_contig_free(&sc->sched_dma);
+    iwm_dma_contig_free(&sc->fw_dma);
     ieee80211_ifdetach(ifp);
     taskq_destroy(systq);
     taskq_destroy(com.sc_nswq);
@@ -81,8 +90,14 @@ releaseAll()
 IOReturn ItlIwm::
 enable(IONetworkInterface *netif)
 {
+    XYLog("%s\n", __PRETTY_FUNCTION__);
     struct _ifnet *ifp = &com.sc_ic.ic_ac.ac_if;
+    if (ifp->if_flags & IFF_UP) {
+        XYLog("%s already in activating state\n", __FUNCTION__);
+        return kIOReturnSuccess;
+    }
     ifp->if_flags |= IFF_UP;
+    iwm_activate(&com, DVACT_RESUME);
     iwm_activate(&com, DVACT_WAKEUP);
     return kIOReturnSuccess;
 }
@@ -90,6 +105,8 @@ enable(IONetworkInterface *netif)
 IOReturn ItlIwm::
 disable(IONetworkInterface *netif)
 {
+    struct _ifnet *ifp = &com.sc_ic.ic_ac.ac_if;
+    ifp->if_flags &= ~IFF_UP;
     iwm_activate(&com, DVACT_QUIESCE);
     return kIOReturnSuccess;
 }
@@ -118,6 +135,40 @@ clearScanningFlags()
     com.sc_flags &= ~(IWM_FLAG_SCANNING | IWM_FLAG_BGSCAN);
 }
 
+IOReturn ItlIwm::
+setMulticastList(IOEthernetAddress *addr, int count)
+{
+    struct ieee80211com *ic = &com.sc_ic;
+    struct iwm_mcast_filter_cmd *cmd;
+    int len;
+    uint8_t addr_count;
+    int err;
+    
+    if (ic->ic_state != IEEE80211_S_RUN || ic->ic_bss == NULL)
+        return kIOReturnError;
+    addr_count = count;
+    if (count > IWM_MAX_MCAST_FILTERING_ADDRESSES)
+        addr_count = 0;
+    if (addr == NULL)
+        addr_count = 0;
+    len = roundup(sizeof(struct iwm_mcast_filter_cmd) + addr_count * ETHER_ADDR_LEN, 4);
+    XYLog("%s multicast count=%d bssid=%s\n", __FUNCTION__, count, ether_sprintf(ic->ic_bss->ni_bssid));
+    cmd = (struct iwm_mcast_filter_cmd *)malloc(len, 0, 0);
+    if (!cmd)
+        return kIOReturnError;
+    cmd->pass_all = addr_count == 0;
+    cmd->count = addr_count;
+    cmd->port_id = 0;
+    IEEE80211_ADDR_COPY(cmd->bssid, ic->ic_bss->ni_bssid);
+    if (addr_count > 0)
+        memcpy(cmd->addr_list,
+               addr->bytes, ETHER_ADDR_LEN * cmd->count);
+    err = iwm_send_cmd_pdu(&com, IWM_MCAST_FILTER_CMD, IWM_CMD_ASYNC, len,
+                     cmd);
+    ::free(cmd);
+    return err ? kIOReturnError : kIOReturnSuccess;
+}
+
 const char *ItlIwm::
 getFirmwareVersion()
 {
@@ -133,7 +184,7 @@ getFirmwareName()
 UInt32 ItlIwm::
 supportedFeatures()
 {
-    return 0;
+    return kIONetworkFeatureMultiPages;
 }
 
 const char *ItlIwm::
@@ -163,5 +214,7 @@ is5GBandSupport()
 int ItlIwm::
 getTxNSS()
 {
-    return !com.sc_nvm.sku_cap_mimo_disable ? (iwm_mimo_enabled(&com) ? 2 : 1) : 1;
+    return iwm_mimo_enabled(&com) &&
+    (com.sc_ic.ic_bss != NULL && com.sc_ic.ic_bss->ni_rx_nss > 1) ?
+    2 : 1;
 }

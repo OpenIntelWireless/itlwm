@@ -24,6 +24,7 @@
 
 #include "ItlIwm.hpp"
 #include "ItlIwx.hpp"
+#include "ItlIwn.hpp"
 
 #include "AirportItlwmInterface.hpp"
 
@@ -68,6 +69,7 @@ public:
     virtual bool start(IOService *provider) override;
     virtual void stop(IOService *provider) override;
     virtual IOReturn getHardwareAddress(IOEthernetAddress* addrP) override;
+    virtual IOReturn setHardwareAddress(const IOEthernetAddress * addrP) override;
     virtual IOReturn enable(IONetworkInterface *netif) override;
     virtual IOReturn disable(IONetworkInterface *netif) override;
     virtual UInt32 outputPacket(mbuf_t, void * param) override;
@@ -79,13 +81,15 @@ public:
     virtual IOWorkLoop* getWorkLoop() const override;
     virtual const OSString * newVendorString() const override;
     virtual const OSString * newModelString() const override;
-    virtual IOReturn getMaxPacketSize(UInt32* maxSize) const override;
     virtual IONetworkInterface * createInterface() override;
     virtual bool setLinkStatus(
                                UInt32                  status,
                                const IONetworkMedium * activeMedium = 0,
                                UInt64                  speed        = 0,
                                OSData *                data         = 0) override;
+    
+    static IOReturn setLinkStateGated(OSObject *target, void *arg0, void *arg1, void *arg2, void *arg3);
+    
 #ifdef __PRIVATE_SPI__
     virtual IOReturn outputStart(IONetworkInterface *interface, IOOptionBits options) override;
 #endif
@@ -98,6 +102,8 @@ public:
     bool initPCIPowerManagment(IOPCIDevice *provider);
     static IOReturn tsleepHandler(OSObject* owner, void* arg0 = 0, void* arg1 = 0, void* arg2 = 0, void* arg3 = 0);
     static void eventHandler(struct ieee80211com *, int, void *);
+    IOReturn enableAdapter(IONetworkInterface *netif);
+    void disableAdapter(IONetworkInterface *netif);
     
     //IO80211
     virtual IOReturn getHardwareAddressForInterface(IO80211Interface* netif,
@@ -151,6 +157,8 @@ public:
     IOReturn setDISASSOCIATE(OSObject *);
     FUNC_IOCTL_GET(RATE_SET, apple80211_rate_set_data)
     FUNC_IOCTL_GET(MCS_INDEX_SET, apple80211_mcs_index_set_data)
+    FUNC_IOCTL_GET(VHT_MCS_INDEX_SET, apple80211_vht_mcs_index_set_data)
+    FUNC_IOCTL(MCS_VHT, apple80211_mcs_vht_data)
     FUNC_IOCTL_GET(SUPPORTED_CHANNELS, apple80211_sup_channel_data)
     FUNC_IOCTL_GET(LOCALE, apple80211_locale_data)
     FUNC_IOCTL(DEAUTH, apple80211_deauth_data)
@@ -162,7 +170,7 @@ public:
     FUNC_IOCTL_GET(AP_IE_LIST, apple80211_ap_ie_data)
     FUNC_IOCTL_GET(LINK_CHANGED_EVENT_DATA, apple80211_link_changed_event_data)
     FUNC_IOCTL_GET(ASSOCIATION_STATUS, apple80211_assoc_status_data)
-    FUNC_IOCTL_GET(COUNTRY_CODE, apple80211_country_code_data)
+    FUNC_IOCTL(COUNTRY_CODE, apple80211_country_code_data)
     FUNC_IOCTL_GET(RADIO_INFO, apple80211_radio_info_data)
     FUNC_IOCTL_GET(MCS, apple80211_mcs_data)
     FUNC_IOCTL_SET(VIRTUAL_IF_CREATE, apple80211_virt_if_create_data)
@@ -173,6 +181,7 @@ public:
     FUNC_IOCTL_SET(SCANCACHE_CLEAR, apple80211req)
     FUNC_IOCTL(TX_NSS, apple80211_tx_nss_data)
     FUNC_IOCTL_GET(NSS, apple80211_nss_data)
+    FUNC_IOCTL_SET(ROAM, apple80211_sta_roam_data);
     
     //AirportVirtualIOCTL
     FUNC_IOCTL(AWDL_PEER_TRAFFIC_REGISTRATION, apple80211_awdl_peer_traffic_registration)
@@ -205,6 +214,10 @@ public:
     FUNC_IOCTL_SET(P2P_SCAN, apple80211_scan_data)
     FUNC_IOCTL_SET(P2P_LISTEN, apple80211_p2p_listen_data)
     FUNC_IOCTL_SET(P2P_GO_CONF, apple80211_p2p_go_conf_data)
+    FUNC_IOCTL(BTCOEX_PROFILES, apple80211_btc_profiles_data)
+    FUNC_IOCTL(BTCOEX_CONFIG, apple80211_btc_config_data)
+    FUNC_IOCTL(BTCOEX_OPTIONS, apple80211_btc_options_data)
+    FUNC_IOCTL(BTCOEX_MODE, apple80211_btc_mode_data)
     
     
     //-----------------------------------------------------------------------
@@ -252,6 +265,7 @@ public:
     UInt64 currentSpeed;
     UInt32 currentStatus;
     bool disassocIsVoluntary;
+    char geo_location_cc[3];
     
     IO80211P2PInterface *fP2PDISCInterface;
     IO80211P2PInterface *fP2PGOInterface;
@@ -267,5 +281,9 @@ public:
     uint16_t awdlMasterChannel;
     uint16_t awdlSecondaryMasterChannel;
     uint8_t *roamProfile;
+    struct apple80211_btc_profiles_data *btcProfile;
+    struct apple80211_btc_config_data btcConfig;
+    uint32_t btcMode;
+    uint32_t btcOptions;
     bool awdlSyncEnable;
 };

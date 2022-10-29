@@ -25,7 +25,7 @@
 
 #include <IOKit/IOTypes.h>
 #include <libkern/OSAtomic.h>
-#include "bitfield.h"
+#include <linux/bitfield.h>
 
 #define local_bh_disable()
 #define local_bh_enable()
@@ -80,7 +80,7 @@
 #endif
 
 #ifndef unlikely
-#include "kernel.h"
+#include <linux/kernel.h>
 #endif
 
 #ifndef WARN_ON_ONCE
@@ -113,7 +113,7 @@
 #define XYLog(fmt, x...)\
 do\
 {\
-IOLog("%s: " fmt, "itlwm", ##x);\
+kprintf("%s: " fmt, "itlwm", ##x);\
 }while(0)
 
 typedef UInt8  u8;
@@ -231,6 +231,97 @@ static inline void put_unaligned_le32(u32 val, void *p)
 {
     *((__le32 *)p) = cpu_to_le32(val);
 }
+
+static inline unsigned int hweight8(unsigned int w)
+{
+    unsigned int res = w - ((w >> 1) & 0x55);
+    res = (res & 0x33) + ((res >> 2) & 0x33);
+    return (res + (res >> 4)) & 0x0F;
+}
+
+static inline unsigned int hweight16(unsigned int w)
+{
+    unsigned int res = w - ((w >> 1) & 0x5555);
+    res = (res & 0x3333) + ((res >> 2) & 0x3333);
+    res = (res + (res >> 4)) & 0x0F0F;
+    return (res + (res >> 8)) & 0x00FF;
+}
+
+static inline unsigned int hweight32(unsigned int w)
+{
+    unsigned int res = w - ((w >> 1) & 0x55555555);
+    res = (res & 0x33333333) + ((res >> 2) & 0x33333333);
+    res = (res + (res >> 4)) & 0x0F0F0F0F;
+    res = res + (res >> 8);
+    return (res + (res >> 16)) & 0x000000FF;
+}
+
+static inline unsigned long hweight64(uint64_t w)
+{
+    uint64_t res = w - ((w >> 1) & 0x5555555555555555ul);
+    res = (res & 0x3333333333333333ul) + ((res >> 2) & 0x3333333333333333ul);
+    res = (res + (res >> 4)) & 0x0F0F0F0F0F0F0F0Ful;
+    res = res + (res >> 8);
+    res = res + (res >> 16);
+    return (res + (res >> 32)) & 0x00000000000000FFul;
+}
+
+static inline uint64_t field_multiplier(uint64_t field)
+{
+    return field & -field;
+}
+
+static inline uint64_t field_mask(uint64_t field)
+{
+    return field / field_multiplier(field);
+}
+
+/**
+ * sizeof_field(TYPE, MEMBER)
+ *
+ * @TYPE: The structure containing the field of interest
+ * @MEMBER: The field to return the size of
+ */
+#define sizeof_field(TYPE, MEMBER) sizeof((((TYPE *)0)->MEMBER))
+
+/**
+ * offsetofend(TYPE, MEMBER)
+ *
+ * @TYPE: The type of the structure
+ * @MEMBER: The member within the structure to get the end offset of
+ */
+#define offsetofend(TYPE, MEMBER) \
+    (offsetof(TYPE, MEMBER)    + sizeof_field(TYPE, MEMBER))
+
+#define ____MAKE_OP(type,base,to,from)                    \
+static inline __##type type##_encode_bits(base v, base field)    \
+{                                    \
+    return to((v & field_mask(field)) * field_multiplier(field));    \
+}                                    \
+static inline __##type type##_replace_bits(__##type old,    \
+                    base val, base field)        \
+{                                    \
+    return (old & ~to(field)) | type##_encode_bits(val, field);    \
+}                                    \
+static inline void type##p_replace_bits(__##type *p,        \
+                    base val, base field)        \
+{                                    \
+    *p = (*p & ~to(field)) | type##_encode_bits(val, field);    \
+}                                    \
+static inline base type##_get_bits(__##type v, base field)    \
+{                                    \
+    return (from(v) & field)/field_multiplier(field);        \
+}
+#define __MAKE_OP(size)                            \
+    ____MAKE_OP(le##size,u##size,cpu_to_le##size,le##size##_to_cpu)    \
+    ____MAKE_OP(be##size,u##size,cpu_to_be##size,be##size##_to_cpu)    \
+    ____MAKE_OP(u##size,u##size,,)
+____MAKE_OP(u8,u8,,)
+__MAKE_OP(16)
+__MAKE_OP(32)
+__MAKE_OP(64)
+#undef __MAKE_OP
+#undef ____MAKE_OP
 
 #define atomic_t    volatile SInt32
 #define atomic64_t  volatile SInt64

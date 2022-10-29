@@ -261,8 +261,9 @@ enum ieee80211_phymode {
 	IEEE80211_MODE_11G	= 3,	/* 2GHz, OFDM */
 	IEEE80211_MODE_11N	= 4,	/* 2GHz/5GHz, OFDM/HT */
 	IEEE80211_MODE_11AC	= 5,	/* 5GHz, OFDM/VHT */
+    IEEE80211_MODE_11AX = 6,    /* 5GHz, 6GHz, HE */
 };
-#define	IEEE80211_MODE_MAX	(IEEE80211_MODE_11AC+1)
+#define	IEEE80211_MODE_MAX	(IEEE80211_MODE_11AX+1)
 
 enum ieee80211_opmode {
 	IEEE80211_M_STA		= 1,	/* infrastructure station */
@@ -288,7 +289,9 @@ enum ieee80211_protmode {
  */
 struct ieee80211_channel {
 	u_int16_t	ic_freq;	/* setting in MHz */
-	u_int16_t	ic_flags;	/* see below */
+	u_int32_t	ic_flags;	/* see below */
+    u_int16_t   ic_center_freq1;
+    u_int16_t   ic_center_freq2;
 };
 
 /*
@@ -301,11 +304,34 @@ struct ieee80211_channel {
 #define IEEE80211_CHAN_PASSIVE	0x0200	/* Only passive scan allowed */
 #define IEEE80211_CHAN_DYN	0x0400	/* Dynamic CCK-OFDM channel */
 #define IEEE80211_CHAN_XR	0x1000	/* Extended range OFDM channel */
-#define IEEE80211_CHAN_HT	0x2000	/* 11n/HT channel */
-#define IEEE80211_CHAN_VHT	0x4000	/* 11ac/VHT channel */
 
-#define IEEE80211_CHAN_6GHZ 0x0300
-#define IEEE80211_CHAN_60GHZ 0x0500
+#define IEEE80211_CHAN_HT20    0x00010000 /* HT 20 channel */
+#define IEEE80211_CHAN_HT40U    0x00020000 /* HT 40 channel w/ ext above */
+#define IEEE80211_CHAN_HT40D    0x00040000 /* HT 40 channel w/ ext below */
+#define IEEE80211_CHAN_DFS    0x00080000 /* DFS required */
+#define IEEE80211_CHAN_4MSXMIT    0x00100000 /* 4ms limit on frame length */
+#define IEEE80211_CHAN_NOADHOC    0x00200000 /* adhoc mode not allowed */
+#define IEEE80211_CHAN_NOHOSTAP    0x00400000 /* hostap mode not allowed */
+#define IEEE80211_CHAN_11D    0x00800000 /* 802.11d required */
+#define IEEE80211_CHAN_VHT20    0x01000000 /* VHT20 channel */
+#define IEEE80211_CHAN_VHT40U    0x02000000 /* VHT40 channel, ext above */
+#define IEEE80211_CHAN_VHT40D    0x04000000 /* VHT40 channel, ext below */
+#define IEEE80211_CHAN_VHT80    0x08000000 /* VHT80 channel */
+#define IEEE80211_CHAN_VHT160    0x10000000 /* VHT160 channel */
+#define IEEE80211_CHAN_VHT80_80    0x20000000 /* VHT80+80 channel */
+
+#define IEEE80211_CHAN_HT40    (IEEE80211_CHAN_HT40U | IEEE80211_CHAN_HT40D)
+#define IEEE80211_CHAN_HT    (IEEE80211_CHAN_HT20 | IEEE80211_CHAN_HT40)
+
+#define IEEE80211_CHAN_VHT40    (IEEE80211_CHAN_VHT40U | IEEE80211_CHAN_VHT40D)
+#define IEEE80211_CHAN_VHT    (IEEE80211_CHAN_VHT20 | IEEE80211_CHAN_VHT40 \
+                | IEEE80211_CHAN_VHT80 | IEEE80211_CHAN_VHT80_80 \
+                | IEEE80211_CHAN_VHT160)
+
+#define IEEE80211_CHAN_ALL  \
+    (IEEE80211_CHAN_2GHZ | IEEE80211_CHAN_5GHZ | \
+    IEEE80211_CHAN_CCK | IEEE80211_CHAN_OFDM | IEEE80211_CHAN_PASSIVE | IEEE80211_CHAN_DYN | IEEE80211_CHAN_XR | \
+    IEEE80211_CHAN_HT | IEEE80211_CHAN_VHT)
 
 /*
  * Useful combinations of channel characteristics.
@@ -328,9 +354,9 @@ struct ieee80211_channel {
 #define	IEEE80211_IS_CHAN_G(_c) \
 	(((_c)->ic_flags & IEEE80211_CHAN_G) == IEEE80211_CHAN_G)
 #define	IEEE80211_IS_CHAN_N(_c) \
-	(((_c)->ic_flags & IEEE80211_CHAN_HT) == IEEE80211_CHAN_HT)
+	(((_c)->ic_flags & IEEE80211_CHAN_HT) != 0)
 #define	IEEE80211_IS_CHAN_AC(_c) \
-	(((_c)->ic_flags & IEEE80211_CHAN_VHT) == IEEE80211_CHAN_VHT)
+	(((_c)->ic_flags & IEEE80211_CHAN_VHT) != 0)
 
 #define	IEEE80211_IS_CHAN_2GHZ(_c) \
 	(((_c)->ic_flags & IEEE80211_CHAN_2GHZ) != 0)
@@ -401,6 +427,7 @@ struct ieee80211com {
 				    struct ieee80211_node *);
 	void			(*ic_updateslot)(struct ieee80211com *);
 	void			(*ic_updateedca)(struct ieee80211com *);
+    void            (*ic_updatedtim)(struct ieee80211com *);
 	void			(*ic_set_tim)(struct ieee80211com *, int, int);
 	int			(*ic_set_key)(struct ieee80211com *,
 				    struct ieee80211_node *,
@@ -416,8 +443,7 @@ struct ieee80211com {
 				    struct ieee80211_node *, u_int8_t);
 	void			(*ic_ampdu_rx_stop)(struct ieee80211com *,
 				    struct ieee80211_node *, u_int8_t);
-	void			(*ic_update_htprot)(struct ieee80211com *,
-					struct ieee80211_node *);
+	void			(*ic_updateprot)(struct ieee80211com *);
 	int			(*ic_bgscan_start)(struct ieee80211com *);
     /* The channel width has changed (20<->2040) */
     void            (*ic_update_chw)(struct ieee80211com *);
@@ -480,7 +506,7 @@ struct ieee80211com {
 	u_int8_t		ic_des_essid[IEEE80211_NWID_LEN];
 	struct ieee80211_channel *ic_des_chan;	/* desired channel */
 	u_int8_t		ic_des_bssid[IEEE80211_ADDR_LEN];
-#ifdef AIRPORT
+#if (defined AIRPORT) && (defined USE_APPLE_SUPPLICANT)
 	u_int8_t		ic_rsn_ie_override[257];
 #endif
     u_int16_t       ic_deauth_reason;
@@ -514,8 +540,10 @@ struct ieee80211com {
 	enum ieee80211_cipher	ic_rsngroupcipher;
 	enum ieee80211_cipher	ic_rsngroupmgmtcipher;
 
+#ifdef notyet
 	struct ieee80211_defrag	ic_defrag[IEEE80211_DEFRAG_SIZE];
 	int			ic_defrag_cur;
+#endif
 
 	u_int8_t		*ic_tim_bitmap;
 	u_int			ic_tim_len;
@@ -525,6 +553,8 @@ struct ieee80211com {
 
 	u_int32_t		ic_txbfcaps;
 	u_int16_t		ic_htcaps;
+    uint32_t        ic_vhtcaps;
+    uint32_t        ic_hecaps;
 	u_int8_t		ic_ampdu_params;
 	u_int8_t		ic_sup_mcs[howmany(80, NBBY)];
 	u_int16_t		ic_max_rxrate;	/* in Mb/s, 0 <= rate <= 1023 */
@@ -534,12 +564,16 @@ struct ieee80211com {
 	u_int8_t		ic_dialog_token;
 	int			ic_fixed_mcs;
     uint64_t        ic_last_cache_scan_ts;
+    uint16_t        ic_vht_tx_mcs_map;
+    uint16_t        ic_vht_rx_mcs_map;
+    uint16_t        ic_vht_tx_highest;
+    uint16_t        ic_vht_rx_highest;
+    uint16_t        ic_vht_sup_mcs[howmany(80, NBBY)];
     
-    ///add
-    uint32_t        ic_flags_vht;    /* VHT state flags */
-    uint32_t        ic_flags_ht;    /* HT state flags */
-    ///end add
-    
+    /* HE state */
+    struct ieee80211_he_cap_elem ic_he_cap_elem;   /* Fixed portion of the HE capabilities element. */
+    struct ieee80211_he_mcs_nss_supp ic_he_mcs_nss_supp;   /* The supported NSS/MCS combinations. */
+    uint8_t ic_ppe_thres[IEEE80211_HE_PPE_THRES_MAX_LEN]; /* Holds the PPE Thresholds data. */
     
 	TAILQ_HEAD(, ieee80211_ess)	 ic_ess;
 };
@@ -599,6 +633,7 @@ struct ieee80211_ess {
 #define IEEE80211_F_AUTO_JOIN	0x10000000	/* CONF: auto-join active */
 #define	IEEE80211_F_VHTON	0x20000000	/* CONF: VHT enabled */
 #define IEEE80211_F_DISABLE_BG_AUTO_CONNECT 0x40000000  /* CONF: disable auto connect to wifi when doing backgound scan */
+#define IEEE80211_F_HEON    0x80000000  /* CONF: HE enabled */
 
 /* ic_xflags */
 #define	IEEE80211_F_TX_MGMT_ONLY 0x00000001	/* leave data frames on ifq */
@@ -621,6 +656,9 @@ struct ieee80211_ess {
 #define IEEE80211_C_RAWCTL	0x00004000	/* CAPABILITY: raw ctl */
 #define IEEE80211_C_SCANALLBAND	0x00008000	/* CAPABILITY: scan all bands */
 #define IEEE80211_C_TX_AMPDU	0x00010000	/* CAPABILITY: send A-MPDU */
+#define IEEE80211_C_AMSDU_IN_AMPDU 0x00020000 /* CAPABILITY: Rx AMSDU inside AMPDU */
+#define IEEE80211_C_TX_AMPDU_SETUP_IN_HW 0x00040000 /* CAPABILITY: BA negotiation in HW */
+#define IEEE80211_C_SUPPORTS_VHT_EXT_NSS_BW 0x00080000  /* CAPABILITY: for 160mhz */
 
 /* flags for ieee80211_fix_rate() */
 #define	IEEE80211_F_DOSORT	0x00000001	/* sort rate list */
@@ -633,7 +671,7 @@ struct ieee80211_ess {
 #define IEEE80211_EVT_COUNTRY_CODE_UPDATE       3
 #define IEEE80211_EVT_SCAN_DONE                 4
 
-void	ieee80211_ifattach(struct _ifnet *);
+void	ieee80211_ifattach(struct _ifnet *, IOEthernetController *controller);
 void	ieee80211_ifdetach(struct _ifnet *);
 void	ieee80211_channel_init(struct _ifnet *);
 void	ieee80211_media_init(struct _ifnet *);

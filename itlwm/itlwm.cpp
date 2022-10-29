@@ -12,14 +12,14 @@
 * GNU General Public License for more details.
 */
 #include "itlwm.hpp"
-#include "types.h"
-#include "kernel.h"
+#include <linux/types.h>
+#include <linux/kernel.h>
 
 #include <IOKit/IOInterruptController.h>
 #include <IOKit/IOCommandGate.h>
 #include <IOKit/network/IONetworkMedium.h>
 #include <net/ethernet.h>
-#include "sha1.h"
+#include <crypto/sha1.h>
 #include <net80211/ieee80211_node.h>
 #include <net80211/ieee80211_ioctl.h>
 
@@ -81,6 +81,10 @@ IOService* itlwm::probe(IOService *provider, SInt32 *score)
         isMatch = true;
         fHalService = new ItlIwm;
     }
+    if (!isMatch && ItlIwn::iwn_match(device)) {
+        isMatch = true;
+        fHalService = new ItlIwn;
+    }
     if (isMatch) {
         device->findPCICapability(PCI_CAP_ID_MSIX, &msixCap);
         if (msixCap) {
@@ -101,8 +105,10 @@ IOService* itlwm::probe(IOService *provider, SInt32 *score)
     return NULL;
 }
 
-bool itlwm::configureInterface(IONetworkInterface *netif) {
+bool itlwm::configureInterface(IONetworkInterface *netif)
+{
     IONetworkData *nd;
+    struct _ifnet *ifp = &fHalService->get80211Controller()->ic_ac.ac_if;
     
     if (super::configureInterface(netif) == false) {
         XYLog("super failed\n");
@@ -114,27 +120,14 @@ bool itlwm::configureInterface(IONetworkInterface *netif) {
         XYLog("network statistics buffer unavailable?\n");
         return false;
     }
-    fHalService->get80211Controller()->ic_ac.ac_if.netStat = fpNetStats;
-    fHalService->get80211Controller()->ic_ac.ac_if.iface = OSDynamicCast(IOEthernetInterface, netif);
+    ifp->netStat = fpNetStats;
+    ether_ifattach(ifp, OSDynamicCast(IOEthernetInterface, netif));
     fpNetStats->collisions = 0;
 #ifdef __PRIVATE_SPI__
     netif->configureOutputPullModel(fHalService->getDriverInfo()->getTxQueueSize(), 0, 0, IOEthernetInterface::kOutputPacketSchedulingModelNormal, 0);
 #endif
     
     return true;
-}
-
-IONetworkInterface *itlwm::createInterface()
-{
-    itlwm_interface *netif = new itlwm_interface;
-    if (!netif) {
-        return NULL;
-    }
-    if (!netif->init(this)) {
-        netif->release();
-        return NULL;
-    }
-    return netif;
 }
 
 struct _ifnet *itlwm::getIfp()
@@ -283,6 +276,8 @@ void itlwm::associateSSID(const char *ssid, const char *pwd)
         wpa.i_akms = IEEE80211_WPA_AKM_PSK | IEEE80211_WPA_AKM_8021X | IEEE80211_WPA_AKM_SHA256_PSK | IEEE80211_WPA_AKM_SHA256_8021X;
         ieee80211_ioctl_setwpaparms(ic, &wpa);
     }
+    if (ic->ic_state > IEEE80211_S_AUTH && ic->ic_bss != NULL)
+        IEEE80211_SEND_MGMT(ic, ic->ic_bss, IEEE80211_FC0_SUBTYPE_DEAUTH, IEEE80211_REASON_AUTH_LEAVE);
     ieee80211_del_ess(ic, NULL, 0, 1);
     struct ieee80211_node *selbs = ieee80211_node_choose_bss(ic, 0, NULL);
     if (selbs == NULL) {
@@ -303,6 +298,7 @@ void itlwm::associateSSID(const char *ssid, const char *pwd)
 
 bool itlwm::start(IOService *provider)
 {
+    int boot_value = 0;
     if (!super::start(provider)) {
         return false;
     }
@@ -344,6 +340,12 @@ bool itlwm::start(IOService *provider)
         return false;
     }
     fHalService->initWithController(this, _fWorkloop, _fCommandGate);
+    
+    if (PE_parse_boot_argn("-novht", &boot_value, sizeof(boot_value)))
+        fHalService->get80211Controller()->ic_userflags |= IEEE80211_F_NOVHT;
+    if (PE_parse_boot_argn("-noht40", &boot_value, sizeof(boot_value)))
+        fHalService->get80211Controller()->ic_userflags |= IEEE80211_F_NOHT40;
+    
     if (!fHalService->attach(pciNub)) {
         XYLog("attach fail\n");
         super::stop(pciNub);
@@ -474,9 +476,9 @@ void itlwm::stop(IOService *provider)
     super::stop(provider);
     setLinkStatus(kIONetworkLinkValid);
     fHalService->detach(pciNub);
+    ether_ifdetach(ifp);
     detachInterface(fNetIf, true);
     OSSafeReleaseNULL(fNetIf);
-    ifp->iface = NULL;
     releaseAll();
 }
 
@@ -532,9 +534,9 @@ IOReturn itlwm::disable(IONetworkInterface *netif)
 {
     XYLog("%s\n", __FUNCTION__);
     super::disable(netif);
-    fHalService->disable(netif);
     watchdogTimer->cancelTimeout();
     watchdogTimer->disable();
+    fHalService->disable(netif);
     setLinkStatus(kIONetworkLinkValid);
     return kIOReturnSuccess;
 }
@@ -549,21 +551,20 @@ setLinkStatus(UInt32 status, const IONetworkMedium * activeMedium, UInt64 speed,
 #ifdef __PRIVATE_SPI__
             fNetIf->startOutputThread();
 #endif
-            ifq_set_oactive(&ifq->if_snd);
         } else if (!(status & kIONetworkLinkNoNetworkChange)) {
 #ifdef __PRIVATE_SPI__
             fNetIf->stopOutputThread();
             fNetIf->flushOutputQueue();
 #endif
-            ifq->if_snd->lockFlush();
+            ifq_flush(&ifq->if_snd);
             mq_purge(&fHalService->get80211Controller()->ic_mgtq);
-            ifq_clr_oactive(&ifq->if_snd);
         }
     }
     return ret;
 }
 
-IOReturn itlwm::getHardwareAddress(IOEthernetAddress *addrP) {
+IOReturn itlwm::getHardwareAddress(IOEthernetAddress *addrP)
+{
     if (IEEE80211_ADDR_EQ(etheranyaddr, fHalService->get80211Controller()->ic_myaddr)) {
         return kIOReturnError;
     } else {
@@ -572,56 +573,68 @@ IOReturn itlwm::getHardwareAddress(IOEthernetAddress *addrP) {
     }
 }
 
+IOReturn itlwm::setHardwareAddress(const IOEthernetAddress *addrP)
+{
+    if (!fNetIf || !addrP)
+        return kIOReturnError;
+    if_setlladdr(&fHalService->get80211Controller()->ic_ac.ac_if, addrP->bytes);
+    if (fHalService->get80211Controller()->ic_state > IEEE80211_S_INIT) {
+        fHalService->disable(fNetIf);
+        fHalService->enable(fNetIf);
+    }
+    return kIOReturnSuccess;
+}
+
 #ifdef __PRIVATE_SPI__
 IOReturn itlwm::outputStart(IONetworkInterface *interface, IOOptionBits options)
 {
-    _ifnet *ifp = &fHalService->get80211Controller()->ic_ac.ac_if;
+    struct _ifnet *ifp = &fHalService->get80211Controller()->ic_ac.ac_if;
     mbuf_t m = NULL;
-    if (!ifq_is_oactive(&ifp->if_snd)) {
+    if (ifq_is_oactive(&ifp->if_snd))
         return kIOReturnNoResources;
-    }
     while (kIOReturnSuccess == interface->dequeueOutputPackets(1, &m)) {
-        outputPacket(m, NULL);
-        if (!ifq_is_oactive(&ifp->if_snd)) {
+        if (outputPacket(m, NULL)!= kIOReturnOutputSuccess ||
+            ifq_is_oactive(&ifp->if_snd))
             return kIOReturnNoResources;
-        }
     }
-    return kIOReturnNoResources;
+    return kIOReturnSuccess;
 }
 #endif
 
 UInt32 itlwm::outputPacket(mbuf_t m, void *param)
 {
 //    XYLog("%s\n", __FUNCTION__);
+    IOReturn ret = kIOReturnOutputSuccess;
     _ifnet *ifp = &fHalService->get80211Controller()->ic_ac.ac_if;
-    
-    if (fHalService->get80211Controller()->ic_state != IEEE80211_S_RUN || ifp == NULL || ifp->if_snd == NULL) {
-        freePacket(m);
+
+    if (fHalService->get80211Controller()->ic_state != IEEE80211_S_RUN || ifp->if_snd.queue == NULL) {
+        if (m && mbuf_type(m) != MBUF_TYPE_FREE) {
+            freePacket(m);
+        }
         return kIOReturnOutputDropped;
     }
     if (m == NULL) {
         XYLog("%s m==NULL!!\n", __FUNCTION__);
         ifp->netStat->outputErrors++;
-        return kIOReturnOutputDropped;
+        ret = kIOReturnOutputDropped;
     }
     if (!(mbuf_flags(m) & MBUF_PKTHDR) ){
         XYLog("%s pkthdr is NULL!!\n", __FUNCTION__);
         ifp->netStat->outputErrors++;
         freePacket(m);
-        return kIOReturnOutputDropped;
+        ret = kIOReturnOutputDropped;
     }
     if (mbuf_type(m) == MBUF_TYPE_FREE) {
         XYLog("%s mbuf is FREE!!\n", __FUNCTION__);
         ifp->netStat->outputErrors++;
-        return kIOReturnOutputDropped;
+        ret = kIOReturnOutputDropped;
     }
-    if (ifp->if_snd->lockEnqueue(m)) {
-        (*ifp->if_start)(ifp);
-        return kIOReturnOutputSuccess;
-    } else {
+    if (!ifp->if_snd.queue->lockEnqueue(m)) {
         freePacket(m);
-        return kIOReturnOutputDropped;
+        ret = kIOReturnOutputDropped;
     }
+    (*ifp->if_start)(ifp);
+    return ret;
 }
 
 UInt32 itlwm::getFeatures() const
@@ -629,34 +642,32 @@ UInt32 itlwm::getFeatures() const
     return fHalService->getDriverInfo()->supportedFeatures();
 }
 
-IOReturn itlwm::setPromiscuousMode(IOEnetPromiscuousMode mode) {
+IOReturn itlwm::setPromiscuousMode(IOEnetPromiscuousMode mode)
+{
     return kIOReturnSuccess;
 }
 
-IOReturn itlwm::setMulticastMode(IOEnetMulticastMode mode) {
+IOReturn itlwm::setMulticastMode(IOEnetMulticastMode mode)
+{
     return kIOReturnSuccess;
 }
 
-IOReturn itlwm::setMulticastList(IOEthernetAddress* addr, UInt32 len) {
-    return kIOReturnSuccess;
+IOReturn itlwm::setMulticastList(IOEthernetAddress* addr, UInt32 len)
+{
+    return fHalService->getDriverController()->setMulticastList(addr, len);
 }
 
-IOReturn itlwm::getPacketFilters(const OSSymbol *group, UInt32 *filters) const {
+IOReturn itlwm::getPacketFilters(const OSSymbol *group, UInt32 *filters) const
+{
     IOReturn    rtn = kIOReturnSuccess;
     if (group == gIOEthernetWakeOnLANFilterGroup && magicPacketSupported) {
         *filters = kIOEthernetWakeOnMagicPacket;
     } else if (group == gIONetworkFilterGroup) {
-        *filters = kIOPacketFilterUnicast | kIOPacketFilterBroadcast
-        | kIOPacketFilterPromiscuous | kIOPacketFilterMulticast
-        | kIOPacketFilterMulticastAll;
+        *filters = kIOPacketFilterMulticast | kIOPacketFilterPromiscuous;
     } else {
         rtn = IOEthernetController::getPacketFilters(group, filters);
     }
     return rtn;
-}
-
-IOReturn itlwm::getMaxPacketSize(UInt32 *maxSize) const {
-    return super::getMaxPacketSize(maxSize);
 }
 
 IOReturn itlwm::

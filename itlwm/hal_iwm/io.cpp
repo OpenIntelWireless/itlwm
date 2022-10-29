@@ -11,7 +11,7 @@
 * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 * GNU General Public License for more details.
 */
-/*    $OpenBSD: if_iwm.c,v 1.313 2020/07/10 13:22:20 patrick Exp $    */
+/*    $OpenBSD: if_iwm.c,v 1.316 2020/12/07 20:09:24 tobhe Exp $    */
 
 /*
  * Copyright (c) 2014, 2016 genua gmbh <info@genua.de>
@@ -123,23 +123,35 @@
 #include <IOKit/IODMACommand.h>
 
 uint32_t ItlIwm::
-iwm_read_prph(struct iwm_softc *sc, uint32_t addr)
+iwm_read_prph_unlocked(struct iwm_softc *sc, uint32_t addr)
 {
-    iwm_nic_assert_locked(sc);
     IWM_WRITE(sc,
         IWM_HBUS_TARG_PRPH_RADDR, ((addr & 0x000fffff) | (3 << 24)));
     IWM_BARRIER_READ_WRITE(sc);
     return IWM_READ(sc, IWM_HBUS_TARG_PRPH_RDAT);
 }
 
+uint32_t ItlIwm::
+iwm_read_prph(struct iwm_softc *sc, uint32_t addr)
+{
+    iwm_nic_assert_locked(sc);
+    return iwm_read_prph_unlocked(sc, addr);
+}
+
+void ItlIwm::
+iwm_write_prph_unlocked(struct iwm_softc *sc, uint32_t addr, uint32_t val)
+{
+    IWM_WRITE(sc,
+              IWM_HBUS_TARG_PRPH_WADDR, ((addr & 0x000fffff) | (3 << 24)));
+    IWM_BARRIER_WRITE(sc);
+    IWM_WRITE(sc, IWM_HBUS_TARG_PRPH_WDAT, val);
+}
+
 void ItlIwm::
 iwm_write_prph(struct iwm_softc *sc, uint32_t addr, uint32_t val)
 {
     iwm_nic_assert_locked(sc);
-    IWM_WRITE(sc,
-        IWM_HBUS_TARG_PRPH_WADDR, ((addr & 0x000fffff) | (3 << 24)));
-    IWM_BARRIER_WRITE(sc);
-    IWM_WRITE(sc, IWM_HBUS_TARG_PRPH_WDAT, val);
+    iwm_write_prph_unlocked(sc, addr, val);
 }
 
 void ItlIwm::
@@ -212,7 +224,6 @@ int ItlIwm::
 iwm_nic_lock(struct iwm_softc *sc)
 {
     if (sc->sc_nic_locks > 0) {
-        iwm_nic_assert_locked(sc);
         sc->sc_nic_locks++;
         return 1; /* already locked */
     }
@@ -220,7 +231,7 @@ iwm_nic_lock(struct iwm_softc *sc)
     IWM_SETBITS(sc, IWM_CSR_GP_CNTRL,
         IWM_CSR_GP_CNTRL_REG_FLAG_MAC_ACCESS_REQ);
 
-    if (sc->sc_device_family == IWM_DEVICE_FAMILY_8000)
+    if (sc->sc_device_family >= IWM_DEVICE_FAMILY_8000)
         DELAY(2);
 
     if (iwm_poll_bit(sc, IWM_CSR_GP_CNTRL,
@@ -238,11 +249,6 @@ iwm_nic_lock(struct iwm_softc *sc)
 void ItlIwm::
 iwm_nic_assert_locked(struct iwm_softc *sc)
 {
-    uint32_t reg = IWM_READ(sc, IWM_CSR_GP_CNTRL);
-    if ((reg & IWM_CSR_GP_CNTRL_REG_FLAG_MAC_CLOCK_READY) == 0)
-        panic("%s: mac clock not ready", DEVNAME(sc));
-    if (reg & IWM_CSR_GP_CNTRL_REG_FLAG_GOING_TO_SLEEP)
-        panic("%s: mac gone to sleep", DEVNAME(sc));
     if (sc->sc_nic_locks <= 0)
         panic("%s: nic locks counter %d", DEVNAME(sc), sc->sc_nic_locks);
 }

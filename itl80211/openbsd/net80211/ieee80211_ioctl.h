@@ -11,7 +11,7 @@
 * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 * GNU General Public License for more details.
 */
-/*	$OpenBSD: ieee80211_ioctl.h,v 1.40 2020/04/29 13:13:30 stsp Exp $	*/
+/*	$OpenBSD: ieee80211_ioctl.h,v 1.41 2020/10/06 07:23:15 gerhard Exp $	*/
 /*	$NetBSD: ieee80211_ioctl.h,v 1.7 2004/04/30 22:51:04 dyoung Exp $	*/
 
 /*-
@@ -123,6 +123,8 @@ struct ieee80211_stats {
 	u_int32_t	is_ht_rx_ba_window_gap_timeout;
 	u_int32_t	is_ht_rx_ba_timeout;
 	u_int32_t	is_ht_tx_ba_timeout;
+    u_int32_t   is_vht_nego_no_mandatory_mcs;
+    u_int32_t   is_vht_nego_bad_crypto;
 };
 
 #define	SIOCG80211STATS		_IOWR('i', 242, struct ifreq)
@@ -290,7 +292,7 @@ struct ieee80211_keyrun {
 
 #define	SIOCG80211JOINALL	_IOWR('i', 218, struct ieee80211_joinreq_all)
 #define	SIOCS80211JOIN		_IOWR('i', 255, struct ifreq)
-#define	SIOCG80211JOIN		_IOWR('i', 256, struct ifreq)
+#define	SIOCG80211JOIN		_IOWR('i', 0, struct ifreq)
 
 /* join is pointed at by ifr.ifr_data */
 struct ieee80211_join {
@@ -333,7 +335,7 @@ struct ieee80211_nodereq {
 
 	/* Channel and rates */
 	u_int16_t	nr_channel;			/* last channel */
-	u_int16_t	nr_chan_flags;			/* channel flags */
+	u_int32_t	nr_chan_flags;		/* channel flags */
 	u_int8_t	nr_nrates;			/* rate count */
 	u_int8_t	nr_rates[IEEE80211_RATE_MAXSIZE];	/* rate set */
 
@@ -426,6 +428,8 @@ struct ieee80211_nodereq_all {
 #define IEEE80211_F_HOSTAPMASK	0x00000003
 #define IEEE80211_F_STAYAUTH	0x00000004	/* CONF: ignore deauth */
 #define IEEE80211_F_NOMIMO    0x00000008    /* CONF: disable MIMO */
+#define IEEE80211_F_NOVHT       0x00000010  /* CONF: disable 11ac */
+#define IEEE80211_F_NOHT40      0x00000020  /* CONF: disable 40mhz on 2.4Ghz channel */
 #define IEEE80211_F_USERBITS    "\20\01HIDENWID\02NOBRIDGE\03STAYAUTH\04NOMIMO"
 
 struct ieee80211_flags {
@@ -437,7 +441,9 @@ struct ieee80211_flags {
 	{ "hidenwid", IEEE80211_F_HIDENWID },	\
 	{ "nobridge", IEEE80211_F_NOBRIDGE },	\
 	{ "stayauth", IEEE80211_F_STAYAUTH },    \
-    { "nomimo", IEEE80211_F_NOMIMO }    \
+    { "nomimo", IEEE80211_F_NOMIMO },    \
+    { "novht", IEEE80211_F_NOVHT },        \
+    { "noht40", IEEE80211_F_NOHT40 },     \
 }
 
 #define SIOCG80211FLAGS		_IOWR('i', 216, struct ifreq)

@@ -11,7 +11,7 @@
 * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 * GNU General Public License for more details.
 */
-/*    $OpenBSD: if_iwm.c,v 1.313 2020/07/10 13:22:20 patrick Exp $    */
+/*    $OpenBSD: if_iwm.c,v 1.316 2020/12/07 20:09:24 tobhe Exp $    */
 
 /*
  * Copyright (c) 2014, 2016 genua gmbh <info@genua.de>
@@ -134,9 +134,12 @@ iwm_free_tx_ring(iwm_softc *sc, struct iwm_tx_ring *ring)
         
         if (data->m != NULL) {
             mbuf_freem(data->m);
+            data->m = NULL;
         }
-        if (data->map != NULL)
+        if (data->map != NULL) {
             bus_dmamap_destroy(sc->sc_dmat, data->map);
+            data->map = NULL;
+        }
     }
 }
 
@@ -184,6 +187,10 @@ iwm_alloc_tx_ring(iwm_softc *sc, struct iwm_tx_ring *ring, int qid)
     ring->cur = 0;
     ring->tail = 0;
     
+    /* We are using 10:17 for DQA tx agg */
+    if (qid > IWM_LAST_AGG_TX_QUEUE)
+        return 0;
+    
     /* Allocate TX descriptors (256-byte aligned). */
     size = IWM_TX_RING_COUNT * sizeof (struct iwm_tfd);
     err = iwm_dma_contig_alloc(sc->sc_dmat, &ring->desc_dma, size, 256);
@@ -193,28 +200,6 @@ iwm_alloc_tx_ring(iwm_softc *sc, struct iwm_tx_ring *ring, int qid)
         goto fail;
     }
     ring->desc = (struct iwm_tfd *)ring->desc_dma.vaddr;
-    
-    /*
-     * There is no need to allocate DMA buffers for unused rings.
-     * 7k/8k/9k hardware supports up to 31 Tx rings which is more
-     * than we currently need.
-     *
-     * In DQA mode we use 1 command queue + 4 DQA mgmt/data queues.
-     * The command is queue 0 (sc->txq[0]), and 4 mgmt/data frame queues
-     * are sc->tqx[IWM_DQA_MIN_MGMT_QUEUE + ac], i.e. sc->txq[5:8],
-     * in order to provide one queue per EDCA category.
-     *
-     * In non-DQA mode, we use rings 0 through 9 (0-3 are EDCA, 9 is cmd).
-     *
-     * Tx aggregation will require additional queues (one queue per TID
-     * for which aggregation is enabled) but we do not implement this yet.
-     *
-     * Unfortunately, we cannot tell if DQA will be used until the
-     * firmware gets loaded later, so just allocate sufficient rings
-     * in order to satisfy both cases.
-     */
-    if (qid > IWM_CMD_QUEUE)
-        return 0;
     
     size = IWM_TX_RING_COUNT * sizeof(struct iwm_device_cmd);
     err = iwm_dma_contig_alloc(sc->sc_dmat, &ring->cmd_dma, size, 4);
@@ -301,30 +286,135 @@ iwm_enable_ac_txq(struct iwm_softc *sc, int qid, int fifo)
 }
 
 int ItlIwm::
-iwm_enable_txq(struct iwm_softc *sc, int sta_id, int qid, int fifo)
+iwm_enable_txq(struct iwm_softc *sc, int sta_id, int qid, int fifo, int ssn, int tid, int agg)
 {
-    XYLog("%s\n", __FUNCTION__);
+    XYLog("%s qid=%d tid=%d agg=%d\n", __FUNCTION__, qid, tid, agg);
     struct iwm_scd_txq_cfg_cmd cmd;
-    int err;
+    int err = 0;
+    uint16_t idx;
+    struct iwm_tx_ring *ring = &sc->txq[qid];
+    bool scd_bug = false;
     
     iwm_nic_assert_locked(sc);
     
-    IWM_WRITE(sc, IWM_HBUS_TARG_WRPTR, qid << 8 | 0);
+    /*
+     * If we need to move the SCD write pointer by steps of
+     * 0x40, 0x80 or 0xc0, it gets stuck. Avoids this and let
+     * the op_mode know by returning true later.
+     * Do this only in case cfg is NULL since this trick can
+     * be done only if we have DQA enabled which is true for mvm
+     * only. And mvm never sets a cfg pointer.
+     * This is really ugly, but this is the easiest way out for
+     * this sad hardware issue.
+     * This bug has been fixed on devices 9000 and up.
+     */
+    scd_bug = !sc->sc_mqrx_supported &&
+    !((ssn - ring->cur) & 0x3f) &&
+    (ssn != ring->cur);
+    if (scd_bug)
+        ssn = (ssn + 1) & 0xfff;
+    
+    idx = IWM_AGG_SSN_TO_TXQ_IDX(ssn);
+    ring->cur = ring->read = idx;
+    ring->tail = idx;
+    IWM_WRITE(sc, IWM_HBUS_TARG_WRPTR, (qid << 8) | idx);
     
     memset(&cmd, 0, sizeof(cmd));
     cmd.scd_queue = qid;
-    cmd.enable = 1;
-    cmd.sta_id = sta_id;
-    cmd.tx_fifo = fifo;
-    cmd.aggregate = 0;
+    cmd.enable = IWM_SCD_CFG_ENABLE_QUEUE;
     cmd.window = IWM_FRAME_LIMIT;
-    
+    cmd.sta_id = sta_id;
+    cmd.ssn = htole16(ssn);
+    cmd.tx_fifo = fifo;
+    cmd.aggregate = agg;
+    cmd.tid = tid;
+
+    iwm_write_prph(sc, IWM_SCD_QUEUE_RDPTR(qid), ssn);
+
+    iwm_write_mem32(sc,
+                    sc->sched_base + IWM_SCD_CONTEXT_QUEUE_OFFSET(qid), 0);
+
+    /* Set scheduler window size and frame limit. */
+    iwm_write_mem32(sc,
+                    sc->sched_base + IWM_SCD_CONTEXT_QUEUE_OFFSET(qid) +
+                    sizeof(uint32_t),
+                    ((IWM_FRAME_LIMIT << IWM_SCD_QUEUE_CTX_REG2_WIN_SIZE_POS) &
+                     IWM_SCD_QUEUE_CTX_REG2_WIN_SIZE_MSK) |
+                    ((IWM_FRAME_LIMIT
+                      << IWM_SCD_QUEUE_CTX_REG2_FRAME_LIMIT_POS) &
+                     IWM_SCD_QUEUE_CTX_REG2_FRAME_LIMIT_MSK));
+
+    iwm_write_prph(sc, IWM_SCD_QUEUE_STATUS_BITS(qid),
+                   (1 << IWM_SCD_QUEUE_STTS_REG_POS_ACTIVE) |
+                   (fifo << IWM_SCD_QUEUE_STTS_REG_POS_TXF) |
+                   (1 << IWM_SCD_QUEUE_STTS_REG_POS_WSL) |
+                   IWM_SCD_QUEUE_STTS_REG_MSK);
+
+    if (qid == sc->cmdqid)
+        iwm_write_prph(sc, IWM_SCD_EN_CTRL,
+                       iwm_read_prph(sc, IWM_SCD_EN_CTRL) | (1 << qid));
+
     err = iwm_send_cmd_pdu(sc, IWM_SCD_QUEUE_CFG, 0,
                            sizeof(cmd), &cmd);
     if (err)
-        return err;
+        XYLog("%s failed error=%d\n", __FUNCTION__, err);
     
-    return 0;
+    return err;
+}
+
+int ItlIwm::
+iwm_disable_txq(struct iwm_softc *sc, uint8_t qid, uint8_t tid, uint8_t flags)
+{
+    int err;
+    struct iwm_scd_txq_cfg_cmd cmd = {
+        .scd_queue = qid,
+        .enable = IWM_SCD_CFG_DISABLE_QUEUE,
+        .sta_id = IWM_STATION_ID,
+        .tid = tid,
+    };
+    
+    err = iwm_send_cmd_pdu(sc, IWM_SCD_QUEUE_CFG, flags,
+                               sizeof(struct iwm_scd_txq_cfg_cmd), &cmd);
+    return err;
+}
+
+int ItlIwm::
+iwm_send_soc_conf(struct iwm_softc *sc)
+{
+    struct iwm_soc_configuration_cmd cmd;
+    int err;
+    uint32_t cmd_id, flags = 0;
+    
+    memset(&cmd, 0, sizeof(cmd));
+    
+    /*
+     * In VER_1 of this command, the discrete value is considered
+     * an integer; In VER_2, it's a bitmask.  Since we have only 2
+     * values in VER_1, this is backwards-compatible with VER_2,
+     * as long as we don't set any other flag bits.
+     */
+    if (!sc->sc_integrated) { /* VER_1 */
+        flags = IWM_SOC_CONFIG_CMD_FLAGS_DISCRETE;
+    } else { /* VER_2 */
+        uint8_t scan_cmd_ver;
+        if (sc->sc_ltr_delay != IWM_SOC_FLAGS_LTR_APPLY_DELAY_NONE)
+            flags |= (sc->sc_ltr_delay &
+                      IWM_SOC_FLAGS_LTR_APPLY_DELAY_MASK);
+        scan_cmd_ver = iwm_lookup_cmd_ver(sc, IWM_LONG_GROUP,
+                                          IWM_SCAN_REQ_UMAC);
+        if (scan_cmd_ver != IWM_FW_CMD_VER_UNKNOWN &&
+            scan_cmd_ver >= 2 && sc->sc_low_latency_xtal)
+            flags |= IWM_SOC_CONFIG_CMD_FLAGS_LOW_LATENCY;
+    }
+    cmd.flags = htole32(flags);
+    
+    cmd.latency = htole32(sc->sc_xtal_latency);
+    
+    cmd_id = iwm_cmd_id(IWM_SOC_CONFIGURATION_CMD, IWM_SYSTEM_GROUP, 0);
+    err = iwm_send_cmd_pdu(sc, cmd_id, 0, sizeof(cmd), &cmd);
+    if (err)
+        printf("%s: failed to set soc latency: %d\n", DEVNAME(sc), err);
+    return err;
 }
 
 int ItlIwm::
@@ -335,11 +425,14 @@ iwm_send_update_mcc_cmd(struct iwm_softc *sc, const char *alpha2)
     struct iwm_host_cmd hcmd = {
         .id = IWM_MCC_UPDATE_CMD,
         .flags = IWM_CMD_WANT_RESP,
+        .resp_pkt_len = IWM_CMD_RESP_MAX,
         .data = { &mcc_cmd },
     };
+    struct iwm_rx_packet *pkt;
+    size_t resp_len;
     int err;
-    int resp_v2 = isset(sc->sc_enabled_capa,
-                        IWM_UCODE_TLV_CAPA_LAR_SUPPORT_V2);
+    int resp_v3 = isset(sc->sc_enabled_capa,
+                        IWM_UCODE_TLV_CAPA_LAR_SUPPORT_V3);
     
     if (sc->sc_device_family == IWM_DEVICE_FAMILY_8000 &&
         !sc->sc_nvm.lar_enabled) {
@@ -354,23 +447,77 @@ iwm_send_update_mcc_cmd(struct iwm_softc *sc, const char *alpha2)
     else
         mcc_cmd.source_id = IWM_MCC_SOURCE_OLD_FW;
     
-    if (resp_v2) {
+    if (resp_v3) { /* same size as resp_v2 */
         hcmd.len[0] = sizeof(struct iwm_mcc_update_cmd);
-        hcmd.resp_pkt_len = sizeof(struct iwm_rx_packet) +
-        sizeof(struct iwm_mcc_update_resp);
     } else {
         hcmd.len[0] = sizeof(struct iwm_mcc_update_cmd_v1);
-        hcmd.resp_pkt_len = sizeof(struct iwm_rx_packet) +
-        sizeof(struct iwm_mcc_update_resp_v1);
     }
     
     err = iwm_send_cmd(sc, &hcmd);
     if (err)
         return err;
     
-    iwm_free_resp(sc, &hcmd);
+    pkt = hcmd.resp_pkt;
+    if (!pkt || (pkt->hdr.flags & IWM_CMD_FAILED_MSK)) {
+        err = EIO;
+        goto out;
+    }
     
-    return 0;
+    if (resp_v3) {
+        struct iwm_mcc_update_resp_v3 *resp;
+        resp_len = iwm_rx_packet_payload_len(pkt);
+        if (resp_len < sizeof(*resp)) {
+            err = EIO;
+            goto out;
+        }
+        
+        resp = (struct iwm_mcc_update_resp_v3 *)pkt->data;
+        if (resp_len != sizeof(*resp) +
+            resp->n_channels * sizeof(resp->channels[0])) {
+            err = EIO;
+            goto out;
+        }
+    } else {
+        struct iwm_mcc_update_resp_v1 *resp_v1;
+        resp_len = iwm_rx_packet_payload_len(pkt);
+        if (resp_len < sizeof(*resp_v1)) {
+            err = EIO;
+            goto out;
+        }
+        
+        resp_v1 = (struct iwm_mcc_update_resp_v1 *)pkt->data;
+        if (resp_len != sizeof(*resp_v1) +
+            resp_v1->n_channels * sizeof(resp_v1->channels[0])) {
+            err = EIO;
+            goto out;
+        }
+    }
+out:
+    iwm_free_resp(sc, &hcmd);
+    return err;
+}
+
+int ItlIwm::
+iwm_send_temp_report_ths_cmd(struct iwm_softc *sc)
+{
+    struct iwm_temp_report_ths_cmd cmd;
+    int err;
+    
+    /*
+     * In order to give responsibility for critical-temperature-kill
+     * and TX backoff to FW we need to send an empty temperature
+     * reporting command at init time.
+     */
+    memset(&cmd, 0, sizeof(cmd));
+    
+    err = iwm_send_cmd_pdu(sc,
+                           IWM_WIDE_ID(IWM_PHY_OPS_GROUP, IWM_TEMP_REPORTING_THRESHOLDS_CMD),
+                           0, sizeof(cmd), &cmd);
+    if (err)
+        printf("%s: TEMP_REPORT_THS_CMD command failed (error %d)\n",
+               DEVNAME(sc), err);
+    
+    return err;
 }
 
 void ItlIwm::

@@ -352,8 +352,20 @@ struct apple80211req
 #define APPLE80211_IOC_SCAN_BACKOFF_REPORT 264
 #define APPLE80211_IOC_OFFLOAD_TCPKA_ENABLE 265
 #define APPLE80211_IOC_RANGING_CAPS 266
-#define APPLE80211_IOC_PER_CORE_RSSI_REPORT 267
+#define APPLE80211_IOC_SUPPRESS_SCANS 267
+#define APPLE80211_IOC_HOST_AP_MODE_HIDDEN 336
+#define APPLE80211_IOC_LQM_CONFIG 337
+#define APPLE80211_IOC_AWDL_CCA 338
+#define APPLE80211_IOC_TRAP_CRASHTRACER_MINI_DUMP 339
+#define APPLE80211_IOC_AWDL_SIDECAR_STATISTICS 340
 #define APPLE80211_IOC_AWDL_CAPABILITIES    341
+#define APPLE80211_IOC_LLW_PARAMS 344
+#define APPLE80211_IOC_HE_CAPABILITY        345
+#define APPLE80211_IOC_SOFTAP_PARAMS        347
+#define APPLE80211_IOC_SOFTAP_TRIGGER_CSA   349
+#define APPLE80211_IOC_SOFTAP_STATS         350
+#define APPLE80211_IOC_AWDL_SIDECAR_DIAGNOSTICS 351
+#define APPLE80211_IOC_SOFTAP_WIFI_NETWORK_INFO_IE  352
 #define APPLE80211_IOC_NSS  353
 
 #define APPLE80211_IOC_CARD_SPECIFIC            0xffffffff    // req_type
@@ -570,7 +582,7 @@ struct apple80211_scan_multiple_data
     uint32_t                  version;
     uint32_t                  ap_mode; // apple80211_apmode
     uint32_t                  ssid_count;
-    apple80211_ssid_data      ssids[16];
+    apple80211_ssid_data      ssids[10];
     uint32_t                  bssid_count;
     ether_addr                bssids[16];
     uint32_t                  scan_type;
@@ -581,6 +593,8 @@ struct apple80211_scan_multiple_data
     struct apple80211_channel channels[APPLE80211_MAX_CHANNELS];
     uint16_t                  unk_2;
 };
+
+static_assert(__offsetof(struct apple80211_scan_multiple_data, bssid_count) == 0x19c, "zxystd: BSSID offset invalid");
 
 struct apple80211_link_changed_event_data
 {
@@ -708,7 +722,11 @@ struct apple80211_ap_ie_data
 {
     u_int32_t    version;
     u_int32_t    len;
+#if __IO80211_TARGET < __MAC_13_0
     u_int8_t     *ie_data;
+#else
+    u_int8_t     ie_data[APPLE80211_NETWORK_DATA_MAX_IE_LEN];
+#endif
 };
 
 struct apple80211_stats_data
@@ -813,6 +831,21 @@ struct apple80211_mcs_index_set_data
     u_int8_t    mcs_set_map[APPLE80211_MAP_SIZE( APPLE80211_MAX_MCS_INDEX + 1 )];
 };
 
+struct apple80211_vht_mcs_index_set_data
+{
+    u_int32_t   version;
+    u_int16_t    mcs_map;
+} __attribute__((packed));
+
+struct apple80211_mcs_vht_data 
+{
+    u_int32_t   version;
+    u_int32_t   index;
+    u_int32_t   nss;
+    u_int32_t   bw;
+    u_int32_t   guard_interval;
+} __attribute__((packed));
+
 struct apple80211_wow_parameter_data
 {
     u_int32_t                     version;
@@ -892,8 +925,26 @@ struct apple80211_channels_info {
     uint32_t    version;
     uint32_t    unk1;
     uint16_t    num_chan_specs;
-    struct apple80211_awdl_channel channels[APPLE80211_MAX_CHANNELS];
+    uint16_t    chan_spec[APPLE80211_MAX_CHANNELS];
+    uint8_t     chan_num[APPLE80211_MAX_CHANNELS];
+    uint8_t     indoor_restric[APPLE80211_MAX_CHANNELS];
+    uint8_t     radar_dfs[APPLE80211_MAX_CHANNELS];
+    uint8_t     passive[APPLE80211_MAX_CHANNELS];
+    uint8_t     support_40Mhz[APPLE80211_MAX_CHANNELS];
+    uint8_t     support_80Mhz[APPLE80211_MAX_CHANNELS];
+    uint8_t     z[APPLE80211_MAX_CHANNELS];
+    uint8_t     pad[386];
+    uint32_t    per_chan[APPLE80211_MAX_CHANNELS];
+    uint32_t    chan_bitmap[APPLE80211_MAX_CHANNELS];
 } __attribute__((packed));
+
+static_assert(__offsetof(struct apple80211_channels_info, chan_num) == 0x10A, "invalid offset");   //wf_chspec_ctlchan
+static_assert(__offsetof(struct apple80211_channels_info, indoor_restric) == 0x18A, "invalid offset"); //wlc_restricted_chanspec
+static_assert(__offsetof(struct apple80211_channels_info, radar_dfs) == 0x20A, "invalid offset");  //wlc_radar_chanspec
+static_assert(__offsetof(struct apple80211_channels_info, passive) == 0x28A, "invalid offset");    //wlc_quiet_chanspec
+static_assert(__offsetof(struct apple80211_channels_info, support_40Mhz) == 0x30A, "invalid offset");
+static_assert(__offsetof(struct apple80211_channels_info, support_80Mhz) == 0x38A, "invalid offset");
+static_assert(__offsetof(struct apple80211_channels_info, per_chan) == 0x60C, "invalid offset");
 
 struct apple80211_peer_cache_maximum_size {
     uint32_t    version;
@@ -1004,18 +1055,261 @@ struct apple80211_awdl_oob_request {
     uint8_t     data[1782];         // 48
 } __attribute__((packed));
 
+//Roam: <airport[565]> DISABLED, 2.4GHz on awdl0 => {
+//    "ROAM_PROF" =     (
+//                {
+//            "ROAM_PROF_BACKOFF_MULTIPLIER" = 10;
+//            "ROAM_PROF_FULLSCAN_PERIOD" = 3000;
+//            "ROAM_PROF_INIT_SCAN_PERIOD" = 600;
+//            "ROAM_PROF_MAX_SCAN_PERIOD" = 60000;
+//            "ROAM_PROF_NFSCAN" = 1;
+//            "ROAM_PROF_ROAM_DELTA" = 50;
+//            "ROAM_PROF_ROAM_FLAGS" = 0;
+//            "ROAM_PROF_ROAM_TRIGGER" = "-120";
+//            "ROAM_PROF_RSSI_BOOST_DELTA" = 55;
+//            "ROAM_PROF_RSSI_BOOST_THRESH" = "-68";
+//            "ROAM_PROF_RSSI_LOWER" = "-128";
+//        }
+//    );
+//    "ROAM_PROF_BAND" = 4;
+//    "ROAM_PROF_NUM" = 1;
+//}
+//Roam: <airport[565]> SINGLE-BAND, SINGLE-AP, 2.4GHz on awdl0 => {
+//    "ROAM_PROF" =     (
+//                {
+//            "ROAM_PROF_BACKOFF_MULTIPLIER" = 2;
+//            "ROAM_PROF_FULLSCAN_PERIOD" = 3600;
+//            "ROAM_PROF_INIT_SCAN_PERIOD" = 60;
+//            "ROAM_PROF_MAX_SCAN_PERIOD" = 1200;
+//            "ROAM_PROF_NFSCAN" = 1;
+//            "ROAM_PROF_ROAM_DELTA" = 12;
+//            "ROAM_PROF_ROAM_FLAGS" = 0;
+//            "ROAM_PROF_ROAM_TRIGGER" = "-80";
+//            "ROAM_PROF_RSSI_BOOST_DELTA" = 55;
+//            "ROAM_PROF_RSSI_BOOST_THRESH" = "-68";
+//            "ROAM_PROF_RSSI_LOWER" = "-128";
+//        }
+//    );
+//    "ROAM_PROF_BAND" = 4;
+//    "ROAM_PROF_NUM" = 1;
+//}
+//Roam: <airport[565]> DUAL-BAND, SINGLE-AP, 2.4GHz on awdl0 => {
+//    "ROAM_PROF" =     (
+//                {
+//            "ROAM_PROF_BACKOFF_MULTIPLIER" = 2;
+//            "ROAM_PROF_FULLSCAN_PERIOD" = 300;
+//            "ROAM_PROF_INIT_SCAN_PERIOD" = 180;
+//            "ROAM_PROF_MAX_SCAN_PERIOD" = 180;
+//            "ROAM_PROF_NFSCAN" = 2;
+//            "ROAM_PROF_ROAM_DELTA" = 16;
+//            "ROAM_PROF_ROAM_FLAGS" = 1;
+//            "ROAM_PROF_ROAM_TRIGGER" = "-10";
+//            "ROAM_PROF_RSSI_BOOST_DELTA" = 55;
+//            "ROAM_PROF_RSSI_BOOST_THRESH" = "-68";
+//            "ROAM_PROF_RSSI_LOWER" = "-75";
+//        },
+//                {
+//            "ROAM_PROF_BACKOFF_MULTIPLIER" = 2;
+//            "ROAM_PROF_FULLSCAN_PERIOD" = 120;
+//            "ROAM_PROF_INIT_SCAN_PERIOD" = 20;
+//            "ROAM_PROF_MAX_SCAN_PERIOD" = 90;
+//            "ROAM_PROF_NFSCAN" = 2;
+//            "ROAM_PROF_ROAM_DELTA" = 12;
+//            "ROAM_PROF_ROAM_FLAGS" = 0;
+//            "ROAM_PROF_ROAM_TRIGGER" = "-75";
+//            "ROAM_PROF_RSSI_BOOST_DELTA" = 55;
+//            "ROAM_PROF_RSSI_BOOST_THRESH" = "-68";
+//            "ROAM_PROF_RSSI_LOWER" = "-128";
+//        }
+//    );
+//    "ROAM_PROF_BAND" = 4;
+//    "ROAM_PROF_NUM" = 2;
+//}
+//Roam: <airport[565]> MULTI-AP, 2.4GHz on awdl0 => {
+//    "ROAM_PROF" =     (
+//                {
+//            "ROAM_PROF_BACKOFF_MULTIPLIER" = 2;
+//            "ROAM_PROF_FULLSCAN_PERIOD" = 1200;
+//            "ROAM_PROF_INIT_SCAN_PERIOD" = 180;
+//            "ROAM_PROF_MAX_SCAN_PERIOD" = 600;
+//            "ROAM_PROF_NFSCAN" = 2;
+//            "ROAM_PROF_ROAM_DELTA" = 20;
+//            "ROAM_PROF_ROAM_FLAGS" = 1;
+//            "ROAM_PROF_ROAM_TRIGGER" = "-10";
+//            "ROAM_PROF_RSSI_BOOST_DELTA" = 55;
+//            "ROAM_PROF_RSSI_BOOST_THRESH" = "-68";
+//            "ROAM_PROF_RSSI_LOWER" = "-50";
+//        },
+//                {
+//            "ROAM_PROF_BACKOFF_MULTIPLIER" = 2;
+//            "ROAM_PROF_FULLSCAN_PERIOD" = 600;
+//            "ROAM_PROF_INIT_SCAN_PERIOD" = 180;
+//            "ROAM_PROF_MAX_SCAN_PERIOD" = 180;
+//            "ROAM_PROF_NFSCAN" = 2;
+//            "ROAM_PROF_ROAM_DELTA" = 16;
+//            "ROAM_PROF_ROAM_FLAGS" = 1;
+//            "ROAM_PROF_ROAM_TRIGGER" = "-50";
+//            "ROAM_PROF_RSSI_BOOST_DELTA" = 55;
+//            "ROAM_PROF_RSSI_BOOST_THRESH" = "-68";
+//            "ROAM_PROF_RSSI_LOWER" = "-75";
+//        },
+//                {
+//            "ROAM_PROF_BACKOFF_MULTIPLIER" = 1;
+//            "ROAM_PROF_FULLSCAN_PERIOD" = 120;
+//            "ROAM_PROF_INIT_SCAN_PERIOD" = 20;
+//            "ROAM_PROF_MAX_SCAN_PERIOD" = 90;
+//            "ROAM_PROF_NFSCAN" = 2;
+//            "ROAM_PROF_ROAM_DELTA" = 12;
+//            "ROAM_PROF_ROAM_FLAGS" = 0;
+//            "ROAM_PROF_ROAM_TRIGGER" = "-75";
+//            "ROAM_PROF_RSSI_BOOST_DELTA" = 55;
+//            "ROAM_PROF_RSSI_BOOST_THRESH" = "-68";
+//            "ROAM_PROF_RSSI_LOWER" = "-128";
+//        }
+//    );
+//    "ROAM_PROF_BAND" = 4;
+//    "ROAM_PROF_NUM" = 3;
+//}
+//Roam: <airport[565]> AC POWER, 2.4GHz on awdl0 => {
+//    "ROAM_PROF" =     (
+//                {
+//            "ROAM_PROF_BACKOFF_MULTIPLIER" = 2;
+//            "ROAM_PROF_FULLSCAN_PERIOD" = 120;
+//            "ROAM_PROF_INIT_SCAN_PERIOD" = 20;
+//            "ROAM_PROF_MAX_SCAN_PERIOD" = 90;
+//            "ROAM_PROF_NFSCAN" = 2;
+//            "ROAM_PROF_ROAM_DELTA" = 16;
+//            "ROAM_PROF_ROAM_FLAGS" = 1;
+//            "ROAM_PROF_ROAM_TRIGGER" = "-10";
+//            "ROAM_PROF_RSSI_BOOST_DELTA" = 55;
+//            "ROAM_PROF_RSSI_BOOST_THRESH" = "-68";
+//            "ROAM_PROF_RSSI_LOWER" = "-75";
+//        },
+//                {
+//            "ROAM_PROF_BACKOFF_MULTIPLIER" = 2;
+//            "ROAM_PROF_FULLSCAN_PERIOD" = 120;
+//            "ROAM_PROF_INIT_SCAN_PERIOD" = 20;
+//            "ROAM_PROF_MAX_SCAN_PERIOD" = 90;
+//            "ROAM_PROF_NFSCAN" = 2;
+//            "ROAM_PROF_ROAM_DELTA" = 12;
+//            "ROAM_PROF_ROAM_FLAGS" = 0;
+//            "ROAM_PROF_ROAM_TRIGGER" = "-75";
+//            "ROAM_PROF_RSSI_BOOST_DELTA" = 55;
+//            "ROAM_PROF_RSSI_BOOST_THRESH" = "-68";
+//            "ROAM_PROF_RSSI_LOWER" = "-128";
+//        }
+//    );
+//    "ROAM_PROF_BAND" = 4;
+//    "ROAM_PROF_NUM" = 2;
+//}
+//Roam: <airport[565]> DISABLED, 5GHz on awdl0 => {
+//    "ROAM_PROF" =     (
+//                {
+//            "ROAM_PROF_BACKOFF_MULTIPLIER" = 10;
+//            "ROAM_PROF_FULLSCAN_PERIOD" = 3000;
+//            "ROAM_PROF_INIT_SCAN_PERIOD" = 600;
+//            "ROAM_PROF_MAX_SCAN_PERIOD" = 60000;
+//            "ROAM_PROF_NFSCAN" = 1;
+//            "ROAM_PROF_ROAM_DELTA" = 50;
+//            "ROAM_PROF_ROAM_FLAGS" = 0;
+//            "ROAM_PROF_ROAM_TRIGGER" = "-120";
+//            "ROAM_PROF_RSSI_BOOST_DELTA" = 0;
+//            "ROAM_PROF_RSSI_BOOST_THRESH" = 0;
+//            "ROAM_PROF_RSSI_LOWER" = "-128";
+//        }
+//    );
+//    "ROAM_PROF_BAND" = 2;
+//    "ROAM_PROF_NUM" = 1;
+//}
+//Roam: <airport[565]> SINGLE-BAND, SINGLE-AP, 5GHz on awdl0 => {
+//    "ROAM_PROF" =     (
+//                {
+//            "ROAM_PROF_BACKOFF_MULTIPLIER" = 2;
+//            "ROAM_PROF_FULLSCAN_PERIOD" = 3600;
+//            "ROAM_PROF_INIT_SCAN_PERIOD" = 60;
+//            "ROAM_PROF_MAX_SCAN_PERIOD" = 1200;
+//            "ROAM_PROF_NFSCAN" = 1;
+//            "ROAM_PROF_ROAM_DELTA" = 12;
+//            "ROAM_PROF_ROAM_FLAGS" = 0;
+//            "ROAM_PROF_ROAM_TRIGGER" = "-80";
+//            "ROAM_PROF_RSSI_BOOST_DELTA" = 0;
+//            "ROAM_PROF_RSSI_BOOST_THRESH" = 0;
+//            "ROAM_PROF_RSSI_LOWER" = "-128";
+//        }
+//    );
+//    "ROAM_PROF_BAND" = 2;
+//    "ROAM_PROF_NUM" = 1;
+//}
+//Roam: <airport[565]> DUAL-BAND, SINGLE-AP, 5GHz on awdl0 => {
+//    "ROAM_PROF" =     (
+//                {
+//            "ROAM_PROF_BACKOFF_MULTIPLIER" = 2;
+//            "ROAM_PROF_FULLSCAN_PERIOD" = 120;
+//            "ROAM_PROF_INIT_SCAN_PERIOD" = 20;
+//            "ROAM_PROF_MAX_SCAN_PERIOD" = 90;
+//            "ROAM_PROF_NFSCAN" = 2;
+//            "ROAM_PROF_ROAM_DELTA" = 12;
+//            "ROAM_PROF_ROAM_FLAGS" = 0;
+//            "ROAM_PROF_ROAM_TRIGGER" = "-75";
+//            "ROAM_PROF_RSSI_BOOST_DELTA" = 0;
+//            "ROAM_PROF_RSSI_BOOST_THRESH" = 0;
+//            "ROAM_PROF_RSSI_LOWER" = "-128";
+//        }
+//    );
+//    "ROAM_PROF_BAND" = 2;
+//    "ROAM_PROF_NUM" = 1;
+//}
+//Roam: <airport[565]> MULTI-AP, 5GHz on awdl0 => {
+//    "ROAM_PROF" =     (
+//                {
+//            "ROAM_PROF_BACKOFF_MULTIPLIER" = 2;
+//            "ROAM_PROF_FULLSCAN_PERIOD" = 120;
+//            "ROAM_PROF_INIT_SCAN_PERIOD" = 20;
+//            "ROAM_PROF_MAX_SCAN_PERIOD" = 90;
+//            "ROAM_PROF_NFSCAN" = 2;
+//            "ROAM_PROF_ROAM_DELTA" = 12;
+//            "ROAM_PROF_ROAM_FLAGS" = 0;
+//            "ROAM_PROF_ROAM_TRIGGER" = "-75";
+//            "ROAM_PROF_RSSI_BOOST_DELTA" = 0;
+//            "ROAM_PROF_RSSI_BOOST_THRESH" = 0;
+//            "ROAM_PROF_RSSI_LOWER" = "-128";
+//        }
+//    );
+//    "ROAM_PROF_BAND" = 2;
+//    "ROAM_PROF_NUM" = 1;
+//}
+//Roam: <airport[565]> AC POWER, 5GHz on awdl0 => {
+//    "ROAM_PROF" =     (
+//                {
+//            "ROAM_PROF_BACKOFF_MULTIPLIER" = 2;
+//            "ROAM_PROF_FULLSCAN_PERIOD" = 120;
+//            "ROAM_PROF_INIT_SCAN_PERIOD" = 20;
+//            "ROAM_PROF_MAX_SCAN_PERIOD" = 90;
+//            "ROAM_PROF_NFSCAN" = 2;
+//            "ROAM_PROF_ROAM_DELTA" = 12;
+//            "ROAM_PROF_ROAM_FLAGS" = 0;
+//            "ROAM_PROF_ROAM_TRIGGER" = "-75";
+//            "ROAM_PROF_RSSI_BOOST_DELTA" = 0;
+//            "ROAM_PROF_RSSI_BOOST_THRESH" = 0;
+//            "ROAM_PROF_RSSI_LOWER" = "-128";
+//        }
+//    );
+//    "ROAM_PROF_BAND" = 2;
+//    "ROAM_PROF_NUM" = 1;
+//}
+
 struct apple80211_roam_profile {
-    uint8_t     unk1;
-    uint8_t     unk2;
-    uint8_t     unk3;
-    uint8_t     unk4;
-    uint8_t     unk5;
-    uint8_t     unk6;
-    uint16_t    unk7;
-    uint16_t    unk8;
-    uint16_t    unk9;
-    uint16_t    unk10;
-    uint16_t    unk11;
+    int8_t      flags;
+    int8_t      trigger;
+    int8_t      rssi_lower;
+    int8_t      rssi_boost_delta;
+    int8_t      rssi_boost_thresh;
+    int8_t      delta;
+    uint16_t    backoff_multiplier;
+    uint16_t    full_scan_period;
+    uint16_t    init_scan_period;
+    uint16_t    nfscan;
+    uint16_t    max_scan_period;
 } __attribute__((packed));
 
 struct apple80211_roam_profile_band_data {
@@ -1055,6 +1349,38 @@ struct apple80211_p2p_go_conf_data {
     uint32_t    ssid_len;       // 20
     uint8_t     ssid[32];       // 24
     uint32_t    suppress_beacon;// 56 security:1,4
+} __attribute__((packed));
+
+struct apple80211_sta_roam_data {
+    uint32_t    version;
+    uint8_t     rcc_channels;
+    uint8_t     unk1;
+    uint8_t     taget_channel;
+    uint8_t     target_bssid[APPLE80211_ADDR_LEN];
+} __attribute__((packed));
+
+struct apple80211_btc_profiles_data {
+    uint32_t    version;
+    uint32_t    profile_cnt;
+    uint8_t     profiles[141][4];
+} __attribute__((packed));
+
+struct apple80211_btc_config_data {
+    uint32_t version;
+    uint32_t enable_2G;
+    uint32_t profile_2g;
+    uint32_t enable_5G;
+    uint32_t profile_5G;
+} __attribute__((packed));
+
+struct apple80211_btc_mode_data {
+    uint32_t    version;
+    uint32_t    btc_mode;
+} __attribute__((packed));
+
+struct apple80211_btc_options_data {
+    uint32_t    version;
+    uint32_t    btc_options;
 } __attribute__((packed));
 
 #endif // _APPLE80211_IOCTL_H_

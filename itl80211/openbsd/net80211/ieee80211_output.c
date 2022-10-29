@@ -11,7 +11,7 @@
 * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 * GNU General Public License for more details.
 */
-/*    $OpenBSD: ieee80211_output.c,v 1.129 2020/03/06 11:54:49 stsp Exp $    */
+/*    $OpenBSD: ieee80211_output.c,v 1.132 2020/12/08 15:52:04 stsp Exp $    */
 /*    $NetBSD: ieee80211_output.c,v 1.13 2004/05/31 11:02:55 dyoung Exp $    */
 
 /*-
@@ -169,6 +169,18 @@ ieee80211_output(struct _ifnet *ifp, mbuf_t m, struct sockaddr *dst,
 	return (error);
 }
 
+const char *
+ieee80211_action_name(struct ieee80211_frame *wh)
+{
+    const u_int8_t *frm = (const uint8_t *)&wh[1];
+    const char *categ_ba_name[3] = { "addba_req", "addba_resp", "delba" };
+    
+    if (frm[0] == IEEE80211_CATEG_BA && frm[1] < nitems(categ_ba_name))
+        return categ_ba_name[frm[1]];
+    
+    return "action";
+}
+
 /*
  * Send a management frame to the specified node.  The node pointer
  * must have a reference as the pointer will be passed to the driver
@@ -238,16 +250,21 @@ ieee80211_mgmt_output(struct _ifnet *ifp, struct ieee80211_node *ni,
                 ieee80211_debug > 1 ||
     #endif
                 (type & IEEE80211_FC0_SUBTYPE_MASK) !=
-                IEEE80211_FC0_SUBTYPE_PROBE_RESP)
-                XYLog("%s: sending %s to %s on channel %u mode %s type=%d\n",
-                    ifp->if_xname,
-                    ieee80211_mgt_subtype_name[
-                    (type & IEEE80211_FC0_SUBTYPE_MASK)
-                    >> IEEE80211_FC0_SUBTYPE_SHIFT],
+                IEEE80211_FC0_SUBTYPE_PROBE_RESP) {
+                const char *subtype_name;
+                if ((type & IEEE80211_FC0_SUBTYPE_MASK) ==
+                    IEEE80211_FC0_SUBTYPE_ACTION)
+                    subtype_name = ieee80211_action_name(wh);
+                else
+                    subtype_name = ieee80211_mgt_subtype_name[
+                        (type & IEEE80211_FC0_SUBTYPE_MASK) >>
+                        IEEE80211_FC0_SUBTYPE_SHIFT];
+                XYLog("%s: sending %s to %s on channel %u mode %s\n",
+                    ifp->if_xname, subtype_name,
                     ether_sprintf(ni->ni_macaddr),
                     ieee80211_chan2ieee(ic, ni->ni_chan),
-                    ieee80211_phymode_name[ic->ic_curmode],
-                      type);
+                    ieee80211_phymode_name[ic->ic_curmode]);
+            }
         }
 
     #ifndef IEEE80211_STA_ONLY
@@ -317,6 +334,12 @@ const struct ieee80211_edca_ac_params
 		[EDCA_AC_VI] = { 3,  4, 2,  94 },
 		[EDCA_AC_VO] = { 2,  3, 2,  47 }
 	},
+    [IEEE80211_MODE_11AC] = {
+        [EDCA_AC_BK] = { 4, 10, 7,   0 },
+        [EDCA_AC_BE] = { 4, 10, 3,   0 },
+        [EDCA_AC_VI] = { 3,  4, 2,  94 },
+        [EDCA_AC_VO] = { 2,  3, 2,  47 }
+    },
 };
 
 #ifndef IEEE80211_STA_ONLY
@@ -346,6 +369,12 @@ const struct ieee80211_edca_ac_params
 		[EDCA_AC_VI] = { 3,  4, 1,  94 },
 		[EDCA_AC_VO] = { 2,  3, 1,  47 }
 	},
+    [IEEE80211_MODE_11AC] = {
+        [EDCA_AC_BK] = { 4, 10, 7,   0 },
+        [EDCA_AC_BE] = { 4,  6, 3,   0 },
+        [EDCA_AC_VI] = { 3,  4, 1,  94 },
+        [EDCA_AC_VO] = { 2,  3, 1,  47 }
+    },
 };
 #endif	/* IEEE80211_STA_ONLY */
 
@@ -415,33 +444,33 @@ ieee80211_classify(struct ieee80211com *ic, mbuf_t m)
 	if (m->m_flags & M_VLANTAG)	/* use VLAN 802.1D user-priority */
 		return EVL_PRIOFTAG(m->m_pkthdr.ether_vtag);
 #endif
-	mbuf_copydata(m, 0, sizeof(eh), (caddr_t)&eh);
-        if (eh.ether_type == htons(ETHERTYPE_IP)) {
-            struct ip ip;
-            mbuf_copydata(m, sizeof(eh), sizeof(ip), (caddr_t)&ip);
-            if (ip.ip_v != 4)
-                return 0;
-            ds_field = ip.ip_tos;
-        }
-    #ifdef INET6
-        else if (eh.ether_type == htons(ETHERTYPE_IPV6)) {
-            struct ip6_hdr ip6;
-            u_int32_t flowlabel;
-            mbuf_copydata(m, sizeof(eh), sizeof(ip6), (caddr_t)&ip6);
-            flowlabel = ntohl(ip6.ip6_flow);
-            if ((flowlabel >> 28) != 6)
-                return 0;
-            ds_field = (flowlabel >> 20) & 0xff;
-        }
-    #endif    /* INET6 */
-        else    /* neither IPv4 nor IPv6 */
+    mbuf_copydata(m, 0, sizeof(eh), (caddr_t)&eh);
+    if (eh.ether_type == htons(ETHERTYPE_IP)) {
+        struct ip ip;
+        mbuf_copydata(m, sizeof(eh), sizeof(ip), (caddr_t)&ip);
+        if (ip.ip_v != 4)
             return 0;
+        ds_field = ip.ip_tos;
+    }
+#ifdef INET6
+    else if (eh.ether_type == htons(ETHERTYPE_IPV6)) {
+        struct ip6_hdr ip6;
+        u_int32_t flowlabel;
+        mbuf_copydata(m, sizeof(eh), sizeof(ip6), (caddr_t)&ip6);
+        flowlabel = ntohl(ip6.ip6_flow);
+        if ((flowlabel >> 28) != 6)
+            return 0;
+        ds_field = (flowlabel >> 20) & 0xff;
+    }
+#endif    /* INET6 */
+    else    /* neither IPv4 nor IPv6 */
+        return 0;
 
-        /*
-         * Map Differentiated Services Codepoint field (see RFC2474).
-         * Preserves backward compatibility with IP Precedence field.
-         */
-        switch (ds_field & 0xfc) {
+    /*
+     * Map Differentiated Services Codepoint field (see RFC2474).
+     * Preserves backward compatibility with IP Precedence field.
+     */
+    switch (ds_field & 0xfc) {
         case IPTOS_PREC_PRIORITY:
             return EDCA_AC_VI;
         case IPTOS_PREC_IMMEDIATE:
@@ -454,26 +483,7 @@ ieee80211_classify(struct ieee80211com *ic, mbuf_t m)
             return EDCA_AC_VO;
         default:
             return EDCA_AC_BE;
-        }
-
-	/*
-	 * Map Differentiated Services Codepoint field (see RFC2474).
-	 * Preserves backward compatibility with IP Precedence field.
-	 */
-	switch (ds_field & 0xfc) {
-	case IPTOS_PREC_PRIORITY:
-		return EDCA_AC_VI;
-	case IPTOS_PREC_IMMEDIATE:
-		return EDCA_AC_BK;
-	case IPTOS_PREC_FLASH:
-	case IPTOS_PREC_FLASHOVERRIDE:
-	case IPTOS_PREC_CRITIC_ECP:
-	case IPTOS_PREC_INTERNETCONTROL:
-	case IPTOS_PREC_NETCONTROL:
-		return EDCA_AC_VO;
-	default:
-		return EDCA_AC_BE;
-	}
+    }
 }
 
 int
@@ -592,6 +602,14 @@ fallback:
         ic->ic_stats.is_tx_nonode++;
         goto bad;
     }
+    
+#ifndef IEEE80211_STA_ONLY
+    if (ic->ic_opmode == IEEE80211_M_HOSTAP && ni != ic->ic_bss &&
+        ni->ni_state != IEEE80211_STA_ASSOC) {
+        ic->ic_stats.is_tx_nonode++;
+        goto bad;
+    }
+#endif
     
     if ((ic->ic_flags & IEEE80211_F_RSNON) &&
         !ni->ni_port_valid &&
@@ -915,6 +933,8 @@ ieee80211_add_qos_capability(u_int8_t *frm, struct ieee80211com *ic)
     return frm;
 }
 
+#define    WME_OUI_BYTES        0x00, 0x50, 0xf2
+
 /*
  * Add a Wifi-Alliance WME (aka WMM) info element to a frame.
  * WME is a requirement for Wifi-Alliance compliance and some
@@ -923,15 +943,17 @@ ieee80211_add_qos_capability(u_int8_t *frm, struct ieee80211com *ic)
 uint8_t *
 ieee80211_add_wme_info(uint8_t *frm, struct ieee80211com *ic)
 {
-	*frm++ = IEEE80211_ELEMID_VENDOR;
-    *frm++ = 7;
-    memcpy(frm, MICROSOFT_OUI, 3); frm += 3;
-    *frm++ = 2; /* OUI type */
-    *frm++ = 0; /* OUI subtype */
-    *frm++ = 1; /* version */
-    *frm++ = 0; /* info */
-
-    return frm;
+	static const struct ieee80211_wme_info info = {
+        .wme_id        = IEEE80211_ELEMID_VENDOR,
+        .wme_len    = sizeof(struct ieee80211_wme_info) - 2,
+        .wme_oui    = { WME_OUI_BYTES },
+        .wme_type    = WME_OUI_TYPE,
+        .wme_subtype    = WME_INFO_OUI_SUBTYPE,
+        .wme_version    = WME_VERSION,
+        .wme_info    = 0,
+    };
+    memcpy(frm, &info, sizeof(info));
+    return frm + sizeof(info);
 }
 
 #ifndef IEEE80211_STA_ONLY
@@ -978,7 +1000,7 @@ ieee80211_add_rsn_body(u_int8_t *frm, struct ieee80211com *ic,
 {
 	const u_int8_t *oui = wpa ? MICROSOFT_OUI : IEEE80211_OUI;
 	u_int8_t *pcount;
-	u_int16_t count;
+    u_int16_t count, rsncaps;
 
 	/* write Version field */
     LE_WRITE_2(frm, 1); frm += 2;
@@ -1054,7 +1076,16 @@ ieee80211_add_rsn_body(u_int8_t *frm, struct ieee80211com *ic,
         return frm;
 
     /* write RSN Capabilities field */
-    LE_WRITE_2(frm, ni->ni_rsncaps); frm += 2;
+    rsncaps = (ni->ni_rsncaps & (IEEE80211_RSNCAP_PTKSA_RCNT_MASK |
+        IEEE80211_RSNCAP_GTKSA_RCNT_MASK));
+    if (ic->ic_caps & IEEE80211_C_MFP) {
+        rsncaps |= IEEE80211_RSNCAP_MFPC;
+        if (ic->ic_flags & IEEE80211_F_MFPR)
+            rsncaps |= IEEE80211_RSNCAP_MFPR;
+    }
+    if (ic->ic_flags & IEEE80211_F_PBAR)
+        rsncaps |= IEEE80211_RSNCAP_PBAC;
+    LE_WRITE_2(frm, rsncaps); frm += 2;
 
     if (ni->ni_flags & IEEE80211_NODE_PMKID) {
         /* write PMKID Count field */
@@ -1129,23 +1160,72 @@ ieee80211_add_xrates(u_int8_t *frm, const struct ieee80211_rateset *rs)
 {
 	int nrates;
 
-	_KASSERT(rs->rs_nrates > IEEE80211_RATE_SIZE);
+    _KASSERT(rs->rs_nrates > IEEE80211_RATE_SIZE);
 
-	*frm++ = IEEE80211_ELEMID_XRATES;
+    *frm++ = IEEE80211_ELEMID_XRATES;
     nrates = rs->rs_nrates - IEEE80211_RATE_SIZE;
     *frm++ = nrates;
     memcpy(frm, rs->rs_rates + IEEE80211_RATE_SIZE, nrates);
     return frm + nrates;
 }
 
+uint8_t *
+ieee80211_add_ht_ie(uint8_t *frm, struct ieee80211com *ic, struct ieee80211_node *ni)
+{
+    *frm++ = IEEE80211_ELEMID_HTCAPS;
+    *frm++ = 26;
+    uint16_t cap = ni->ni_htcaps;;
+    cap |= ic->ic_htcaps;
+    switch (ni->ni_htop0 & IEEE80211_HTOP0_SCO_MASK) {
+            XYLog("%s line=%d\n", __FUNCTION__, __LINE__);
+        case IEEE80211_HTOP0_SCO_SCA:
+            XYLog("%s line=%d\n", __FUNCTION__, __LINE__);
+            if (ni->ni_chan != NULL) {
+                XYLog("%s line=%d\n", __FUNCTION__, __LINE__);
+                if ((ni->ni_chan->ic_flags & IEEE80211_CHAN_HT40U) == 0) {
+                    XYLog("%s line=%d\n", __FUNCTION__, __LINE__);
+                    cap &= ~IEEE80211_HTCAP_CBW20_40;
+                    cap &= ~IEEE80211_HTCAP_SGI40;
+                }
+            }
+            break;
+        case IEEE80211_HTOP0_SCO_SCB:
+            XYLog("%s line=%d\n", __FUNCTION__, __LINE__);
+            if (ni->ni_chan != NULL) {
+                XYLog("%s line=%d\n", __FUNCTION__, __LINE__);
+                if ((ni->ni_chan->ic_flags & IEEE80211_CHAN_HT40D) == 0) {
+                    XYLog("%s line=%d\n", __FUNCTION__, __LINE__);
+                    cap &= ~IEEE80211_HTCAP_CBW20_40;
+                    cap &= ~IEEE80211_HTCAP_SGI40;
+                }
+            }
+            break;
+
+        default:
+            break;
+    }
+    LE_WRITE_2(frm, cap); frm += 2;
+    *frm++ = ic->ic_ampdu_params;
+    memcpy(frm, ic->ic_sup_mcs, 10); frm += 10;// rx_mask
+    LE_WRITE_2(frm, (ic->ic_max_rxrate & IEEE80211_MCS_RX_RATE_HIGH)); frm += 2;// rx_highest
+    *frm++ = ic->ic_tx_mcs_set;// tx_params
+    *frm++ = 0; /* reserved */
+    *frm++ = 0; /* reserved */
+    *frm++ = 0; /* reserved */
+    LE_WRITE_2(frm, ic->ic_htxcaps); frm += 2;
+    LE_WRITE_4(frm, ic->ic_txbfcaps); frm += 4;
+    *frm++ = ic->ic_aselcaps;
+    return frm;
+}
+
 /*
  * Add an HT Capabilities element to a frame (see 7.3.2.57).
  */
-u_int8_t *
-ieee80211_add_htcaps(u_int8_t *frm, struct ieee80211com *ic)
+uint8_t *
+ieee80211_add_htcaps(uint8_t *frm, struct ieee80211com *ic)
 {
 	*frm++ = IEEE80211_ELEMID_HTCAPS;
-    *frm++ = 26;
+    *frm++ = sizeof(struct ieee80211_ie_htcap) - 2;
     LE_WRITE_2(frm, ic->ic_htcaps); frm += 2;
     *frm++ = ic->ic_ampdu_params;
     memcpy(frm, ic->ic_sup_mcs, 10); frm += 10;
@@ -1158,6 +1238,74 @@ ieee80211_add_htcaps(u_int8_t *frm, struct ieee80211com *ic)
     LE_WRITE_2(frm, ic->ic_htxcaps); frm += 2;
     LE_WRITE_4(frm, ic->ic_txbfcaps); frm += 4;
     *frm++ = ic->ic_aselcaps;
+    return frm;
+}
+
+uint8_t *
+ieee80211_add_vhtcaps(uint8_t *frm, struct ieee80211com *ic)
+{
+    *frm++ = IEEE80211_ELEMID_VHT_CAP;
+    *frm++ = sizeof(struct ieee80211_ie_vhtcap) - 2;
+    /* 32-bit VHT capability */
+    LE_WRITE_4(frm, ic->ic_vhtcaps); frm += 4;
+    /* suppmcs */
+    LE_WRITE_2(frm, ic->ic_vht_rx_mcs_map); frm += 2;
+    LE_WRITE_2(frm, ic->ic_vht_rx_highest); frm += 2;
+    LE_WRITE_2(frm, ic->ic_vht_tx_mcs_map); frm += 2;
+    LE_WRITE_2(frm, ic->ic_vht_tx_highest); frm += 2;
+    return frm;
+}
+
+uint8_t *
+ieee80211_add_hecaps(uint8_t *frm, struct ieee80211com *ic)
+{
+    uint8_t nss_size, ie_len;
+    uint8_t *orig_pos = frm;
+    
+    nss_size = ieee80211_he_mcs_nss_size(&ic->ic_he_cap_elem);
+    ie_len = 2 + 1 +
+    sizeof(ic->ic_he_cap_elem) + nss_size +
+    ieee80211_he_ppe_size(ic->ic_ppe_thres[0],
+                  ic->ic_he_cap_elem.phy_cap_info);
+    
+    *frm++ = IEEE80211_ELEMID_EXTENSION;
+    frm++; /* We'll set the size later below */
+    *frm++ = IEEE80211_ELEMID_EXT_HE_CAPABILITY;
+    
+    /* Fixed data */
+    memcpy(frm, &ic->ic_he_cap_elem, sizeof(ic->ic_he_cap_elem));
+    frm += sizeof(ic->ic_he_cap_elem);
+    
+    memcpy(frm, &ic->ic_he_mcs_nss_supp, nss_size);
+    frm += nss_size;
+    
+    /* Check if PPE Threshold should be present */
+    if ((ic->ic_he_cap_elem.phy_cap_info[6] &
+         IEEE80211_HE_PHY_CAP6_PPE_THRESHOLD_PRESENT) == 0)
+        return frm;
+    
+    /*
+     * Calculate how many PPET16/PPET8 pairs are to come. Algorithm:
+     * (NSS_M1 + 1) x (num of 1 bits in RU_INDEX_BITMASK)
+     */
+    nss_size = hweight8(ic->ic_ppe_thres[0] &
+             IEEE80211_PPE_THRES_RU_INDEX_BITMASK_MASK);
+    
+    nss_size *= (1 + ((ic->ic_ppe_thres[0] & IEEE80211_PPE_THRES_NSS_MASK) >>
+           IEEE80211_PPE_THRES_NSS_POS));
+    
+    /*
+     * Each pair is 6 bits, and we need to add the 7 "header" bits to the
+     * total size.
+     */
+    nss_size = (nss_size * IEEE80211_PPE_THRES_INFO_PPET_SIZE * 2) + 7;
+    nss_size = DIV_ROUND_UP(nss_size, 8);
+    
+    /* Copy PPE Thresholds */
+    memcpy(frm, &ic->ic_ppe_thres, nss_size);
+    frm += nss_size;
+    
+    orig_pos[1] = (frm - orig_pos) - 2;
     return frm;
 }
 
@@ -1236,7 +1384,8 @@ ieee80211_get_probe_req(struct ieee80211com *ic, struct ieee80211_node *ni)
 	    2 + min(rs->rs_nrates, IEEE80211_RATE_SIZE) +
 	    ((rs->rs_nrates > IEEE80211_RATE_SIZE) ?
 		2 + rs->rs_nrates - IEEE80211_RATE_SIZE : 0) +
-	    ((ic->ic_flags & IEEE80211_F_HTON) ? 28 + 9 : 0));
+	    ((ic->ic_flags & IEEE80211_F_HTON) ? sizeof(struct ieee80211_ie_htcap) + sizeof(struct ieee80211_wme_info) : 0) +
+        ((ic->ic_flags & IEEE80211_F_VHTON) ? sizeof(struct ieee80211_ie_vhtcap) : 0));
 	if (m == NULL)
 		return NULL;
 
@@ -1249,6 +1398,8 @@ ieee80211_get_probe_req(struct ieee80211com *ic, struct ieee80211_node *ni)
 		frm = ieee80211_add_htcaps(frm, ic);
 		frm = ieee80211_add_wme_info(frm, ic);
 	}
+    if (ic->ic_flags & IEEE80211_F_VHTON)
+        frm = ieee80211_add_vhtcaps(frm, ic);
     size_t l = frm - mtod(m, u_int8_t *);
     mbuf_pkthdr_setlen(m, l);
     mbuf_setlen(m, l);
@@ -1421,7 +1572,9 @@ ieee80211_get_assoc_req(struct ieee80211com *ic, struct ieee80211_node *ni,
 	    (((ic->ic_flags & IEEE80211_F_RSNON) &&
 	      (ni->ni_rsnprotos & IEEE80211_PROTO_WPA)) ?
 		2 + IEEE80211_WPAIE_MAXLEN : 0) +
-	    ((ic->ic_flags & IEEE80211_F_HTON) ? 28 + 9 : 0));
+	    ((ic->ic_flags & IEEE80211_F_HTON) ? sizeof(struct ieee80211_ie_htcap) + sizeof(struct ieee80211_wme_info) : 0) +
+        ((ic->ic_flags & IEEE80211_F_VHTON) ? sizeof(struct ieee80211_ie_vhtcap) + 2 : 0) +
+        ((ic->ic_flags & IEEE80211_F_HEON) ? (sizeof(struct ieee80211_he_cap_elem) + 2 + 1 + sizeof(struct ieee80211_he_mcs_nss_supp) + IEEE80211_HE_PPE_THRES_MAX_LEN) : 0));
 	if (m == NULL)
 		return NULL;
 
@@ -1446,7 +1599,7 @@ ieee80211_get_assoc_req(struct ieee80211com *ic, struct ieee80211_node *ni,
 		frm = ieee80211_add_xrates(frm, rs);
 	if ((ic->ic_flags & IEEE80211_F_RSNON) &&
 		(ni->ni_rsnprotos & IEEE80211_PROTO_RSN)) {
-#ifdef AIRPORT
+#if (defined AIRPORT) && (defined USE_APPLE_SUPPLICANT)
 		if (ic->ic_rsn_ie_override[1] > 0) {
 			memcpy(frm, ic->ic_rsn_ie_override, 2 + ic->ic_rsn_ie_override[1]);
 			frm += 2 + ic->ic_rsn_ie_override[1];
@@ -1459,7 +1612,7 @@ ieee80211_get_assoc_req(struct ieee80211com *ic, struct ieee80211_node *ni,
 		frm = ieee80211_add_qos_capability(frm, ic);
 	if ((ic->ic_flags & IEEE80211_F_RSNON) &&
 		(ni->ni_rsnprotos & IEEE80211_PROTO_WPA)) {
-#ifdef AIRPORT
+#if (defined AIRPORT) && (defined USE_APPLE_SUPPLICANT)
 		if (ic->ic_rsn_ie_override[1] > 0) {
 			memcpy(frm, ic->ic_rsn_ie_override, 2 + ic->ic_rsn_ie_override[1]);
 			frm += 2 + ic->ic_rsn_ie_override[1];
@@ -1472,6 +1625,12 @@ ieee80211_get_assoc_req(struct ieee80211com *ic, struct ieee80211_node *ni,
 		frm = ieee80211_add_htcaps(frm, ic);
 		frm = ieee80211_add_wme_info(frm, ic);
 	}
+    
+    if (ic->ic_flags & IEEE80211_F_VHTON)
+        frm = ieee80211_add_vhtcaps(frm, ic);
+    
+    if (ic->ic_flags & IEEE80211_F_HEON)
+        frm = ieee80211_add_hecaps(frm, ic);
 
     size_t l = frm - mtod(m, u_int8_t *);
     mbuf_pkthdr_setlen(m, l);

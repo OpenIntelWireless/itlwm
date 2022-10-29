@@ -118,6 +118,11 @@ enum apple80211_cipher_type {
     APPLE80211_CIPHER_AES_CCM     = 5,        // AES (CCM)
     APPLE80211_CIPHER_PMK         = 6,        // PMK
     APPLE80211_CIPHER_PMKSA       = 7,        // PMK obtained from pre-authentication
+    APPLE80211_CIPHER_SMS4        = 8,
+    APPLE80211_CIPHER_MSK         = 9,
+    APPLE80211_CIPHER_PWD         = 10,
+    APPLE80211_CIPHER_AES_GCM     = 11,
+    APPLE80211_CIPHER_AES_GCM256  = 12,
 };
 
 enum apple80211_cipher_key_type
@@ -144,12 +149,18 @@ enum apple80211_authtype_upper
     APPLE80211_AUTHTYPE_WPA_PSK      = 1 << 1,    //    WPA PSK
     APPLE80211_AUTHTYPE_WPA2         = 1 << 2,    //    WPA2
     APPLE80211_AUTHTYPE_WPA2_PSK     = 1 << 3,    //    WPA2 PSK
-    APPLE80211_AUTHTYPE_LEAP         = 1 << 4,    //    LEAP
-    APPLE80211_AUTHTYPE_8021X        = 1 << 5,    //    802.1x
-    APPLE80211_AUTHTYPE_WPS          = 1 << 6,    //    WiFi Protected Setup
-    APPLE80211_AUTHTYPE_SHA256_PSK   = 1 << 7,
-    APPLE80211_AUTHTYPE_SHA256_8021X = 1 << 8,
-    APPLE80211_AUTHTYPE_WPA3_SAE     = 1 << 9
+    APPLE80211_AUTHTYPE_FT_PSK       = 1 << 4,    //
+    APPLE80211_AUTHTYPE_LEAP         = 1 << 5,    //    LEAP
+    APPLE80211_AUTHTYPE_WEP_8021X    = 1 << 6,    //    WEP 802.1x
+    APPLE80211_AUTHTYPE_FT_8021X     = 1 << 7,    //    802.1x
+    APPLE80211_AUTHTYPE_WPS          = 1 << 8,    //    WiFi Protected Setup
+    APPLE80211_AUTHTYPE_WAPI         = 1 << 9,
+    APPLE80211_AUTHTYPE_SHA256_PSK   = 1 << 10,
+    APPLE80211_AUTHTYPE_SHA256_8021X = 1 << 11,
+    APPLE80211_AUTHTYPE_WPA3_SAE     = 1 << 12,
+    APPLE80211_AUTHTYPE_WPA3_FT_SAE  = 1 << 13,
+    APPLE80211_AUTHTYPE_WPA3_ENTERPRISE = 1 << 14,
+    APPLE80211_AUTHTYPE_WPA3_FT_ENTERPRISE = 1 << 15,
 };
 
 // Unify association status code and deauth reason codes into a single enum describing
@@ -246,7 +257,8 @@ enum apple80211_channel_flag
     APPLE80211_C_FLAG_EXT_ABV      = 0x200, // If 40 Mhz, extension channel above.
     // If this flag is not set, then the
     // extension channel is below.
-    APPLE80211_C_FLAG_80MHZ        = 0x400  // name made up - set if channelWidth == 80 && 5ghz && AC
+    APPLE80211_C_FLAG_80MHZ        = 0x400,  // name made up - set if channelWidth == 80 && 5ghz && AC
+    APPLE80211_C_FLAG_160MHZ       = 0x800,  // zxystd: Apple Broadcom not use it, but we can use!
 };
 
 enum apple80211_rate_flag
@@ -470,15 +482,19 @@ struct apple80211_scan_result
     u_int32_t             asr_rates[ APPLE80211_MAX_RATES ]; // 0x24 - 0x5f
     u_int8_t              asr_ssid_len;   // 0x60
     u_int8_t              asr_ssid[ APPLE80211_MAX_SSID_LEN ]; // 0x61 - 0x80
-    __attribute__((packed)) __attribute__((aligned(1))) int16_t unk;
+    int16_t               unk;
     uint8_t               unk2;
     u_int32_t             asr_age;        // (ms) non-zero for cached scan result // 0x84
 
     u_int16_t             unk3;
     int16_t               asr_ie_len;
+#if __IO80211_TARGET < __MAC_12_0
     uint32_t              asr_unk3;
     void*                 asr_ie_data;
-};
+#else
+    uint8_t               asr_ie_data[1024];
+#endif
+} __attribute__((packed));
 
 struct apple80211_network_data
 {
@@ -553,11 +569,15 @@ enum apple80211_card_capability
 
 enum apple80211_virtual_interface_type
 {
+#if __IO80211_TARGET < __MAC_13_0
     APPLE80211_VIF_P2P_DEVICE   = 1,
-    APPLE80211_VIF_P2P_CLIENT   = 2,
-    APPLE80211_VIF_P2P_GO       = 3,
-    APPLE80211_VIF_AWDL         = 4,
-    APPLE80211_VIF_SOFT_AP      = 5,
+#else
+    APPLE80211_VIF_P2P_DEVICE   = 3,
+#endif
+    APPLE80211_VIF_P2P_CLIENT,
+    APPLE80211_VIF_P2P_GO,
+    APPLE80211_VIF_AWDL,
+    APPLE80211_VIF_SOFT_AP,
     
     APPLE80211_VIF_MAX
 };

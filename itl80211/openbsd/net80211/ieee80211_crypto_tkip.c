@@ -98,7 +98,7 @@ ieee80211_tkip_set_key(struct ieee80211com *ic, struct ieee80211_key *k)
 	} else
 #endif
 	{
-#ifdef AIRPORT
+#if (defined AIRPORT) && (defined USE_APPLE_SUPPLICANT)
         ctx->txmic = &k->k_key[16];
         ctx->rxmic = &k->k_key[24];
 #else
@@ -574,8 +574,6 @@ ieee80211_michael_mic_failure_timeout(void *arg)
 void
 ieee80211_michael_mic_failure(struct ieee80211com *ic, u_int64_t tsc)
 {
-	int ticks = 1;
-    int hz = 1000;
 #ifndef IEEE80211_STA_ONLY
 	int sec;
 #endif
@@ -639,7 +637,7 @@ ieee80211_michael_mic_failure(struct ieee80211com *ic, u_int64_t tsc)
 		    IEEE80211_FC0_SUBTYPE_DEAUTH,
 		    IEEE80211_REASON_MIC_FAILURE);
 		/* ..and find another one */
-		(void)ieee80211_new_state(ic, IEEE80211_S_SCAN, -1);
+		ieee80211_new_state(ic, IEEE80211_S_SCAN, -1);
 		break;
 	default:
 		break;

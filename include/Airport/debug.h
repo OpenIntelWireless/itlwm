@@ -277,7 +277,7 @@ static const char* IOCTL_NAMES[] = {
      "SCAN_BACKOFF_REPORT",
      "OFFLOAD_TCPKA_ENABLE",
      "RANGING_CAPS",
-     "PER_CORE_RSSI_REPORT",
+     "PER_CORE_RSSI_REPORT/SUPPRESS_SCANS",
 };
 
 #endif /* debug_h */

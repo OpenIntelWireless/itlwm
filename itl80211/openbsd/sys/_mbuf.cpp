@@ -19,7 +19,7 @@
 * GNU General Public License for more details.
 */
 
-#include "_mbuf.h"
+#include <sys/_mbuf.h>
 
 #include <IOKit/IOCommandGate.h>
 

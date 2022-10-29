@@ -11,7 +11,7 @@
 * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 * GNU General Public License for more details.
 */
-/*    $OpenBSD: if_iwm.c,v 1.313 2020/07/10 13:22:20 patrick Exp $    */
+/*    $OpenBSD: if_iwm.c,v 1.316 2020/12/07 20:09:24 tobhe Exp $    */
 
 /*
  * Copyright (c) 2014, 2016 genua gmbh <info@genua.de>
@@ -243,7 +243,7 @@ iwm_fill_probe_req(struct iwm_softc *sc, struct iwm_scan_probe_req *preq)
     
     memset(preq, 0, sizeof(*preq));
     
-    if (remain < sizeof(*wh) + 2 + ic->ic_des_esslen)
+    if (remain < sizeof(*wh) + 2)
         return ENOBUFS;
     
     /*
@@ -261,9 +261,11 @@ iwm_fill_probe_req(struct iwm_softc *sc, struct iwm_scan_probe_req *preq)
     *(uint16_t *)&wh->i_seq[0] = 0;    /* filled by HW */
     
     frm = (uint8_t *)(wh + 1);
-    frm = ieee80211_add_ssid(frm, ic->ic_des_essid, ic->ic_des_esslen);
+    *frm++ = IEEE80211_ELEMID_SSID;
+    *frm++ = 0;
+    /* hardware inserts SSID */
     
-    /* Tell the firmware where the MAC header is. */
+    /* Tell firmware where the MAC header and SSID IE are. */
     preq->mac_header.offset = 0;
     preq->mac_header.len = htole16(frm - (uint8_t *)wh);
     remain -= frm - (uint8_t *)wh;
@@ -280,7 +282,6 @@ iwm_fill_probe_req(struct iwm_softc *sc, struct iwm_scan_probe_req *preq)
     frm = ieee80211_add_rates(frm, rs);
     if (rs->rs_nrates > IEEE80211_RATE_SIZE)
         frm = ieee80211_add_xrates(frm, rs);
-    preq->band_data[0].len = htole16(frm - pos);
     remain -= frm - pos;
     
     if (isset(sc->sc_enabled_capa,
@@ -292,6 +293,7 @@ iwm_fill_probe_req(struct iwm_softc *sc, struct iwm_scan_probe_req *preq)
         *frm++ = 0;
         remain -= 3;
     }
+    preq->band_data[0].len = htole16(frm - pos);
     
     if (sc->sc_nvm.sku_cap_band_52GHz_enable) {
         /* Fill in 5GHz IEs. */
@@ -308,17 +310,24 @@ iwm_fill_probe_req(struct iwm_softc *sc, struct iwm_scan_probe_req *preq)
             frm = ieee80211_add_xrates(frm, rs);
         preq->band_data[1].len = htole16(frm - pos);
         remain -= frm - pos;
+        if (ic->ic_flags & IEEE80211_F_VHTON) {
+            if (remain < sizeof(struct ieee80211_ie_vhtcap))
+                return ENOBUFS;
+            frm = ieee80211_add_vhtcaps(frm, ic);
+            remain -= frm - pos;
+        }
     }
     
     /* Send 11n IEs on both 2GHz and 5GHz bands. */
     preq->common_data.offset = htole16(frm - (uint8_t *)wh);
     pos = frm;
     if (ic->ic_flags & IEEE80211_F_HTON) {
-        if (remain < 28)
+        if (remain < sizeof(struct ieee80211_ie_htcap))
             return ENOBUFS;
         frm = ieee80211_add_htcaps(frm, ic);
         /* XXX add WME info? */
     }
+
     preq->common_data.len = htole16(frm - pos);
     
     return 0;
@@ -379,7 +388,9 @@ iwm_lmac_scan(struct iwm_softc *sc, int bgscan)
         req->scan_flags |=
         htole32(IWM_LMAC_SCAN_FLAG_PRE_CONNECTION);
     if (isset(sc->sc_enabled_capa,
-              IWM_UCODE_TLV_CAPA_DS_PARAM_SET_IE_SUPPORT))
+              IWM_UCODE_TLV_CAPA_DS_PARAM_SET_IE_SUPPORT) &&
+              isset(sc->sc_enabled_capa,
+              IWM_UCODE_TLV_CAPA_WFA_TPC_REP_IE_SUPPORT))
         req->scan_flags |= htole32(IWM_LMAC_SCAN_FLAGS_RRM_ENABLED);
     
     req->flags = htole32(IWM_PHY_BAND_24);
@@ -521,10 +532,6 @@ iwm_umac_scan_size(struct iwm_softc *sc)
         base_size = IWM_SCAN_REQ_UMAC_SIZE_V8;
     else if (isset(sc->sc_ucode_api, IWM_UCODE_TLV_API_ADAPTIVE_DWELL))
         base_size = IWM_SCAN_REQ_UMAC_SIZE_V7;
-#ifdef notyet
-    else if (sc->sc_device_family >= IWM_DEVICE_FAMILY_22000)
-        base_size = IWM_SCAN_REQ_UMAC_SIZE_V6;
-#endif
     if (isset(sc->sc_ucode_api, IWM_UCODE_TLV_API_SCAN_EXT_CHAN_VER))
         tail_size = sizeof(struct iwm_scan_req_umac_tail_v2);
     else
@@ -543,10 +550,6 @@ iwm_get_scan_req_umac_chan_param(struct iwm_softc *sc,
     
     if (isset(sc->sc_ucode_api, IWM_UCODE_TLV_API_ADAPTIVE_DWELL))
         return &req->v7.channel;
-#ifdef notyet
-    if (sc->sc_device_family >= IWM_DEVICE_FAMILY_22000)
-        return &req->v6.channel;
-#endif
     return &req->v1.channel;
 }
 
@@ -558,10 +561,6 @@ iwm_get_scan_req_umac_data(struct iwm_softc *sc, struct iwm_scan_req_umac *req)
     
     if (isset(sc->sc_ucode_api, IWM_UCODE_TLV_API_ADAPTIVE_DWELL))
         return (void *)&req->v7.data;
-#ifdef notyet
-    if (sc->sc_device_family >= IWM_DEVICE_FAMILY_22000)
-        return (void *)&req->v6.data;
-#endif
     return (void *)&req->v1.data;
     
 }
@@ -642,6 +641,8 @@ iwm_umac_scan(struct iwm_softc *sc, int bgscan)
         req->v1.passive_dwell = 110;
         req->v1.fragmented_dwell = 44;
         req->v1.extended_dwell = 90;
+
+        req->v1.scan_priority = htole32(IWM_SCAN_PRIORITY_HIGH);
     }
     
     if (bgscan) {
@@ -659,8 +660,7 @@ iwm_umac_scan(struct iwm_softc *sc, int bgscan)
             req->v1.suspend_time = timeout;
         }
     }
-    
-    req->v1.scan_priority = htole32(IWM_SCAN_PRIORITY_HIGH);
+
     req->ooc_priority = htole32(IWM_SCAN_PRIORITY_HIGH);
     
     cmd_data = iwm_get_scan_req_umac_data(sc, req);
@@ -678,6 +678,10 @@ iwm_umac_scan(struct iwm_softc *sc, int bgscan)
     
     req->general_flags = htole32(IWM_UMAC_SCAN_GEN_FLAGS_PASS_ALL |
                                  IWM_UMAC_SCAN_GEN_FLAGS_ITER_COMPLETE);
+    if (isset(sc->sc_ucode_api, IWM_UCODE_TLV_API_ADAPTIVE_DWELL_V2)) {
+        req->v8.general_flags2 =
+        IWM_UMAC_SCAN_GEN_FLAGS2_ALLOW_CHNL_REORDER;
+    }
     
     /* Check if we're doing an active directed scan. */
     if (ic->ic_des_esslen != 0) {
@@ -698,7 +702,9 @@ iwm_umac_scan(struct iwm_softc *sc, int bgscan)
         req->general_flags |= htole32(IWM_UMAC_SCAN_GEN_FLAGS_PASSIVE);
     
     if (isset(sc->sc_enabled_capa,
-              IWM_UCODE_TLV_CAPA_DS_PARAM_SET_IE_SUPPORT))
+              IWM_UCODE_TLV_CAPA_DS_PARAM_SET_IE_SUPPORT) &&
+              isset(sc->sc_enabled_capa,
+              IWM_UCODE_TLV_CAPA_WFA_TPC_REP_IE_SUPPORT))
         req->general_flags |=
         htole32(IWM_UMAC_SCAN_GEN_FLAGS_RRM_ENABLED);
     
@@ -726,6 +732,27 @@ iwm_umac_scan(struct iwm_softc *sc, int bgscan)
     err = iwm_send_cmd(sc, &hcmd);
     ::free(req);
     return err;
+}
+
+void ItlIwm::
+iwm_mcc_update(struct iwm_softc *sc, struct iwm_mcc_chub_notif *notif)
+{
+    struct ieee80211com *ic = &sc->sc_ic;
+    struct _ifnet *ifp = IC2IFP(ic);
+    
+    snprintf(sc->sc_fw_mcc, sizeof(sc->sc_fw_mcc), "%c%c",
+             (le16toh(notif->mcc) & 0xff00) >> 8, le16toh(notif->mcc) & 0xff);
+    if (sc->sc_fw_mcc_int != notif->mcc && sc->sc_ic.ic_event_handler) {
+        (*sc->sc_ic.ic_event_handler)(&sc->sc_ic, IEEE80211_EVT_COUNTRY_CODE_UPDATE, NULL);
+    }
+    sc->sc_fw_mcc_int = notif->mcc;
+    
+    if (ifp->if_flags & IFF_DEBUG) {
+        DPRINTFN(3, ("%s: firmware has detected regulatory domain '%s' "
+               "(0x%x)\n", DEVNAME(sc), sc->sc_fw_mcc, le16toh(notif->mcc)));
+    }
+    
+    /* TODO: Schedule a task to send MCC_UPDATE_CMD? */
 }
 
 uint8_t ItlIwm::

@@ -11,7 +11,7 @@
 * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 * GNU General Public License for more details.
 */
-/*    $OpenBSD: if_iwm.c,v 1.313 2020/07/10 13:22:20 patrick Exp $    */
+/*    $OpenBSD: if_iwm.c,v 1.316 2020/12/07 20:09:24 tobhe Exp $    */
 
 /*
  * Copyright (c) 2014, 2016 genua gmbh <info@genua.de>
@@ -133,6 +133,66 @@ iwm_phy_ctxt_cmd_hdr(struct iwm_softc *sc, struct iwm_phy_ctxt *ctxt,
     cmd->apply_time = htole32(apply_time);
 }
 
+static uint8_t
+iwm_get_channel_width(struct ieee80211com *ic, struct ieee80211_channel *c)
+{
+    uint8_t ret = IWM_PHY_VHT_CHANNEL_MODE20;
+    if (ic->ic_bss == NULL || ic->ic_state < IEEE80211_S_ASSOC) {
+        return ret;
+    }
+    switch (ic->ic_bss->ni_chw) {
+        case IEEE80211_CHAN_WIDTH_20_NOHT:
+        case IEEE80211_CHAN_WIDTH_20:
+            return IWM_PHY_VHT_CHANNEL_MODE20;
+        case IEEE80211_CHAN_WIDTH_40:
+            return IWM_PHY_VHT_CHANNEL_MODE40;
+        case IEEE80211_CHAN_WIDTH_80:
+            return IWM_PHY_VHT_CHANNEL_MODE80;
+        case IEEE80211_CHAN_WIDTH_160:
+            return IWM_PHY_VHT_CHANNEL_MODE160;
+        default:
+            XYLog("Invalid channel width=%u\n", ic->ic_bss->ni_chw);
+            return ret;
+    }
+}
+
+static uint8_t
+iwm_get_ctrl_pos(struct ieee80211com *ic, struct ieee80211_channel *c)
+{
+    if (ic->ic_bss == NULL || ic->ic_state < IEEE80211_S_ASSOC || iwm_get_channel_width(ic, c) == IWM_PHY_VHT_CHANNEL_MODE20)
+        return IWM_PHY_VHT_CTRL_POS_1_BELOW;
+    
+    signed int offset = ic->ic_bss->ni_chan->ic_freq - ic->ic_bss->ni_chan->ic_center_freq1;
+    switch (offset) {
+        case -70:
+            return IWM_PHY_VHT_CTRL_POS_4_BELOW;
+        case -50:
+            return IWM_PHY_VHT_CTRL_POS_3_BELOW;
+        case -30:
+            return IWM_PHY_VHT_CTRL_POS_2_BELOW;
+        case -10:
+            return IWM_PHY_VHT_CTRL_POS_1_BELOW;
+        case  10:
+            return IWM_PHY_VHT_CTRL_POS_1_ABOVE;
+        case  30:
+            return IWM_PHY_VHT_CTRL_POS_2_ABOVE;
+        case  50:
+            return IWM_PHY_VHT_CTRL_POS_3_ABOVE;
+        case  70:
+            return IWM_PHY_VHT_CTRL_POS_4_ABOVE;
+        default:
+            XYLog("Invalid channel definition freq=%d %d\n", ic->ic_bss->ni_chan->ic_freq, offset);
+            /* fall through */
+        case 0:
+            /*
+             * The FW is expected to check the control channel position only
+             * when in HT/VHT and the channel width is not 20MHz. Return
+             * this value as the default one.
+             */
+            return IWM_PHY_VHT_CTRL_POS_1_BELOW;
+    }
+}
+
 void ItlIwm::
 iwm_phy_ctxt_cmd_data(struct iwm_softc *sc, struct iwm_phy_context_cmd *cmd,
     struct ieee80211_channel *chan, uint8_t chains_static,
@@ -144,8 +204,8 @@ iwm_phy_ctxt_cmd_data(struct iwm_softc *sc, struct iwm_phy_context_cmd *cmd,
     cmd->ci.band = IEEE80211_IS_CHAN_2GHZ(chan) ?
         IWM_PHY_BAND_24 : IWM_PHY_BAND_5;
     cmd->ci.channel = ieee80211_chan2ieee(ic, chan);
-    cmd->ci.width = IWM_PHY_VHT_CHANNEL_MODE20;
-    cmd->ci.ctrl_pos = IWM_PHY_VHT_CTRL_POS_1_BELOW;
+    cmd->ci.width = iwm_get_channel_width(ic, chan);
+    cmd->ci.ctrl_pos = iwm_get_ctrl_pos(ic, chan);
 
     /* Set rx the chains */
     idle_cnt = chains_static;
@@ -161,12 +221,58 @@ iwm_phy_ctxt_cmd_data(struct iwm_softc *sc, struct iwm_phy_context_cmd *cmd,
 }
 
 int ItlIwm::
+iwm_phy_ctxt_cmd_uhb(struct iwm_softc *sc, struct iwm_phy_ctxt *ctxt,
+                     uint8_t chains_static, uint8_t chains_dynamic, uint32_t action,
+                     uint32_t apply_time)
+{
+    XYLog("%s\n", __FUNCTION__);
+    struct ieee80211com *ic = &sc->sc_ic;
+    struct iwm_phy_context_cmd_uhb cmd;
+    uint8_t active_cnt, idle_cnt;
+    struct ieee80211_channel *chan = ctxt->channel;
+    
+    memset(&cmd, 0, sizeof(cmd));
+    cmd.id_and_color = htole32(IWM_FW_CMD_ID_AND_COLOR(ctxt->id,
+                                                       ctxt->color));
+    cmd.action = htole32(action);
+    cmd.apply_time = htole32(apply_time);
+    
+    cmd.ci.band = IEEE80211_IS_CHAN_2GHZ(chan) ?
+    IWM_PHY_BAND_24 : IWM_PHY_BAND_5;
+    cmd.ci.channel = htole32(ieee80211_chan2ieee(ic, chan));
+    cmd.ci.width = iwm_get_channel_width(ic, chan);
+    cmd.ci.ctrl_pos = iwm_get_ctrl_pos(ic, chan);
+    
+    idle_cnt = chains_static;
+    active_cnt = chains_dynamic;
+    cmd.rxchain_info = htole32(iwm_fw_valid_rx_ant(sc) <<
+                               IWM_PHY_RX_CHAIN_VALID_POS);
+    cmd.rxchain_info |= htole32(idle_cnt << IWM_PHY_RX_CHAIN_CNT_POS);
+    cmd.rxchain_info |= htole32(active_cnt <<
+                                IWM_PHY_RX_CHAIN_MIMO_CNT_POS);
+    cmd.txchain_info = htole32(iwm_fw_valid_tx_ant(sc));
+    
+    return iwm_send_cmd_pdu(sc, IWM_PHY_CONTEXT_CMD, 0, sizeof(cmd), &cmd);
+}
+
+int ItlIwm::
 iwm_phy_ctxt_cmd(struct iwm_softc *sc, struct iwm_phy_ctxt *ctxt,
     uint8_t chains_static, uint8_t chains_dynamic, uint32_t action,
     uint32_t apply_time)
 {
     XYLog("%s\n", __FUNCTION__);
     struct iwm_phy_context_cmd cmd;
+    
+    /*
+     * Intel increased the size of the fw_channel_info struct and neglected
+     * to bump the phy_context_cmd struct, which contains an fw_channel_info
+     * member in the middle.
+     * To keep things simple we use a separate function to handle the larger
+     * variant of the phy context command.
+     */
+    if (isset(sc->sc_enabled_capa, IWM_UCODE_TLV_CAPA_ULTRA_HB_CHANNELS))
+        return iwm_phy_ctxt_cmd_uhb(sc, ctxt, chains_static,
+                                    chains_dynamic, action, apply_time);
 
     iwm_phy_ctxt_cmd_hdr(sc, ctxt, &cmd, action, apply_time);
 

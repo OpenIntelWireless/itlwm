@@ -11,7 +11,7 @@
 * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 * GNU General Public License for more details.
 */
-/* $OpenBSD: ieee80211_radiotap.h,v 1.15 2019/02/19 08:12:30 stsp Exp $ */
+/* $OpenBSD: ieee80211_radiotap.h,v 1.16 2020/10/09 08:53:16 mpi Exp $ */
 /* $FreeBSD: src/sys/net80211/ieee80211_radiotap.h,v 1.3 2004/04/05 22:13:21 sam Exp $ */
 /* $NetBSD: ieee80211_radiotap.h,v 1.9 2004/06/06 04:13:28 dyoung Exp $ */
 
@@ -170,10 +170,6 @@ struct ieee80211_radiotap_header {
  *
  *	FCS from frame in network byte order.
  *
- * IEEE80211_RADIOTAP_HWQUEUE           u_int8_t       data
- *
- *	A specific hardware queue (used by WME)
- *
  * IEEE80211_RADIOTAP_RSSI              2x u_int8_t    RSSI, max RSSI
  *
  *	A relative Received Signal Strength Index
@@ -194,7 +190,6 @@ enum ieee80211_radiotap_type {
 	IEEE80211_RADIOTAP_DB_ANTSIGNAL = 12,
 	IEEE80211_RADIOTAP_DB_ANTNOISE = 13,
 	IEEE80211_RADIOTAP_FCS = 14,
-	IEEE80211_RADIOTAP_HWQUEUE = 15,
 	IEEE80211_RADIOTAP_RSSI = 16,
 	IEEE80211_RADIOTAP_EXT = 31
 };
