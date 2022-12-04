@@ -12,9 +12,8 @@
 SInt32 AirportItlwm::
 apple80211VirtualRequest(UInt request_type, int request_number, IO80211VirtualInterface *interface, void *data)
 {
-    if (request_type != SIOCGA80211 && request_type != SIOCSA80211) {
+    if (request_type != SIOCGA80211 && request_type != SIOCSA80211)
         return kIOReturnError;
-    }
     IOReturn ret = kIOReturnError;
     
     switch (request_number) {
@@ -140,10 +139,9 @@ apple80211VirtualRequest(UInt request_type, int request_number, IO80211VirtualIn
             break;
         default:
         unhandled:
-            if (!ml_at_interrupt_context()) {
+            if (!ml_at_interrupt_context())
                 XYLog("%s Unhandled IOCTL %s (%d) %s\n", __FUNCTION__, IOCTL_NAMES[request_number >= ARRAY_SIZE(IOCTL_NAMES) ? 0: request_number],
                       request_number, request_type == SIOCGA80211 ? "get" : (request_type == SIOCSA80211 ? "set" : "other"));
-            }
             break;
     }
     
@@ -175,9 +173,8 @@ IOReturn AirportItlwm::
 getAWDL_PEER_TRAFFIC_REGISTRATION(OSObject *object, struct apple80211_awdl_peer_traffic_registration *)
 {
     XYLog("%s\n", __FUNCTION__);
-    if (fAWDLInterface) {
+    if (fAWDLInterface)
         return 45;
-    }
     return 22;
 }
 
@@ -217,9 +214,8 @@ IOReturn AirportItlwm::
 getSYNC_FRAME_TEMPLATE(OSObject *object, struct apple80211_awdl_sync_frame_template *data)
 {
     XYLog("%s\n", __FUNCTION__);
-    if (syncFrameTemplate == NULL || syncFrameTemplateLength == 0) {
+    if (syncFrameTemplate == NULL || syncFrameTemplateLength == 0)
         return kIOReturnError;
-    }
     data->version = APPLE80211_VERSION;
     data->payload_len = syncFrameTemplateLength;
     memcpy(data->payload, syncFrameTemplate, syncFrameTemplateLength);
@@ -230,9 +226,8 @@ IOReturn AirportItlwm::
 setSYNC_FRAME_TEMPLATE(OSObject *object, struct apple80211_awdl_sync_frame_template *data)
 {
     XYLog("%s payload_len=%d\n", __FUNCTION__, data->payload_len);
-    if (data->payload_len <= 0) {
+    if (data->payload_len <= 0)
         return kIOReturnError;
-    }
     if (syncFrameTemplate != NULL && syncFrameTemplateLength > 0) {
         IOFree(syncFrameTemplate, syncFrameTemplateLength);
         syncFrameTemplateLength = 0;
@@ -415,9 +410,8 @@ getAWDL_SYNCHRONIZATION_CHANNEL_SEQUENCE(OSObject *object, struct apple80211_awd
 #if 0
 static void dumpAWDLChannelSeqs(struct apple80211_awdl_sync_channel_sequence *data)
 {
-    if (data == nullptr) {
+    if (data == nullptr)
         return;
-    }
     XYLog("%s length %u step count %u duplicate %u fill %d encoding %u\n", __FUNCTION__, data->length, data->step_count, data->duplicate_count, data->fill_channel, data->encoding);
     for (int i = 0; i < data->length; i++) {
         struct apple80211_channel_sequence seq = data->seqs[i];

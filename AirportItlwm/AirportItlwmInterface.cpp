@@ -26,9 +26,8 @@ const char* hexdump(uint8_t *buf, size_t len)
 bool AirportItlwmInterface::
 init(IO80211Controller *controller, ItlHalService *halService)
 {
-    if (!super::init(controller)) {
+    if (!super::init(controller))
         return false;
-    }
     this->fHalService = halService;
     return true;
 }
