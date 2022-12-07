@@ -2155,9 +2155,8 @@ struct ieee80211_wme_info {
 static inline uint64_t airport_up_time()
 {
     struct timeval tv;
-    
     microuptime(&tv);
-    return ((0x10624DD3LL * tv.tv_usec) >> 0x3F) + (0x10624DD3LL * tv.tv_usec >> 0x26) + tv.tv_sec * 1000LL;
+    return tv.tv_sec * 1000 + tv.tv_usec / 1000;
 }
 #endif
 
