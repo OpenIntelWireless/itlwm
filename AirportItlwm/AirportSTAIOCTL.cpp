@@ -1166,30 +1166,27 @@ setDEAUTH(OSObject *object,
 void AirportItlwm::
 eventHandler(struct ieee80211com *ic, int msgCode, void *data)
 {
-#define INTERFACE_POST_MESSAGE(code) \
-    if (interface) { \
-        interface->postMessage(code); \
-    }
     IO80211Interface *interface = OSDynamicCast(IO80211Interface, ic->ic_ac.ac_if.iface);
+    if (!interface)
+        return;
     switch (msgCode) {
         case IEEE80211_EVT_COUNTRY_CODE_UPDATE:
-            INTERFACE_POST_MESSAGE(APPLE80211_M_COUNTRY_CODE_CHANGED)
+            interface->postMessage(APPLE80211_M_COUNTRY_CODE_CHANGED);
             break;
         case IEEE80211_EVT_STA_ASSOC_DONE:
-            INTERFACE_POST_MESSAGE(APPLE80211_M_ASSOC_DONE)
+            interface->postMessage(APPLE80211_M_ASSOC_DONE);
             break;
         case IEEE80211_EVT_STA_DEAUTH:
-            INTERFACE_POST_MESSAGE(APPLE80211_M_DEAUTH_RECEIVED)
+            interface->postMessage(APPLE80211_M_DEAUTH_RECEIVED);
             break;
 #if 0
         case IEEE80211_EVT_SCAN_DONE:
-            INTERFACE_POST_MESSAGE(APPLE80211_M_SCAN_DONE)
+            interface->postMessage(APPLE80211_M_SCAN_DONE);
             break;
 #endif
         default:
             break;
     }
-#undef INTERFACE_POST_MESSAGE
 }
 
 IOReturn AirportItlwm::
