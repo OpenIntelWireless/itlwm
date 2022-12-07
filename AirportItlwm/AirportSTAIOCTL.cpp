@@ -940,7 +940,7 @@ getNOISE(OSObject *object,
         nd->version = APPLE80211_VERSION;
         nd->num_radios = 1;
         nd->noise[0]
-        = nd->aggregate_noise = fHalService->getDriverInfo()->getBSSNoise();
+        = nd->aggregate_noise = -fHalService->getDriverInfo()->getBSSNoise();
         nd->noise_unit = APPLE80211_UNIT_DBM;
         return kIOReturnSuccess;
     }
@@ -1408,7 +1408,7 @@ getSCAN_RESULT(OSObject *object, struct apple80211_scan_result **sr)
     result->asr_channel.version = APPLE80211_VERSION;
     result->asr_channel.channel = ieee80211_chan2ieee(ic, fNextNodeToSend->ni_chan);
     result->asr_channel.flags = ieeeChanFlag2apple(fNextNodeToSend->ni_chan->ic_flags, -1);
-    result->asr_noise = fHalService->getDriverInfo()->getBSSNoise();
+    result->asr_noise = -fHalService->getDriverInfo()->getBSSNoise();
     result->asr_rssi = -(0 - IWM_MIN_DBM - fNextNodeToSend->ni_rssi);
     memcpy(result->asr_bssid, fNextNodeToSend->ni_bssid, IEEE80211_ADDR_LEN);
     result->asr_ssid_len = fNextNodeToSend->ni_esslen;
