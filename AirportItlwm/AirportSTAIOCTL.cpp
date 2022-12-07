@@ -225,7 +225,7 @@ getSSID(OSObject *object,
         sd->ssid_len = (uint32_t)strlen((const char*)ic->ic_des_essid);
         return kIOReturnSuccess;
     }
-    return kIOReturnError;
+    return 6;
 }
 
 IOReturn AirportItlwm::
@@ -376,7 +376,7 @@ getCHANNEL(OSObject *object,
         cd->channel.flags = ieeeChanFlag2apple(ic->ic_bss->ni_chan->ic_flags, ic->ic_bss->ni_chw);
         return kIOReturnSuccess;
     }
-    return kIOReturnError;
+    return 6;
 }
 
 IOReturn AirportItlwm::
@@ -397,7 +397,7 @@ getPROTMODE(OSObject *object, struct apple80211_protmode_data *pd)
         pd->protmode = 0;
         return kIOReturnSuccess;
     }
-    return kIOReturnError;
+    return 6;
 }
 
 IOReturn AirportItlwm::
@@ -418,7 +418,7 @@ getTXPOWER(OSObject *object,
         txd->txpower_unit = APPLE80211_UNIT_PERCENT;
         return kIOReturnSuccess;
     }
-    return kIOReturnError;
+    return 6;
 }
 
 IOReturn AirportItlwm::
@@ -457,7 +457,7 @@ getRATE(OSObject *object, struct apple80211_rate_data *rd)
 {
     struct ieee80211com *ic = fHalService->get80211Controller();
     if (ic->ic_bss == NULL)
-        return kIOReturnError;
+        return 6;
     int nss;
     int sgi;
     int index = 0;
@@ -502,7 +502,7 @@ getRATE(OSObject *object, struct apple80211_rate_data *rd)
             rd->rate[0] = ic->ic_bss->ni_rates.rs_rates[ic->ic_bss->ni_txrate];
         return kIOReturnSuccess;
     }
-    return kIOReturnError;
+    return 6;
 }
 
 IOReturn AirportItlwm::
@@ -638,7 +638,7 @@ getBSSID(OSObject *object,
         memcpy(bd->bssid.octet, ic->ic_bss->ni_bssid, APPLE80211_ADDR_LEN);
         return kIOReturnSuccess;
     }
-    return kIOReturnError;
+    return 6;
 }
 
 IOReturn AirportItlwm::
@@ -722,7 +722,7 @@ getMCS_INDEX_SET(OSObject *object, struct apple80211_mcs_index_set_data *ad)
             ad->mcs_set_map[i] = ic->ic_bss->ni_rxmcs[i];
         return kIOReturnSuccess;
     }
-    return kIOReturnError;
+    return 6;
 }
 
 IOReturn AirportItlwm::
@@ -793,7 +793,7 @@ getRATE_SET(OSObject *object, struct apple80211_rate_set_data *ad)
         }
         return kIOReturnSuccess;
     }
-    return kIOReturnError;
+    return 6;
 }
 
 IOReturn AirportItlwm::
@@ -869,7 +869,7 @@ getRSSI(OSObject *object,
         = -(0 - IWM_MIN_DBM - ic->ic_bss->ni_rssi);
         return kIOReturnSuccess;
     }
-    return kIOReturnError;
+    return 6;
 }
 
 IOReturn AirportItlwm::
@@ -944,7 +944,7 @@ getNOISE(OSObject *object,
         nd->noise_unit = APPLE80211_UNIT_DBM;
         return kIOReturnSuccess;
     }
-    return kIOReturnError;
+    return 6;
 }
 
 IOReturn AirportItlwm::
@@ -1274,7 +1274,7 @@ getMCS(OSObject *object, struct apple80211_mcs_data* md)
 {
     struct ieee80211com *ic = fHalService->get80211Controller();
     if (ic->ic_state != IEEE80211_S_RUN ||  ic->ic_bss == NULL || !md)
-        return kIOReturnError;
+        return 6;
     md->version = APPLE80211_VERSION;
     md->index = ic->ic_bss->ni_txmcs;
     return kIOReturnSuccess;
