@@ -1282,6 +1282,8 @@ ieee80211_node_join_bss(struct ieee80211com *ic, struct ieee80211_node *selbs, i
         int bgscan = ((ic->ic_flags & IEEE80211_F_BGSCAN) &&
                       ic->ic_opmode == IEEE80211_M_STA &&
                       ic->ic_state == IEEE80211_S_RUN);
+        int roamscan = bgscan &&
+                    (ic->ic_flags & IEEE80211_F_DISABLE_BG_AUTO_CONNECT) == 0;
         int auth_next = (ic->ic_opmode == IEEE80211_M_STA &&
                          ic->ic_state == IEEE80211_S_AUTH);
         int mgt = -1;
@@ -1298,7 +1300,7 @@ ieee80211_node_join_bss(struct ieee80211com *ic, struct ieee80211_node *selbs, i
              * ieee80211_new_state() try to re-auth and thus send
              * an AUTH frame to our newly selected AP.
              */
-            if (bgscan)
+            if (roamscan)
                 mgt = IEEE80211_FC0_SUBTYPE_DEAUTH;
             /*
              * If we are trying another AP after the previous one
@@ -1399,13 +1401,15 @@ ieee80211_end_scan(struct _ifnet *ifp)
     int bgscan = ((ic->ic_flags & IEEE80211_F_BGSCAN) &&
                   ic->ic_opmode == IEEE80211_M_STA &&
                   ic->ic_state == IEEE80211_S_RUN);
+    int roamscan = bgscan &&
+                (ic->ic_flags & IEEE80211_F_DISABLE_BG_AUTO_CONNECT) == 0;
     
     if (ic->ic_event_handler)
         (*ic->ic_event_handler)(ic, IEEE80211_EVT_SCAN_DONE, NULL);
     
     if (ifp->if_flags & IFF_DEBUG)
         XYLog("%s: end %s scan\n", ifp->if_xname,
-              bgscan ? "background" :
+              bgscan ? (roamscan ? "roam" : "background") :
               ((ic->ic_flags & IEEE80211_F_ASCAN) ?
                "active" : "passive"));
     
@@ -1484,10 +1488,15 @@ ieee80211_end_scan(struct _ifnet *ifp)
     if (bgscan) {
         struct ieee80211_node_switch_bss_arg *arg;
         
+        ic->ic_flags &= ~IEEE80211_F_DISABLE_BG_AUTO_CONNECT;
+        if (!roamscan) {
+            ic->ic_flags &= ~IEEE80211_F_BGSCAN;
+            return;
+        }
+        
         /* AP disappeared? Should not happen. */
         if (selbs == NULL || curbs == NULL) {
             ic->ic_flags &= ~IEEE80211_F_BGSCAN;
-            ic->ic_flags &= ~IEEE80211_F_DISABLE_BG_AUTO_CONNECT;
             XYLog("%s %d AP disappeared? Should not happen.\n", __FUNCTION__, __LINE__);
             goto notfound;
         }
@@ -1501,7 +1510,6 @@ ieee80211_end_scan(struct _ifnet *ifp)
             if (ic->ic_bgscan_fail < IEEE80211_BGSCAN_FAIL_MAX)
                 ic->ic_bgscan_fail++;
             ic->ic_flags &= ~IEEE80211_F_BGSCAN;
-            ic->ic_flags &= ~IEEE80211_F_DISABLE_BG_AUTO_CONNECT;
             /*
               * HT is negotiated during association so we must use
               * ic_bss to check HT. The nodes tree was re-populated
@@ -1518,12 +1526,6 @@ ieee80211_end_scan(struct _ifnet *ifp)
              else
                  ieee80211_setmode(ic,
                      ieee80211_chan2mode(ic, ni->ni_chan));
-            return;
-        }
-        
-        if (ic->ic_flags & IEEE80211_F_DISABLE_BG_AUTO_CONNECT) {
-            ic->ic_flags &= ~IEEE80211_F_BGSCAN;
-            ic->ic_flags &= ~IEEE80211_F_DISABLE_BG_AUTO_CONNECT;
             return;
         }
         

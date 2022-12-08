@@ -2871,9 +2871,11 @@ ieee80211_recv_deauth(struct ieee80211com *ic, mbuf_t m,
         case IEEE80211_M_STA: {
             int bgscan = ((ic->ic_flags & IEEE80211_F_BGSCAN) &&
                           ic->ic_state == IEEE80211_S_RUN);
+            int roamscan = bgscan &&
+                        (ic->ic_flags & IEEE80211_F_DISABLE_BG_AUTO_CONNECT) == 0;
             int stay_auth = ((ic->ic_userflags & IEEE80211_F_STAYAUTH) &&
                              ic->ic_state >= IEEE80211_S_AUTH);
-            if (!(bgscan || stay_auth))
+            if (!(roamscan || stay_auth))
                 ieee80211_new_state(ic, IEEE80211_S_AUTH,
                                     IEEE80211_FC0_SUBTYPE_DEAUTH);
         }
@@ -2931,7 +2933,9 @@ ieee80211_recv_disassoc(struct ieee80211com *ic, mbuf_t m,
         case IEEE80211_M_STA: {
             int bgscan = ((ic->ic_flags & IEEE80211_F_BGSCAN) &&
                           ic->ic_state == IEEE80211_S_RUN);
-            if (!bgscan) /* ignore disassoc during bgscan */
+            int roamscan = bgscan &&
+                        (ic->ic_flags & IEEE80211_F_DISABLE_BG_AUTO_CONNECT) == 0;
+            if (!roamscan) /* ignore disassoc during bgscan */
                 ieee80211_new_state(ic, IEEE80211_S_ASSOC,
                                     IEEE80211_FC0_SUBTYPE_DISASSOC);
         }
@@ -3003,6 +3007,7 @@ ieee80211_recv_addba_req(struct ieee80211com *ic, mbuf_t m,
         return;
     /* If we are in the process of roaming between APs, ignore. */
     if ((ic->ic_flags & IEEE80211_F_BGSCAN) &&
+        ((ic->ic_flags & IEEE80211_F_DISABLE_BG_AUTO_CONNECT) == 0) &&
         (ic->ic_xflags & IEEE80211_F_TX_MGMT_ONLY))
         return;
     /* check if we already have a Block Ack agreement for this RA/TID */
