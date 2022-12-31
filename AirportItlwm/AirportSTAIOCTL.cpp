@@ -1410,7 +1410,7 @@ getSCAN_RESULT(OSObject *object, struct apple80211_scan_result **sr)
     memcpy(result->asr_bssid, fNextNodeToSend->ni_bssid, IEEE80211_ADDR_LEN);
     result->asr_ssid_len = fNextNodeToSend->ni_esslen;
     if (result->asr_ssid_len != 0)
-        memcpy(&result->asr_ssid, fNextNodeToSend->ni_essid, result->asr_ssid_len + 1);
+        memcpy(&result->asr_ssid, fNextNodeToSend->ni_essid, result->asr_ssid_len);
 
     *sr = result;
     
