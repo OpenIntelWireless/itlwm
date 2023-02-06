@@ -387,12 +387,12 @@ struct apple80211_virt_if_create_data {
     uint8_t     mac[APPLE80211_ADDR_LEN];
     uint16_t    unk1;
     uint32_t    role;
-    uint8_t     bsd_name[15];
+    uint8_t     bsd_name[IFNAMSIZ];
 } __attribute__((packed));
 
 struct apple80211_virt_if_delete_data {
     uint32_t    version;
-    uint8_t     bsd_name[15];
+    uint8_t     bsd_name[IFNAMSIZ];
 } __attribute__((packed));
 
 struct apple80211_ht_capability {
