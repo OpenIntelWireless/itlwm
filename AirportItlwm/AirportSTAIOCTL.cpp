@@ -964,8 +964,11 @@ getPOWER(OSObject *object,
     if (!pd)
         return kIOReturnError;
     pd->version = APPLE80211_VERSION;
-    pd->num_radios = 1;
+    pd->num_radios = 4;
     pd->power_state[0] = power_state;
+    pd->power_state[1] = power_state;
+    pd->power_state[2] = power_state;
+    pd->power_state[3] = power_state;
     return kIOReturnSuccess;
 }
 
@@ -983,14 +986,17 @@ setPOWER(OSObject *object,
 {
     if (!pd)
         return kIOReturnError;
+    IOLog("itlwm: setPOWER: num_radios[%d]  power_state(0:%u  1:%u  2:%u  3:%u)\n", pd->num_radios, pd->power_state[0], pd->power_state[1], pd->power_state[2], pd->power_state[3]);
     if (pd->num_radios > 0) {
         bool isRunning = (fHalService->get80211Controller()->ic_ac.ac_if.if_flags & (IFF_UP | IFF_RUNNING)) != 0;
         if (pd->power_state[0] == 0) {
+            changePowerStateToPriv(1);
             if (isRunning) {
                 net80211_ifstats(fHalService->get80211Controller());
                 disableAdapter(fNetIf);
             }
         } else {
+            changePowerStateToPriv(2);
             if (!isRunning)
                 enableAdapter(fNetIf);
         }
