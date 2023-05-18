@@ -166,11 +166,6 @@ bool itlwm::createMediumTables(const IONetworkMedium **primary)
     return result;
 }
 
-ieee80211_wpaparams wpa;
-ieee80211_wpapsk psk;
-ieee80211_nwkey nwkey;
-ieee80211_join join;
-
 void itlwm::joinSSID(const char *ssid_name, const char *ssid_pwd)
 {
     struct ieee80211com *ic = fHalService->get80211Controller();
@@ -209,8 +204,6 @@ void itlwm::joinSSID(const char *ssid_name, const char *ssid_pwd)
     if (ieee80211_add_ess(ic, &join) == 0)
         ic->ic_flags |= IEEE80211_F_AUTO_JOIN;
 }
-
-struct ieee80211_nwid nwid;
 
 void itlwm::associateSSID(const char *ssid, const char *pwd)
 {
