@@ -317,6 +317,7 @@ static int ieeeChanFlag2apple(int flags, int bw)
         ret |= APPLE80211_C_FLAG_2GHZ;
     if (flags & IEEE80211_CHAN_5GHZ)
         ret |= APPLE80211_C_FLAG_5GHZ;
+#if __IO80211_TARGET < __MAC_13_0
     if (!(flags & IEEE80211_CHAN_PASSIVE))
         ret |= APPLE80211_C_FLAG_ACTIVE;
     if (flags & IEEE80211_CHAN_DFS)
@@ -336,6 +337,11 @@ static int ieeeChanFlag2apple(int flags, int bw)
         else if ((flags & IEEE80211_CHAN_CCK) || (flags & IEEE80211_CHAN_OFDM))
             ret |= APPLE80211_C_FLAG_10MHZ;
     } else {
+#else
+        if (bw == -1) {
+            ret |= (APPLE80211_C_FLAG_ACTIVE|APPLE80211_C_FLAG_20MHZ);
+        } else {
+#endif
         switch (bw) {
             case IEEE80211_CHAN_WIDTH_80P80:
             case IEEE80211_CHAN_WIDTH_160:
