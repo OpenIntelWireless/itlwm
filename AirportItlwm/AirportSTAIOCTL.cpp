@@ -310,6 +310,21 @@ setCIPHER_KEY(OSObject *object, struct apple80211_key *key)
     return kIOReturnSuccess;
 }
 
+// From Ventura, airport/wifiagent seems that they don't like to accept extra channel flags in the scan result list,
+// if not, the exact behavior is that the wifi list on the control center/menu bar will not refresh after system boot.
+#if __IO80211_TARGET >= __MAC_13_0
+static int ieeeChanFlag2appleScanFlagVentura(int flags)
+{
+    int ret = 0;
+    if (flags & IEEE80211_CHAN_2GHZ)
+        ret |= APPLE80211_C_FLAG_2GHZ;
+    if (flags & IEEE80211_CHAN_5GHZ)
+        ret |= APPLE80211_C_FLAG_5GHZ;
+    ret |= (APPLE80211_C_FLAG_ACTIVE | APPLE80211_C_FLAG_20MHZ);
+    return ret;
+}
+#endif
+
 static int ieeeChanFlag2apple(int flags, int bw)
 {
     int ret = 0;
@@ -317,7 +332,6 @@ static int ieeeChanFlag2apple(int flags, int bw)
         ret |= APPLE80211_C_FLAG_2GHZ;
     if (flags & IEEE80211_CHAN_5GHZ)
         ret |= APPLE80211_C_FLAG_5GHZ;
-#if __IO80211_TARGET < __MAC_13_0
     if (!(flags & IEEE80211_CHAN_PASSIVE))
         ret |= APPLE80211_C_FLAG_ACTIVE;
     if (flags & IEEE80211_CHAN_DFS)
@@ -337,11 +351,6 @@ static int ieeeChanFlag2apple(int flags, int bw)
         else if ((flags & IEEE80211_CHAN_CCK) || (flags & IEEE80211_CHAN_OFDM))
             ret |= APPLE80211_C_FLAG_10MHZ;
     } else {
-#else
-        if (bw == -1) {
-            ret |= (APPLE80211_C_FLAG_ACTIVE|APPLE80211_C_FLAG_20MHZ);
-        } else {
-#endif
         switch (bw) {
             case IEEE80211_CHAN_WIDTH_80P80:
             case IEEE80211_CHAN_WIDTH_160:
@@ -1416,7 +1425,11 @@ getSCAN_RESULT(OSObject *object, struct apple80211_scan_result **sr)
     result->asr_cap = fNextNodeToSend->ni_capinfo;
     result->asr_channel.version = APPLE80211_VERSION;
     result->asr_channel.channel = ieee80211_chan2ieee(ic, fNextNodeToSend->ni_chan);
+#if __IO80211_TARGET < __MAC_13_0
     result->asr_channel.flags = ieeeChanFlag2apple(fNextNodeToSend->ni_chan->ic_flags, -1);
+#else
+    result->asr_channel.flags = ieeeChanFlag2appleScanFlagVentura(fNextNodeToSend->ni_chan->ic_flags);
+#endif
     result->asr_noise = -fHalService->getDriverInfo()->getBSSNoise();
     result->asr_rssi = -(0 - IWM_MIN_DBM - fNextNodeToSend->ni_rssi);
     memcpy(result->asr_bssid, fNextNodeToSend->ni_bssid, IEEE80211_ADDR_LEN);
