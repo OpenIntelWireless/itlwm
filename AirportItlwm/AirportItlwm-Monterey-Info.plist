@@ -34,6 +34,8 @@
 			<integer>2000</integer>
 			<key>IOProviderClass</key>
 			<string>IOPCIDevice</string>
+			<key>IOPCITunnelCompatible</key>
+			<true/>
 		</dict>
 	</dict>
 	<key>NSHumanReadableCopyright</key>

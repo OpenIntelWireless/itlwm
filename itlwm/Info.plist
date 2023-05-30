@@ -36,6 +36,8 @@
 			<string>IOPCIDevice</string>
 			<key>IOUserClientClass</key>
 			<string>ItlNetworkUserClient</string>
+			<key>IOPCITunnelCompatible</key>
+			<true/>
 			<key>WiFiConfig</key>
 			<dict>
 				<key>WiFi_1</key>
