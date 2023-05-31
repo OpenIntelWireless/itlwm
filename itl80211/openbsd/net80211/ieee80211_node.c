@@ -1669,9 +1669,11 @@ ieee80211_node_cleanup(struct ieee80211com *ic, struct ieee80211_node *ni)
     }
     ieee80211_ba_del(ni);
     ieee80211_ba_free(ni);
-    IOFree(ni->ni_unref_arg, ni->ni_unref_arg_size);
-    ni->ni_unref_arg = NULL;
-    ni->ni_unref_arg_size = 0;
+    if (ni->ni_unref_arg != NULL) {
+        IOFree(ni->ni_unref_arg, ni->ni_unref_arg_size);
+        ni->ni_unref_arg = NULL;
+        ni->ni_unref_arg_size = 0;
+    }
     
 #ifndef IEEE80211_STA_ONLY
     mq_purge(&ni->ni_savedq);
