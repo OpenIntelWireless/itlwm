@@ -95,15 +95,6 @@ extern int _start(struct kmod_info*, void*);
 
 extern int timingsafe_bcmp(const void *b1, const void *b2, size_t n);
 
-static inline void* _MallocZero(vm_size_t size)
-{
-    void *ret = IOMalloc(size);
-    if (ret != NULL) {
-        bzero(ret, size);
-    }
-    return ret;
-}
-
 /*
  * ppsratecheck(): packets (or events) per second limitation.
  */

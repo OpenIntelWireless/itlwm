@@ -1600,8 +1600,8 @@ ieee80211_save_ie(const u_int8_t *frm, u_int8_t **ie)
     
     if (*ie == NULL || olen != len) {
         if (*ie != NULL)
-            IOFree(*ie, olen);
-        *ie = (u_int8_t *)_MallocZero(len);
+            free(*ie);
+        *ie = (u_int8_t *)malloc(len, 0, 0);
         if (*ie == NULL)
             return ENOMEM;
     }
@@ -3068,7 +3068,7 @@ ieee80211_recv_addba_req(struct ieee80211com *ic, mbuf_t m,
     ba->ba_winstart = ssn;
     ba->ba_winend = (ba->ba_winstart + ba->ba_winsize - 1) & 0xfff;
     /* allocate and setup our reordering buffer */
-    ba->ba_buf = (struct ieee80211_ba_buf*)_MallocZero(IEEE80211_BA_MAX_WINSZ * sizeof(struct ieee80211_ba_buf));
+    ba->ba_buf = (struct ieee80211_ba_buf*)malloc(IEEE80211_BA_MAX_WINSZ * sizeof(struct ieee80211_ba_buf), 0, 0);
     if (ba->ba_buf == NULL)
         goto refuse;
     
@@ -3118,8 +3118,7 @@ ieee80211_addba_req_refuse(struct ieee80211com *ic, struct ieee80211_node *ni,
 {
     struct ieee80211_rx_ba *ba = &ni->ni_rx_ba[tid];
     
-    IOFree(ba->ba_buf,
-           IEEE80211_BA_MAX_WINSZ * sizeof(*ba->ba_buf));
+    free(ba->ba_buf);
     ba->ba_buf = NULL;
     ba->ba_state = IEEE80211_BA_INIT;
     
@@ -3299,8 +3298,7 @@ ieee80211_recv_delba(struct ieee80211com *ic, mbuf_t m,
             for (i = 0; i < IEEE80211_BA_MAX_WINSZ; i++)
                 mbuf_freem(ba->ba_buf[i].m);
             /* free reordering buffer */
-            IOFree(ba->ba_buf,
-                   IEEE80211_BA_MAX_WINSZ * sizeof(*ba->ba_buf));
+            free(ba->ba_buf);
             ba->ba_buf = NULL;
         }
     } else {
