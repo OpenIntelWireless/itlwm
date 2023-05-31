@@ -70,7 +70,7 @@ ieee80211_bip_set_key(struct ieee80211com *ic, struct ieee80211_key *k)
 {
 	struct ieee80211_bip_ctx *ctx;
 
-	ctx = (struct ieee80211_bip_ctx *)_MallocZero(sizeof(*ctx));
+	ctx = (struct ieee80211_bip_ctx *)malloc(sizeof(*ctx), 0, 0);
 	if (ctx == NULL)
 		return ENOMEM;
 	AES_CMAC_SetKey(&ctx->cmac, k->k_key);
@@ -83,7 +83,7 @@ ieee80211_bip_delete_key(struct ieee80211com *ic, struct ieee80211_key *k)
 {
 	if (k->k_priv != NULL) {
 		explicit_bzero(k->k_priv, sizeof(struct ieee80211_bip_ctx));
-		IOFree(k->k_priv, sizeof(struct ieee80211_bip_ctx));
+		free(k->k_priv);
 	}
 	k->k_priv = NULL;
 }

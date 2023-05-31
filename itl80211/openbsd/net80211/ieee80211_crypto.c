@@ -98,7 +98,7 @@ ieee80211_crypto_detach(struct _ifnet *ifp)
 	while ((pmk = TAILQ_FIRST(&ic->ic_pmksa)) != NULL) {
 		TAILQ_REMOVE(&ic->ic_pmksa, pmk, pmk_next);
 		explicit_bzero(pmk, sizeof(*pmk));
-		IOFree(pmk, sizeof(*pmk));
+		free(pmk);
 	}
 
 	/* clear all group keys from memory */
@@ -654,7 +654,7 @@ ieee80211_pmksa_add(struct ieee80211com *ic, enum ieee80211_akm akm,
 	}
 	if (pmk == NULL) {
 		/* allocate a new PMKSA entry */
-		if ((pmk = (struct ieee80211_pmk *)_MallocZero(sizeof(*pmk))) == NULL)
+		if ((pmk = (struct ieee80211_pmk *)malloc(sizeof(*pmk), 0, 0)) == NULL)
 			return NULL;
 		pmk->pmk_akm = akm;
 		IEEE80211_ADDR_COPY(pmk->pmk_macaddr, macaddr);

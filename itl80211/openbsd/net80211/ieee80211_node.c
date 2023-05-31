@@ -220,7 +220,7 @@ ieee80211_del_ess(struct ieee80211com *ic, char *nwid, int len, int all)
                          memcmp(ess->essid, nwid, len) == 0)) {
             TAILQ_REMOVE(&ic->ic_ess, ess, ess_next);
             explicit_bzero(ess, sizeof(*ess));
-            IOFree(ess, sizeof(*ess));
+            free(ess);
             if (TAILQ_EMPTY(&ic->ic_ess))
                 ic->ic_flags &= ~IEEE80211_F_AUTO_JOIN;
             if (all != 1)
@@ -396,7 +396,7 @@ ieee80211_add_ess(struct ieee80211com *ic, struct ieee80211_join *join)
         if (ness > IEEE80211_CACHE_SIZE)
             return (ERANGE);
         new_value = 1;
-        ess = (struct ieee80211_ess *)_MallocZero(sizeof(*ess));
+        ess = (struct ieee80211_ess *)malloc(sizeof(*ess), 0, 0);
         if (ess == NULL)
             return (ENOMEM);
         memcpy(ess->essid, join->i_nwid, join->i_len);
@@ -406,7 +406,7 @@ ieee80211_add_ess(struct ieee80211com *ic, struct ieee80211_join *join)
     if (join->i_flags & IEEE80211_JOIN_WPA) {
         if (join->i_wpaparams.i_enabled) {
             if (!(ic->ic_caps & IEEE80211_C_RSN)) {
-                IOFree(ess, sizeof(*ess));
+                free(ess);
                 return ENODEV;
             }
             ieee80211_ess_setwpaparms(ess,
@@ -424,7 +424,7 @@ ieee80211_add_ess(struct ieee80211com *ic, struct ieee80211_join *join)
     } else if (join->i_flags & IEEE80211_JOIN_NWKEY) {
         if (join->i_nwkey.i_wepon) {
             if (!(ic->ic_caps & IEEE80211_C_WEP)) {
-                IOFree(ess, sizeof(*ess));
+                free(ess);
                 return ENODEV;
             }
             ieee80211_ess_setnwkeys(ess, &join->i_nwkey);
@@ -732,7 +732,7 @@ ieee80211_node_attach(struct _ifnet *ifp)
         ic->ic_max_aid = IEEE80211_AID_MAX;
 #ifndef IEEE80211_STA_ONLY
     size = howmany(ic->ic_max_aid, 32) * sizeof(u_int32_t);
-    ic->ic_aid_bitmap = (u_int32_t *)_MallocZero(size);
+    ic->ic_aid_bitmap = (u_int32_t *)malloc(size, 0, 0);
     if (ic->ic_aid_bitmap == NULL) {
         /* XXX no way to recover */
         XYLog("%s: no memory for AID bitmap!\n", __FUNCTION__);
@@ -740,7 +740,7 @@ ieee80211_node_attach(struct _ifnet *ifp)
     }
     if (ic->ic_caps & (IEEE80211_C_HOSTAP | IEEE80211_C_IBSS)) {
         ic->ic_tim_len = howmany(ic->ic_max_aid, 8);
-        ic->ic_tim_bitmap = (u_int8_t*)_MallocZero(ic->ic_tim_len);
+        ic->ic_tim_bitmap = (u_int8_t*)malloc(ic->ic_tim_len, 0, 0);
         if (ic->ic_tim_bitmap == NULL) {
             XYLog("%s: no memory for TIM bitmap!\n", __FUNCTION__);
             ic->ic_tim_len = 0;
@@ -799,9 +799,8 @@ ieee80211_node_detach(struct _ifnet *ifp)
     ieee80211_del_ess(ic, NULL, 0, 1);
     ieee80211_free_allnodes(ic, 1);
 #ifndef IEEE80211_STA_ONLY
-    IOFree(ic->ic_aid_bitmap,
-           howmany(ic->ic_max_aid, 32) * sizeof(u_int32_t));
-    IOFree(ic->ic_tim_bitmap, ic->ic_tim_len);
+    free(ic->ic_aid_bitmap);
+    free(ic->ic_tim_bitmap);
     timeout_del(&ic->ic_inact_timeout);
     timeout_free(&ic->ic_inact_timeout);
     timeout_del(&ic->ic_node_cache_timeout);
@@ -1197,7 +1196,7 @@ ieee80211_node_switch_bss(struct ieee80211com *ic, struct ieee80211_node *ni)
     splassert(IPL_NET);
     
     if ((ic->ic_flags & IEEE80211_F_BGSCAN) == 0) {
-        IOFree(sba, sizeof(*sba));
+        free(sba);
         return;
     }
     
@@ -1205,7 +1204,7 @@ ieee80211_node_switch_bss(struct ieee80211com *ic, struct ieee80211_node *ni)
     
     selbs = ieee80211_find_node(ic, sba->sel_macaddr);
     if (selbs == NULL) {
-        IOFree(sba, sizeof(*sba));
+        free(sba);
         ic->ic_flags &= ~IEEE80211_F_BGSCAN;
         ieee80211_new_state(ic, IEEE80211_S_SCAN, -1);
         return;
@@ -1213,7 +1212,7 @@ ieee80211_node_switch_bss(struct ieee80211com *ic, struct ieee80211_node *ni)
     
     curbs = ieee80211_find_node(ic, sba->cur_macaddr);
     if (curbs == NULL) {
-        IOFree(sba, sizeof(*sba));
+        free(sba);
         ic->ic_flags &= ~IEEE80211_F_BGSCAN;
         ieee80211_new_state(ic, IEEE80211_S_SCAN, -1);
         return;
@@ -1529,7 +1528,7 @@ ieee80211_end_scan(struct _ifnet *ifp)
             return;
         }
         
-        arg = (struct ieee80211_node_switch_bss_arg *)_MallocZero(sizeof(*arg));
+        arg = (struct ieee80211_node_switch_bss_arg *)malloc(sizeof(*arg), 0, 0);
         if (arg == NULL) {
             ic->ic_flags &= ~IEEE80211_F_BGSCAN;
             return;
@@ -1547,7 +1546,7 @@ ieee80211_end_scan(struct _ifnet *ifp)
                                 IEEE80211_FC0_SUBTYPE_DEAUTH,
                                 IEEE80211_REASON_AUTH_LEAVE) != 0) {
             ic->ic_flags &= ~IEEE80211_F_BGSCAN;
-            IOFree(arg, sizeof(*arg));
+            free(arg);
             return;
         }
         
@@ -1659,7 +1658,7 @@ ieee80211_node_cleanup(struct ieee80211com *ic, struct ieee80211_node *ni)
         return;
     }
     if (ni->ni_rsnie != NULL) {
-        IOFree(ni->ni_rsnie, 2 + ni->ni_rsnie[1]);
+        free(ni->ni_rsnie);
         ni->ni_rsnie = NULL;
     }
     if (ni->ni_rsnie_tlv != NULL && ni->ni_rsnie_tlv_len > 0) {
@@ -1670,7 +1669,7 @@ ieee80211_node_cleanup(struct ieee80211com *ic, struct ieee80211_node *ni)
     ieee80211_ba_del(ni);
     ieee80211_ba_free(ni);
     if (ni->ni_unref_arg != NULL) {
-        IOFree(ni->ni_unref_arg, ni->ni_unref_arg_size);
+        free(ni->ni_unref_arg);
         ni->ni_unref_arg = NULL;
         ni->ni_unref_arg_size = 0;
     }
@@ -3190,8 +3189,7 @@ ieee80211_node_leave_ht(struct ieee80211com *ic, struct ieee80211_node *ni)
         if (ba->ba_buf != NULL) {
             for (i = 0; i < IEEE80211_BA_MAX_WINSZ; i++)
                 mbuf_freem(ba->ba_buf[i].m);
-            IOFree(ba->ba_buf,
-                   IEEE80211_BA_MAX_WINSZ * sizeof(*ba->ba_buf));
+            free(ba->ba_buf);
             ba->ba_buf = NULL;
         }
     }
