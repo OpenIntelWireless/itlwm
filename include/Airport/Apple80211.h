@@ -9,8 +9,13 @@
 #ifndef Apple80211_h
 #define Apple80211_h
 
+#if __IO80211_TARGET >= __MAC_14_0
+#define IO80211FAMILY_V2
+#endif
+
 #include "apple_private_spi.h"
 #include "debug.h"
+#include "IO80211WorkQueue.h"
 #include "IO80211WorkLoop.h"
 #include "IO80211Controller.h"
 #include "IO80211Interface.h"

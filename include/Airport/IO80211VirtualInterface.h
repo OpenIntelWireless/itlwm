@@ -1,7 +1,19 @@
 #ifndef IO80211VirtualInterface_h
 #define IO80211VirtualInterface_h
 
+#include <Availability.h>
+#include <libkern/version.h>
+
+// This is necessary, because even the latest Xcode does not support properly targeting 11.0.
+#ifndef __IO80211_TARGET
+#error "Please define __IO80211_TARGET to the requested version"
+#endif
+
+#ifndef IO80211FAMILY_V2
 #include "IO80211Interface.h"
+#else
+#include "IO80211SkywalkInterface.h"
+#endif
 #include "apple_private_spi.h"
 
 typedef UInt64 IO80211FlowQueueHash;
@@ -17,6 +29,14 @@ struct apple80211_awdl_statistics;
 struct apple80211_lowlatency_peer_statistics_evevt;
 struct apple80211_p2p_airplay_statistics;
 struct apple80211_awdl_sidecar_statistics;
+struct apple80211_pmk_cache_data;
+struct apple80211_interface_availability;
+struct packet_info_tx;
+struct userPrintCtx;
+struct apple80211_chip_counters_tx;
+struct apple80211_chip_error_counters_tx;
+struct apple80211_chip_counters_rx;
+struct apple80211_ManagementInformationBasedot11_counters;
 
 class IO80211VirtualInterface : public IOService {
     OSDeclareDefaultStructors(IO80211VirtualInterface)

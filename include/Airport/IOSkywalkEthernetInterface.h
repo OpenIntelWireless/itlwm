@@ -1,12 +1,13 @@
 #ifndef IOSkywalkEthernetInterface_h
 #define IOSkywalkEthernetInterface_h
 
-#include <IOKit/network/IOEthernetController.h>
+#include "IOSkywalkNetworkInterface.h"
 
-class IOSkywalkEthernetInterface : public IOEthernetController {
+class IOSkywalkEthernetInterface : public IOSkywalkNetworkInterface {
     OSDeclareAbstractStructors( IOSkywalkEthernetInterface )
     
 public:
+    virtual void free() APPLE_KEXT_OVERRIDE;
     
 };
 

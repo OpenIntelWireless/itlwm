@@ -22,6 +22,8 @@
 #include <net/if_var.h>
 #include <sys/queue.h>
 
+#ifndef IO80211FAMILY_V2
+
 enum IO80211LinkState
 {
 	kIO80211NetworkLinkUndefined,			// Starting link state when an interface is created
@@ -287,6 +289,8 @@ public:
 protected:
     u_int8_t dat[0x500];
 };
+
+#endif
 
 #endif /* defined(KERNEL) && defined(__cplusplus) */
 
