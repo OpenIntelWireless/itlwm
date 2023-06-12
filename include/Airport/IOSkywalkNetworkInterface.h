@@ -21,7 +21,10 @@ class IOSkywalkPacketBufferPool;
 class IOSkywalkNetworkInterface : public IOSkywalkInterface {
     OSDeclareAbstractStructors( IOSkywalkNetworkInterface )
     
-    struct RegistrationInfo;
+public:
+    struct RegistrationInfo {
+        uint8_t pad[304];
+    } __attribute__((packed));
     struct IOSkywalkTSOOptions;
     
 public:
