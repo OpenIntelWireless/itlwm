@@ -150,9 +150,9 @@ public:
     virtual IOWorkLoop* getWorkLoop(void) const APPLE_KEXT_OVERRIDE;
     virtual const char* stringFromReturn(int) APPLE_KEXT_OVERRIDE;
     virtual int errnoFromReturn(int) APPLE_KEXT_OVERRIDE;
-    virtual int getFeatures();
-    virtual const char* newVendorString();
-    virtual const char* newModelString();
+    virtual UInt32 getFeatures() const APPLE_KEXT_OVERRIDE;
+    virtual const OSString * newVendorString() const APPLE_KEXT_OVERRIDE;
+    virtual const OSString * newModelString() const APPLE_KEXT_OVERRIDE;
     virtual bool createWorkLoop() APPLE_KEXT_OVERRIDE;
     virtual IOReturn getHardwareAddress(IOEthernetAddress *) APPLE_KEXT_OVERRIDE;
     virtual IOReturn setHardwareAddress(const IOEthernetAddress * addrP) APPLE_KEXT_OVERRIDE;
