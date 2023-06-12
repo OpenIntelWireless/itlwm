@@ -191,6 +191,7 @@ public:
 public:
     OSString *setInterfaceRole(UInt role);
     void *setInterfaceId(UInt id);
+    int getInterfaceRole();
     
 public:
     char _data[0x118];
