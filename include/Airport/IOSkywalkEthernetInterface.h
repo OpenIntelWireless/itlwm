@@ -52,6 +52,8 @@ public:
     OSMetaClassDeclareReservedUnused( IOSkywalkInterface,  8 );
     OSMetaClassDeclareReservedUnused( IOSkywalkInterface,  9 );
     OSMetaClassDeclareReservedUnused( IOSkywalkInterface, 10 );
+    
+public:
     virtual SInt32 initBSDInterfaceParameters(ifnet_init_eparams *,sockaddr_dl **) = 0;
     virtual bool prepareBSDInterface(ifnet_t,UInt) APPLE_KEXT_OVERRIDE;
     virtual void finalizeBSDInterface(ifnet_t,UInt) APPLE_KEXT_OVERRIDE;
