@@ -95,7 +95,7 @@ public:
     virtual void *getSupportedMediaArray(UInt *,UInt *) APPLE_KEXT_OVERRIDE;
     virtual UInt32 getFeatureFlags(void) APPLE_KEXT_OVERRIDE;
     virtual const char *classNameOverride(void) APPLE_KEXT_OVERRIDE;
-    virtual IOReturn setPromiscuousModeEnable(bool, UInt);
+    virtual IOReturn setPromiscuousModeEnable(bool, UInt) APPLE_KEXT_OVERRIDE;
     virtual void *createPeerManager(void);
     virtual void postMessage(UInt,void *,unsigned long,bool);
     virtual IOReturn reportDataPathEvents(UInt,void *,unsigned long,bool);
@@ -187,6 +187,10 @@ public:
     virtual void postMessageIOUC(char const*,UInt,void *,unsigned long);
     virtual bool isIOUCPipeOpened(void);
     virtual void *getRingMD(IO80211APIUserClient *,unsigned long long);
+    
+public:
+    OSString *setInterfaceRole(UInt role);
+    void *setInterfaceId(UInt id);
     
 public:
     char _data[0x118];
