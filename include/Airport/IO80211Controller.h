@@ -210,11 +210,11 @@ public:
     }
     
     virtual UInt getPacketTSCounter();
-    virtual UInt64 getDriverTextLog();
+    virtual void *getDriverTextLog();
     
     virtual UInt32 selfDiagnosticsReport(int,char const*,UInt);
     
-    virtual UInt64 getFaultReporterFromDriver();
+    virtual void *getFaultReporterFromDriver();
     
     virtual UInt32 getDataQueueDepth(OSObject *);
     virtual bool isAssociatedToMovingNetwork(void) { return false; }
