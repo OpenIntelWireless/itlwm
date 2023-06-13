@@ -31,6 +31,10 @@
 #include "IO80211SkywalkInterface.h"
 #include "IO80211WorkLoop.h"
 #include "IO80211WorkQueue.h"
+#include "CCStream.h"
+#include "CCDataPipe.h"
+#include "CCLogPipe.h"
+#include "CCLogStream.h"
 
 #define AUTH_TIMEOUT            15    // seconds
 
@@ -72,10 +76,6 @@ typedef enum IO80211FeatureCode IO80211FeatureCode;
 
 class IOSkywalkInterface;
 class IO80211ScanManager;
-enum CCStreamLogLevel
-{
-    LEVEL_1,
-};
 
 enum scanSource
 {
