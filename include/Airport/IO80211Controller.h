@@ -199,7 +199,7 @@ public:
     }
     virtual IO80211FlowQueueLegacy* requestFlowQueue(FlowIdMetadata const*);
     virtual void releaseFlowQueue(IO80211FlowQueue *);
-    virtual void getLogPipes(CCPipe**, CCPipe**, CCPipe**) {};
+    virtual bool getLogPipes(CCPipe**, CCPipe**, CCPipe**);
     virtual void enableFeatureForLoggingFlags(unsigned long long) {};
     virtual IOReturn requestQueueSizeAndTimeout(unsigned short *, unsigned short *) { return kIOReturnIOError; };
     virtual IOReturn enablePacketTimestamping(void) {
@@ -333,7 +333,7 @@ public:
     virtual IO80211FlowQueueLegacy* requestFlowQueue(FlowIdMetadata const*);
     virtual void releaseFlowQueue(IO80211FlowQueue *);
 #if __IO80211_TARGET >= __MAC_10_15
-    virtual void getLogPipes(CCPipe**, CCPipe**, CCPipe**) {};
+    virtual bool getLogPipes(CCPipe**, CCPipe**, CCPipe**);
 #endif
     virtual IOReturn enablePacketTimestamping(void) {
         return kIOReturnUnsupported;

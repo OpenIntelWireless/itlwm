@@ -13,7 +13,9 @@
 #include "CCPipe.h"
 
 struct CCStreamOptions {
-    
+    uint64_t stream_type;
+    uint64_t console_level;
+    char pad[0x348];
 };
 
 class CCStream : public IOService {
@@ -30,6 +32,7 @@ public:
     virtual CCStream const *initWithPipeAndName(CCPipe *,char const*,CCStreamOptions const*);
     
 public:
+    static CCStream *withPipeAndName(CCPipe *,char const*,CCStreamOptions const*);
     CCPipe *getPipe() const;
     
 public:
