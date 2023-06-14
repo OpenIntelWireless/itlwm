@@ -24,6 +24,7 @@
 #if __IO80211_TARGET >= __MAC_10_15
 #include "IO80211SkywalkInterface.h"
 #include "IO80211InfraInterface.h"
+#include "IO80211InfraProtocol.h"
 #endif
 
 #endif /* Apple80211_h */
