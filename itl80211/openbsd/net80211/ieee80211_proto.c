@@ -1078,8 +1078,7 @@ ieee80211_delba_request(struct ieee80211com *ic, struct ieee80211_node *ni,
 			for (i = 0; i < IEEE80211_BA_MAX_WINSZ; i++)
 				mbuf_freem(ba->ba_buf[i].m);
 			/* free reordering buffer */
-			IOFree(ba->ba_buf,
-			    IEEE80211_BA_MAX_WINSZ * sizeof(*ba->ba_buf));
+			free(ba->ba_buf);
 			ba->ba_buf = NULL;
 		}
 	}

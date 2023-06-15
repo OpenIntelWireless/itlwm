@@ -867,7 +867,6 @@
 		F89B6C2225027609000F77FF /* debug.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = debug.h; sourceTree = "<group>"; };
 		F8A763892766B95F004606BE /* iwlwifi-so-a0-gf4-a0.pnvm */ = {isa = PBXFileReference; lastKnownFileType = file; path = "iwlwifi-so-a0-gf4-a0.pnvm"; sourceTree = "<group>"; };
 		F8AE6558285471560085B4CF /* AirportItlwm.kext */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AirportItlwm.kext; sourceTree = BUILT_PRODUCTS_DIR; };
-		F8AE6559285471560085B4CF /* AirportItlwm-Ventura-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; name = "AirportItlwm-Ventura-Info.plist"; path = "/Users/qcwap/Desktop/github_project/itlwm/AirportItlwm-Ventura-Info.plist"; sourceTree = "<absolute>"; };
 		F8AF3A2F24F9F35B008911C1 /* ItlIwm.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ItlIwm.cpp; sourceTree = "<group>"; };
 		F8AF3A3024F9F35B008911C1 /* ItlIwm.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = ItlIwm.hpp; sourceTree = "<group>"; };
 		F8B783AF240B9F87004C9777 /* _ifq.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = _ifq.h; sourceTree = "<group>"; };
@@ -1238,7 +1237,6 @@
 				F8CA44A225091AF60036119A /* AirportItlwmInterface.hpp */,
 				F89B6BBF25021C9C000F77FF /* Info.plist */,
 				F883EC1F266F43F200EA018C /* AirportItlwm-Monterey-Info.plist */,
-				F8AE6559285471560085B4CF /* AirportItlwm-Ventura-Info.plist */,
 			);
 			path = AirportItlwm;
 			sourceTree = "<group>";
@@ -2537,7 +2535,7 @@
 				KERNEL_EXTENSION_HEADER_SEARCH_PATHS = "$(PROJECT_DIR)/MacKernelSDK/Headers";
 				KERNEL_FRAMEWORK_HEADERS = "$(PROJECT_DIR)/MacKernelSDK/Headers";
 				MACOSX_DEPLOYMENT_TARGET = 10.12;
-				MODULE_VERSION = 2.2.0;
+				MODULE_VERSION = 2.3.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				OTHER_CPLUSPLUSFLAGS = (
@@ -2604,7 +2602,7 @@
 				KERNEL_EXTENSION_HEADER_SEARCH_PATHS = "$(PROJECT_DIR)/MacKernelSDK/Headers";
 				KERNEL_FRAMEWORK_HEADERS = "$(PROJECT_DIR)/MacKernelSDK/Headers";
 				MACOSX_DEPLOYMENT_TARGET = 10.12;
-				MODULE_VERSION = 2.2.0;
+				MODULE_VERSION = 2.3.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				OTHER_CPLUSPLUSFLAGS = (
@@ -3005,7 +3003,7 @@
 					"__IO80211_TARGET=__MAC_13_0",
 					__PRIVATE_SPI__,
 				);
-				INFOPLIST_FILE = "AirportItlwm/AirportItlwm-Ventura-Info.plist";
+				INFOPLIST_FILE = "AirportItlwm/AirportItlwm-Monterey-Info.plist";
 				LIBRARY_SEARCH_PATHS = (
 					"$(PROJECT_DIR)/itl80211",
 					"$(inherited)",
@@ -3036,7 +3034,7 @@
 					__PRIVATE_SPI__,
 					"$(inherited)",
 				);
-				INFOPLIST_FILE = "AirportItlwm/AirportItlwm-Ventura-Info.plist";
+				INFOPLIST_FILE = "AirportItlwm/AirportItlwm-Monterey-Info.plist";
 				LIBRARY_SEARCH_PATHS = (
 					"$(PROJECT_DIR)/itl80211",
 					"$(inherited)",

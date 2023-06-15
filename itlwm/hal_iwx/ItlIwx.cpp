@@ -1798,6 +1798,13 @@ iwx_read_firmware(struct iwx_softc *sc)
                 break;
         }
         
+        /*
+         * Check for size_t overflow and ignore missing padding at
+         * end of firmware file.
+         */
+        if (roundup(tlv_len, 4) > len)
+            break;
+        
         len -= roundup(tlv_len, 4);
         data += roundup(tlv_len, 4);
     }
@@ -1941,8 +1948,11 @@ iwx_pnvm_handle_section(struct iwx_softc *sc, const uint8_t *data, size_t len)
                 break;
         }
         
-        len -= _ALIGN(tlv_len, 4);
-        data += _ALIGN(tlv_len, 4);
+        if (roundup(tlv_len, 4) > len)
+            break;
+        
+        len -= roundup(tlv_len, 4);
+        data += roundup(tlv_len, 4);
     }
     
 done:
@@ -2038,10 +2048,10 @@ iwx_read_pnvm(struct iwx_softc *sc)
         len -= sizeof(*tlv);
         tlv = (struct iwx_ucode_tlv *)data;
 
-        tlv_len = le32_to_cpu(tlv->length);
-        tlv_type = le32_to_cpu(tlv->type);
+        tlv_len = le32toh(tlv->length);
+        tlv_type = le32toh(tlv->type);
 
-        if (len < tlv_len) {
+        if (len < tlv_len || roundup(tlv_len, 4) > len) {
             XYLog("invalid TLV len: %zd/%u\n",
                 len, tlv_len);
             err = -EINVAL;
@@ -2055,16 +2065,16 @@ iwx_read_pnvm(struct iwx_softc *sc)
             XYLog("Got IWL_UCODE_TLV_PNVM_SKU len %d\n",
                      tlv_len);
             XYLog("sku_id 0x%0x 0x%0x 0x%0x\n",
-                     le32_to_cpu(sku_id->data[0]),
-                     le32_to_cpu(sku_id->data[1]),
-                     le32_to_cpu(sku_id->data[2]));
+                     le32toh(sku_id->data[0]),
+                     le32toh(sku_id->data[1]),
+                     le32toh(sku_id->data[2]));
 
-            data += sizeof(*tlv) + _ALIGN(tlv_len, 4);
-            len -= _ALIGN(tlv_len, 4);
+            data += sizeof(*tlv) + roundup(tlv_len, 4);
+            len -= roundup(tlv_len, 4);
 
-            if (sc->sku_id[0] == le32_to_cpu(sku_id->data[0]) &&
-                sc->sku_id[1] == le32_to_cpu(sku_id->data[1]) &&
-                sc->sku_id[2] == le32_to_cpu(sku_id->data[2])) {
+            if (sc->sku_id[0] == le32toh(sku_id->data[0]) &&
+                sc->sku_id[1] == le32toh(sku_id->data[1]) &&
+                sc->sku_id[2] == le32toh(sku_id->data[2])) {
 
                 err = iwx_pnvm_handle_section(sc, data, len);
                 if (!err)
@@ -2073,8 +2083,8 @@ iwx_read_pnvm(struct iwx_softc *sc)
                 XYLog("SKU ID didn't match!\n");
             }
         } else {
-            data += sizeof(*tlv) + _ALIGN(tlv_len, 4);
-            len -= _ALIGN(tlv_len, 4);
+            data += sizeof(*tlv) + roundup(tlv_len, 4);
+            len -= roundup(tlv_len, 4);
         }
     }
     
@@ -12118,9 +12128,10 @@ static const struct iwl_dev_info iwl_dev_info_table[] = {
     IWL_DEV_INFO(0x43F0, 0x0074, iwl_ax201_cfg_qu_hr, NULL),
     IWL_DEV_INFO(0x43F0, 0x0078, iwl_ax201_cfg_qu_hr, NULL),
     IWL_DEV_INFO(0x43F0, 0x007C, iwl_ax201_cfg_qu_hr, NULL),
+    IWL_DEV_INFO(0x43F0, 0x1651, killer1650s_2ax_cfg_qu_b0_hr_b0, iwl_ax201_killer_1650s_name),
+    IWL_DEV_INFO(0x43F0, 0x1652, killer1650i_2ax_cfg_qu_b0_hr_b0, iwl_ax201_killer_1650i_name),
     IWL_DEV_INFO(0x43F0, 0x2074, iwl_ax201_cfg_qu_hr, NULL),
     IWL_DEV_INFO(0x43F0, 0x4070, iwl_ax201_cfg_qu_hr, NULL),
-    IWL_DEV_INFO(0x43F0, 0x1651, killer1650s_2ax_cfg_qu_b0_hr_b0, iwl_ax201_killer_1650s_name),
     IWL_DEV_INFO(0xA0F0, 0x0070, iwl_ax201_cfg_qu_hr, NULL),
     IWL_DEV_INFO(0xA0F0, 0x0074, iwl_ax201_cfg_qu_hr, NULL),
     IWL_DEV_INFO(0xA0F0, 0x0078, iwl_ax201_cfg_qu_hr, NULL),
@@ -12130,6 +12141,7 @@ static const struct iwl_dev_info iwl_dev_info_table[] = {
     IWL_DEV_INFO(0xA0F0, 0x1652, killer1650i_2ax_cfg_qu_b0_hr_b0, NULL),
     IWL_DEV_INFO(0xA0F0, 0x2074, iwl_ax201_cfg_qu_hr, NULL),
     IWL_DEV_INFO(0xA0F0, 0x4070, iwl_ax201_cfg_qu_hr, NULL),
+    IWL_DEV_INFO(0xA0F0, 0x6074, iwl_ax201_cfg_qu_hr, NULL),
     IWL_DEV_INFO(0x02F0, 0x0070, iwl_ax201_cfg_quz_hr, NULL),
     IWL_DEV_INFO(0x02F0, 0x0074, iwl_ax201_cfg_quz_hr, NULL),
     IWL_DEV_INFO(0x02F0, 0x6074, iwl_ax201_cfg_quz_hr, NULL),

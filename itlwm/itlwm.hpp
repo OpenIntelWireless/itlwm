@@ -113,4 +113,11 @@ public:
     UInt8 pmPCICapPtr;
     bool magicPacketEnabled;
     bool magicPacketSupported;
+    
+    //connect params
+    struct ieee80211_wpaparams wpa;
+    struct ieee80211_wpapsk psk;
+    struct ieee80211_nwkey nwkey;
+    struct ieee80211_join join;
+    struct ieee80211_nwid nwid;
 };

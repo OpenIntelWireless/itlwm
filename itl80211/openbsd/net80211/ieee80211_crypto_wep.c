@@ -70,7 +70,7 @@ ieee80211_wep_set_key(struct ieee80211com *ic, struct ieee80211_key *k)
 {
 	struct ieee80211_wep_ctx *ctx;
 
-	ctx = (struct ieee80211_wep_ctx *)_MallocZero(sizeof(*ctx));
+	ctx = (struct ieee80211_wep_ctx *)malloc(sizeof(*ctx), 0, 0);
 	if (ctx == NULL)
 		return ENOMEM;
 	k->k_priv = ctx;
@@ -82,7 +82,7 @@ ieee80211_wep_delete_key(struct ieee80211com *ic, struct ieee80211_key *k)
 {
 	if (k->k_priv != NULL) {
 		explicit_bzero(k->k_priv, sizeof(struct ieee80211_wep_ctx));
-		IOFree(k->k_priv, sizeof(struct ieee80211_wep_ctx));
+		free(k->k_priv);
 	}
 	k->k_priv = NULL;
 }

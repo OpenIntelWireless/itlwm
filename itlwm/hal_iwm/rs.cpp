@@ -1372,6 +1372,10 @@ static u32 rs_bw_from_sta_bw(struct ieee80211_node *ni)
         .vht_cap_info = cpu_to_le32(ni->ni_vhtcaps),
         .supp_mcs = ni->ni_vht_mcsinfo,
     };
+    
+    if (ni->ni_chw == IEEE80211_CHAN_WIDTH_40 &&
+        IEEE80211_IS_CHAN_2GHZ(ni->ni_chan))
+        return RATE_MCS_CHAN_WIDTH_20;
 
     switch (ni->ni_chw) {
     case IEEE80211_CHAN_WIDTH_160:

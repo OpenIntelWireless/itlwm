@@ -220,7 +220,7 @@ ieee80211_del_ess(struct ieee80211com *ic, char *nwid, int len, int all)
                          memcmp(ess->essid, nwid, len) == 0)) {
             TAILQ_REMOVE(&ic->ic_ess, ess, ess_next);
             explicit_bzero(ess, sizeof(*ess));
-            IOFree(ess, sizeof(*ess));
+            free(ess);
             if (TAILQ_EMPTY(&ic->ic_ess))
                 ic->ic_flags &= ~IEEE80211_F_AUTO_JOIN;
             if (all != 1)
@@ -396,7 +396,7 @@ ieee80211_add_ess(struct ieee80211com *ic, struct ieee80211_join *join)
         if (ness > IEEE80211_CACHE_SIZE)
             return (ERANGE);
         new_value = 1;
-        ess = (struct ieee80211_ess *)_MallocZero(sizeof(*ess));
+        ess = (struct ieee80211_ess *)malloc(sizeof(*ess), 0, 0);
         if (ess == NULL)
             return (ENOMEM);
         memcpy(ess->essid, join->i_nwid, join->i_len);
@@ -406,7 +406,7 @@ ieee80211_add_ess(struct ieee80211com *ic, struct ieee80211_join *join)
     if (join->i_flags & IEEE80211_JOIN_WPA) {
         if (join->i_wpaparams.i_enabled) {
             if (!(ic->ic_caps & IEEE80211_C_RSN)) {
-                IOFree(ess, sizeof(*ess));
+                free(ess);
                 return ENODEV;
             }
             ieee80211_ess_setwpaparms(ess,
@@ -424,7 +424,7 @@ ieee80211_add_ess(struct ieee80211com *ic, struct ieee80211_join *join)
     } else if (join->i_flags & IEEE80211_JOIN_NWKEY) {
         if (join->i_nwkey.i_wepon) {
             if (!(ic->ic_caps & IEEE80211_C_WEP)) {
-                IOFree(ess, sizeof(*ess));
+                free(ess);
                 return ENODEV;
             }
             ieee80211_ess_setnwkeys(ess, &join->i_nwkey);
@@ -732,7 +732,7 @@ ieee80211_node_attach(struct _ifnet *ifp)
         ic->ic_max_aid = IEEE80211_AID_MAX;
 #ifndef IEEE80211_STA_ONLY
     size = howmany(ic->ic_max_aid, 32) * sizeof(u_int32_t);
-    ic->ic_aid_bitmap = (u_int32_t *)_MallocZero(size);
+    ic->ic_aid_bitmap = (u_int32_t *)malloc(size, 0, 0);
     if (ic->ic_aid_bitmap == NULL) {
         /* XXX no way to recover */
         XYLog("%s: no memory for AID bitmap!\n", __FUNCTION__);
@@ -740,7 +740,7 @@ ieee80211_node_attach(struct _ifnet *ifp)
     }
     if (ic->ic_caps & (IEEE80211_C_HOSTAP | IEEE80211_C_IBSS)) {
         ic->ic_tim_len = howmany(ic->ic_max_aid, 8);
-        ic->ic_tim_bitmap = (u_int8_t*)_MallocZero(ic->ic_tim_len);
+        ic->ic_tim_bitmap = (u_int8_t*)malloc(ic->ic_tim_len, 0, 0);
         if (ic->ic_tim_bitmap == NULL) {
             XYLog("%s: no memory for TIM bitmap!\n", __FUNCTION__);
             ic->ic_tim_len = 0;
@@ -799,9 +799,8 @@ ieee80211_node_detach(struct _ifnet *ifp)
     ieee80211_del_ess(ic, NULL, 0, 1);
     ieee80211_free_allnodes(ic, 1);
 #ifndef IEEE80211_STA_ONLY
-    IOFree(ic->ic_aid_bitmap,
-           howmany(ic->ic_max_aid, 32) * sizeof(u_int32_t));
-    IOFree(ic->ic_tim_bitmap, ic->ic_tim_len);
+    free(ic->ic_aid_bitmap);
+    free(ic->ic_tim_bitmap);
     timeout_del(&ic->ic_inact_timeout);
     timeout_free(&ic->ic_inact_timeout);
     timeout_del(&ic->ic_node_cache_timeout);
@@ -1197,7 +1196,7 @@ ieee80211_node_switch_bss(struct ieee80211com *ic, struct ieee80211_node *ni)
     splassert(IPL_NET);
     
     if ((ic->ic_flags & IEEE80211_F_BGSCAN) == 0) {
-        IOFree(sba, sizeof(*sba));
+        free(sba);
         return;
     }
     
@@ -1205,7 +1204,7 @@ ieee80211_node_switch_bss(struct ieee80211com *ic, struct ieee80211_node *ni)
     
     selbs = ieee80211_find_node(ic, sba->sel_macaddr);
     if (selbs == NULL) {
-        IOFree(sba, sizeof(*sba));
+        free(sba);
         ic->ic_flags &= ~IEEE80211_F_BGSCAN;
         ieee80211_new_state(ic, IEEE80211_S_SCAN, -1);
         return;
@@ -1213,7 +1212,7 @@ ieee80211_node_switch_bss(struct ieee80211com *ic, struct ieee80211_node *ni)
     
     curbs = ieee80211_find_node(ic, sba->cur_macaddr);
     if (curbs == NULL) {
-        IOFree(sba, sizeof(*sba));
+        free(sba);
         ic->ic_flags &= ~IEEE80211_F_BGSCAN;
         ieee80211_new_state(ic, IEEE80211_S_SCAN, -1);
         return;
@@ -1282,6 +1281,8 @@ ieee80211_node_join_bss(struct ieee80211com *ic, struct ieee80211_node *selbs, i
         int bgscan = ((ic->ic_flags & IEEE80211_F_BGSCAN) &&
                       ic->ic_opmode == IEEE80211_M_STA &&
                       ic->ic_state == IEEE80211_S_RUN);
+        int roamscan = bgscan &&
+                    (ic->ic_flags & IEEE80211_F_DISABLE_BG_AUTO_CONNECT) == 0;
         int auth_next = (ic->ic_opmode == IEEE80211_M_STA &&
                          ic->ic_state == IEEE80211_S_AUTH);
         int mgt = -1;
@@ -1298,7 +1299,7 @@ ieee80211_node_join_bss(struct ieee80211com *ic, struct ieee80211_node *selbs, i
              * ieee80211_new_state() try to re-auth and thus send
              * an AUTH frame to our newly selected AP.
              */
-            if (bgscan)
+            if (roamscan)
                 mgt = IEEE80211_FC0_SUBTYPE_DEAUTH;
             /*
              * If we are trying another AP after the previous one
@@ -1399,13 +1400,15 @@ ieee80211_end_scan(struct _ifnet *ifp)
     int bgscan = ((ic->ic_flags & IEEE80211_F_BGSCAN) &&
                   ic->ic_opmode == IEEE80211_M_STA &&
                   ic->ic_state == IEEE80211_S_RUN);
+    int roamscan = bgscan &&
+                (ic->ic_flags & IEEE80211_F_DISABLE_BG_AUTO_CONNECT) == 0;
     
     if (ic->ic_event_handler)
         (*ic->ic_event_handler)(ic, IEEE80211_EVT_SCAN_DONE, NULL);
     
     if (ifp->if_flags & IFF_DEBUG)
         XYLog("%s: end %s scan\n", ifp->if_xname,
-              bgscan ? "background" :
+              bgscan ? (roamscan ? "roam" : "background") :
               ((ic->ic_flags & IEEE80211_F_ASCAN) ?
                "active" : "passive"));
     
@@ -1484,10 +1487,15 @@ ieee80211_end_scan(struct _ifnet *ifp)
     if (bgscan) {
         struct ieee80211_node_switch_bss_arg *arg;
         
+        ic->ic_flags &= ~IEEE80211_F_DISABLE_BG_AUTO_CONNECT;
+        if (!roamscan) {
+            ic->ic_flags &= ~IEEE80211_F_BGSCAN;
+            return;
+        }
+        
         /* AP disappeared? Should not happen. */
         if (selbs == NULL || curbs == NULL) {
             ic->ic_flags &= ~IEEE80211_F_BGSCAN;
-            ic->ic_flags &= ~IEEE80211_F_DISABLE_BG_AUTO_CONNECT;
             XYLog("%s %d AP disappeared? Should not happen.\n", __FUNCTION__, __LINE__);
             goto notfound;
         }
@@ -1501,7 +1509,6 @@ ieee80211_end_scan(struct _ifnet *ifp)
             if (ic->ic_bgscan_fail < IEEE80211_BGSCAN_FAIL_MAX)
                 ic->ic_bgscan_fail++;
             ic->ic_flags &= ~IEEE80211_F_BGSCAN;
-            ic->ic_flags &= ~IEEE80211_F_DISABLE_BG_AUTO_CONNECT;
             /*
               * HT is negotiated during association so we must use
               * ic_bss to check HT. The nodes tree was re-populated
@@ -1521,13 +1528,7 @@ ieee80211_end_scan(struct _ifnet *ifp)
             return;
         }
         
-        if (ic->ic_flags & IEEE80211_F_DISABLE_BG_AUTO_CONNECT) {
-            ic->ic_flags &= ~IEEE80211_F_BGSCAN;
-            ic->ic_flags &= ~IEEE80211_F_DISABLE_BG_AUTO_CONNECT;
-            return;
-        }
-        
-        arg = (struct ieee80211_node_switch_bss_arg *)_MallocZero(sizeof(*arg));
+        arg = (struct ieee80211_node_switch_bss_arg *)malloc(sizeof(*arg), 0, 0);
         if (arg == NULL) {
             ic->ic_flags &= ~IEEE80211_F_BGSCAN;
             return;
@@ -1545,7 +1546,7 @@ ieee80211_end_scan(struct _ifnet *ifp)
                                 IEEE80211_FC0_SUBTYPE_DEAUTH,
                                 IEEE80211_REASON_AUTH_LEAVE) != 0) {
             ic->ic_flags &= ~IEEE80211_F_BGSCAN;
-            IOFree(arg, sizeof(*arg));
+            free(arg);
             return;
         }
         
@@ -1657,7 +1658,7 @@ ieee80211_node_cleanup(struct ieee80211com *ic, struct ieee80211_node *ni)
         return;
     }
     if (ni->ni_rsnie != NULL) {
-        IOFree(ni->ni_rsnie, 2 + ni->ni_rsnie[1]);
+        free(ni->ni_rsnie);
         ni->ni_rsnie = NULL;
     }
     if (ni->ni_rsnie_tlv != NULL && ni->ni_rsnie_tlv_len > 0) {
@@ -1667,9 +1668,11 @@ ieee80211_node_cleanup(struct ieee80211com *ic, struct ieee80211_node *ni)
     }
     ieee80211_ba_del(ni);
     ieee80211_ba_free(ni);
-    IOFree(ni->ni_unref_arg, ni->ni_unref_arg_size);
-    ni->ni_unref_arg = NULL;
-    ni->ni_unref_arg_size = 0;
+    if (ni->ni_unref_arg != NULL) {
+        free(ni->ni_unref_arg);
+        ni->ni_unref_arg = NULL;
+        ni->ni_unref_arg_size = 0;
+    }
     
 #ifndef IEEE80211_STA_ONLY
     mq_purge(&ni->ni_savedq);
@@ -3186,8 +3189,7 @@ ieee80211_node_leave_ht(struct ieee80211com *ic, struct ieee80211_node *ni)
         if (ba->ba_buf != NULL) {
             for (i = 0; i < IEEE80211_BA_MAX_WINSZ; i++)
                 mbuf_freem(ba->ba_buf[i].m);
-            IOFree(ba->ba_buf,
-                   IEEE80211_BA_MAX_WINSZ * sizeof(*ba->ba_buf));
+            free(ba->ba_buf);
             ba->ba_buf = NULL;
         }
     }

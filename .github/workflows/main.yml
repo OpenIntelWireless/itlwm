@@ -64,7 +64,7 @@ jobs:
         git log -"5" --format="- %H %s" | sed '/^$/d' >> ReleaseNotes.md
 
     - name: Delete Old Prerelease
-      uses: dev-drprasad/delete-tag-and-release@v0.2.0
+      uses: dev-drprasad/delete-tag-and-release@v0.2.1
       with:
         tag_name: ${{ env.OLD_PRE_TAG }}
       env:
@@ -72,7 +72,7 @@ jobs:
 
     - name: Publish GitHub Release
       if: contains(github.event.head_commit.message, 'Bump version') == false
-      uses: ncipollo/release-action@v1.8.6
+      uses: ncipollo/release-action@v1.12.0
       with:
         prerelease: true
         bodyFile: ReleaseNotes.md
