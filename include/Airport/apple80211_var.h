@@ -486,13 +486,13 @@ struct apple80211_scan_result
     uint8_t               unk2;
     u_int32_t             asr_age;        // (ms) non-zero for cached scan result // 0x84
 
-    u_int16_t             unk3;
-    int16_t               asr_ie_len;
+    u_int16_t             unk3;             // 0x88
+    int16_t               asr_ie_len;       // 0x8A
 #if __IO80211_TARGET < __MAC_12_0
-    uint32_t              asr_unk3;
-    void*                 asr_ie_data;
+    uint32_t              asr_unk3;         // 0x8C
+    void*                 asr_ie_data;      // 90
 #else
-    uint8_t               asr_ie_data[1024];
+    uint8_t               asr_ie_data[1024];    // 0x8C
 #endif
 } __attribute__((packed));
 

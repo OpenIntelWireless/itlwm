@@ -23,8 +23,12 @@
 #include "IO80211P2PInterface.h"
 #if __IO80211_TARGET >= __MAC_10_15
 #include "IO80211SkywalkInterface.h"
+#endif
+#if __IO80211_TARGET >= __MAC_14_0
 #include "IO80211InfraInterface.h"
 #include "IO80211InfraProtocol.h"
+#include "IOSkywalkPacketBufferPool.h"
+#include "IOSkywalkLegacyEthernetInterface.h"
 #endif
 
 #endif /* Apple80211_h */
