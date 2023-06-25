@@ -51,7 +51,12 @@ struct apple80211_txrx_chain_info;
 struct apple80211_mimo_status;
 struct apple80211_dynsar_detail;
 struct apple80211_mac_randomisation_status;
-struct apple80211_colocated_network_scope_id;
+struct apple80211_colocated_network_scope_id
+{
+    uint32_t version;
+    uint32_t id1;
+    uint32_t id2;
+};
 struct apple80211_slow_wifi_feature_enabled;
 struct apple80211_interface_cca_data;
 struct apple80211_timesync_info;
