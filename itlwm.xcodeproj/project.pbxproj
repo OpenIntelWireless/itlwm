@@ -577,6 +577,13 @@
 		F89B6C20250232DC000F77FF /* _mbuf.cpp in Sources */ = {isa = PBXBuildFile; fileRef = F8D257732495A33500872E4F /* _mbuf.cpp */; };
 		F89B6C21250232DC000F77FF /* _task.cpp in Sources */ = {isa = PBXBuildFile; fileRef = F8F9EDE0240B7415009CB8E7 /* _task.cpp */; };
 		F89B6C2325027609000F77FF /* debug.h in Headers */ = {isa = PBXBuildFile; fileRef = F89B6C2225027609000F77FF /* debug.h */; };
+		F89F35F22A49867F00061876 /* IO80211ControllerV2.h in Headers */ = {isa = PBXBuildFile; fileRef = F89F35F12A49867F00061876 /* IO80211ControllerV2.h */; };
+		F89F35F32A49867F00061876 /* IO80211ControllerV2.h in Headers */ = {isa = PBXBuildFile; fileRef = F89F35F12A49867F00061876 /* IO80211ControllerV2.h */; };
+		F89F35F42A49867F00061876 /* IO80211ControllerV2.h in Headers */ = {isa = PBXBuildFile; fileRef = F89F35F12A49867F00061876 /* IO80211ControllerV2.h */; };
+		F89F35F52A49867F00061876 /* IO80211ControllerV2.h in Headers */ = {isa = PBXBuildFile; fileRef = F89F35F12A49867F00061876 /* IO80211ControllerV2.h */; };
+		F89F35F62A49867F00061876 /* IO80211ControllerV2.h in Headers */ = {isa = PBXBuildFile; fileRef = F89F35F12A49867F00061876 /* IO80211ControllerV2.h */; };
+		F89F35F72A49867F00061876 /* IO80211ControllerV2.h in Headers */ = {isa = PBXBuildFile; fileRef = F89F35F12A49867F00061876 /* IO80211ControllerV2.h */; };
+		F89F35F82A49867F00061876 /* IO80211ControllerV2.h in Headers */ = {isa = PBXBuildFile; fileRef = F89F35F12A49867F00061876 /* IO80211ControllerV2.h */; };
 		F8A4307325062CE300EA545E /* zutil.c in Sources */ = {isa = PBXBuildFile; fileRef = F8FA0EED2501E8C100B1822E /* zutil.c */; };
 		F8AE64F9285471560085B4CF /* debug.h in Headers */ = {isa = PBXBuildFile; fileRef = F89B6C2225027609000F77FF /* debug.h */; };
 		F8AE64FA285471560085B4CF /* IOSkywalkEthernetInterface.h in Headers */ = {isa = PBXBuildFile; fileRef = F89B6BD025021E66000F77FF /* IOSkywalkEthernetInterface.h */; };
@@ -1042,6 +1049,7 @@
 		F89B6BDE25022FB5000F77FF /* AirportVirtualIOCTL.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = AirportVirtualIOCTL.cpp; sourceTree = "<group>"; };
 		F89B6BE025022FC7000F77FF /* AirportAWDL.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = AirportAWDL.cpp; sourceTree = "<group>"; };
 		F89B6C2225027609000F77FF /* debug.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = debug.h; sourceTree = "<group>"; };
+		F89F35F12A49867F00061876 /* IO80211ControllerV2.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = IO80211ControllerV2.h; sourceTree = "<group>"; };
 		F8A2A68B2A305B9E002ABDDB /* IOSkywalkNetworkInterface.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = IOSkywalkNetworkInterface.h; sourceTree = "<group>"; };
 		F8A2A68C2A305BAC002ABDDB /* IOSkywalkInterface.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = IOSkywalkInterface.h; sourceTree = "<group>"; };
 		F8A763892766B95F004606BE /* iwlwifi-so-a0-gf4-a0.pnvm */ = {isa = PBXFileReference; lastKnownFileType = file; path = "iwlwifi-so-a0-gf4-a0.pnvm"; sourceTree = "<group>"; };
@@ -1411,6 +1419,7 @@
 				F84AD8832A497DB200DC8DED /* IOSkywalkPacketBufferPool.h */,
 				F89B6B8325021A79000F77FF /* apple_private_spi.h */,
 				F8F7EA35252D834500520FD4 /* IO80211Controller.h */,
+				F89F35F12A49867F00061876 /* IO80211ControllerV2.h */,
 				F8F7EA38252D834500520FD4 /* IO80211Interface.h */,
 				F8F7EA36252D834500520FD4 /* IO80211P2PInterface.h */,
 				F8F7EA37252D834500520FD4 /* IO80211SkywalkInterface.h */,
@@ -1686,6 +1695,7 @@
 				F8F7EA51252D834600520FD4 /* IO80211WorkLoop.h in Headers */,
 				F84AD8BA2A497DB200DC8DED /* CCDataPipe.h in Headers */,
 				F84AD8C12A497DB200DC8DED /* CCLogStream.h in Headers */,
+				F89F35F52A49867F00061876 /* IO80211ControllerV2.h in Headers */,
 				35CBE661251CB89700435CBC /* apple80211_var.h in Headers */,
 				35CBE664251CB89700435CBC /* AirportItlwmInterface.hpp in Headers */,
 				F84AD8CF2A497DB200DC8DED /* IOSkywalkLegacyEthernetInterface.h in Headers */,
@@ -1719,6 +1729,7 @@
 				F8F7EA4F252D834600520FD4 /* IO80211WorkLoop.h in Headers */,
 				F84AD8B82A497DB200DC8DED /* CCDataPipe.h in Headers */,
 				F84AD8BF2A497DB200DC8DED /* CCLogStream.h in Headers */,
+				F89F35F32A49867F00061876 /* IO80211ControllerV2.h in Headers */,
 				35CBE6CB251CB8BF00435CBC /* apple80211_var.h in Headers */,
 				35CBE6CE251CB8BF00435CBC /* AirportItlwmInterface.hpp in Headers */,
 				F84AD8CD2A497DB200DC8DED /* IOSkywalkLegacyEthernetInterface.h in Headers */,
@@ -1752,6 +1763,7 @@
 				F8F7EA4E252D834600520FD4 /* IO80211WorkLoop.h in Headers */,
 				F84AD8B72A497DB200DC8DED /* CCDataPipe.h in Headers */,
 				F84AD8BE2A497DB200DC8DED /* CCLogStream.h in Headers */,
+				F89F35F22A49867F00061876 /* IO80211ControllerV2.h in Headers */,
 				35CBE736251CB8CA00435CBC /* apple80211_var.h in Headers */,
 				35CBE739251CB8CA00435CBC /* AirportItlwmInterface.hpp in Headers */,
 				F84AD8CC2A497DB200DC8DED /* IOSkywalkLegacyEthernetInterface.h in Headers */,
@@ -1797,6 +1809,7 @@
 				F897ECC3266EFF93005EE8F7 /* IO80211SkywalkInterface.h in Headers */,
 				F84AD8C22A497DB200DC8DED /* CCLogStream.h in Headers */,
 				F897ECC4266EFF93005EE8F7 /* AirportItlwm.hpp in Headers */,
+				F89F35F62A49867F00061876 /* IO80211ControllerV2.h in Headers */,
 				F897ECC5266EFF93005EE8F7 /* IO80211VirtualInterface.h in Headers */,
 				F897ECC6266EFF93005EE8F7 /* IO80211Controller.h in Headers */,
 				F897ECC7266EFF93005EE8F7 /* (null) in Headers */,
@@ -1820,6 +1833,7 @@
 				F8F7EA50252D834600520FD4 /* IO80211WorkLoop.h in Headers */,
 				F84AD8B92A497DB200DC8DED /* CCDataPipe.h in Headers */,
 				F84AD8C02A497DB200DC8DED /* CCLogStream.h in Headers */,
+				F89F35F42A49867F00061876 /* IO80211ControllerV2.h in Headers */,
 				F89B6BC925021DED000F77FF /* apple80211_var.h in Headers */,
 				F8CA44A425091AF60036119A /* AirportItlwmInterface.hpp in Headers */,
 				F84AD8CE2A497DB200DC8DED /* IOSkywalkLegacyEthernetInterface.h in Headers */,
@@ -1865,6 +1879,7 @@
 				F8AE6502285471560085B4CF /* IO80211SkywalkInterface.h in Headers */,
 				F84AD8C32A497DB200DC8DED /* CCLogStream.h in Headers */,
 				F8AE6503285471560085B4CF /* AirportItlwm.hpp in Headers */,
+				F89F35F72A49867F00061876 /* IO80211ControllerV2.h in Headers */,
 				F8AE6504285471560085B4CF /* IO80211VirtualInterface.h in Headers */,
 				F8AE6505285471560085B4CF /* IO80211Controller.h in Headers */,
 				F8AE6506285471560085B4CF /* (null) in Headers */,
@@ -1900,6 +1915,7 @@
 				F8B210B42A2EC2680043ECBD /* IO80211SkywalkInterface.h in Headers */,
 				F84AD8C42A497DB200DC8DED /* CCLogStream.h in Headers */,
 				F8B210B52A2EC2680043ECBD /* AirportItlwm.hpp in Headers */,
+				F89F35F82A49867F00061876 /* IO80211ControllerV2.h in Headers */,
 				F8B210B62A2EC2680043ECBD /* IO80211VirtualInterface.h in Headers */,
 				F8B210B72A2EC2680043ECBD /* IO80211Controller.h in Headers */,
 				F8B210B82A2EC2680043ECBD /* (null) in Headers */,
