@@ -333,7 +333,7 @@ public:
     virtual IO80211FlowQueueLegacy* requestFlowQueue(FlowIdMetadata const*);
     virtual void releaseFlowQueue(IO80211FlowQueue *);
 #if __IO80211_TARGET >= __MAC_10_15
-    virtual bool getLogPipes(CCPipe**, CCPipe**, CCPipe**);
+    virtual void getLogPipes(CCPipe**, CCPipe**, CCPipe**) {};
 #endif
     virtual IOReturn enablePacketTimestamping(void) {
         return kIOReturnUnsupported;
