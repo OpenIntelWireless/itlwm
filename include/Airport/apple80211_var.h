@@ -595,6 +595,14 @@ enum apple80211_assoc_flags {
     APPLE80211_ASSOC_F_CLOSED    = 1,    // flag: scan was directed, needed to remember closed networks
 };
 
+enum IO80211LinkState
+{
+    kIO80211NetworkLinkUndefined,            // Starting link state when an interface is created
+    kIO80211NetworkLinkDown,                // Interface not capable of transmitting packets
+    kIO80211NetworkLinkUp,                    // Interface capable of transmitting packets
+};
+typedef enum IO80211LinkState IO80211LinkState;
+
 // Kernel messages
 
 struct apple80211_status_msg_hdr

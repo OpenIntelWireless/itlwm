@@ -17,8 +17,6 @@
 #error "Please define __IO80211_TARGET to the requested version"
 #endif
 
-#ifdef IO80211FAMILY_V2
-
 class TxSubmissionDequeueStats;
 class TxCompletionEnqueueStats;
 class IO80211NetworkPacket;
@@ -39,13 +37,6 @@ struct apple80211_lteCoex_report;
 struct apple80211_frame_counters;
 struct userPrintCtx;
 struct apple80211_lqm_summary;
-enum IO80211LinkState
-{
-    kIO80211NetworkLinkUndefined,            // Starting link state when an interface is created
-    kIO80211NetworkLinkDown,                // Interface not capable of transmitting packets
-    kIO80211NetworkLinkUp,                    // Interface capable of transmitting packets
-};
-typedef enum IO80211LinkState IO80211LinkState;
 
 struct TxPacketRequest {
     uint16_t    unk1;       // 0
@@ -196,11 +187,5 @@ public:
 public:
     char _data[0x118];
 };
-
-#else
-
-class IO80211SkywalkInterface;
-
-#endif
 
 #endif /* _IO80211SKYWALK_H */
