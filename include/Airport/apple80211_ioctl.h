@@ -746,20 +746,11 @@ struct apple80211_stats_data
     u_int32_t    rx_errors;
 };
 
-#if __IO80211_TARGET >= __MAC_14_0
-struct apple80211_country_code_data
-{
-    u_int32_t    version;
-    uint16_t     cc;
-    uint8_t      len;
-};
-#else
 struct apple80211_country_code_data
 {
     u_int32_t    version;
     u_int8_t     cc[APPLE80211_MAX_CC_LEN];
 };
-#endif
 
 struct apple80211_last_rx_pkt_data
 {
