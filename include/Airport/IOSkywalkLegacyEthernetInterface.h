@@ -10,6 +10,7 @@
 #define IOSkywalkLegacyEthernetInterface_h
 
 #include <IOKit/IOService.h>
+#include <IOKit/network/IOEthernetInterface.h>
 
 class IOSkywalkLegacyEthernetInterface : public IOEthernetInterface {
     OSDeclareDefaultStructors(IOSkywalkLegacyEthernetInterface)
