@@ -129,6 +129,20 @@ public:
 public:
     bool initRegistrationInfo(IOSkywalkEthernetInterface::RegistrationInfo*, unsigned int, unsigned long);
     bool registerEthernetInterface(IOSkywalkEthernetInterface::RegistrationInfo const*, IOSkywalkPacketQueue**, unsigned int, IOSkywalkPacketBufferPool*, IOSkywalkPacketBufferPool*, unsigned int);
+    
+public:
+    void *vptr;
+    uint8_t pad1[0x30];
+    struct ExpansionData
+    {
+        RegistrationInfo *fRegistrationInfo;
+        ifnet_t fBSDInterface;
+    };
+    ExpansionData *mExpansionData2;
 };
+
+static_assert(__offsetof(IOSkywalkEthernetInterface, mExpansionData2) == 0x108, "Invalid class size");
+
+static_assert(sizeof(IOSkywalkEthernetInterface) == 0x110, "Invalid class size");
 
 #endif /* IOSkywalkEthernetInterface_h */

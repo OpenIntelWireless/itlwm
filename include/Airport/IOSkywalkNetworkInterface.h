@@ -113,7 +113,19 @@ public:
     OSMetaClassDeclareReservedUnused( IOSkywalkNetworkInterface,  9);
     
 public:
-    uint8_t filter[0xD0];
+    void reportLinkStatus(unsigned int, unsigned int);
+    
+public:
+    void *vptr;
+    struct ExpansionData
+    {
+        RegistrationInfo *fRegistrationInfo;
+        ifnet_t fBSDInterface;
+    };
+    ExpansionData *mExpansionData;
+    uint8_t pad[2 * 8];
 };
+
+static_assert(sizeof(IOSkywalkNetworkInterface) == 0xD0, "Invalid class size");
 
 #endif /* IOSkywalkNetworkInterface_h */

@@ -43,7 +43,9 @@ public:
     OSMetaClassDeclareReservedUnused( IOSkywalkInterface, 10 );
     
 public:
-    uint8_t filter[0xB0];
+    uint8_t filter[0xB0 - 136];
 };
+
+static_assert(sizeof(IOSkywalkInterface) == 0xB0, "Invalid class size");
 
 #endif /* IOSkywalkInterface_h */
