@@ -61,9 +61,27 @@ static void pciMsiXClearAndSet(IOPCIDevice *device, UInt8 msixCap, UInt16 clear,
     device->configWrite16(msixCap + PCI_MSIX_FLAGS, ctrl);
 }
 
+static int kernel_version_map[] = {
+    [14] = __MAC_10_10,
+    [15] = __MAC_10_11,
+    [16] = __MAC_10_12,
+    [17] = __MAC_10_13,
+    [18] = __MAC_10_14,
+    [19] = __MAC_10_15,
+    [20] = __MAC_11_0,
+    [21] = __MAC_12_0,
+    [22] = __MAC_13_0,
+    [23] = __MAC_14_0,
+    [99] = 999999999
+};
+
 IOService* AirportItlwm::probe(IOService *provider, SInt32 *score)
 {
     bool isMatch = false;
+    if (__IO80211_TARGET != kernel_version_map[version_major]) {
+        XYLog("%s Please use the correct kext version corresponding to the OS!!!\n", __FUNCTION__);
+        return NULL;
+    }
     super::probe(provider, score);
     UInt8 msiCap;
     UInt8 msixCap;
@@ -321,7 +339,7 @@ createMediumTables(const IONetworkMedium **primary)
         return false;
     }
     
-    medium = IONetworkMedium::medium(0x80, 11000000);
+    medium = IONetworkMedium::medium(kIOMediumIEEE80211Auto, 11000000);
     IONetworkMedium::addMedium(mediumDict, medium);
     medium->release();
     if (primary) {
