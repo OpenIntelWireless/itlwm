@@ -65,11 +65,6 @@ public:
     virtual IOReturn updateReport(IOReportChannelList *,UInt,void *,void *) APPLE_KEXT_OVERRIDE;
     virtual bool start(IOService *) APPLE_KEXT_OVERRIDE;
     virtual void stop(IOService *) APPLE_KEXT_OVERRIDE;
-    virtual IOReturn newUserClient( task_t owningTask, void * securityID,
-        UInt32 type, OSDictionary * properties,
-        LIBKERN_RETURNS_RETAINED IOUserClient ** handler ) APPLE_KEXT_OVERRIDE;
-    virtual const char * stringFromReturn( IOReturn rtn ) APPLE_KEXT_OVERRIDE;
-    virtual int errnoFromReturn( IOReturn rtn ) APPLE_KEXT_OVERRIDE;
     virtual IOReturn setPowerState(
         unsigned long powerStateOrdinal,
         IOService *   whatDevice ) APPLE_KEXT_OVERRIDE;

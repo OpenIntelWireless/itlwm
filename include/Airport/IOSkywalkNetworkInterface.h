@@ -30,37 +30,13 @@ public:
 public:
     virtual void free() APPLE_KEXT_OVERRIDE;
     virtual bool init(OSDictionary *) APPLE_KEXT_OVERRIDE;
-    virtual bool willTerminate( IOService * provider, IOOptionBits options ) APPLE_KEXT_OVERRIDE;
-    virtual bool didTerminate( IOService * provider, IOOptionBits options, bool * defer ) APPLE_KEXT_OVERRIDE;
     virtual void stop(IOService *) APPLE_KEXT_OVERRIDE;
-    virtual bool handleOpen(    IOService *   forClient,
-                            IOOptionBits      options,
-                            void *        arg ) APPLE_KEXT_OVERRIDE;
-    virtual void handleClose(   IOService *       forClient,
-                             IOOptionBits      options ) APPLE_KEXT_OVERRIDE;
-    virtual bool handleIsOpen(  const IOService * forClient ) const APPLE_KEXT_OVERRIDE;
     virtual void joinPMtree( IOService * driver ) APPLE_KEXT_OVERRIDE;
     virtual IOReturn setAggressiveness(
                                        unsigned long type,
                                        unsigned long newLevel ) APPLE_KEXT_OVERRIDE;
     virtual IOReturn enable(UInt) APPLE_KEXT_OVERRIDE;
     virtual IOReturn disable(UInt) APPLE_KEXT_OVERRIDE;
-    virtual IOReturn clientConnectWithTask(task_t,IOService *,UInt) APPLE_KEXT_OVERRIDE;
-    virtual void clientDisconnect(IOService *,UInt) APPLE_KEXT_OVERRIDE;
-    virtual bool isTerminating(void) APPLE_KEXT_OVERRIDE;
-    OSMetaClassDeclareReservedUnused( IOSkywalkInterface,  0 );
-    OSMetaClassDeclareReservedUnused( IOSkywalkInterface,  1 );
-    OSMetaClassDeclareReservedUnused( IOSkywalkInterface,  2 );
-    OSMetaClassDeclareReservedUnused( IOSkywalkInterface,  3 );
-    OSMetaClassDeclareReservedUnused( IOSkywalkInterface,  4 );
-    OSMetaClassDeclareReservedUnused( IOSkywalkInterface,  5 );
-    OSMetaClassDeclareReservedUnused( IOSkywalkInterface,  6 );
-    OSMetaClassDeclareReservedUnused( IOSkywalkInterface,  7 );
-    OSMetaClassDeclareReservedUnused( IOSkywalkInterface,  8 );
-    OSMetaClassDeclareReservedUnused( IOSkywalkInterface,  9 );
-    OSMetaClassDeclareReservedUnused( IOSkywalkInterface, 10 );
-
-public:
     virtual SInt32 initBSDInterfaceParameters(ifnet_init_eparams *,sockaddr_dl **) = 0;
     virtual bool prepareBSDInterface(ifnet_t,UInt);
     virtual void finalizeBSDInterface(ifnet_t,UInt);
