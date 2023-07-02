@@ -11,6 +11,7 @@
 #include <crypto/sha1.h>
 #include <net80211/ieee80211_priv.h>
 #include <net80211/ieee80211_var.h>
+#include <sys/arp.h>
 
 #include "AirportItlwmSkywalkInterface.hpp"
 #include "IOPCIEDeviceWrapper.hpp"
@@ -548,6 +549,7 @@ UInt32 AirportItlwm::outputPacket(mbuf_t m, void *param)
         ifp->netStat->outputErrors++;
         ret = kIOReturnOutputDropped;
     }
+    debug_print_arp(__func__, m);
     if (!ifp->if_snd.queue->lockEnqueue(m)) {
         freePacket(m);
         ret = kIOReturnOutputDropped;

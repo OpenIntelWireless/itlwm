@@ -20,10 +20,17 @@
 */
 
 #include <sys/_mbuf.h>
-
+extern "C" {
+#include <net/bpf.h>
+}
+#include <sys/arp.h>
 #include <IOKit/IOCommandGate.h>
 
 extern IOCommandGate *_fCommandGate;
+
+struct network_header {
+    char pad[0x48];
+};
 
 static IOReturn _if_input(OSObject *target, void *arg0, void *arg1, void *arg2, void *arg3)
 {
@@ -31,6 +38,7 @@ static IOReturn _if_input(OSObject *target, void *arg0, void *arg1, void *arg2, 
     bool isEmpty = true;
     struct _ifnet *ifq = (struct _ifnet *)arg0;
     struct mbuf_list *ml = (struct mbuf_list *)arg1;
+    struct network_header header = { 0 };
     
     MBUF_LIST_FOREACH(ml, m) {
         if (ifq->iface == NULL) {
@@ -43,6 +51,8 @@ static IOReturn _if_input(OSObject *target, void *arg0, void *arg1, void *arg2, 
         }
         //        XYLog("%s %d 啊啊啊啊 ifq->iface->inputPacket(m) hdr_len=%d len=%d\n", __FUNCTION__, __LINE__, mbuf_pkthdr_len(m), mbuf_len(m));
         isEmpty = false;
+        debug_print_arp(__func__, m);
+        bpf_tap_in(ifq->iface->getIfnet(), DLT_RAW, m, &header, 0x48);
         ifq->iface->inputPacket(m, 0, IONetworkInterface::kInputOptionQueuePacket);
         if (ifq->netStat != NULL) {
             ifq->netStat->inputPackets++;
