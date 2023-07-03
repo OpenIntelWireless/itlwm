@@ -11,7 +11,6 @@
 #include <crypto/sha1.h>
 #include <net80211/ieee80211_priv.h>
 #include <net80211/ieee80211_var.h>
-#include <sys/arp.h>
 
 #include "AirportItlwmSkywalkInterface.hpp"
 #include "IOPCIEDeviceWrapper.hpp"
@@ -217,14 +216,14 @@ bool AirportItlwm::start(IOService *provider)
     driverLogOptions.pipe_size = 0x200000;
     driverLogOptions.min_log_size_notify = 0xccccc;
     driverLogOptions.notify_threshold = 1000;
-    strlcpy(driverLogOptions.file_name, "AppleBCMWLAN_Logs", sizeof(driverLogOptions.file_name));
+    strlcpy(driverLogOptions.file_name, "Itlwm_Logs", sizeof(driverLogOptions.file_name));
     snprintf(driverLogOptions.name, sizeof(driverLogOptions.name), "wlan%d", 0);
     strlcpy(driverLogOptions.directory_name, "WiFi", sizeof(driverLogOptions.directory_name));
     driverLogOptions.pad9 = 0x1000000;
     driverLogOptions.pad10 = 2;
     driverLogOptions.file_options = 0;
     driverLogOptions.log_policy = 0;
-    driverLogPipe = CCPipe::withOwnerNameCapacity(this, "com.zxystd.RTL008", "DriverLogs", &driverLogOptions);
+    driverLogPipe = CCPipe::withOwnerNameCapacity(this, "com.zxystd.AirportItlwm", "DriverLogs", &driverLogOptions);
     XYLog("%s driverLogPipeRet %d\n", __FUNCTION__, driverLogPipe != NULL);
     
     memset(&driverLogOptions, 0, sizeof(driverLogOptions));
@@ -239,7 +238,7 @@ bool AirportItlwm::start(IOService *provider)
     driverLogOptions.pad10 = LOWER32(0x202800000);
     driverLogOptions.file_options = 0;
     driverLogOptions.log_policy = 0;
-    driverDataPathPipe = CCPipe::withOwnerNameCapacity(this, "com.zxystd.RTL008", "DatapathEvents", &driverLogOptions);
+    driverDataPathPipe = CCPipe::withOwnerNameCapacity(this, "com.zxystd.AirportItlwm", "DatapathEvents", &driverLogOptions);
     XYLog("%s driverDataPathPipeRet %d\n", __FUNCTION__, driverDataPathPipe != NULL);
     
     memset(&driverLogOptions, 0, sizeof(driverLogOptions));
@@ -249,7 +248,7 @@ bool AirportItlwm::start(IOService *provider)
     strlcpy(driverLogOptions.name, "0", sizeof(driverLogOptions.name));
     strlcpy(driverLogOptions.directory_name, "WiFi", sizeof(driverLogOptions.directory_name));
     driverLogOptions.pipe_size = 128;
-    driverSnapshotsPipe = CCPipe::withOwnerNameCapacity(this, "com.zxystd.RTL008", "StateSnapshots", &driverLogOptions);
+    driverSnapshotsPipe = CCPipe::withOwnerNameCapacity(this, "com.zxystd.AirportItlwm", "StateSnapshots", &driverLogOptions);
     XYLog("%s driverSnapshotsPipeRet %d\n", __FUNCTION__, driverSnapshotsPipe != NULL);
     
     CCStreamOptions faultReportOptions = { 0 };
@@ -301,7 +300,6 @@ bool AirportItlwm::start(IOService *provider)
     if (TAILQ_EMPTY(&fHalService->get80211Controller()->ic_ess))
         fHalService->get80211Controller()->ic_flags |= IEEE80211_F_AUTO_JOIN;
     registerService();
-    fNetIf->registerService();
     return true;
 }
 
@@ -549,7 +547,6 @@ UInt32 AirportItlwm::outputPacket(mbuf_t m, void *param)
         ifp->netStat->outputErrors++;
         ret = kIOReturnOutputDropped;
     }
-    debug_print_arp(__func__, m);
     if (!ifp->if_snd.queue->lockEnqueue(m)) {
         freePacket(m);
         ret = kIOReturnOutputDropped;

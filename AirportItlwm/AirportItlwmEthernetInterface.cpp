@@ -34,11 +34,11 @@ attachToDataLinkLayer( IOOptionBits options, void *parameter )
         interface->setProperty("built-in", OSData::withBytes(&builtIn, sizeof(builtIn)));
         snprintf(infName, sizeof(infName), "%s%u", ifnet_name(getIfnet()), ifnet_unit(getIfnet()));
         interface->setProperty("IOInterfaceName", OSString::withCString(infName));
-//        interface->setProperty("IOInterfaceUnit", OSNumber::withNumber(ifnet_unit(getIfnet()), 8));
-        interface->setProperty("IOInterfaceNamePrefix", OSString::withCString("en"));
+        interface->setProperty("IOInterfaceUnit", OSNumber::withNumber(ifnet_unit(getIfnet()), 8));
+        interface->setProperty("IOInterfaceNamePrefix", OSString::withCString(ifnet_name(getIfnet())));
         interface->registerService();
         interface->prepareBSDInterface(getIfnet(), 0);
-        ret = bpf_attach(getIfnet(), DLT_RAW, 0x48, &AirportItlwmEthernetInterface::bpfOutputPacket, &AirportItlwmEthernetInterface::bpfTap);
+//        ret = bpf_attach(getIfnet(), DLT_RAW, 0x48, &RTLEthernetInterface::bpfOutputPacket, &RTLEthernetInterface::bpfTap);
     }
     return ret;
 }
