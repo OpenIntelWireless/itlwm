@@ -27,8 +27,8 @@ IOReturn AirportItlwmEthernetInterface::
 attachToDataLinkLayer( IOOptionBits options, void *parameter )
 {
     XYLog("%s\n", __FUNCTION__);
-    char infName[16];
-    IOReturn ret = super::IONetworkInterface::attachToDataLinkLayer(options, parameter);
+    char infName[IFNAMSIZ];
+    IOReturn ret = super::attachToDataLinkLayer(options, parameter);
     if (ret == kIOReturnSuccess && interface) {
         UInt8 builtIn = 0;
         interface->setProperty("built-in", OSData::withBytes(&builtIn, sizeof(builtIn)));
