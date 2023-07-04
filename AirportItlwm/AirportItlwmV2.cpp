@@ -489,9 +489,6 @@ setLinkStateGated(OSObject *target, void *arg0, void *arg1, void *arg2, void *ar
         that->fNetIf->reportLinkStatus(1, 0);
     }
     that->bsdInterface->setLinkState((IO80211LinkState)(uint64_t)arg0);
-    if ((ifnet_flags(that->bsdInterface->getIfnet()) & (IFF_UP | IFF_RUNNING)) != (IFF_UP | IFF_RUNNING)) {
-            XYLog("stf: IFF_DOWN\n");
-        }
     return ret;
 }
 

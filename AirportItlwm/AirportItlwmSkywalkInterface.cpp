@@ -322,7 +322,7 @@ setAUTH_TYPE(struct apple80211_authtype_data *ad)
 IOReturn AirportItlwmSkywalkInterface::
 setCIPHER_KEY(struct apple80211_key *key)
 {
-    XYLog("%s", __FUNCTION__);
+    XYLog("%s\n", __FUNCTION__);
     const char* keydump = hexdump(key->key, key->key_len);
     const char* rscdump = hexdump(key->key_rsc, key->key_rsc_len);
     const char* eadump = hexdump(key->key_ea.octet, APPLE80211_ADDR_LEN);
