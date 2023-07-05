@@ -24,6 +24,10 @@ IOCommandGate *_fCommandGate;
 
 void AirportItlwm::releaseAll()
 {
+    OSSafeReleaseNULL(driverLogPipe);
+    OSSafeReleaseNULL(driverDataPathPipe);
+    OSSafeReleaseNULL(driverSnapshotsPipe);
+    OSSafeReleaseNULL(driverFaultReporter);
     if (fHalService) {
         fHalService->release();
         fHalService = NULL;
