@@ -122,6 +122,58 @@ IOService* AirportItlwm::probe(IOService *provider, SInt32 *score)
 #define LOWER32(x)  ((uint64_t)(x) & 0xffffffff)
 #define HIGHER32(x) ((uint64_t)(x) >> 32)
 
+bool AirportItlwm::
+initCCLogs()
+{
+    CCPipeOptions driverLogOptions = { 0 };
+    driverLogOptions.pipe_type = 0;
+    driverLogOptions.log_data_type = 1;
+    driverLogOptions.pipe_size = 0x200000;
+    driverLogOptions.min_log_size_notify = 0xccccc;
+    driverLogOptions.notify_threshold = 1000;
+    strlcpy(driverLogOptions.file_name, "Itlwm_Logs", sizeof(driverLogOptions.file_name));
+    snprintf(driverLogOptions.name, sizeof(driverLogOptions.name), "wlan%d", 0);
+    strlcpy(driverLogOptions.directory_name, "WiFi", sizeof(driverLogOptions.directory_name));
+    driverLogOptions.pad9 = 0x1000000;
+    driverLogOptions.pad10 = 2;
+    driverLogOptions.file_options = 0;
+    driverLogOptions.log_policy = 0;
+    driverLogPipe = CCPipe::withOwnerNameCapacity(this, "com.zxystd.AirportItlwm", "DriverLogs", &driverLogOptions);
+    XYLog("%s driverLogPipeRet %d\n", __FUNCTION__, driverLogPipe != NULL);
+    
+    memset(&driverLogOptions, 0, sizeof(driverLogOptions));
+    driverLogOptions.pipe_type = 0;
+    driverLogOptions.log_data_type = 0;
+    driverLogOptions.pipe_size = 0x200000;
+    driverLogOptions.min_log_size_notify = 0xccccc;
+    driverLogOptions.notify_threshold = 1000;
+    strlcpy(driverLogOptions.file_name, "AppleBCMWLAN_Datapath", sizeof(driverLogOptions.file_name));
+    strlcpy(driverLogOptions.directory_name, "WiFi", sizeof(driverLogOptions.directory_name));
+    driverLogOptions.pad9 = HIGHER32(0x202800000);
+    driverLogOptions.pad10 = LOWER32(0x202800000);
+    driverLogOptions.file_options = 0;
+    driverLogOptions.log_policy = 0;
+    driverDataPathPipe = CCPipe::withOwnerNameCapacity(this, "com.zxystd.AirportItlwm", "DatapathEvents", &driverLogOptions);
+    XYLog("%s driverDataPathPipeRet %d\n", __FUNCTION__, driverDataPathPipe != NULL);
+    
+    memset(&driverLogOptions, 0, sizeof(driverLogOptions));
+    driverLogOptions.pipe_type = 0x200000001;
+    driverLogOptions.log_data_type = 2;
+    strlcpy(driverLogOptions.file_name, "StateSnapshots", sizeof(driverLogOptions.file_name));
+    strlcpy(driverLogOptions.name, "0", sizeof(driverLogOptions.name));
+    strlcpy(driverLogOptions.directory_name, "WiFi", sizeof(driverLogOptions.directory_name));
+    driverLogOptions.pipe_size = 128;
+    driverSnapshotsPipe = CCPipe::withOwnerNameCapacity(this, "com.zxystd.AirportItlwm", "StateSnapshots", &driverLogOptions);
+    XYLog("%s driverSnapshotsPipeRet %d\n", __FUNCTION__, driverSnapshotsPipe != NULL);
+    
+    CCStreamOptions faultReportOptions = { 0 };
+    faultReportOptions.stream_type = 1;
+    faultReportOptions.console_level = 0xFFFFFFFFFFFFFFFF;
+    driverFaultReporter = CCStream::withPipeAndName(driverSnapshotsPipe, "FaultReporter", &faultReportOptions);
+    XYLog("%s driverFaultReporterRet %d\n", __FUNCTION__, driverFaultReporter != NULL);
+    return driverLogPipe && driverDataPathPipe && driverSnapshotsPipe && driverFaultReporter;
+}
+
 bool AirportItlwm::start(IOService *provider)
 {
     XYLog("%s\n", __PRETTY_FUNCTION__);
@@ -210,53 +262,13 @@ bool AirportItlwm::start(IOService *provider)
     }
     fNetIf->setInterfaceRole(1);
     fNetIf->setInterfaceId(1);
-    CCPipeOptions driverLogOptions = { 0 };
-    driverLogOptions.pipe_type = 0;
-    driverLogOptions.log_data_type = 1;
-    driverLogOptions.pipe_size = 0x200000;
-    driverLogOptions.min_log_size_notify = 0xccccc;
-    driverLogOptions.notify_threshold = 1000;
-    strlcpy(driverLogOptions.file_name, "Itlwm_Logs", sizeof(driverLogOptions.file_name));
-    snprintf(driverLogOptions.name, sizeof(driverLogOptions.name), "wlan%d", 0);
-    strlcpy(driverLogOptions.directory_name, "WiFi", sizeof(driverLogOptions.directory_name));
-    driverLogOptions.pad9 = 0x1000000;
-    driverLogOptions.pad10 = 2;
-    driverLogOptions.file_options = 0;
-    driverLogOptions.log_policy = 0;
-    driverLogPipe = CCPipe::withOwnerNameCapacity(this, "com.zxystd.AirportItlwm", "DriverLogs", &driverLogOptions);
-    XYLog("%s driverLogPipeRet %d\n", __FUNCTION__, driverLogPipe != NULL);
     
-    memset(&driverLogOptions, 0, sizeof(driverLogOptions));
-    driverLogOptions.pipe_type = 0;
-    driverLogOptions.log_data_type = 0;
-    driverLogOptions.pipe_size = 0x200000;
-    driverLogOptions.min_log_size_notify = 0xccccc;
-    driverLogOptions.notify_threshold = 1000;
-    strlcpy(driverLogOptions.file_name, "AppleBCMWLAN_Datapath", sizeof(driverLogOptions.file_name));
-    strlcpy(driverLogOptions.directory_name, "WiFi", sizeof(driverLogOptions.directory_name));
-    driverLogOptions.pad9 = HIGHER32(0x202800000);
-    driverLogOptions.pad10 = LOWER32(0x202800000);
-    driverLogOptions.file_options = 0;
-    driverLogOptions.log_policy = 0;
-    driverDataPathPipe = CCPipe::withOwnerNameCapacity(this, "com.zxystd.AirportItlwm", "DatapathEvents", &driverLogOptions);
-    XYLog("%s driverDataPathPipeRet %d\n", __FUNCTION__, driverDataPathPipe != NULL);
-    
-    memset(&driverLogOptions, 0, sizeof(driverLogOptions));
-    driverLogOptions.pipe_type = 0x200000001;
-    driverLogOptions.log_data_type = 2;
-    strlcpy(driverLogOptions.file_name, "StateSnapshots", sizeof(driverLogOptions.file_name));
-    strlcpy(driverLogOptions.name, "0", sizeof(driverLogOptions.name));
-    strlcpy(driverLogOptions.directory_name, "WiFi", sizeof(driverLogOptions.directory_name));
-    driverLogOptions.pipe_size = 128;
-    driverSnapshotsPipe = CCPipe::withOwnerNameCapacity(this, "com.zxystd.AirportItlwm", "StateSnapshots", &driverLogOptions);
-    XYLog("%s driverSnapshotsPipeRet %d\n", __FUNCTION__, driverSnapshotsPipe != NULL);
-    
-    CCStreamOptions faultReportOptions = { 0 };
-    faultReportOptions.stream_type = 1;
-    faultReportOptions.console_level = 0xFFFFFFFFFFFFFFFF;
-    driverFaultReporter = CCStream::withPipeAndName(driverSnapshotsPipe, "FaultReporter", &faultReportOptions);
-    XYLog("%s driverFaultReporterRet %d\n", __FUNCTION__, driverFaultReporter != NULL);
-    
+    if (!initCCLogs()) {
+        XYLog("CCLog init fail\n");
+        super::stop(provider);
+        releaseAll();
+        return false;
+    }
     if (!fNetIf->attach(this)) {
         XYLog("attach to service fail\n");
         super::stop(provider);

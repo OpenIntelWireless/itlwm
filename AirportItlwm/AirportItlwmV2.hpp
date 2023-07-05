@@ -104,6 +104,7 @@ public:
     static void eventHandler(struct ieee80211com *, int, void *);
     IOReturn enableAdapter(IONetworkInterface *netif);
     void disableAdapter(IONetworkInterface *netif);
+    bool initCCLogs();
     
     virtual IO80211WorkQueue *getWorkQueue() override;
     virtual bool requiresExplicitMBufRelease() override {
