@@ -184,6 +184,8 @@ bool AirportItlwm::start(IOService *provider)
     struct IOSkywalkEthernetInterface::RegistrationInfo registInfo;
     int boot_value = 0;
     
+    UInt8 builtIn = 0;
+    setProperty("built-in", OSData::withBytes(&builtIn, sizeof(builtIn)));
     setProperty("DriverKitDriver", kOSBooleanFalse);
     if (!super::start(provider)) {
         return false;

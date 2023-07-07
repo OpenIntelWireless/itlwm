@@ -31,11 +31,15 @@ attachToDataLinkLayer( IOOptionBits options, void *parameter )
     IOReturn ret = super::attachToDataLinkLayer(options, parameter);
     if (ret == kIOReturnSuccess && interface) {
         UInt8 builtIn = 0;
+        IOEthernetAddress addr;
         interface->setProperty("built-in", OSData::withBytes(&builtIn, sizeof(builtIn)));
         snprintf(infName, sizeof(infName), "%s%u", ifnet_name(getIfnet()), ifnet_unit(getIfnet()));
         interface->setProperty("IOInterfaceName", OSString::withCString(infName));
-        interface->setProperty("IOInterfaceUnit", OSNumber::withNumber(ifnet_unit(getIfnet()), 8));
-        interface->setProperty("IOInterfaceNamePrefix", OSString::withCString(ifnet_name(getIfnet())));
+        interface->setProperty(kIOInterfaceUnit, OSNumber::withNumber(ifnet_unit(getIfnet()), 8));
+        interface->setProperty(kIOInterfaceNamePrefix, OSString::withCString(ifnet_name(getIfnet())));
+        if (OSDynamicCast(IOEthernetController, getController())->getHardwareAddress(&addr) == kIOReturnSuccess)
+            setProperty(kIOMACAddress,  (void *) &addr,
+                        kIOEthernetAddressSize);
         interface->registerService();
         interface->prepareBSDInterface(getIfnet(), 0);
 //        ret = bpf_attach(getIfnet(), DLT_RAW, 0x48, &RTLEthernetInterface::bpfOutputPacket, &RTLEthernetInterface::bpfTap);

@@ -103,7 +103,8 @@ start(IOService *provider)
         return false;
     }
     IOLog("%s::super start succeed\n", getName());
-    
+    UInt8 builtIn = 0;
+    setProperty("built-in", OSData::withBytes(&builtIn, sizeof(builtIn)));
     registerService();
     return true;
 }
