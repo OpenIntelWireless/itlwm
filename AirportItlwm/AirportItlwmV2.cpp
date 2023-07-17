@@ -668,10 +668,45 @@ IOReturn AirportItlwm::
 getCARD_CAPABILITIES(OSObject *object,
                                      struct apple80211_capability_data *cd)
 {
+    uint32_t caps = fHalService->get80211Controller()->ic_caps;
+    memset(cd, 0, sizeof(struct apple80211_capability_data));
+    
+    if (caps & IEEE80211_C_WEP)
+        cd->capabilities[0] |= 1 << APPLE80211_CAP_WEP;
+    if (caps & IEEE80211_C_RSN)
+        cd->capabilities[0] |= 1 << APPLE80211_CAP_TKIP | 1 << APPLE80211_CAP_AES_CCM;
+    // Disable not implemented capabilities
+    // if (caps & IEEE80211_C_PMGT)
+    //     cd->capabilities[0] |= 1 << APPLE80211_CAP_PMGT;
+    // if (caps & IEEE80211_C_IBSS)
+    //     cd->capabilities[0] |= 1 << APPLE80211_CAP_IBSS;
+    // if (caps & IEEE80211_C_HOSTAP)
+    //     cd->capabilities[0] |= 1 << APPLE80211_CAP_HOSTAP;
+    // AES not enabled, like on Apple cards
+    
+    if (caps & IEEE80211_C_SHSLOT)
+        cd->capabilities[1] |= 1 << (APPLE80211_CAP_SHSLOT - 8);
+    if (caps & IEEE80211_C_SHPREAMBLE)
+        cd->capabilities[1] |= 1 << (APPLE80211_CAP_SHPREAMBLE - 8);
+    if (caps & IEEE80211_C_RSN)
+        cd->capabilities[1] |= 1 << (APPLE80211_CAP_WPA1 - 8) | 1 << (APPLE80211_CAP_WPA2 - 8) | 1 << (APPLE80211_CAP_TKIPMIC - 8);
+    // Disable not implemented capabilities
+    // if (caps & IEEE80211_C_TXPMGT)
+    //     cd->capabilities[1] |= 1 << (APPLE80211_CAP_TXPMGT - 8);
+    // if (caps & IEEE80211_C_MONITOR)
+    //     cd->capabilities[1] |= 1 << (APPLE80211_CAP_MONITOR - 8);
+    // WPA not enabled, like on Apple cards
+
     cd->version = APPLE80211_VERSION;
-    *(uint16_t *)&cd->capabilities[0] = 0xEE6F;
+    cd->capabilities[2] = 0xFF; // BURST, WME, SHORT_GI_40MHZ, SHORT_GI_20MHZ, WOW, TSN, ?, ?
+    cd->capabilities[3] = 0x2B;
     cd->capabilities[5] = 0x40;
-    cd->capabilities[2] = 0x61;
+    cd->capabilities[6] = (
+//                           1 |    //MFP capable
+                           0x8 |
+                           0x4 |
+                           0x80
+                           );
     *(uint16_t *)&cd->capabilities[8] = 0x201;
 //
 //    cd->capabilities[2] |= 0x10;
