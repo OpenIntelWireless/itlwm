@@ -368,8 +368,15 @@ setCIPHER_KEY(struct apple80211_key *key)
         case APPLE80211_CIPHER_PMK:
             XYLog("Setting WPA PMK is not supported\n");
             break;
+        case APPLE80211_CIPHER_MSK:
+            XYLog("Setting MSK\n");
+            ieee80211_pmksa_add(fHalService->get80211Controller(), IEEE80211_AKM_8021X,
+                                fHalService->get80211Controller()->ic_bss->ni_macaddr, key->key, 0);
+            break;
         case APPLE80211_CIPHER_PMKSA:
-            XYLog("Setting WPA PMKSA is not supported\n");
+            XYLog("Setting WPA PMKSA\n");
+            ieee80211_pmksa_add(fHalService->get80211Controller(), IEEE80211_AKM_8021X,
+                                fHalService->get80211Controller()->ic_bss->ni_macaddr, key->key, 0);
             break;
     }
     //fInterface->postMessage(APPLE80211_M_CIPHER_KEY_CHANGED);

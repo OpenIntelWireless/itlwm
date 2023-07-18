@@ -1592,8 +1592,11 @@ justcleanup:
                     (ni->ni_flags & IEEE80211_NODE_HE) ?
                     " HE enabled" : "");
 			}
-#if (defined AIRPORT) && (defined USE_APPLE_SUPPLICANT)
-			{
+#ifdef USE_APPLE_SUPPLICANT
+            {
+#elif (defined IO80211FAMILY_V2)
+            if (ieee80211_is_8021x_akm((enum ieee80211_akm)ni->ni_rsnakms) ||
+                !(ic->ic_flags & IEEE80211_F_RSNON)) {
 #else
 			if (!(ic->ic_flags & IEEE80211_F_RSNON)) {
 #endif

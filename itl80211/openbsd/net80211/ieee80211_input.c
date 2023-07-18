@@ -1068,6 +1068,7 @@ ieee80211_enqueue_data(struct ieee80211com *ic, mbuf_t m,
     struct _ifnet *ifp = &ic->ic_if;
     struct ether_header *eh;
     mbuf_t m1;
+    mbuf_t m2;
     
     eh = mtod(m, struct ether_header *);
     
@@ -1128,9 +1129,17 @@ ieee80211_enqueue_data(struct ieee80211com *ic, mbuf_t m,
             if (ifp->if_bpf && m1 == NULL)
                 bpf_mtap(ifp->if_bpf, m, BPF_DIRECTION_IN);
 #endif
-#if (defined AIRPORT) && (defined USE_APPLE_SUPPLICANT)
+#ifdef USE_APPLE_SUPPLICANT
             ml_enqueue(ml, m);
 #else
+#ifdef IO80211FAMILY_V2
+            if (ieee80211_is_8021x_akm((enum ieee80211_akm)ni->ni_rsnakms)) {
+                XYLog("%s Duplicate EAPOL packet to user space\n", __FUNCTION__);
+                mbuf_dup(m, MBUF_DONTWAIT, &m2);
+                if (m2 != NULL)
+                    ifp->iface->inputPacket(m2, mbuf_len(m2));
+            }
+#endif
             ieee80211_eapol_key_input(ic, m, ni);
 #endif
         } else {

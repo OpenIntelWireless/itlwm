@@ -3530,6 +3530,7 @@
 					AIRPORT,
 					"__IO80211_TARGET=__MAC_14_0",
 					__PRIVATE_SPI__,
+					IO80211FAMILY_V2,
 				);
 				INFOPLIST_FILE = "AirportItlwm/AirportItlwm-Sonoma-Info.plist";
 				LIBRARY_SEARCH_PATHS = (
@@ -3560,6 +3561,7 @@
 					AIRPORT,
 					__PRIVATE_SPI__,
 					"$(inherited)",
+					IO80211FAMILY_V2,
 				);
 				INFOPLIST_FILE = "AirportItlwm/AirportItlwm-Sonoma-Info.plist";
 				LIBRARY_SEARCH_PATHS = (

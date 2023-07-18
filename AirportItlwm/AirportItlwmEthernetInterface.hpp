@@ -35,6 +35,12 @@ public:
     static errno_t bpfTap(ifnet_t interface, u_int32_t data_link_type,
                           bpf_tap_mode direction);
     
+    virtual UInt32   inputPacket(
+                                 mbuf_t          packet,
+                                 UInt32          length  = 0,
+                                 IOOptionBits    options = 0,
+                                 void *          param   = 0 ) override;
+    
 private:
     IO80211SkywalkInterface *interface;
 };
