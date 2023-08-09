@@ -91,6 +91,7 @@ public:
     virtual void logTxCompletionPacket(IO80211NetworkPacket *,PacketSkywalkScratch *,unsigned char *,apple80211_wme_ac,int,UInt,bool);
     virtual IOReturn recordCompletionPackets(TxCompletionEnqueueStats *,TxCompletionEnqueueStats *);
     virtual IOReturn inputPacket(IO80211NetworkPacket *,packet_info_tag *,ether_header *,bool *);
+    virtual IOReturn forwardInfraRelayPackets(IO80211NetworkPacket*, ether_header*);
     virtual void logSkywalkTxReqPacket(IO80211NetworkPacket *,PacketSkywalkScratch *,unsigned char *,apple80211_wme_ac,bool);
     virtual SInt64 pendingPackets(unsigned char);
     virtual SInt64 packetSpace(unsigned char);

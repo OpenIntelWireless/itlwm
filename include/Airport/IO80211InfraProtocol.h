@@ -144,6 +144,7 @@ struct apple80211_bg_motion_profile;
 struct apple80211_bg_network;
 struct apple80211_bg_scan;
 struct apple80211_bg_params;
+typedef UInt apple80211_offload_tcpka_enable_t;
 
 class IO80211InfraProtocol : public IO80211InfraInterface {
     OSDeclareAbstractStructors(IO80211InfraProtocol)
@@ -213,6 +214,7 @@ public:
     virtual IOReturn getMAX_NSS_FOR_AP(apple80211_btcoex_max_nss_for_ap_data *) = 0;
     virtual IOReturn getBTCOEX_2G_CHAIN_DISABLE(apple80211_btcoex_2g_chain_disable *) = 0;
     virtual IOReturn getPOWER_BUDGET(apple80211_power_budget_t *) = 0;
+    virtual IOReturn getOFFLOAD_TCPKA_ENABLE(apple80211_offload_tcpka_enable_t *) = 0;
     virtual IOReturn getRANGING_CAPS(apple80211_ranging_capabilities_t *) = 0;
     virtual IOReturn getSUPPRESS_SCANS(apple80211_suppress_scans_t *) = 0;
     virtual IOReturn getHOST_AP_MODE_HIDDEN(apple80211_host_ap_mode_hidden_t *) = 0;
@@ -318,6 +320,7 @@ public:
     virtual IOReturn setTHERMAL_INDEX(apple80211_thermal_index_t *) = 0;
     virtual IOReturn setBTCOEX_2G_CHAIN_DISABLE(apple80211_btcoex_2g_chain_disable *) = 0;
     virtual IOReturn setPOWER_BUDGET(apple80211_power_budget_t *) = 0;
+    virtual IOReturn setOFFLOAD_TCPKA_ENABLE(apple80211_offload_tcpka_enable_t *) = 0;
     virtual IOReturn setSUPPRESS_SCANS(apple80211_suppress_scans_t *) = 0;
     virtual IOReturn setHOST_AP_MODE_HIDDEN(apple80211_host_ap_mode_hidden_t *) = 0;
     virtual IOReturn setLQM_CONFIG(apple80211_lqm_config_t *) = 0;

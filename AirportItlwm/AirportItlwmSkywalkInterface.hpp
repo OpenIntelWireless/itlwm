@@ -87,6 +87,7 @@ public:
     virtual IOReturn getMAX_NSS_FOR_AP(apple80211_btcoex_max_nss_for_ap_data *) override { return kIOReturnUnsupported; }
     virtual IOReturn getBTCOEX_2G_CHAIN_DISABLE(apple80211_btcoex_2g_chain_disable *) override { return kIOReturnUnsupported; }
     virtual IOReturn getPOWER_BUDGET(apple80211_power_budget_t *) override { return kIOReturnUnsupported; }
+    virtual IOReturn getOFFLOAD_TCPKA_ENABLE(apple80211_offload_tcpka_enable_t *) override { return kIOReturnUnsupported; }
     virtual IOReturn getRANGING_CAPS(apple80211_ranging_capabilities_t *) override { return kIOReturnUnsupported; }
     virtual IOReturn getSUPPRESS_SCANS(apple80211_suppress_scans_t *) override { return kIOReturnUnsupported; }
     virtual IOReturn getHOST_AP_MODE_HIDDEN(apple80211_host_ap_mode_hidden_t *) override { return kIOReturnUnsupported; }
@@ -192,6 +193,7 @@ public:
     virtual IOReturn setTHERMAL_INDEX(apple80211_thermal_index_t *) override { return kIOReturnUnsupported; }
     virtual IOReturn setBTCOEX_2G_CHAIN_DISABLE(apple80211_btcoex_2g_chain_disable *) override { return kIOReturnUnsupported; }
     virtual IOReturn setPOWER_BUDGET(apple80211_power_budget_t *) override { return kIOReturnUnsupported; }
+    virtual IOReturn setOFFLOAD_TCPKA_ENABLE(apple80211_offload_tcpka_enable_t *) override { return kIOReturnUnsupported; }
     virtual IOReturn setSUPPRESS_SCANS(apple80211_suppress_scans_t *) override { return kIOReturnUnsupported; }
     virtual IOReturn setHOST_AP_MODE_HIDDEN(apple80211_host_ap_mode_hidden_t *) override { return kIOReturnUnsupported; }
     virtual IOReturn setLQM_CONFIG(apple80211_lqm_config_t *) override { return kIOReturnUnsupported; }
