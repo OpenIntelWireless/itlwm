@@ -309,6 +309,53 @@ void AirportItlwm::setGTK(const u_int8_t *gtk, size_t key_len, u_int8_t kid, u_i
     }
 }
 
+void AirportItlwm::setIGTK(const u_int8_t *igtk, size_t key_len, u_int8_t kid, u_int8_t *rsc) {
+    struct ieee80211com *ic = fHalService->get80211Controller();
+    struct ieee80211_node    * ni = ic->ic_bss;
+    struct ieee80211_key *k;
+    int keylen;
+    
+    if (igtk != NULL) {
+        /* check that the IGTK KDE is valid */
+        keylen = ieee80211_cipher_keylen(ni->ni_rsngroupmgmtcipher);
+        if (key_len != keylen) {
+            XYLog("IGTK length mismatch. expected %d, got %zu\n", keylen, key_len);
+            return;
+        }
+        if (kid != 4 && kid != 5) {
+            XYLog("unsupported IGTK id %u\n", kid);
+            return;
+        }
+        /* map GTK to 802.11 key */
+        k = &ic->ic_nw_keys[kid];
+        if (k->k_cipher == IEEE80211_CIPHER_NONE || k->k_len != keylen || memcmp(k->k_key, igtk, keylen) != 0) {
+            memset(k, 0, sizeof(*k));
+            k->k_id = kid;    /* either 4 or 5 */
+            k->k_cipher = ni->ni_rsngroupmgmtcipher;
+            k->k_flags = IEEE80211_KEY_IGTK;
+            k->k_mgmt_rsc = LE_READ_6(rsc);    /* IPN */
+            k->k_len = keylen;
+            memcpy(k->k_key, igtk, k->k_len);
+            /* install the IGTK */
+            if ((*ic->ic_set_key)(ic, ni, k) != 0) {
+                XYLog("setting IGTK failed\n");
+                return;
+            }
+            else {
+                XYLog("setting IGTK successfully\n");
+            }
+        }
+        
+        /* use MFP if we both support it */
+        if ((ic->ic_caps & IEEE80211_C_MFP) &&
+            (ni->ni_rsncaps & IEEE80211_RSNCAP_MFPC)) {
+            ni->ni_flags |= IEEE80211_NODE_MFP;
+            ni->ni_flags |= IEEE80211_NODE_TXMGMTPROT;
+            ni->ni_flags |= IEEE80211_NODE_RXMGMTPROT;
+            ic->ic_igtk_kid = kid;
+        }
+    }
+}
 
 bool AirportItlwm::
 createMediumTables(const IONetworkMedium **primary)

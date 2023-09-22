@@ -510,7 +510,8 @@ iwn_attach(struct iwn_softc *sc, struct pci_attach_args *pa)
         IEEE80211_C_MONITOR |    /* monitor mode supported */
         IEEE80211_C_SHSLOT |    /* short slot time supported */
         IEEE80211_C_SHPREAMBLE |    /* short preamble supported */
-        IEEE80211_C_PMGT;        /* power saving supported */
+        IEEE80211_C_PMGT |        /* power saving supported */
+        IEEE80211_C_MFP;    /* management frame protection 11w supported */
 
     /* No optional HT features supported for now, */
     ic->ic_htcaps = 0;
@@ -3524,7 +3525,9 @@ iwn_tx(struct iwn_softc *sc, mbuf_t m, struct ieee80211_node *ni)
     if (wh->i_fc[1] & IEEE80211_FC1_PROTECTED) {
         /* Retrieve key for TX. */
         k = ieee80211_get_txkey(ic, wh, ni);
-        if (k->k_cipher != IEEE80211_CIPHER_CCMP) {
+        if ((k->k_flags & IEEE80211_KEY_GROUP) ||
+            (k->k_flags & IEEE80211_KEY_IGTK) ||
+            (k->k_cipher != IEEE80211_CIPHER_CCMP)) {
             /* Do software encryption. */
             if ((m = ieee80211_encrypt(ic, m, k)) == NULL)
                 return ENOBUFS;
@@ -3532,9 +3535,11 @@ iwn_tx(struct iwn_softc *sc, mbuf_t m, struct ieee80211_node *ni)
             wh = mtod(m, struct ieee80211_frame *);
             //    totlen = m->m_pkthdr.len;
             totlen = mbuf_pkthdr_len(m);
-
-        } else    /* HW appends CCMP MIC. */
+            k = NULL; /* skip hardware crypto below */
+        } else {
+            /* HW appends CCMP MIC. */
             totlen += IEEE80211_CCMP_HDRLEN;
+        }
     }
 
     data->totlen = totlen;
@@ -5883,6 +5888,7 @@ iwn_set_key(struct ieee80211com *ic, struct ieee80211_node *ni,
     uint16_t kflags;
 
     if ((k->k_flags & IEEE80211_KEY_GROUP) ||
+        (k->k_flags & IEEE80211_KEY_IGTK) ||
         k->k_cipher != IEEE80211_CIPHER_CCMP)
         return ieee80211_set_key(ic, ni, k);
 
@@ -5912,6 +5918,7 @@ iwn_delete_key(struct ieee80211com *ic, struct ieee80211_node *ni,
     struct iwn_node_info node;
 
     if ((k->k_flags & IEEE80211_KEY_GROUP) ||
+        (k->k_flags & IEEE80211_KEY_IGTK) ||
         k->k_cipher != IEEE80211_CIPHER_CCMP) {
         /* See comment about other ciphers above. */
         ieee80211_delete_key(ic, ni, k);

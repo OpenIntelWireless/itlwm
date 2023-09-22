@@ -297,6 +297,10 @@ setCIPHER_KEY(OSObject *object, struct apple80211_key *key)
                     setGTK(key->key, key->key_len, key->key_index, key->key_rsc);
                     getNetworkInterface()->postMessage(APPLE80211_M_RSN_HANDSHAKE_DONE);
                     break;
+                case 64: // IGTK
+                    setIGTK(key->key, key->key_len, key->key_index, key->key_rsc);
+                    getNetworkInterface()->postMessage(APPLE80211_M_RSN_HANDSHAKE_DONE);
+                    break;
             }
             break;
         case APPLE80211_CIPHER_PMK:

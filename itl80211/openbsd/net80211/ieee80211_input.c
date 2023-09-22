@@ -651,16 +651,25 @@ ieee80211_inputm(struct _ifnet *ifp, mbuf_t m, struct ieee80211_node *ni,
                 if (subtype == IEEE80211_FC0_SUBTYPE_DISASSOC ||
                     subtype == IEEE80211_FC0_SUBTYPE_DEAUTH ||
                     subtype == IEEE80211_FC0_SUBTYPE_ACTION) {
-                    if (!IEEE80211_IS_MULTICAST(wh->i_addr1) &&
-                        !(wh->i_fc[1] & IEEE80211_FC1_PROTECTED)) {
-                        /* unicast mgmt not encrypted */
-                        goto out;
-                    }
-                    /* do software decryption */
-                    m = ieee80211_decrypt(ic, m, ni);
-                    if (m == NULL) {
-                        /* XXX stats */
-                        goto out;
+                    if (!(rxi->rxi_flags & IEEE80211_RXI_HWDEC)) {
+                        if (!IEEE80211_IS_MULTICAST(wh->i_addr1) &&
+                            !(wh->i_fc[1] & IEEE80211_FC1_PROTECTED)) {
+                            /* unicast mgmt not encrypted */
+                            ic->ic_stats.is_rx_unencrypted++;
+                            ic->ic_stats.is_rx_mgtdiscard++;
+                            goto out;
+                        }
+                        /* do software decryption */
+                        m = ieee80211_decrypt(ic, m, ni);
+                        if (m == NULL) {
+                            /* XXX stats */
+                            ic->ic_stats.is_rx_wepfail++;
+                            goto out;
+                        }
+                    } else {
+                        m = ieee80211_input_hwdecrypt(ic, ni, m, rxi);
+                        if (m == NULL)
+                            goto err;
                     }
                     wh = mtod(m, struct ieee80211_frame *);
                 }

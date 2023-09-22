@@ -236,8 +236,10 @@ ieee80211_mgmt_output(struct _ifnet *ifp, struct ieee80211_node *ni,
              * XXX could use an mbuf flag..
              */
             if (IEEE80211_IS_MULTICAST(wh->i_addr1) ||
-                (ni->ni_flags & IEEE80211_NODE_TXMGMTPROT))
+                (ni->ni_flags & IEEE80211_NODE_TXMGMTPROT)) {
+                XYLog("%s %d type=%d going to protect.\n", __FUNCTION__, __LINE__, type);
                 wh->i_fc[1] |= IEEE80211_FC1_PROTECTED;
+            }
         }
 
         if (ifp->if_flags & IFF_DEBUG) {
