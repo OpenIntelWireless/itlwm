@@ -8728,7 +8728,7 @@ iwx_rs_fw_get_config_flags(struct iwx_softc *sc)
     }
     
     if (iwx_num_of_ant(iwx_fw_valid_tx_ant(sc)) > 1) {
-        if (ic->ic_flags & IEEE80211_F_HEON &&
+        if ((ni->ni_flags & IEEE80211_NODE_HE) &&
             ni->ni_he_cap_elem.phy_cap_info[2] &
             IEEE80211_HE_PHY_CAP2_STBC_RX_UNDER_80MHZ) {
             flags |= IWX_TLC_MNG_CFG_FLAGS_STBC_MSK;
@@ -8743,17 +8743,17 @@ iwx_rs_fw_get_config_flags(struct iwx_softc *sc)
         flags |= IWX_TLC_MNG_CFG_FLAGS_LDPC_MSK;
     
     /* consider LDPC support in case of HE */
-    if ((ic->ic_flags & IEEE80211_F_HEON) && 
+    if ((ni->ni_flags & IEEE80211_NODE_HE) &&
         (ni->ni_he_cap_elem.phy_cap_info[1] &
         IEEE80211_HE_PHY_CAP1_LDPC_CODING_IN_PAYLOAD))
         flags |= IWX_TLC_MNG_CFG_FLAGS_LDPC_MSK;
     
-    if ((ic->ic_flags & IEEE80211_F_HEON) &&
+    if ((ni->ni_flags & IEEE80211_NODE_HE) &&
         !(ni->ni_he_cap_elem.phy_cap_info[1] &
          IEEE80211_HE_PHY_CAP1_LDPC_CODING_IN_PAYLOAD))
         flags &= ~IWX_TLC_MNG_CFG_FLAGS_LDPC_MSK;
 
-    if ((ic->ic_flags & IEEE80211_F_HEON) &&
+    if ((ni->ni_flags & IEEE80211_NODE_HE) &&
         (ni->ni_he_cap_elem.phy_cap_info[3] &
          IEEE80211_HE_PHY_CAP3_DCM_MAX_CONST_RX_MASK))
         flags |= IWX_TLC_MNG_CFG_FLAGS_HE_DCM_NSS_1_MSK;
