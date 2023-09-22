@@ -2826,6 +2826,10 @@ ieee80211_setup_heop(struct ieee80211_node *ni, const uint8_t *data,
     
     ni->ni_he_oper_params = le32toh(he_op_ie->he_oper_params);
     ni->ni_he_oper_nss_set = le16toh(he_op_ie->he_mcs_nss_set);
+    bzero(&ni->ni_he_optional, sizeof(ni->ni_he_optional));
+    if (len > __offsetof(struct ieee80211_he_operation, optional)) {
+        memcpy(ni->ni_he_optional, he_op_ie->optional, min(sizeof(ni->ni_he_optional), len - __offsetof(struct ieee80211_he_operation, optional)));
+    }
     return 1;
 }
 

@@ -1516,6 +1516,23 @@ struct ieee80211_csa_ie {
     uint8_t        csa_count;        /* Channel Switch Count */
 } __packed;
 
+/**
+ * struct ieee80211_vht_operation - VHT operation IE
+ *
+ * This structure is the "VHT operation element" as
+ * described in 802.11ac D3.0 8.4.2.161
+ * @chan_width: Operating channel width
+ * @center_freq_seg0_idx: center freq segment 0 index
+ * @center_freq_seg1_idx: center freq segment 1 index
+ * @basic_mcs_set: VHT Basic MCS rate set
+ */
+struct ieee80211_vht_operation {
+    uint8_t chan_width;
+    uint8_t center_freq_seg0_idx;
+    uint8_t center_freq_seg1_idx;
+    uint16_t basic_mcs_set;
+} __packed;
+
 #define IEEE80211_HE_PPE_THRES_MAX_LEN        25
 
 /**

@@ -427,6 +427,7 @@ struct ieee80211_node {
     uint8_t ni_ppe_thres[IEEE80211_HE_PPE_THRES_MAX_LEN]; /* Holds the PPE Thresholds data. */
     uint32_t        ni_he_oper_params;
     uint16_t        ni_he_oper_nss_set;
+    uint8_t         ni_he_optional[8];
     
 	/* Timeout handlers which trigger Tx Block Ack negotiation. */
 	CTimeout*		ni_addba_req_to[IEEE80211_NUM_TID];
