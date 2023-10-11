@@ -2684,31 +2684,34 @@ void ItlIwm::
 iwm_delete_key(struct ieee80211com *ic, struct ieee80211_node *ni,
     struct ieee80211_key *k)
 {
-   struct iwm_softc *sc = (struct iwm_softc *)ic->ic_softc;
-   struct iwm_add_sta_key_cmd cmd;
+    struct iwm_softc *sc = (struct iwm_softc *)ic->ic_softc;
+    struct iwm_add_sta_key_cmd cmd;
     ItlIwm *that = container_of(sc, ItlIwm, com);
-
-   if ((k->k_flags & IEEE80211_KEY_GROUP) ||
-       (k->k_cipher != IEEE80211_CIPHER_CCMP)) {
-       /* Fallback to software crypto for other ciphers. */
-                ieee80211_delete_key(ic, ni, k);
-       return;
-   }
-
-   if (!isset(sc->sc_ucode_api, IWM_UCODE_TLV_API_TKIP_MIC_KEYS))
-       return that->iwm_delete_key_v1(ic, ni, k);
-
-   memset(&cmd, 0, sizeof(cmd));
-
-   cmd.common.key_flags = htole16(IWM_STA_KEY_NOT_VALID |
-       IWM_STA_KEY_FLG_NO_ENC | IWM_STA_KEY_FLG_WEP_KEY_MAP |
-       ((k->k_id << IWM_STA_KEY_FLG_KEYID_POS) &
-       IWM_STA_KEY_FLG_KEYID_MSK));
-   memcpy(cmd.common.key, k->k_key, MIN(sizeof(cmd.common.key), k->k_len));
-   cmd.common.key_offset = 0;
-   cmd.common.sta_id = IWM_STATION_ID;
-
-   that->iwm_send_cmd_pdu(sc, IWM_ADD_STA_KEY, IWM_CMD_ASYNC, sizeof(cmd), &cmd);
+    
+    if ((k->k_flags & IEEE80211_KEY_GROUP) ||
+        (k->k_cipher != IEEE80211_CIPHER_CCMP)) {
+        /* Fallback to software crypto for other ciphers. */
+        ieee80211_delete_key(ic, ni, k);
+        return;
+    }
+    
+    if ((sc->sc_flags & IWM_FLAG_STA_ACTIVE) == 0)
+        return;
+    
+    if (!isset(sc->sc_ucode_api, IWM_UCODE_TLV_API_TKIP_MIC_KEYS))
+        return that->iwm_delete_key_v1(ic, ni, k);
+    
+    memset(&cmd, 0, sizeof(cmd));
+    
+    cmd.common.key_flags = htole16(IWM_STA_KEY_NOT_VALID |
+                                   IWM_STA_KEY_FLG_NO_ENC | IWM_STA_KEY_FLG_WEP_KEY_MAP |
+                                   ((k->k_id << IWM_STA_KEY_FLG_KEYID_POS) &
+                                    IWM_STA_KEY_FLG_KEYID_MSK));
+    memcpy(cmd.common.key, k->k_key, MIN(sizeof(cmd.common.key), k->k_len));
+    cmd.common.key_offset = 0;
+    cmd.common.sta_id = IWM_STATION_ID;
+    
+    that->iwm_send_cmd_pdu(sc, IWM_ADD_STA_KEY, IWM_CMD_ASYNC, sizeof(cmd), &cmd);
 }
 
 void ItlIwm::
