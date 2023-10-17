@@ -354,6 +354,7 @@ iwm_rx_mpdu(struct iwm_softc *sc, mbuf_t m, void *pktdata,
 {
     struct ieee80211com *ic = &sc->sc_ic;
     struct ieee80211_rxinfo rxi;
+    struct ieee80211_rx_status rx_status;
     struct iwm_rx_phy_info *phy_info;
     struct iwm_rx_mpdu_res_start *rx_res;
     int device_timestamp;
@@ -363,6 +364,7 @@ iwm_rx_mpdu(struct iwm_softc *sc, mbuf_t m, void *pktdata,
     int rssi, chanidx, rate_n_flags;
     
     memset(&rxi, 0, sizeof(rxi));
+    memset(&rx_status, 0, sizeof(struct ieee80211_rx_status));
     
     phy_info = &sc->sc_last_phy_info;
     rx_res = (struct iwm_rx_mpdu_res_start *)pktdata;
@@ -415,7 +417,8 @@ iwm_rx_mpdu(struct iwm_softc *sc, mbuf_t m, void *pktdata,
     phy_flags = letoh16(phy_info->phy_flags);
     rate_n_flags = le32toh(phy_info->rate_n_flags);
 
-    rssi = iwm_get_signal_strength(sc, phy_info);
+    rssi = iwm_get_signal_strength(sc, &rx_status, phy_info);
+    rs_update_last_rssi(sc, &rx_status);
     rssi = (0 - IWM_MIN_DBM) + rssi;    /* normalize */
     rssi = MIN(rssi, ic->ic_max_rssi);    /* clip to max. 100% */
 
@@ -823,6 +826,7 @@ iwm_rx_mpdu_mq(struct iwm_softc *sc, mbuf_t m, void *pktdata,
 {
     struct ieee80211com *ic = &sc->sc_ic;
     struct ieee80211_rxinfo rxi;
+    struct ieee80211_rx_status rx_status;
     struct iwm_rx_mpdu_desc *desc;
     uint32_t len, hdrlen, rate_n_flags, device_timestamp;
     int rssi;
@@ -830,6 +834,7 @@ iwm_rx_mpdu_mq(struct iwm_softc *sc, mbuf_t m, void *pktdata,
     uint16_t phy_info;
     
     memset(&rxi, 0, sizeof(rxi));
+    memset(&rx_status, 0, sizeof(struct ieee80211_rx_status));
     
     desc = (struct iwm_rx_mpdu_desc *)pktdata;
     
@@ -950,7 +955,8 @@ iwm_rx_mpdu_mq(struct iwm_softc *sc, mbuf_t m, void *pktdata,
     chanidx = desc->v1.channel;
     device_timestamp = desc->v1.gp2_on_air_rise;
     
-    rssi = iwm_rxmq_get_signal_strength(sc, desc);
+    rssi = iwm_rxmq_get_signal_strength(sc, &rx_status, rate_n_flags, desc);
+    rs_update_last_rssi(sc, &rx_status);
     rssi = (0 - IWM_MIN_DBM) + rssi;    /* normalize */
     rssi = MIN(rssi, ic->ic_max_rssi);    /* clip to max. 100% */
     

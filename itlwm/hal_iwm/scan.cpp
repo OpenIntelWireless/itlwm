@@ -120,6 +120,7 @@
  */
 
 #include "ItlIwm.hpp"
+#include "rs.h"
 
 uint16_t ItlIwm::
 iwm_scan_rx_chain(struct iwm_softc *sc)
@@ -152,10 +153,10 @@ iwm_scan_rate_n_flags(struct iwm_softc *sc, int flags, int no_cck)
     tx_ant = (1 << sc->sc_scan_last_antenna) << IWM_RATE_MCS_ANT_POS;
     
     if ((flags & IEEE80211_CHAN_2GHZ) && !no_cck)
-        return htole32(IWM_RATE_1M_PLCP | IWM_RATE_MCS_CCK_MSK |
+        return htole32(IWL_RATE_1M_PLCP | RATE_MCS_CCK_MSK |
                        tx_ant);
     else
-        return htole32(IWM_RATE_6M_PLCP | tx_ant);
+        return htole32(IWL_RATE_6M_PLCP | tx_ant);
 }
 
 uint8_t ItlIwm::
@@ -763,26 +764,11 @@ iwm_ridx2rate(struct ieee80211_rateset *rs, int ridx)
     
     for (i = 0; i < rs->rs_nrates; i++) {
         rval = (rs->rs_rates[i] & IEEE80211_RATE_VAL);
-        if (rval == iwm_rates[ridx].rate)
+        if (rval == ieee80211_std_rateset_11g.rs_rates[ridx])
             return rs->rs_rates[i];
     }
     
     return 0;
-}
-
-int ItlIwm::
-iwm_rval2ridx(int rval)
-{
-    int ridx;
-    
-    for (ridx = 0; ridx < nitems(iwm_rates); ridx++) {
-        if (iwm_rates[ridx].plcp == IWM_RATE_INVM_PLCP)
-            continue;
-        if (rval == iwm_rates[ridx].rate)
-            break;
-    }
-    
-    return ridx;
 }
 
 void ItlIwm::
@@ -799,7 +785,7 @@ iwm_ack_rates(struct iwm_softc *sc, struct iwm_node *in, int *cck_rates,
     
     if (ni->ni_chan == IEEE80211_CHAN_ANYC ||
         IEEE80211_IS_CHAN_2GHZ(ni->ni_chan)) {
-        for (i = IWM_FIRST_CCK_RATE; i < IWM_FIRST_OFDM_RATE; i++) {
+        for (i = IWL_FIRST_CCK_RATE; i < IWL_FIRST_OFDM_RATE; i++) {
             if ((iwm_ridx2rate(rs, i) & IEEE80211_RATE_BASIC) == 0)
                 continue;
             cck |= (1 << i);
@@ -807,10 +793,10 @@ iwm_ack_rates(struct iwm_softc *sc, struct iwm_node *in, int *cck_rates,
                 lowest_present_cck = i;
         }
     }
-    for (i = IWM_FIRST_OFDM_RATE; i <= IWM_LAST_NON_HT_RATE; i++) {
+    for (i = IWL_FIRST_OFDM_RATE; i <= IWL_LAST_NON_HT_RATE; i++) {
         if ((iwm_ridx2rate(rs, i) & IEEE80211_RATE_BASIC) == 0)
             continue;
-        ofdm |= (1 << (i - IWM_FIRST_OFDM_RATE));
+        ofdm |= (1 << (i - IWL_FIRST_OFDM_RATE));
         if (lowest_present_ofdm == -1 || lowest_present_ofdm > i)
             lowest_present_ofdm = i;
     }
@@ -838,12 +824,12 @@ iwm_ack_rates(struct iwm_softc *sc, struct iwm_node *in, int *cck_rates,
      * lower than all of the basic rates to these bitmaps.
      */
     
-    if (IWM_RATE_24M_INDEX < lowest_present_ofdm)
-        ofdm |= IWM_RATE_BIT_MSK(24) >> IWM_FIRST_OFDM_RATE;
-    if (IWM_RATE_12M_INDEX < lowest_present_ofdm)
-        ofdm |= IWM_RATE_BIT_MSK(12) >> IWM_FIRST_OFDM_RATE;
+    if (IWL_RATE_24M_INDEX < lowest_present_ofdm)
+        ofdm |= IWL_RATE_BIT_MSK(24) >> IWL_FIRST_OFDM_RATE;
+    if (IWL_RATE_12M_INDEX < lowest_present_ofdm)
+        ofdm |= IWL_RATE_BIT_MSK(12) >> IWL_FIRST_OFDM_RATE;
     /* 6M already there or needed so always add */
-    ofdm |= IWM_RATE_BIT_MSK(6) >> IWM_FIRST_OFDM_RATE;
+    ofdm |= IWL_RATE_BIT_MSK(6) >> IWL_FIRST_OFDM_RATE;
     
     /*
      * CCK is a bit more complex with DSSS vs. HR/DSSS vs. ERP.
@@ -858,14 +844,14 @@ iwm_ack_rates(struct iwm_softc *sc, struct iwm_node *in, int *cck_rates,
      * As a consequence, it's not as complicated as it sounds, just add
      * any lower rates to the ACK rate bitmap.
      */
-    if (IWM_RATE_11M_INDEX < lowest_present_cck)
-        cck |= IWM_RATE_BIT_MSK(11) >> IWM_FIRST_CCK_RATE;
-    if (IWM_RATE_5M_INDEX < lowest_present_cck)
-        cck |= IWM_RATE_BIT_MSK(5) >> IWM_FIRST_CCK_RATE;
-    if (IWM_RATE_2M_INDEX < lowest_present_cck)
-        cck |= IWM_RATE_BIT_MSK(2) >> IWM_FIRST_CCK_RATE;
+    if (IWL_RATE_11M_INDEX < lowest_present_cck)
+        cck |= IWL_RATE_BIT_MSK(11) >> IWL_FIRST_CCK_RATE;
+    if (IWL_RATE_5M_INDEX < lowest_present_cck)
+        cck |= IWL_RATE_BIT_MSK(5) >> IWL_FIRST_CCK_RATE;
+    if (IWL_RATE_2M_INDEX < lowest_present_cck)
+        cck |= IWL_RATE_BIT_MSK(2) >> IWL_FIRST_CCK_RATE;
     /* 1M already there or needed so always add */
-    cck |= IWM_RATE_BIT_MSK(1) >> IWM_FIRST_CCK_RATE;
+    cck |= IWL_RATE_BIT_MSK(1) >> IWL_FIRST_CCK_RATE;
     
     *cck_rates = cck;
     *ofdm_rates = ofdm;

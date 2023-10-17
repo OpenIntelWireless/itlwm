@@ -120,6 +120,7 @@
  */
 
 #include "ItlIwm.hpp"
+#include "rs.h"
 #include <FwData.h>
 
 uint8_t ItlIwm::
@@ -135,28 +136,6 @@ iwm_lookup_cmd_ver(struct iwm_softc *sc, uint8_t grp, uint8_t cmd)
    }
 
    return IWM_FW_CMD_VER_UNKNOWN;
-}
-
-int ItlIwm::
-iwm_is_mimo_ht_plcp(uint8_t ht_plcp)
-{
-    return (ht_plcp != IWM_RATE_HT_SISO_MCS_INV_PLCP &&
-            (ht_plcp & IWM_RATE_HT_MCS_NSS_MSK));
-}
-
-int ItlIwm::
-iwm_is_mimo_vht_plcp(uint8_t ht_plcp)
-{
-    return (ht_plcp != IWM_RATE_VHT_SISO_MCS_INV_PLCP &&
-            (ht_plcp & IWM_RATE_VHT_MCS_NSS_MSK));
-}
-
-int ItlIwm::
-iwm_is_mimo_mcs(int mcs)
-{
-    int ridx = iwm_mcs2ridx[mcs];
-    return iwm_is_mimo_ht_plcp(iwm_rates[ridx].ht_plcp);
-    
 }
 
 int ItlIwm::
@@ -744,6 +723,20 @@ iwm_fw_valid_rx_ant(struct iwm_softc *sc)
         rx_ant &= sc->sc_nvm.valid_rx_ant;
     
     return rx_ant;
+}
+
+uint32_t ItlIwm::
+iwm_get_tx_ant(struct iwm_softc *sc, struct ieee80211_node *ni,
+               int type, struct ieee80211_frame *wh)
+{
+    if (IEEE80211_IS_CHAN_2GHZ(ni->ni_chan) &&
+        !ItlIwm::iwm_coex_is_shared_ant_avail(sc))
+        return sc->non_shared_ant << RATE_MCS_ANT_POS;
+    
+    if (!IEEE80211_IS_MULTICAST(wh->i_addr1) && type == IEEE80211_FC0_TYPE_DATA)
+        return ((1 << sc->sc_tx_ant) << RATE_MCS_ANT_POS);
+    
+    return ((1 << sc->sc_mgmt_last_antenna_idx) << RATE_MCS_ANT_POS);
 }
 
 void ItlIwm::

@@ -933,6 +933,7 @@ enum iwm_msix_ivar_for_cause {
 #define IWM_UCODE_TLV_CAPA_BINDING_CDB_SUPPORT        39
 #define IWM_UCODE_TLV_CAPA_CDB_SUPPORT            40
 #define IWM_UCODE_TLV_CAPA_DYNAMIC_QUOTA                44
+#define IWM_UCODE_TLV_CAPA_COEX_SCHEMA_2            45
 #define IWM_UCODE_TLV_CAPA_ULTRA_HB_CHANNELS        48
 #define IWM_UCODE_TLV_CAPA_EXTENDED_DTS_MEASURE        64
 #define IWM_UCODE_TLV_CAPA_SHORT_PM_TIMEOUTS        65
@@ -4398,232 +4399,6 @@ struct iwm_beacon_filter_cmd {
     .bf_escape_timer = htole32(IWM_BF_ESCAPE_TIMER_DEFAULT),         \
     .ba_escape_timer = htole32(IWM_BA_ESCAPE_TIMER_DEFAULT)
 
-/* uCode API values for HT/VHT bit rates */
-#define IWM_RATE_HT_SISO_MCS_0_PLCP    0
-#define IWM_RATE_HT_SISO_MCS_1_PLCP    1
-#define IWM_RATE_HT_SISO_MCS_2_PLCP    2
-#define IWM_RATE_HT_SISO_MCS_3_PLCP    3
-#define IWM_RATE_HT_SISO_MCS_4_PLCP    4
-#define IWM_RATE_HT_SISO_MCS_5_PLCP    5
-#define IWM_RATE_HT_SISO_MCS_6_PLCP    6
-#define IWM_RATE_HT_SISO_MCS_7_PLCP    7
-#define IWM_RATE_HT_MIMO2_MCS_8_PLCP    0x8
-#define IWM_RATE_HT_MIMO2_MCS_9_PLCP    0x9
-#define IWM_RATE_HT_MIMO2_MCS_10_PLCP    0xA
-#define IWM_RATE_HT_MIMO2_MCS_11_PLCP    0xB
-#define IWM_RATE_HT_MIMO2_MCS_12_PLCP    0xC
-#define IWM_RATE_HT_MIMO2_MCS_13_PLCP    0xD
-#define IWM_RATE_HT_MIMO2_MCS_14_PLCP    0xE
-#define IWM_RATE_HT_MIMO2_MCS_15_PLCP    0xF
-#define IWM_RATE_VHT_SISO_MCS_0_PLCP    0
-#define IWM_RATE_VHT_SISO_MCS_1_PLCP    1
-#define IWM_RATE_VHT_SISO_MCS_2_PLCP    2
-#define IWM_RATE_VHT_SISO_MCS_3_PLCP    3
-#define IWM_RATE_VHT_SISO_MCS_4_PLCP    4
-#define IWM_RATE_VHT_SISO_MCS_5_PLCP    5
-#define IWM_RATE_VHT_SISO_MCS_6_PLCP    6
-#define IWM_RATE_VHT_SISO_MCS_7_PLCP    7
-#define IWM_RATE_VHT_SISO_MCS_8_PLCP    8
-#define IWM_RATE_VHT_SISO_MCS_9_PLCP    9
-#define IWM_RATE_VHT_MIMO2_MCS_0_PLCP    0x10
-#define IWM_RATE_VHT_MIMO2_MCS_1_PLCP    0x11
-#define IWM_RATE_VHT_MIMO2_MCS_2_PLCP    0x12
-#define IWM_RATE_VHT_MIMO2_MCS_3_PLCP    0x13
-#define IWM_RATE_VHT_MIMO2_MCS_4_PLCP    0x14
-#define IWM_RATE_VHT_MIMO2_MCS_5_PLCP    0x15
-#define IWM_RATE_VHT_MIMO2_MCS_6_PLCP    0x16
-#define IWM_RATE_VHT_MIMO2_MCS_7_PLCP    0x17
-#define IWM_RATE_VHT_MIMO2_MCS_8_PLCP    0x18
-#define IWM_RATE_VHT_MIMO2_MCS_9_PLCP    0x19
-#define IWM_RATE_HT_SISO_MCS_INV_PLCP    0x1A
-#define IWM_RATE_HT_MIMO2_MCS_INV_PLCP    IWM_RATE_HT_SISO_MCS_INV_PLCP
-#define IWM_RATE_VHT_SISO_MCS_INV_PLCP    IWM_RATE_HT_SISO_MCS_INV_PLCP
-#define IWM_RATE_VHT_MIMO2_MCS_INV_PLCP    IWM_RATE_HT_SISO_MCS_INV_PLCP
-#define IWM_RATE_HT_SISO_MCS_8_PLCP    IWM_RATE_HT_SISO_MCS_INV_PLCP
-#define IWM_RATE_HT_SISO_MCS_9_PLCP    IWM_RATE_HT_SISO_MCS_INV_PLCP
-
-/*
- * These serve as indexes into struct iwm_rate iwm_rates[IWM_RIDX_MAX].
- */
-enum {
-    IWM_RATE_1M_INDEX = 0,
-    IWM_FIRST_CCK_RATE = IWM_RATE_1M_INDEX,
-    IWM_RATE_2M_INDEX,
-    IWM_RATE_5M_INDEX,
-    IWM_RATE_11M_INDEX,
-    IWM_LAST_CCK_RATE = IWM_RATE_11M_INDEX,
-    IWM_RATE_6M_INDEX,
-    IWM_FIRST_OFDM_RATE = IWM_RATE_6M_INDEX,
-    IWM_RATE_MCS_0_INDEX = IWM_RATE_6M_INDEX,
-    IWM_FIRST_HT_RATE = IWM_RATE_MCS_0_INDEX,
-    IWM_FIRST_VHT_RATE = IWM_RATE_MCS_0_INDEX,
-    IWM_RATE_9M_INDEX,
-    IWM_RATE_12M_INDEX,
-    IWM_RATE_MCS_1_INDEX = IWM_RATE_12M_INDEX,
-    IWM_RATE_MCS_8_INDEX,
-    IWM_FIRST_HT_MIMO2_RATE = IWM_RATE_MCS_8_INDEX,
-    IWM_RATE_18M_INDEX,
-    IWM_RATE_MCS_2_INDEX = IWM_RATE_18M_INDEX,
-    IWM_RATE_24M_INDEX,
-    IWM_RATE_MCS_3_INDEX = IWM_RATE_24M_INDEX,
-    IWM_RATE_MCS_9_INDEX,
-    IWM_RATE_36M_INDEX,
-    IWM_RATE_MCS_4_INDEX = IWM_RATE_36M_INDEX,
-    IWM_RATE_MCS_10_INDEX,
-    IWM_RATE_48M_INDEX,
-    IWM_RATE_MCS_5_INDEX = IWM_RATE_48M_INDEX,
-    IWM_RATE_MCS_11_INDEX,
-    IWM_RATE_54M_INDEX,
-    IWM_RATE_MCS_6_INDEX = IWM_RATE_54M_INDEX,
-    IWM_LAST_NON_HT_RATE = IWM_RATE_54M_INDEX,
-    IWM_RATE_MCS_7_INDEX,
-    IWM_LAST_HT_SISO_RATE = IWM_RATE_MCS_7_INDEX,
-    IWM_RATE_MCS_12_INDEX,
-    IWM_RATE_MCS_13_INDEX,
-    IWM_RATE_MCS_14_INDEX,
-    IWM_RATE_MCS_15_INDEX,
-    IWM_LAST_VHT_SISO_RATE = IWM_RATE_MCS_13_INDEX,
-    IWM_LAST_HT_RATE = IWM_RATE_MCS_15_INDEX,
-    IWM_LAST_VHT_RATE = IWM_RATE_MCS_15_INDEX + 3,
-    IWM_RATE_COUNT_LEGACY = IWM_LAST_NON_HT_RATE + 1,
-    IWM_RATE_COUNT = IWM_LAST_VHT_RATE + 1,
-};
-
-#define IWM_RATE_BIT_MSK(r) (1 << (IWM_RATE_##r##M_INDEX))
-
-/* fw API values for legacy bit rates, both OFDM and CCK */
-#define IWM_RATE_6M_PLCP     13
-#define IWM_RATE_9M_PLCP     15
-#define IWM_RATE_12M_PLCP    5
-#define IWM_RATE_18M_PLCP    7
-#define IWM_RATE_24M_PLCP    9
-#define IWM_RATE_36M_PLCP    11
-#define IWM_RATE_48M_PLCP    1
-#define IWM_RATE_54M_PLCP    3
-#define IWM_RATE_1M_PLCP     10
-#define IWM_RATE_2M_PLCP     20
-#define IWM_RATE_5M_PLCP     55
-#define IWM_RATE_11M_PLCP    110
-#define IWM_RATE_INVM_PLCP    0xff
-
-/*
- * rate_n_flags bit fields
- *
- * The 32-bit value has different layouts in the low 8 bites depending on the
- * format. There are three formats, HT, VHT and legacy (11abg, with subformats
- * for CCK and OFDM).
- *
- * High-throughput (HT) rate format
- *    bit 8 is 1, bit 26 is 0, bit 9 is 0 (OFDM)
- * Very High-throughput (VHT) rate format
- *    bit 8 is 0, bit 26 is 1, bit 9 is 0 (OFDM)
- * Legacy OFDM rate format for bits 7:0
- *    bit 8 is 0, bit 26 is 0, bit 9 is 0 (OFDM)
- * Legacy CCK rate format for bits 7:0:
- *    bit 8 is 0, bit 26 is 0, bit 9 is 1 (CCK)
- */
-
-/* Bit 8: (1) HT format, (0) legacy or VHT format */
-#define IWM_RATE_MCS_HT_POS 8
-#define IWM_RATE_MCS_HT_MSK (1 << IWM_RATE_MCS_HT_POS)
-
-/* Bit 9: (1) CCK, (0) OFDM.  HT (bit 8) must be "0" for this bit to be valid */
-#define IWM_RATE_MCS_CCK_POS 9
-#define IWM_RATE_MCS_CCK_MSK (1 << IWM_RATE_MCS_CCK_POS)
-
-/* Bit 26: (1) VHT format, (0) legacy format in bits 8:0 */
-#define IWM_RATE_MCS_VHT_POS 26
-#define IWM_RATE_MCS_VHT_MSK (1 << IWM_RATE_MCS_VHT_POS)
-
-
-/*
- * High-throughput (HT) rate format for bits 7:0
- *
- *  2-0:  MCS rate base
- *        0)   6 Mbps
- *        1)  12 Mbps
- *        2)  18 Mbps
- *        3)  24 Mbps
- *        4)  36 Mbps
- *        5)  48 Mbps
- *        6)  54 Mbps
- *        7)  60 Mbps
- *  4-3:  0)  Single stream (SISO)
- *        1)  Dual stream (MIMO)
- *        2)  Triple stream (MIMO)
- *    5:  Value of 0x20 in bits 7:0 indicates 6 Mbps HT40 duplicate data
- *  (bits 7-6 are zero)
- *
- * Together the low 5 bits work out to the MCS index because we don't
- * support MCSes above 15/23, and 0-7 have one stream, 8-15 have two
- * streams and 16-23 have three streams. We could also support MCS 32
- * which is the duplicate 20 MHz MCS (bit 5 set, all others zero.)
- */
-#define IWM_RATE_HT_MCS_RATE_CODE_MSK    0x7
-#define IWM_RATE_HT_MCS_NSS_POS             3
-#define IWM_RATE_HT_MCS_NSS_MSK             (3 << IWM_RATE_HT_MCS_NSS_POS)
-
-/* Bit 10: (1) Use Green Field preamble */
-#define IWM_RATE_HT_MCS_GF_POS        10
-#define IWM_RATE_HT_MCS_GF_MSK        (1 << IWM_RATE_HT_MCS_GF_POS)
-
-#define IWM_RATE_HT_MCS_INDEX_MSK        0x3f
-
-/*
- * Very High-throughput (VHT) rate format for bits 7:0
- *
- *  3-0:  VHT MCS (0-9)
- *  5-4:  number of streams - 1:
- *        0)  Single stream (SISO)
- *        1)  Dual stream (MIMO)
- *        2)  Triple stream (MIMO)
- */
-
-/* Bit 4-5: (0) SISO, (1) MIMO2 (2) MIMO3 */
-#define IWM_RATE_VHT_MCS_RATE_CODE_MSK    0xf
-#define IWM_RATE_VHT_MCS_NSS_POS        4
-#define IWM_RATE_VHT_MCS_NSS_MSK        (3 << IWM_RATE_VHT_MCS_NSS_POS)
-
-/*
- * Legacy OFDM rate format for bits 7:0
- *
- *  3-0:  0xD)   6 Mbps
- *        0xF)   9 Mbps
- *        0x5)  12 Mbps
- *        0x7)  18 Mbps
- *        0x9)  24 Mbps
- *        0xB)  36 Mbps
- *        0x1)  48 Mbps
- *        0x3)  54 Mbps
- * (bits 7-4 are 0)
- *
- * Legacy CCK rate format for bits 7:0:
- * bit 8 is 0, bit 26 is 0, bit 9 is 1 (CCK):
- *
- *  6-0:   10)  1 Mbps
- *         20)  2 Mbps
- *         55)  5.5 Mbps
- *        110)  11 Mbps
- * (bit 7 is 0)
- */
-#define IWM_RATE_LEGACY_RATE_MSK 0xff
-
-
-/*
- * Bit 11-12: (0) 20MHz, (1) 40MHz, (2) 80MHz, (3) 160MHz
- * 0 and 1 are valid for HT and VHT, 2 and 3 only for VHT
- */
-#define IWM_RATE_MCS_CHAN_WIDTH_POS        11
-#define IWM_RATE_MCS_CHAN_WIDTH_MSK        (3 << IWM_RATE_MCS_CHAN_WIDTH_POS)
-#define IWM_RATE_MCS_CHAN_WIDTH_20        (0 << IWM_RATE_MCS_CHAN_WIDTH_POS)
-#define IWM_RATE_MCS_CHAN_WIDTH_40        (1 << IWM_RATE_MCS_CHAN_WIDTH_POS)
-#define IWM_RATE_MCS_CHAN_WIDTH_80        (2 << IWM_RATE_MCS_CHAN_WIDTH_POS)
-#define IWM_RATE_MCS_CHAN_WIDTH_160        (3 << IWM_RATE_MCS_CHAN_WIDTH_POS)
-
-/* Bit 13: (1) Short guard interval (0.4 usec), (0) normal GI (0.8 usec) */
-#define IWM_RATE_MCS_SGI_POS        13
-#define IWM_RATE_MCS_SGI_MSK        (1 << IWM_RATE_MCS_SGI_POS)
-
 /* Bit 14-16: Antenna selection (1) Ant A, (2) Ant B, (4) Ant C */
 #define IWM_RATE_MCS_ANT_POS        14
 #define IWM_RATE_MCS_ANT_A_MSK        (1 << IWM_RATE_MCS_ANT_POS)
@@ -4636,57 +4411,8 @@ enum {
 #define IWM_RATE_MCS_ANT_MSK        IWM_RATE_MCS_ANT_ABC_MSK
 #define IWM_RATE_MCS_ANT_NUM 3
 
-/* Bit 17-18: (0) SS, (1) SS*2 */
-#define IWM_RATE_MCS_STBC_POS        17
-#define IWM_RATE_MCS_STBC_MSK        (1 << IWM_RATE_MCS_STBC_POS)
-
-/* Bit 19: (0) Beamforming is off, (1) Beamforming is on */
-#define IWM_RATE_MCS_BF_POS            19
-#define IWM_RATE_MCS_BF_MSK            (1 << IWM_RATE_MCS_BF_POS)
-
-/* Bit 20: (0) ZLF is off, (1) ZLF is on */
-#define IWM_RATE_MCS_ZLF_POS        20
-#define IWM_RATE_MCS_ZLF_MSK        (1 << IWM_RATE_MCS_ZLF_POS)
-
-/* Bit 24-25: (0) 20MHz (no dup), (1) 2x20MHz, (2) 4x20MHz, 3 8x20MHz */
-#define IWM_RATE_MCS_DUP_POS        24
-#define IWM_RATE_MCS_DUP_MSK        (3 << IWM_RATE_MCS_DUP_POS)
-
-/* Bit 27: (1) LDPC enabled, (0) LDPC disabled */
-#define IWM_RATE_MCS_LDPC_POS        27
-#define IWM_RATE_MCS_LDPC_MSK        (1 << IWM_RATE_MCS_LDPC_POS)
-
-
-/* Link Quality definitions */
-
 /* # entries in rate scale table to support Tx retries */
 #define  IWM_LQ_MAX_RETRY_NUM 16
-
-/* Link quality command flags bit fields */
-
-/* Bit 0: (0) Don't use RTS (1) Use RTS */
-#define IWM_LQ_FLAG_USE_RTS_POS             0
-#define IWM_LQ_FLAG_USE_RTS_MSK            (1 << IWM_LQ_FLAG_USE_RTS_POS)
-
-/* Bit 1-3: LQ command color. Used to match responses to LQ commands */
-#define IWM_LQ_FLAG_COLOR_POS               1
-#define IWM_LQ_FLAG_COLOR_MSK               (7 << IWM_LQ_FLAG_COLOR_POS)
-
-/* Bit 4-5: Tx RTS BW Signalling
- * (0) No RTS BW signalling
- * (1) Static BW signalling
- * (2) Dynamic BW signalling
- */
-#define IWM_LQ_FLAG_RTS_BW_SIG_POS          4
-#define IWM_LQ_FLAG_RTS_BW_SIG_NONE         (0 << IWM_LQ_FLAG_RTS_BW_SIG_POS)
-#define IWM_LQ_FLAG_RTS_BW_SIG_STATIC       (1 << IWM_LQ_FLAG_RTS_BW_SIG_POS)
-#define IWM_LQ_FLAG_RTS_BW_SIG_DYNAMIC      (2 << IWM_LQ_FLAG_RTS_BW_SIG_POS)
-
-/* Bit 6: (0) No dynamic BW selection (1) Allow dynamic BW selection
- * Dyanmic BW selection allows Tx with narrower BW then requested in rates
- */
-#define IWM_LQ_FLAG_DYNAMIC_BW_POS          6
-#define IWM_LQ_FLAG_DYNAMIC_BW_MSK          (1 << IWM_LQ_FLAG_DYNAMIC_BW_POS)
 
 /* Antenna flags. */
 #define IWM_ANT_A    (1 << 0)
@@ -4719,11 +4445,11 @@ enum {
  *    2 - 0x3f: maximal number of frames (up to 3f == 63)
  * @rs_table: array of rates for each TX try, each is rate_n_flags,
  *    meaning it is a combination of IWM_RATE_MCS_* and IWM_RATE_*_PLCP
- * @bf_params: beam forming params, currently not used
+ * @ss_params: single stream features. declare whether STBC or BFER are allowed.
  */
 struct iwm_lq_cmd {
     uint8_t sta_id;
-    uint8_t reserved1;
+    uint8_t reduced_tpc;
     uint16_t control;
     /* LINK_QUAL_GENERAL_PARAMS_API_S_VER_1 */
     uint8_t flags;
@@ -4737,7 +4463,7 @@ struct iwm_lq_cmd {
     uint8_t agg_frame_cnt_limit;
     uint32_t reserved2;
     uint32_t rs_table[IWM_LQ_MAX_RETRY_NUM];
-    uint32_t bf_params;
+    uint32_t ss_params;
 }; /* LINK_QUALITY_CMD_API_S_VER_1 */
 
 /**
@@ -5137,7 +4863,8 @@ struct iwm_tx_resp {
     uint8_t pa_integ_res_b[3];
     uint8_t pa_integ_res_c[3];
     uint16_t measurement_req_id;
-    uint16_t reserved;
+    uint8_t reduced_tpc;
+    uint8_t reserved;
 
     uint32_t tfd_info;
     uint16_t seq_ctl;
@@ -5145,8 +4872,7 @@ struct iwm_tx_resp {
     uint8_t tlc_info;
     uint8_t ra_tid;
     uint16_t frame_ctrl;
-
-    struct iwm_agg_tx_status status;
+    struct iwm_agg_tx_status status[];
 } __packed; /* IWM_TX_RSP_API_S_VER_3 */
 
 /**

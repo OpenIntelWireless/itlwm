@@ -185,6 +185,7 @@ pointer_t __mptr = (pointer_t)(ptr);                    \
 
 #define time_after(a,b)    \
 ((long)(b) - (long)(a) < 0)
+#define time_is_before_jiffies(a) time_after(ticks, a)
 
 #define DMA_BIT_MASK(n)    (((n) == 64) ? ~0ULL : ((1ULL<<(n))-1))
 

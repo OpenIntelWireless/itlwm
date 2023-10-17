@@ -147,6 +147,10 @@ typedef UInt16 __sum16;
 
 typedef u64 dma_addr_t;
 
+#define U8_MAX        ((u8)~0U)
+#define S8_MAX        ((s8)(U8_MAX >> 1))
+#define S8_MIN        ((s8)(-S8_MAX - 1))
+
 #define ARRAY_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]))
 
 #define upper_32_bits(n) ((u32)(((n) >> 16) >> 16))

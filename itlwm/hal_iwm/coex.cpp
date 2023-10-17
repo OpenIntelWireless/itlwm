@@ -23,7 +23,7 @@
 #define LINK_QUAL_AGG_TIME_LIMIT_BT_ACT    (1200)
 
 uint16_t ItlIwm::
-iwm_coex_agg_time_limit(struct iwm_softc *sc)
+iwm_coex_agg_time_limit(struct iwm_softc *sc, struct ieee80211_node *ni)
 {
     return LINK_QUAL_AGG_TIME_LIMIT_DEF;
 }
@@ -68,4 +68,77 @@ iwm_coex_tx_prio(struct iwm_softc *sc, struct ieee80211_frame *wh, uint8_t ac)
         return 3;
     
     return 0;
+}
+
+bool ItlIwm::
+iwm_coex_is_ant_avail(struct iwm_softc *sc, u8 ant)
+{
+#if 0
+    /* there is no other antenna, shared antenna is always available */
+    if (mvm->cfg->bt_shared_single_ant)
+        return true;
+#endif
+    
+    if (ant & sc->non_shared_ant)
+        return true;
+    
+#ifdef notyet_coex
+    return le32_to_cpu(mvm->last_bt_notif.bt_activity_grading) <
+                BT_HIGH_TRAFFIC;
+#else
+    return true;
+#endif
+}
+
+bool ItlIwm::
+iwm_coex_is_mimo_allowed(struct iwm_softc *sc, struct ieee80211_node *ni)
+{
+#ifdef notyet_coex
+    struct iwm_node *in = (struct iwm_node *)ni;
+    struct iwm_phy_ctxt *phy_ctxt = in->in_phyctxt;
+    enum iwl_bt_coex_lut_type lut_type;
+
+    if (sc->last_bt_notif.ttc_status & BIT(phy_ctxt->id))
+        return true;
+
+    if (le32_to_cpu(sc->last_bt_notif.bt_activity_grading) <
+        BT_HIGH_TRAFFIC)
+        return true;
+
+    /*
+     * In Tight / TxTxDis, BT can't Rx while we Tx, so use both antennas
+     * since BT is already killed.
+     * In Loose, BT can Rx while we Tx, so forbid MIMO to let BT Rx while
+     * we Tx.
+     * When we are in 5GHz, we'll get BT_COEX_INVALID_LUT allowing MIMO.
+     */
+    lut_type = iwl_get_coex_type(mvm, mvmsta->vif);
+    return lut_type != BT_COEX_LOOSE_LUT;
+#else
+    return true;
+#endif
+}
+
+bool ItlIwm::
+iwm_coex_is_tpc_allowed(struct iwm_softc *mvm, bool is5G)
+{
+    if (is5G)
+        return false;
+    
+#ifdef notyet_coex
+    return le32_to_cpu(mvm->last_bt_notif.bt_activity_grading) >= BT_LOW_TRAFFIC;
+#else
+    return false;
+#endif
+}
+
+bool ItlIwm::
+iwm_coex_is_shared_ant_avail(struct iwm_softc *mvm)
+{
+#ifdef notyet_coex
+    return le32_to_cpu(mvm->last_bt_notif.bt_activity_grading) < BT_HIGH_TRAFFIC;
+#else
+    return mvm->sc_device_family == IWM_DEVICE_FAMILY_9000 &&
+            (iwm_fw_valid_tx_ant(mvm) & IWM_ANT_B);
+#endif
 }
