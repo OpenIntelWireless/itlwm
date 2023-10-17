@@ -600,9 +600,12 @@ static void rs_tl_turn_on_agg(struct iwm_softc *sc,
                   u8 tid, struct iwl_lq_sta *lq_sta,
                   struct ieee80211_node *ni)
 {
-#if 1
     struct iwm_tx_ba *tid_data;
     struct ieee80211_tx_ba *tx_ba;
+    struct ieee80211com *ic = &sc->sc_ic;
+    
+    if ((ic->ic_caps & IEEE80211_C_TX_AMPDU_SETUP_IN_RS) == 0)
+        return;
 
     /*
      * In AP mode, tid can be equal to IWL_MAX_TID_COUNT
@@ -625,9 +628,6 @@ static void rs_tl_turn_on_agg(struct iwm_softc *sc,
         IWL_DEBUG_RATE("RS: try to aggregate tid %d\n", tid);
         rs_tl_turn_on_agg_for_tid(sc, lq_sta, tid, ni);
     }
-#else
-    ;
-#endif
 }
 
 static inline int get_num_of_ant_from_rate(u32 rate_n_flags)
