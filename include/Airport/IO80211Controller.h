@@ -28,7 +28,6 @@
 #include <net/bpf.h>
 
 #include "apple80211_ioctl.h"
-#include "IO80211SkywalkInterface.h"
 #include "IO80211WorkLoop.h"
 
 #define AUTH_TIMEOUT            15    // seconds
@@ -86,6 +85,7 @@ enum joinStatus
     STATUS_1,
 };
 
+class IO80211SkywalkInterface;
 class IO80211Controller;
 class IO80211Interface;
 class IO82110WorkLoop;

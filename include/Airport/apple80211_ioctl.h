@@ -430,11 +430,19 @@ struct apple80211_bssid_data
     struct ether_addr    bssid;
 };
 
+#if __IO80211_TARGET >= __MAC_14_0
+struct apple80211_capability_data
+{
+    u_int32_t    version;
+    u_int8_t     capabilities[14];
+};
+#else
 struct apple80211_capability_data
 {
     u_int32_t    version;
     u_int8_t     capabilities[11];
 };
+#endif
 
 struct apple80211_state_data
 {

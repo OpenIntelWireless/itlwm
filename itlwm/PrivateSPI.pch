@@ -12,3 +12,7 @@ typedef u_int32_t ifnet_ctl_cmd_t;
 #ifndef __MAC_13_0
 #define __MAC_13_0  130000
 #endif
+
+#ifndef __MAC_14_0
+#define __MAC_14_0  140000
+#endif

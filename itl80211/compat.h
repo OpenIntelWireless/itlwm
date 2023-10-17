@@ -181,6 +181,8 @@ typedef pci_intr_handle* pci_intr_handle_t;
 #define    DVACT_POWERDOWN        6    /* power device down */
 
 struct device {
+    IOService *provider;
+    void *_data;
 	char dv_xname[16];
 };
 

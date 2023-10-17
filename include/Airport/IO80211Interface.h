@@ -22,13 +22,6 @@
 #include <net/if_var.h>
 #include <sys/queue.h>
 
-enum IO80211LinkState
-{
-	kIO80211NetworkLinkUndefined,			// Starting link state when an interface is created
-	kIO80211NetworkLinkDown,				// Interface not capable of transmitting packets
-	kIO80211NetworkLinkUp,					// Interface capable of transmitting packets
-};
-typedef enum IO80211LinkState IO80211LinkState;
 typedef UInt kIO80211InterfaceType;
 
 /*!	@defined kIO80211InterfaceClass

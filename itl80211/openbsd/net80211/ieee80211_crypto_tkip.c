@@ -98,7 +98,7 @@ ieee80211_tkip_set_key(struct ieee80211com *ic, struct ieee80211_key *k)
 	} else
 #endif
 	{
-#if (defined AIRPORT) && (defined USE_APPLE_SUPPLICANT)
+#ifdef USE_APPLE_SUPPLICANT
         ctx->txmic = &k->k_key[16];
         ctx->rxmic = &k->k_key[24];
 #else

@@ -20,10 +20,16 @@
 */
 
 #include <sys/_mbuf.h>
-
+extern "C" {
+#include <net/bpf.h>
+}
 #include <IOKit/IOCommandGate.h>
 
 extern IOCommandGate *_fCommandGate;
+
+struct network_header {
+    char pad[0x48];
+};
 
 static IOReturn _if_input(OSObject *target, void *arg0, void *arg1, void *arg2, void *arg3)
 {
