@@ -8636,7 +8636,7 @@ iwx_scan_abort(struct iwx_softc *sc)
 }
 
 int ItlIwx::
-iwx_enable_data_tx_queues(struct iwx_softc *sc)
+iwx_enable_mgmt_queue(struct iwx_softc *sc)
 {
     int err;
     int cmdver;
@@ -9213,7 +9213,7 @@ iwx_auth(struct iwx_softc *sc)
         return 0;
     }
     
-    err = iwx_enable_data_tx_queues(sc);
+    err = iwx_enable_mgmt_queue(sc);
     if (err)
         goto rm_sta;
     
