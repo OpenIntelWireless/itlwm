@@ -20,6 +20,7 @@ initWithSkywalkInterfaceAndProvider(IONetworkController *controller, IO80211Skyw
     bool ret = super::init(controller);
     if (ret)
         this->interface = interface;
+    this->isAttach = false;
     return ret;
 }
 
@@ -44,7 +45,24 @@ attachToDataLinkLayer( IOOptionBits options, void *parameter )
         interface->prepareBSDInterface(getIfnet(), 0);
 //        ret = bpf_attach(getIfnet(), DLT_RAW, 0x48, &AirportItlwmEthernetInterface::bpfOutputPacket, &AirportItlwmEthernetInterface::bpfTap);
     }
+    isAttach = true;
     return ret;
+}
+
+void AirportItlwmEthernetInterface::
+detachFromDataLinkLayer(IOOptionBits options, void *parameter)
+{
+    super::detachFromDataLinkLayer(options, parameter);
+    isAttach = false;
+}
+
+/**
+ Add another hack to fake that the provider is IOSkywalkNetworkInterface, to avoid skywalkfamily instance cast panic.
+ */
+IOService *AirportItlwmEthernetInterface::
+getProvider() const
+{
+    return isAttach ? this->interface : super::getProvider();
 }
 
 errno_t AirportItlwmEthernetInterface::

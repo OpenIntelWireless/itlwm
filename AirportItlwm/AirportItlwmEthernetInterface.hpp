@@ -25,6 +25,9 @@ public:
     virtual IOReturn attachToDataLinkLayer( IOOptionBits options,
                                             void *       parameter ) override;
     
+    virtual void     detachFromDataLinkLayer( IOOptionBits options,
+                                              void *       parameter ) override;
+    
     virtual bool initWithSkywalkInterfaceAndProvider(IONetworkController *controller, IO80211SkywalkInterface *interface);
     
     virtual bool setLinkState(IO80211LinkState state);
@@ -41,8 +44,11 @@ public:
                                  IOOptionBits    options = 0,
                                  void *          param   = 0 ) override;
     
+    virtual IOService * getProvider( void ) const override;
+    
 private:
     IO80211SkywalkInterface *interface;
+    bool isAttach;
 };
 
 #endif /* AirportItlwmEthernetInterface_hpp */
