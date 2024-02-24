@@ -2698,14 +2698,12 @@ static void rs_drv_get_rate(struct iwm_softc *mvm, struct ieee80211_node *sta,
     struct rs_rate *optimal_rate;
     u32 last_ucode_rate;
 
-    if (sta) {
-        /* if vif isn't initialized mvm doesn't know about
-         * this station, so don't do anything with the it
-         */
-        sta = NULL;
-    }
+    if (!sta)
+        return;
 
     lq_sta = &mvm->lq_sta.rs_drv;
+    
+    IOSimpleLockLock(mvm->lq_sta.rs_drv.pers.lock);
     iwl_mvm_hwrate_to_tx_rate(lq_sta->last_rate_n_flags,
                   IEEE80211_IS_CHAN_2GHZ(sta->ni_chan) ? NL80211_BAND_2GHZ : NL80211_BAND_5GHZ, r);
 
@@ -2719,6 +2717,7 @@ static void rs_drv_get_rate(struct iwm_softc *mvm, struct ieee80211_node *sta,
         iwl_mvm_hwrate_to_tx_rate(last_ucode_rate, IEEE80211_IS_CHAN_2GHZ(sta->ni_chan) ? NL80211_BAND_2GHZ : NL80211_BAND_5GHZ,
                       r);
     }
+    IOSimpleLockUnlock(mvm->lq_sta.rs_drv.pers.lock);
 }
 
 void *rs_drv_alloc_sta(iwm_softc *sc, struct ieee80211_node *ni)
