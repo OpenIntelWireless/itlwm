@@ -536,10 +536,10 @@ static char *rs_pretty_rate(const struct rs_rate *rate)
          (rate->index <= IWL_RATE_MCS_9_INDEX))
         rate_str = ht_vht_rates[rate->index];
     else
-        rate_str = "BAD_RATE";
+        rate_str = NULL;
 
     snprintf(buf, sizeof(buf), "(%s|%s|%s)", rs_pretty_lq_type(rate->type),
-        rs_pretty_ant(rate->ant), rate_str);
+        rs_pretty_ant(rate->ant), rate_str ?: "BAD_RATE");
     return buf;
 }
 
@@ -1096,10 +1096,13 @@ static void rs_get_lower_rate_down_column(struct iwl_lq_sta *lq_sta,
 
         rate->bw = RATE_MCS_CHAN_WIDTH_20;
 
-        WARN_ON_ONCE(rate->index < IWL_RATE_MCS_0_INDEX ||
-                 rate->index > IWL_RATE_MCS_9_INDEX);
+        if (WARN_ON_ONCE(rate->index < IWL_RATE_MCS_0_INDEX))
+            rate->index = rs_ht_to_legacy[IWL_RATE_MCS_0_INDEX];
+        else if (WARN_ON_ONCE(rate->index > IWL_RATE_MCS_9_INDEX))
+            rate->index = rs_ht_to_legacy[IWL_RATE_MCS_9_INDEX];
+        else
+            rate->index = rs_ht_to_legacy[rate->index];
 
-        rate->index = rs_ht_to_legacy[rate->index];
         rate->ldpc = false;
     } else {
         /* Downgrade to SISO with same MCS if in MIMO  */
