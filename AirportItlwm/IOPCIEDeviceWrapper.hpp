@@ -24,6 +24,9 @@ public:
     virtual bool start(IOService *provider) override;
     virtual void stop(IOService *provider) override;
     virtual IOWorkLoop* getWorkLoop() const override;
+    virtual IOReturn setPowerState(
+        unsigned long powerStateOrdinal,
+                                   IOService *   whatDevice ) override;
     
 public:
     ItlHalService *fHalService;

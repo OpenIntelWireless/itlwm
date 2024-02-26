@@ -23,6 +23,12 @@ OSDefineMetaClassAndStructors(IOPCIEDeviceWrapper, IOService);
 #define  PCI_MSIX_FLAGS_ENABLE    0x8000    /* MSI-X enable */
 #define  PCI_MSI_FLAGS_ENABLE    0x0001    /* MSI feature enabled */
 
+static IOPMPowerState powerStateArray[2] =
+{
+    {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+    {1, kIOPMDeviceUsable, kIOPMPowerOn, kIOPMPowerOn, 0, 0, 0, 0, 0, 0, 0, 0}
+};
+
 static void pciMsiSetEnable(IOPCIDevice *device, UInt8 msiCap, int enable)
 {
     UInt16 control;
@@ -105,6 +111,9 @@ start(IOService *provider)
     IOLog("%s::super start succeed\n", getName());
     UInt8 builtIn = 0;
     setProperty("built-in", OSData::withBytes(&builtIn, sizeof(builtIn)));
+    PMinit();
+    registerPowerDriver(this, powerStateArray, 2);
+    provider->joinPMtree(this);
     registerService();
     return true;
 }
@@ -113,5 +122,12 @@ void IOPCIEDeviceWrapper::
 stop(IOService *provider)
 {
     XYLog("%s\n", __PRETTY_FUNCTION__);
+    PMstop();
     super::stop(provider);
+}
+
+IOReturn IOPCIEDeviceWrapper::
+setPowerState(unsigned long powerStateOrdinal, IOService *whatDevice)
+{
+    return IOPMAckImplied;
 }
