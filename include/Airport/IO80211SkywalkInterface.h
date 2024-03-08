@@ -37,6 +37,7 @@ struct apple80211_lteCoex_report;
 struct apple80211_frame_counters;
 struct userPrintCtx;
 struct apple80211_lqm_summary;
+struct apple80211_infra_specific_stats;
 
 struct TxPacketRequest {
     uint16_t    unk1;       // 0
@@ -117,6 +118,9 @@ public:
     virtual void setInterfaceChipCounters(apple80211_stat_report *,apple80211_chip_counters_tx *,apple80211_chip_error_counters_tx *,apple80211_chip_counters_rx *);
     virtual void setInterfaceMIBdot11(apple80211_stat_report *,apple80211_ManagementInformationBasedot11_counters *);
     virtual void setFrameStats(apple80211_stat_report *,apple80211_frame_counters *);
+#if __IO80211_TARGET >= __MAC_14_4
+    virtual void setInfraSpecificFrameStats(apple80211_stat_report *,apple80211_infra_specific_stats *);
+#endif
     virtual SInt64 getWmeTxCounters(unsigned long long *);
     virtual void setEnabledBySystem(bool);
     virtual bool enabledBySystem(void);

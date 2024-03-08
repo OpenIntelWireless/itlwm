@@ -100,7 +100,21 @@
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "F8B210A72A2EC2680043ECBD"
                BuildableName = "AirportItlwm.kext"
-               BlueprintName = "AirportItlwm-Sonoma"
+               BlueprintName = "AirportItlwm-Sonoma14.0"
+               ReferencedContainer = "container:itlwm.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "F8D94C802B9ABFE20081A3C4"
+               BuildableName = "AirportItlwm.kext"
+               BlueprintName = "AirportItlwm-Sonoma14.4"
                ReferencedContainer = "container:itlwm.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
