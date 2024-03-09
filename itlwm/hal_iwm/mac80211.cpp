@@ -1312,6 +1312,7 @@ iwm_rx_tx_cmd_single(struct iwm_softc *sc, struct iwm_tx_resp *tx_resp,
             skb_freed++;
 
             memset(&info->status, 0, sizeof(info->status));
+            info->flags &= ~(IEEE80211_TX_STAT_ACK | IEEE80211_TX_STAT_TX_FILTERED);
 
             /* inform mac80211 about what happened with the frame */
             switch (status & IWM_TX_STATUS_MSK) {
