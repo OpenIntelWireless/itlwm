@@ -628,7 +628,7 @@ struct iwm_softc {
 
 	struct iwm_bf_data sc_bf;
 
-	int sc_tx_timer;
+	int sc_tx_timer[IWM_MAX_QUEUES];
 	int sc_rx_ba_sessions;
 
 	int sc_scan_last_antenna;

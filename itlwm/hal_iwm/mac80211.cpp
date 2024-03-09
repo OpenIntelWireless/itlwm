@@ -1179,7 +1179,7 @@ iwm_rx_tx_ba_notif(struct iwm_softc *sc, struct iwm_rx_packet *pkt, struct iwm_r
     if (qid != IWM_FIRST_AGG_TX_QUEUE + ba_notif->tid)
         return;
     
-    sc->sc_tx_timer = 0;
+    sc->sc_tx_timer[qid] = 0;
     
     ba = &ni->ni_tx_ba[ba_notif->tid];
     if (ba->ba_state != IEEE80211_BA_AGREED)
@@ -1236,8 +1236,6 @@ iwm_ampdu_tx_done(struct iwm_softc *sc, struct iwm_cmd_header *cmd_hdr,
     int txfail = (status != IWM_TX_STATUS_SUCCESS &&
                   status != IWM_TX_STATUS_DIRECT_DONE);
     struct ieee80211_tx_ba *ba;
-    
-    sc->sc_tx_timer = 0;
     
     if (ic->ic_state != IEEE80211_S_RUN)
         return;
@@ -1444,8 +1442,8 @@ iwm_rx_tx_cmd(struct iwm_softc *sc, struct iwm_rx_packet *pkt,
     struct iwm_cmd_header *cmd_hdr = &pkt->hdr;
     int idx = cmd_hdr->idx;
     int qid = cmd_hdr->qid;
-    struct iwm_tx_ring *ring = &sc->txq[qid];
-    struct iwm_tx_data *txd = &ring->data[idx];
+    struct iwm_tx_ring *ring;
+    struct iwm_tx_data *txd;
     struct iwm_tx_resp *tx_resp = (struct iwm_tx_resp *)pkt->data;
     uint32_t ssn;
     uint32_t len = iwm_rx_packet_len(pkt);
@@ -1453,8 +1451,6 @@ iwm_rx_tx_cmd(struct iwm_softc *sc, struct iwm_rx_packet *pkt,
     
     bus_dmamap_sync(sc->sc_dmat, data->map, 0, IWM_RBUF_SIZE,
                     BUS_DMASYNC_POSTREAD);
-    
-    sc->sc_tx_timer = 0;
     
     /* Sanity checks. */
     if (sizeof(*tx_resp) > len)
@@ -1466,6 +1462,11 @@ iwm_rx_tx_cmd(struct iwm_softc *sc, struct iwm_rx_packet *pkt,
     if (sizeof(*tx_resp) + sizeof(ssn) +
         tx_resp->frame_count * sizeof(struct iwm_agg_tx_status) > len)
         return;
+    
+    sc->sc_tx_timer[qid] = 0;
+    
+    ring = &sc->txq[qid];
+    txd = &ring->data[idx];
     
     if (tx_resp->frame_count > 1) {
         for (int i = 0; i < tx_resp->frame_count; i++) {
@@ -1898,6 +1899,9 @@ iwm_tx(struct iwm_softc *sc, mbuf_t m, struct ieee80211_node *ni, int ac)
 //        XYLog("%s qid=%d sc->qfullmsk is FULL ring->cur=%d ring->queued=%d\n", __FUNCTION__, ring->qid, ring->cur, ring->queued);
         sc->qfullmsk |= 1 << ring->qid;
     }
+    
+    if (ic->ic_if.if_flags & IFF_UP)
+        sc->sc_tx_timer[ring->qid] = 15;
     
     return 0;
 }
@@ -3581,10 +3585,8 @@ _iwm_start_task(OSObject *target, void *arg0, void *arg1, void *arg2, void *arg3
         }
         ifp->netStat->outputPackets++;
         
-        if (ifp->if_flags & IFF_UP) {
-            sc->sc_tx_timer = 15;
+        if (ifp->if_flags & IFF_UP)
             ifp->if_timer = 1;
-        }
     }
     
     return kIOReturnSuccess;
@@ -3667,7 +3669,8 @@ iwm_stop(struct _ifnet *ifp)
         iwm_clear_reorder_buffer(sc, rxba);
     }
     iwm_led_blink_stop(sc);
-    ifp->if_timer = sc->sc_tx_timer = 0;
+    memset(sc->sc_tx_timer, 0, sizeof(sc->sc_tx_timer));
+    ifp->if_timer = 0;
     
     splx(s);
 }
@@ -3677,22 +3680,31 @@ iwm_watchdog(struct _ifnet *ifp)
 {
     struct iwm_softc *sc = (struct iwm_softc *)ifp->if_softc;
     ItlIwm *that = container_of(sc, ItlIwm, com);
+    int i;
     
     ifp->if_timer = 0;
-    if (sc->sc_tx_timer > 0) {
-        if (--sc->sc_tx_timer == 0) {
-            XYLog("%s: device timeout\n", DEVNAME(sc));
+
+    /*
+     * We maintain a separate timer for each Tx queue because
+     * Tx aggregation queues can get "stuck" while other queues
+     * keep working. The Linux driver uses a similar workaround.
+     */
+    for (i = 0; i < nitems(sc->sc_tx_timer); i++) {
+        if (sc->sc_tx_timer[i] > 0) {
+            if (--sc->sc_tx_timer[i] == 0) {
+                XYLog("%s: device timeout\n", DEVNAME(sc));
 #ifdef IWM_DEBUG
-            that->iwm_nic_error(sc);
+                that->iwm_nic_error(sc);
 #endif
-            if ((sc->sc_flags & IWM_FLAG_SHUTDOWN) == 0) {
-                task_add(systq, &sc->init_task);
+                if ((sc->sc_flags & IWM_FLAG_SHUTDOWN) == 0) {
+                    task_add(systq, &sc->init_task);
+                }
+                XYLog("%s %d OUTPUT_ERROR\n", __FUNCTION__, __LINE__);
+                ifp->netStat->outputErrors++;
+                return;
             }
-            XYLog("%s %d OUTPUT_ERROR\n", __FUNCTION__, __LINE__);
-            ifp->netStat->outputErrors++;
-            return;
+            ifp->if_timer = 1;
         }
-        ifp->if_timer = 1;
     }
     
     ieee80211_watchdog(ifp);
