@@ -276,16 +276,19 @@ int
 task_add(struct taskq *tq, struct task *w)
 {
     int rv = 0;
-//    IOLog("itlwm: taskq task_add %s\n", w->name);
+//    IOLog("itlwm: taskq task_add %s thread: %lld\n", w->name, thread_tid(current_thread()));
+    
+    if (ISSET(w->t_flags, TASK_ONQUEUE))
+        return (0);
 
     IORecursiveLockLock(tq->tq_mtx);
     if (ISSET(w->t_flags, TASK_ONQUEUE)) {
-        IOLog("itlwm: taskq task_add %s is already on queue\n", w->name);
+//        IOLog("itlwm: taskq task_add %s is already on queue thread: %lld\n", w->name, thread_tid(current_thread()));
         IORecursiveLockUnlock(tq->tq_mtx);
         return (0);
     }
     if (!ISSET(w->t_flags, TASK_ONQUEUE)) {
-        IOLog("itlwm: taskq task_add %s add to queue\n", w->name);
+//        IOLog("itlwm: taskq task_add %s add to queue thread: %lld\n", w->name, thread_tid(current_thread()));
         rv = 1;
         SET(w->t_flags, TASK_ONQUEUE);
         TAILQ_INSERT_TAIL(&tq->tq_worklist, w, t_entry);
@@ -302,7 +305,10 @@ int
 task_del(struct taskq *tq, struct task *w)
 {
     int rv = 0;
-//    IOLog("itlwm: taskq task_del %s\n", w->name);
+//    IOLog("itlwm: taskq task_del %s thread: %lld\n", w->name, thread_tid(current_thread()));
+    
+    if (!ISSET(w->t_flags, TASK_ONQUEUE))
+        return (0);
 
     IORecursiveLockLock(tq->tq_mtx);
     if (ISSET(w->t_flags, TASK_ONQUEUE)) {
