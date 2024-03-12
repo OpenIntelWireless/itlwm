@@ -347,8 +347,6 @@ iwn_attach(struct iwn_softc *sc, struct pci_attach_args *pa)
 {
     struct ieee80211com *ic = &sc->sc_ic;
     struct _ifnet *ifp = &ic->ic_if;
-    const char *intrstr;
-    pci_intr_handle_t ih;
     pcireg_t memtype, reg;
     int i, error;
 
@@ -395,7 +393,7 @@ iwn_attach(struct iwn_softc *sc, struct pci_attach_args *pa)
         return false;
     }
 
-    int msiIntrIndex = 0;
+    int msiIntrIndex = -1;
     for (int index = 0; ; index++)
     {
         int interruptType;
@@ -408,12 +406,16 @@ iwn_attach(struct iwn_softc *sc, struct pci_attach_args *pa)
             break;
         }
     }
+    if (msiIntrIndex == -1) {
+        XYLog("%s: can't find MSI interrupt controller\n", DEVNAME(sc));
+        return false;
+    }
 
     sc->sc_ih = IOFilterInterruptEventSource::filterInterruptEventSource(this,
                                                                          (IOInterruptEventSource::Action)&ItlIwn::iwn_intr, &ItlIwn::intrFilter
                                                                          ,pa->pa_tag, msiIntrIndex);
     if (sc->sc_ih == NULL || pa->workloop->addEventSource(sc->sc_ih) != kIOReturnSuccess) {
-        XYLog("%s: can't establish interrupt", DEVNAME(sc));
+        XYLog("%s: can't establish interrupt\n", DEVNAME(sc));
         return false;
     }
     sc->sc_ih->enable();
