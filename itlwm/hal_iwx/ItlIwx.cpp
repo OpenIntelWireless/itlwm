@@ -4452,6 +4452,9 @@ iwx_ampdu_rx_start(struct ieee80211com *ic, struct ieee80211_node *ni,
         tid >= IWX_MAX_TID_COUNT)
         return ENOSPC;
     
+    if (ic->ic_state != IEEE80211_S_RUN)
+        return ENOSPC;
+    
     if (sc->ba_rx.start_tidmask & (1 << tid))
         return EBUSY;
 
@@ -4475,6 +4478,9 @@ iwx_ampdu_rx_stop(struct ieee80211com *ic, struct ieee80211_node *ni,
     if (tid >= IWX_MAX_TID_COUNT || sc->ba_rx.stop_tidmask & (1 << tid))
         return;
     
+    if (ic->ic_state != IEEE80211_S_RUN)
+        return;
+
     sc->ba_rx.stop_tidmask |= (1 << tid);
     that->iwx_add_task(sc, systq, &sc->ba_task);
 }
