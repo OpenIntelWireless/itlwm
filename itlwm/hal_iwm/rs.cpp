@@ -2912,29 +2912,6 @@ enum ieee80211_rate_flags {
     IEEE80211_RATE_SUPPORTS_10MHZ    = 1<<6,
 };
 
-/* rate data (static) */
-static struct ieee80211_rate iwl_cfg80211_rates[] = {
-    { .bitrate = 1 * 10, .hw_value = 0, .hw_value_short = 0, },
-    { .bitrate = 2 * 10, .hw_value = 1, .hw_value_short = 1,
-      .flags = IEEE80211_RATE_SHORT_PREAMBLE, },
-    { .bitrate = (u16)(5.5 * 10), .hw_value = 2, .hw_value_short = 2,
-      .flags = IEEE80211_RATE_SHORT_PREAMBLE, },
-    { .bitrate = 11 * 10, .hw_value = 3, .hw_value_short = 3,
-      .flags = IEEE80211_RATE_SHORT_PREAMBLE, },
-    { .bitrate = 6 * 10, .hw_value = 4, .hw_value_short = 4, },
-    { .bitrate = 9 * 10, .hw_value = 5, .hw_value_short = 5, },
-    { .bitrate = 12 * 10, .hw_value = 6, .hw_value_short = 6, },
-    { .bitrate = 18 * 10, .hw_value = 7, .hw_value_short = 7, },
-    { .bitrate = 24 * 10, .hw_value = 8, .hw_value_short = 8, },
-    { .bitrate = 36 * 10, .hw_value = 9, .hw_value_short = 9, },
-    { .bitrate = 48 * 10, .hw_value = 10, .hw_value_short = 10, },
-    { .bitrate = 54 * 10, .hw_value = 11, .hw_value_short = 11, },
-};
-#define RATES_24_OFFS    0
-#define N_RATES_24    ARRAY_SIZE(iwl_cfg80211_rates)
-#define RATES_52_OFFS    4
-#define N_RATES_52    (N_RATES_24 - RATES_52_OFFS)
-
 /*
  * Called after adding a new station to initialize rate scaling
  */
@@ -2977,14 +2954,14 @@ static void rs_drv_rate_init(struct iwm_softc *mvm, struct ieee80211_node *sta,
      * active legacy rates as per supported rates bitmap
      */
     lq_sta->active_legacy_rate = 0;
-    for (i = 0; i < sta->ni_rates.rs_nrates; i++) {
-        rate = sta->ni_rates.rs_rates[i] & IEEE80211_RATE_VAL;
-        /* Map 802.11 rate to HW rate index. */
-        for (j = 0; j <= (band == NL80211_BAND_2GHZ ? N_RATES_24 : N_RATES_52); j++) {
-            if (iwl_cfg80211_rates[j + (band == NL80211_BAND_2GHZ ? RATES_24_OFFS : RATES_52_OFFS)].bitrate / 5 == rate)
+    for (i = 0; i < ieee80211_std_rateset_11g.rs_nrates; i++) {
+        for (j = 0; j < sta->ni_rates.rs_nrates; j++) {
+            if (ieee80211_std_rateset_11g.rs_rates[i] ==
+                (sta->ni_rates.rs_rates[j] & IEEE80211_RATE_VAL)) {
+                lq_sta->active_legacy_rate |= BIT(i);
                 break;
+            }
         }
-        lq_sta->active_legacy_rate |= BIT(iwl_cfg80211_rates[j + (band == NL80211_BAND_2GHZ ? RATES_24_OFFS : RATES_52_OFFS)].hw_value);
     }
 
     /* TODO: should probably account for rx_highest for both HT/VHT */
