@@ -289,9 +289,6 @@ struct iwm_tx_data {
     int totlen;
     uint16_t fc;
     
-    /* A-MPDU subframes */
-    int ampdu_txmcs;
-    int ampdu_nframes;
     struct ieee80211_tx_info info;
 };
 

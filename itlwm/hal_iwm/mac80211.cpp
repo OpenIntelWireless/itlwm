@@ -1403,11 +1403,9 @@ iwm_txd_done(struct iwm_softc *sc, struct iwm_tx_data *txd)
     ieee80211_release_node(ic, &txd->in->in_ni);
     txd->in = NULL;
     txd->totlen = 0;
-    txd->ampdu_txmcs = 0;
     txd->txmcs = 0;
     txd->txrate = 0;
     txd->fc = 0;
-    txd->ampdu_nframes = 0;
     memset(&txd->info, 0, sizeof(struct ieee80211_tx_info));
 }
 
@@ -1849,7 +1847,6 @@ iwm_tx(struct iwm_softc *sc, mbuf_t m, struct ieee80211_node *ni, int ac)
     data->txmcs = ni->ni_txmcs;
     data->txrate = ni->ni_txrate;
     data->totlen = totlen;
-    data->ampdu_txmcs = ni->ni_txmcs;
     memcpy(&data->fc, &wh->i_fc[0], sizeof(uint16_t));
     data->info.band = IEEE80211_IS_CHAN_2GHZ(ni->ni_chan) ? NL80211_BAND_2GHZ : NL80211_BAND_5GHZ;
     
