@@ -2842,10 +2842,12 @@ static void rs_vht_init(struct iwm_softc *mvm,
         (sta->ni_vhtcaps & IEEE80211_VHTCAP_RXSTBC_MASK))
         lq_sta->stbc_capable = true;
 
+#if 0
     if (isset(mvm->sc_enabled_capa, IWM_UCODE_TLV_CAPA_BEAMFORMER) &&
         (that->iwm_num_of_ant(that->iwm_fw_valid_tx_ant(mvm)) > 1) &&
         (sta->ni_vhtcaps & IEEE80211_VHTCAP_SU_BEAMFORMEE_CAPABLE))
         lq_sta->bfer_capable = true;
+#endif
 
     lq_sta->is_vht = true;
 }
