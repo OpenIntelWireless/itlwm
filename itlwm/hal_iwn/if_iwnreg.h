@@ -1727,9 +1727,18 @@ struct iwn_eeprom_chan {
 } __packed;
 
 struct iwn_eeprom_enhinfo {
-    uint16_t    chan;
+    uint8_t        flags;
+#define IWN_TXP_VALID        (1 << 0)
+#define IWN_TXP_BAND_52G    (1 << 1)
+#define IWN_TXP_OFDM        (1 << 2)
+#define IWN_TXP_40MHZ        (1 << 3)
+#define IWN_TXP_HT_AP        (1 << 4)
+#define IWN_TXP_RES1        (1 << 5)
+#define IWN_TXP_RES2        (1 << 6)
+#define IWN_TXP_COMMON_TYPE    (1 << 7)
+    uint8_t        chan;
     int8_t        chain[3];    /* max power in half-dBm */
-    uint8_t        reserved;
+    uint8_t        delta_20_in_40;
     int8_t        mimo2;        /* max power in half-dBm */
     int8_t        mimo3;        /* max power in half-dBm */
 } __packed;
