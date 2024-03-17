@@ -4064,17 +4064,12 @@ iwn_set_link_quality(struct iwn_softc *sc, struct ieee80211_node *ni)
         if (sc->hw_type != IWN_HW_REV_TYPE_4965)
             linkq.flags |= IWN_LINK_QUAL_FLAGS_SET_STA_TLC_RTS;
 
-    if (ieee80211_node_supports_ht_sgi20(ni)) {
+    if (ieee80211_node_supports_ht_sgi20(ni))
         sgi_ok = 1;
-    }
-    
+
     if (ni->ni_chw == IEEE80211_CHAN_WIDTH_40) {
         is_40mhz = 1;
-        if (ieee80211_node_supports_ht_sgi40(ni)) {
-            sgi_ok = 1;
-        } else {
-            sgi_ok = 0;
-        }
+        sgi_ok = ieee80211_node_supports_ht_sgi40(ni);
     }
     
     /*
@@ -4108,15 +4103,17 @@ iwn_set_link_quality(struct iwn_softc *sc, struct ieee80211_node *ni)
             for (i = ni->ni_txmcs; i >= 0; i--) {
                 if (isclr(ni->ni_rxmcs, i))
                     continue;
-                if (ridx == iwn_mcs2ridx[i]) {
-                    tab = ht_plcp;
-                    rflags |= IWN_RFLAG_MCS;
-                    if (sgi_ok)
-                        rflags |= IWN_RFLAG_SGI;
-                    if (is_40mhz)
-                        rflags |= IWN_RFLAG_HT40;
+                if (ridx != iwn_mcs2ridx[i])
+                    continue;
+                tab = ht_plcp;
+                rflags |= IWN_RFLAG_MCS;
+                /* First two Tx attempts may use 40MHz/SGI. */
+                if (j > 1)
                     break;
-                }
+                if (is_40mhz)
+                    rflags |= IWN_RFLAG_HT40;
+                if (sgi_ok)
+                    rflags |= IWN_RFLAG_SGI;
             }
         } else if (plcp != IWN_RATE_INVM_PLCP) {
             for (i = ni->ni_txrate; i >= 0; i--) {
