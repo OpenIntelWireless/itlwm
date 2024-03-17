@@ -1539,6 +1539,25 @@ iwm_rx_bmiss(struct iwm_softc *sc, struct iwm_rx_packet *pkt,
     
 }
 
+static int
+iwm_rate2ridx(struct iwm_softc *sc, int rate)
+{
+    struct ieee80211com *ic = &sc->sc_ic;
+    struct ieee80211_node *ni = ic->ic_bss;
+    int ridx = -1, i;
+    
+    int min_ridx = (IEEE80211_IS_CHAN_5GHZ(ni->ni_chan)) ?
+        IWL_FIRST_OFDM_RATE : IWL_FIRST_CCK_RATE;
+    
+    for (i = 0; i < ieee80211_std_rateset_11g.rs_nrates; i++) {
+        if (ieee80211_std_rateset_11g.rs_rates[i] == rate) {
+            ridx = i;
+            break;
+        }
+    }
+    return ridx == -1 ? min_ridx : ridx;
+}
+
 /*
  * Fill in various bit for management frames, and leave them
  * unfilled for data frames (firmware takes care of that).
@@ -1553,54 +1572,35 @@ iwm_tx_fill_cmd(struct iwm_softc *sc, struct iwm_node *in,
     int type = wh->i_fc[0] & IEEE80211_FC0_TYPE_MASK;
     int subtype = wh->i_fc[0] & IEEE80211_FC0_SUBTYPE_MASK;
     int ridx = -1, rate_flags;
-    int min_ridx = (IEEE80211_IS_CHAN_5GHZ(ni->ni_chan)) ?
-    IWL_FIRST_OFDM_RATE : IWL_FIRST_CCK_RATE;
-    int i;
+    int min_ridx = iwm_rate2ridx(sc, ieee80211_min_basic_rate(ic));
     
-    int min_rate = ieee80211_min_basic_rate(ic);
-    for (i = 0; i < ieee80211_std_rateset_11g.rs_nrates; i++) {
-        if (ieee80211_std_rateset_11g.rs_rates[i] == min_rate) {
-            min_ridx = i;
-            break;
-        }
-    }
-
     tx->rts_retry_limit = IWM_RTS_DFAULT_RETRY_LIMIT;
     
-    if (type == IEEE80211_FC0_TYPE_CTL && subtype == IEEE80211_FC0_SUBTYPE_BAR)
+    if (type == IEEE80211_FC0_TYPE_CTL &&
+        subtype == IEEE80211_FC0_SUBTYPE_BAR)
         tx->data_retry_limit = IWM_BAR_DFAULT_RETRY_LIMIT;
     else
         tx->data_retry_limit = IWM_DEFAULT_TX_RETRY;
     
-    /*
-    * for data packets, rate info comes from the table inside the fw. This
-    * table is controlled by LINK_QUALITY commands
-    */
-    if (!IEEE80211_IS_MULTICAST(wh->i_addr1) &&
-        type == IEEE80211_FC0_TYPE_DATA) {
-        tx->initial_rate_index = 0;
-        tx->tx_flags |= cpu_to_le32(IWM_TX_CMD_FLG_STA_RATE);
-        return &iwl_rates[ridx];
-    } else if (type == IEEE80211_FC0_TYPE_CTL &&
-               subtype == IEEE80211_FC0_SUBTYPE_BAR)
-        tx->tx_flags |= htole32(IWM_TX_CMD_FLG_ACK | IWM_TX_CMD_FLG_BAR);
-
-    if (ic->ic_fixed_mcs != -1 ||
-        ic->ic_fixed_rate != -1)
-        ridx = sc->sc_fixed_ridx;
-    else {
+    if (IEEE80211_IS_MULTICAST(wh->i_addr1) ||
+        type != IEEE80211_FC0_TYPE_DATA) {
+        /* for non-data, use the lowest supported rate */
+        ridx = min_ridx;
+        tx->data_retry_limit = IWM_MGMT_DFAULT_RETRY_LIMIT;
+    } else if (ic->ic_fixed_mcs != -1) {
         if (ni->ni_flags & IEEE80211_NODE_VHT)
-            ridx = iwm_mcs2ridx[ni->ni_txmcs];
-        else if (ni->ni_flags & IEEE80211_NODE_HT)
-            ridx = iwm_mcs2ridx[ni->ni_txmcs % 8];
-        else {
-            for (i = 0; i < ieee80211_std_rateset_11g.rs_nrates; i++) {
-                if (ieee80211_std_rateset_11g.rs_rates[i] == ni->ni_txrate) {
-                    ridx = i;
-                    break;
-                }
-            }
-        }
+            ridx = IWL_FIRST_OFDM_RATE;
+        else
+            ridx = sc->sc_fixed_ridx;
+    } else if (ic->ic_fixed_rate != -1) {
+        ridx = sc->sc_fixed_ridx;
+     } else {
+        /* Use firmware rateset retry table. */
+        tx->initial_rate_index = 0;
+        tx->tx_flags |= htole32(IWM_TX_CMD_FLG_STA_RATE);
+        if (ni->ni_flags & IEEE80211_NODE_HT) /* VHT implies HT */
+            return 0;
+        return &iwl_rates[iwm_rate2ridx(sc, ni->ni_txrate)];
     }
     
     if (ridx == -1 || ridx >= IWL_RATE_COUNT_LEGACY)
