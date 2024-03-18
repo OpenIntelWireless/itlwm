@@ -370,8 +370,6 @@ ieee80211_ra_next_rateset(struct ieee80211_ra_node *rn, struct ieee80211com *ic,
                 continue;
             if (rsnext->nss > support_nss(ni))
                 continue;
-            if (rsnext->sgi && !ieee80211_node_supports_sgi(ni))
-                continue;
             found = true;
             break;
         }
@@ -384,8 +382,6 @@ ieee80211_ra_next_rateset(struct ieee80211_ra_node *rn, struct ieee80211com *ic,
             if (rsnext->band_width > ni->ni_chw)
                 continue;
             if (rsnext->nss > support_nss(ni))
-                continue;
-            if (rsnext->sgi && !ieee80211_node_supports_sgi(ni))
                 continue;
             found = true;
             break;
