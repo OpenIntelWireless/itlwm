@@ -278,6 +278,19 @@ ieee80211_ra_get_rateset(struct ieee80211_ra_node *ra, struct ieee80211com *ic, 
     panic("%s mcs=%d rs_count=%d sgi=%d nss=%d bw=%d rate==NULL!!!!\n", __FUNCTION__, mcs, ra->active_rs_count, ra->sgi, ra->nss, ra->bw);
 }
 
+int
+ieee80211_ra_use_ht_sgi(struct ieee80211_node *ni)
+{
+    if ((ni->ni_chw == IEEE80211_CHAN_WIDTH_40) &&
+        ieee80211_node_supports_ht_chan40(ni)) {
+        if (ni->ni_flags & IEEE80211_NODE_HT_SGI40)
+            return 1;
+    } else if (ni->ni_flags & IEEE80211_NODE_HT_SGI20)
+        return 1;
+    
+    return 0;
+}
+
 /*
  * Update goodput statistics.
  */

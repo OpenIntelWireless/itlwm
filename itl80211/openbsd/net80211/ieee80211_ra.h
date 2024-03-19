@@ -117,4 +117,6 @@ void    ieee80211_ra_choose(struct ieee80211_ra_node *,
 /* Get the HT rateset for a particular HT MCS with SGI on/off. */
 const struct ieee80211_ra_rate *ieee80211_ra_get_rateset(struct ieee80211_ra_node *, struct ieee80211com *,
                                                          struct ieee80211_node *, int);
+/* Check whether SGI should be used. */
+int     ieee80211_ra_use_ht_sgi(struct ieee80211_node *);
 #endif /* _NET80211_IEEE80211_RA_H_ */
