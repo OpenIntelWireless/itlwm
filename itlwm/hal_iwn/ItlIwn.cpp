@@ -550,12 +550,12 @@ iwn_attach(struct iwn_softc *sc, struct pci_attach_args *pa)
             ieee80211_std_rateset_11a;
     }
     if (sc->sc_flags & IWN_FLAG_HAS_11N) {
-        int ntxstreams = sc->ntxchains;
-        int nrxstreams = sc->nrxchains;
-        
         /* Set supported HT rates. */
         if (ic->ic_userflags & IEEE80211_F_NOMIMO)
-            ntxstreams = nrxstreams = 1;
+            sc->ntxchains = sc->nrxchains = 1;
+
+        int ntxstreams = sc->ntxchains;
+        int nrxstreams = sc->nrxchains;
 
         ic->ic_sup_mcs[0] = 0xff;        /* MCS 0-7 */
         if (nrxstreams > 1)
