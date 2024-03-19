@@ -4093,7 +4093,8 @@ iwn_set_link_quality(struct iwn_softc *sc, struct ieee80211_node *ni)
                 (!mimo && iwn_is_mimo_ht_plcp(ht_plcp)))
                 continue;
             for (i = ni->ni_txmcs; i >= 0; i--) {
-                if (isclr(ni->ni_rxmcs, i))
+                if (ic->ic_tx_mcs_set == IEEE80211_TX_MCS_SET_DEFINED &&
+                    isclr(ni->ni_rxmcs, i))
                     continue;
                 if (ridx != iwn_mcs2ridx[i])
                     continue;
