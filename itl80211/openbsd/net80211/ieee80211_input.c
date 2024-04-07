@@ -2987,6 +2987,11 @@ ieee80211_recv_addba_req(struct ieee80211com *ic, mbuf_t m,
     u_int8_t token, tid;
     int err = 0;
     
+    /* Ignore if we are not ready to receive data frames. */
+    if (ic->ic_state != IEEE80211_S_RUN ||
+        ((ic->ic_flags & IEEE80211_F_RSNON) && !ni->ni_port_valid))
+        return;
+    
     if (!(ni->ni_flags & IEEE80211_NODE_HT)) {
         DPRINTF(("received ADDBA req from non-HT STA %s\n",
                  ether_sprintf(ni->ni_macaddr)));
