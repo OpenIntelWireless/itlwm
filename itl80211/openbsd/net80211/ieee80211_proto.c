@@ -670,7 +670,7 @@ ieee80211_ht_negotiate(struct ieee80211com *ic, struct ieee80211_node *ni)
 void
 ieee80211_vht_negotiate(struct ieee80211com *ic, struct ieee80211_node *ni)
 {
-    uint8_t ext_nss_bw_supp, supp_chwidth;
+    uint8_t ext_nss_bw_supp, supp_chwidth, own_chwidth;
     uint16_t cf0, cf1;
     int ccfs0, ccfs1, ccfs2;
     int ccf0, ccf1;
@@ -808,6 +808,36 @@ ieee80211_vht_negotiate(struct ieee80211com *ic, struct ieee80211_node *ni)
             
         default:
             return;
+    }
+    
+    /*
+     * Clamp the negotiated width to what THIS card can actually do.
+     *
+     * Everything above is derived from ni->ni_vhtcaps - the AP's advertised
+     * capability - and is never intersected with ic->ic_vhtcaps, so an AP
+     * advertising 160MHz/80+80 drags us to a width the hardware may not have.
+     * Every iwm-generation part is 80MHz max (7265/8260/8265); ic_vhtcaps only
+     * gains SUPP_CHAN_WIDTH_160MHZ when sc_nvm.vht160_supported is set. Taking
+     * the AP's word programs a PHY context the firmware cannot execute:
+     *     iwm_run -> iwm_phy_ctxt_cmd -> 0x14FC ADVANCED_SYSASSERT
+     *     "could not update PHY context (error 35)"
+     * after which the device resets in a loop and association never completes.
+     *
+     * Linux performs this same intersection in
+     * ieee80211_vht_cap_ie_to_sta_vht_cap(), which is why iwlwifi negotiates
+     * 80MHz/NSS2 against the very same AP that asserts here.
+     */
+    own_chwidth = (ic->ic_vhtcaps & IEEE80211_VHTCAP_SUPP_CHAN_WIDTH_MASK) >>
+        IEEE80211_VHTCAP_SUPP_CHAN_WIDTH_MASK_S;
+    if (own_chwidth == 0 &&
+        (ni->ni_chw == IEEE80211_CHAN_WIDTH_160 ||
+         ni->ni_chw == IEEE80211_CHAN_WIDTH_80P80)) {
+        ni->ni_chw = IEEE80211_CHAN_WIDTH_80;
+        ni->ni_chan->ic_center_freq1 = cf0;
+        ni->ni_chan->ic_center_freq2 = 0;
+    } else if (own_chwidth == 1 && ni->ni_chw == IEEE80211_CHAN_WIDTH_80P80) {
+        ni->ni_chw = IEEE80211_CHAN_WIDTH_160;
+        ni->ni_chan->ic_center_freq2 = 0;
     }
     
     ni->ni_flags |= IEEE80211_NODE_VHT;
