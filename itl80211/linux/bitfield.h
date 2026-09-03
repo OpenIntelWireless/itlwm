@@ -121,14 +121,14 @@ find_last_bit(volatile void *p, int max)
     int b;
     volatile u_int *ptr = (volatile u_int *)p;
 
-    for (b = max; b > 0; b -= 32) {
-        if (ptr[b >> 5] != 0) {
-            for (;;) {
-                if (ptr[b >> 5] & (1 << (b & 0x1f)))
-                    return b;
-                b--;
-            }
-        }
+    /*
+     * Bits are numbered 0..max-1, so the scan must start at max-1:
+     * starting at max read one 32-bit word past the object and never
+     * examined ptr[0].  Matches Linux's contract (last set bit, or size).
+     */
+    for (b = max - 1; b >= 0; b--) {
+        if (ptr[b >> 5] & (1U << (b & 0x1f)))
+            return b;
     }
     return max;
 }
