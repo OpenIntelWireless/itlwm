@@ -918,8 +918,13 @@ setSCAN_REQ(struct apple80211_scan_data *sd)
           sd->ssid,
           ether_sprintf(sd->bssid.octet));
 #endif
-    if (fScanResultWrapping)
-        return 22;
+    /*
+     * A scan request starts a NEW enumeration: drop the cursor left over
+     * from whoever stopped reading last time.  ic_tree is keyed on BSSID,
+     * so resuming mid-tree hides every lower-addressed BSS.
+     */
+    fNextNodeToSend = NULL;
+    fScanResultWrapping = false;
     if (ic->ic_state <= IEEE80211_S_INIT)
         return 22;
     if (sd->scan_type == APPLE80211_SCAN_TYPE_FAST || sd->scan_type == APPLE80211_SCAN_TYPE_PASSIVE) {

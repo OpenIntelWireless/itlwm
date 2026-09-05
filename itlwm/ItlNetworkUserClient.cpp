@@ -357,6 +357,9 @@ IOReturn ItlNetworkUserClient::
 sSCAN(OSObject* target, void* data, bool isSet)
 {
     ItlNetworkUserClient *that = OSDynamicCast(ItlNetworkUserClient, target);
+    /* A scan request starts a new enumeration; see AirportSTAIOCTL.cpp. */
+    that->fNextNodeToSend = NULL;
+    that->fScanResultWrapping = false;
     ieee80211_begin_cache_bgscan(that->fIfp);
     return kIOReturnSuccess;
 }
