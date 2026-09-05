@@ -1414,6 +1414,18 @@ getSCAN_RESULT(OSObject *object, struct apple80211_scan_result **sr)
             if (fNextNodeToSend == NULL)
                 return 12;
         }
+    } else if (RB_FIND(ieee80211_tree, &ic->ic_tree, fNextNodeToSend) !=
+               fNextNodeToSend) {
+        /*
+         * The node we parked on was freed out of ic_tree by
+         * ieee80211_free_node(); nothing invalidates the cursor, so
+         * RB_NEXT() below would walk a dangling node.  Restart instead.
+         */
+        fNextNodeToSend = RB_MIN(ieee80211_tree, &ic->ic_tree);
+        if (fNextNodeToSend == NULL) {
+            fScanResultWrapping = false;
+            return 12;
+        }
     }
 //    XYLog("%s ni_bssid=%s ni_essid=%s channel=%d flags=%d asr_cap=%d asr_nrates=%d asr_ssid_len=%d asr_ie_len=%d asr_rssi=%d\n", __FUNCTION__, ether_sprintf(fNextNodeToSend->ni_bssid), fNextNodeToSend->ni_essid, ieee80211_chan2ieee(ic, fNextNodeToSend->ni_chan), ieeeChanFlag2apple(fNextNodeToSend->ni_chan->ic_flags), fNextNodeToSend->ni_capinfo, fNextNodeToSend->ni_rates.rs_nrates, fNextNodeToSend->ni_esslen, fNextNodeToSend->ni_rsnie_tlv == NULL ? 0 : fNextNodeToSend->ni_rsnie_tlv_len, fNextNodeToSend->ni_rssi);
     apple80211_scan_result* result = (apple80211_scan_result* )fNextNodeToSend->verb;

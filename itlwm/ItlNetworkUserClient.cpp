@@ -380,6 +380,14 @@ sSCAN_RESULT(OSObject* target, void* data, bool isSet)
                 return kIONoScanResult;
             }
         }
+    } else if (RB_FIND(ieee80211_tree, &ic->ic_tree, that->fNextNodeToSend) !=
+               that->fNextNodeToSend) {
+        /* See AirportSTAIOCTL.cpp: the cursor's node may have been freed. */
+        that->fNextNodeToSend = RB_MIN(ieee80211_tree, &ic->ic_tree);
+        if (that->fNextNodeToSend == NULL) {
+            that->fScanResultWrapping = false;
+            return kIONoScanResult;
+        }
     }
     bzero(ni, sizeof(*ni));
     
