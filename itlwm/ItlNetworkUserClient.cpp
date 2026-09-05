@@ -357,6 +357,9 @@ IOReturn ItlNetworkUserClient::
 sSCAN(OSObject* target, void* data, bool isSet)
 {
     ItlNetworkUserClient *that = OSDynamicCast(ItlNetworkUserClient, target);
+    /* A scan request starts a new enumeration; see AirportSTAIOCTL.cpp. */
+    that->fNextNodeToSend = NULL;
+    that->fScanResultWrapping = false;
     ieee80211_begin_cache_bgscan(that->fIfp);
     return kIOReturnSuccess;
 }
@@ -376,6 +379,14 @@ sSCAN_RESULT(OSObject* target, void* data, bool isSet)
             if (that->fNextNodeToSend == NULL) {
                 return kIONoScanResult;
             }
+        }
+    } else if (RB_FIND(ieee80211_tree, &ic->ic_tree, that->fNextNodeToSend) !=
+               that->fNextNodeToSend) {
+        /* See AirportSTAIOCTL.cpp: the cursor's node may have been freed. */
+        that->fNextNodeToSend = RB_MIN(ieee80211_tree, &ic->ic_tree);
+        if (that->fNextNodeToSend == NULL) {
+            that->fScanResultWrapping = false;
+            return kIONoScanResult;
         }
     }
     bzero(ni, sizeof(*ni));

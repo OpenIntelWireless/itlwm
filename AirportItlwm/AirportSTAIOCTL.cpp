@@ -1340,8 +1340,13 @@ setSCAN_REQ(OSObject *object,
           sd->ssid,
           ether_sprintf(sd->bssid.octet));
 #endif
-    if (fScanResultWrapping)
-        return 22;
+    /*
+     * A scan request starts a NEW enumeration: drop the cursor left over
+     * from whoever stopped reading last time.  ic_tree is keyed on BSSID,
+     * so resuming mid-tree hides every lower-addressed BSS.
+     */
+    fNextNodeToSend = NULL;
+    fScanResultWrapping = false;
     if (ic->ic_state <= IEEE80211_S_INIT)
         return 22;
     if (sd->scan_type == APPLE80211_SCAN_TYPE_FAST || sd->scan_type == APPLE80211_SCAN_TYPE_PASSIVE) {
@@ -1378,8 +1383,13 @@ setSCAN_REQ_MULTIPLE(OSObject *object, struct apple80211_scan_multiple_data *sd)
     for (i = 0; i < sd->ssid_count; i++)
         XYLog("%s index=%d ssid=%s ssid_len=%d\n", __FUNCTION__, i, sd->ssids[i].ssid_bytes, sd->ssids[i].ssid_len);
 #endif
-    if (fScanResultWrapping)
-        return 22;
+    /*
+     * A scan request starts a NEW enumeration: drop the cursor left over
+     * from whoever stopped reading last time.  ic_tree is keyed on BSSID,
+     * so resuming mid-tree hides every lower-addressed BSS.
+     */
+    fNextNodeToSend = NULL;
+    fScanResultWrapping = false;
     if (ic->ic_state <= IEEE80211_S_INIT)
         return 22;
     ieee80211_begin_cache_bgscan(&ic->ic_ac.ac_if);
@@ -1403,6 +1413,18 @@ getSCAN_RESULT(OSObject *object, struct apple80211_scan_result **sr)
             fNextNodeToSend = RB_MIN(ieee80211_tree, &ic->ic_tree);
             if (fNextNodeToSend == NULL)
                 return 12;
+        }
+    } else if (RB_FIND(ieee80211_tree, &ic->ic_tree, fNextNodeToSend) !=
+               fNextNodeToSend) {
+        /*
+         * The node we parked on was freed out of ic_tree by
+         * ieee80211_free_node(); nothing invalidates the cursor, so
+         * RB_NEXT() below would walk a dangling node.  Restart instead.
+         */
+        fNextNodeToSend = RB_MIN(ieee80211_tree, &ic->ic_tree);
+        if (fNextNodeToSend == NULL) {
+            fScanResultWrapping = false;
+            return 12;
         }
     }
 //    XYLog("%s ni_bssid=%s ni_essid=%s channel=%d flags=%d asr_cap=%d asr_nrates=%d asr_ssid_len=%d asr_ie_len=%d asr_rssi=%d\n", __FUNCTION__, ether_sprintf(fNextNodeToSend->ni_bssid), fNextNodeToSend->ni_essid, ieee80211_chan2ieee(ic, fNextNodeToSend->ni_chan), ieeeChanFlag2apple(fNextNodeToSend->ni_chan->ic_flags), fNextNodeToSend->ni_capinfo, fNextNodeToSend->ni_rates.rs_nrates, fNextNodeToSend->ni_esslen, fNextNodeToSend->ni_rsnie_tlv == NULL ? 0 : fNextNodeToSend->ni_rsnie_tlv_len, fNextNodeToSend->ni_rssi);

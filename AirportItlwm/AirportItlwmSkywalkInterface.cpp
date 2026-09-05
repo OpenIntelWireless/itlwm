@@ -918,8 +918,13 @@ setSCAN_REQ(struct apple80211_scan_data *sd)
           sd->ssid,
           ether_sprintf(sd->bssid.octet));
 #endif
-    if (fScanResultWrapping)
-        return 22;
+    /*
+     * A scan request starts a NEW enumeration: drop the cursor left over
+     * from whoever stopped reading last time.  ic_tree is keyed on BSSID,
+     * so resuming mid-tree hides every lower-addressed BSS.
+     */
+    fNextNodeToSend = NULL;
+    fScanResultWrapping = false;
     if (ic->ic_state <= IEEE80211_S_INIT)
         return 22;
     if (sd->scan_type == APPLE80211_SCAN_TYPE_FAST || sd->scan_type == APPLE80211_SCAN_TYPE_PASSIVE) {
@@ -997,6 +1002,14 @@ getSCAN_RESULT(struct apple80211_scan_result *sr)
             if (fNextNodeToSend == NULL) {
                 return 5;
             }
+        }
+    } else if (RB_FIND(ieee80211_tree, &fHalService->get80211Controller()->ic_tree,
+                       fNextNodeToSend) != fNextNodeToSend) {
+        /* See AirportSTAIOCTL.cpp: the cursor's node may have been freed. */
+        fNextNodeToSend = RB_MIN(ieee80211_tree, &fHalService->get80211Controller()->ic_tree);
+        if (fNextNodeToSend == NULL) {
+            fScanResultWrapping = false;
+            return 5;
         }
     }
 //    XYLog("%s ni_bssid=%s ni_essid=%s channel=%d flags=%d asr_cap=%d asr_nrates=%d asr_ssid_len=%d asr_ie_len=%d asr_rssi=%d\n", __FUNCTION__, ether_sprintf(fNextNodeToSend->ni_bssid), fNextNodeToSend->ni_essid, ieee80211_chan2ieee(ic, fNextNodeToSend->ni_chan), ieeeChanFlag2apple(fNextNodeToSend->ni_chan->ic_flags, -1), fNextNodeToSend->ni_capinfo, fNextNodeToSend->ni_rates.rs_nrates, fNextNodeToSend->ni_esslen, fNextNodeToSend->ni_rsnie_tlv == NULL ? 0 : fNextNodeToSend->ni_rsnie_tlv_len, fNextNodeToSend->ni_rssi);
