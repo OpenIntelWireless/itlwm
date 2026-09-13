@@ -1,0 +1,25 @@
+== IO80211Family ==
+1200.13.1
+total 0
+drwxr-xr-x@   3 root  wheel     96 10 мар  2026 .
+drwxr-xr-x  709 root  wheel  22688 10 мар  2026 ..
+drwxr-xr-x    5 root  wheel    160 10 мар  2026 Contents
+== IOSkywalkFamily ==
+1.0
+total 0
+drwxr-xr-x@   3 root  wheel     96 10 мар  2026 .
+drwxr-xr-x  709 root  wheel  22688 10 мар  2026 ..
+drwxr-xr-x    5 root  wheel    160 10 мар  2026 Contents
+== IO80211FamilyLegacy ==
+== IONetworkingFamily ==
+3.4
+total 0
+drwxr-xr-x@   3 root  wheel     96 10 мар  2026 .
+drwxr-xr-x  709 root  wheel  22688 10 мар  2026 ..
+drwxr-xr-x    6 root  wheel    192 10 мар  2026 Contents
+== IOPCIFamily ==
+2.9
+total 0
+drwxr-xr-x@   3 root  wheel     96 10 мар  2026 .
+drwxr-xr-x  709 root  wheel  22688 10 мар  2026 ..
+drwxr-xr-x    6 root  wheel    192 10 мар  2026 Contents

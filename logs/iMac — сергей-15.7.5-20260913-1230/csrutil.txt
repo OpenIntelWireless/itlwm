@@ -1,0 +1,12 @@
+System Integrity Protection status: unknown (Custom Configuration).
+
+Configuration:
+	Apple Internal: disabled
+	Kext Signing: disabled
+	Filesystem Protections: disabled
+	Debugging Restrictions: enabled
+	DTrace Restrictions: enabled
+	NVRAM Protections: enabled
+	BaseSystem Verification: enabled
+
+This is an unsupported configuration, likely to break in the future and leave your machine in an unknown state.

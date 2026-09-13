@@ -1,81 +1,70 @@
-name: CD
+name: Build itlwm for macOS 14.4
 
 on:
   push:
-    branches: master
-
-env:
-  BUILD_OUTPUT: 'build/Build/Products/Debug'
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
 
 jobs:
-
   build:
-    
     runs-on: macos-latest
-
+    
     steps:
+    # Checkout the code from the repository
+    - name: Checkout code
+      uses: actions/checkout@v2
 
-    - uses: actions/checkout@v2
+    # Set up Xcode (replacing the previous deprecated action)
+    - name: Set up Xcode
+      uses: apple-actions/setup-xcode@v1
       with:
-        fetch-depth: '5'
+        xcode-version: '14.4'  # You can specify the exact version of Xcode, or use 'macos-latest' for the latest available.
 
-    - name: Manage Version
+    # Install dependencies (if any, like brew or others)
+    - name: Install dependencies
       run: |
-        git fetch --prune --unshallow --tags
-        GIT_SHA="$(git rev-parse --short HEAD)"
-        CUR_TAG="$(git tag -l | grep 'alpha\|beta' | tail -1)"
-        eval $(grep -m 1 "MODULE_VERSION =" itlwm.xcodeproj/project.pbxproj | tr -d ';' | tr -d '\t' | tr -d " ")
-        echo "SHORT_SHA=$GIT_SHA" >> $GITHUB_ENV
-        echo "ITLWM_VER=$MODULE_VERSION" >> $GITHUB_ENV
-        if [[ -z $CUR_TAG ]]; then
-          echo "OLD_PRE_TAG=NULL" >> $GITHUB_ENV
-        else
-          echo "OLD_PRE_TAG=$CUR_TAG" >> $GITHUB_ENV
-        fi
+        brew install cmake
+        brew install libtool
+        brew install autoconf
+        # Add any additional dependencies here if required
 
-    - name: Install MacKernelSDK
-      run: |
-        git clone --depth=1 https://github.com/acidanthera/MacKernelSDK.git
-
+    # Clean and Build project using xcodebuild
     - name: Build itlwm
       run: |
-        xcodebuild -scheme itlwm -configuration Debug -derivedDataPath build GIT_COMMIT=_${SHORT_SHA} | xcpretty && exit ${PIPESTATUS[0]}
+        xcodebuild clean -project itlwm.xcodeproj -scheme AirportItlwm -configuration Debug -derivedDataPath build
+        xcodebuild -project itlwm.xcodeproj -scheme AirportItlwm -configuration Debug -derivedDataPath build
 
-    - name: Build AirportItlwm
+    # Optional: Run tests (if any tests are defined)
+    - name: Run tests (if any)
       run: |
-        xcodebuild -scheme "AirportItlwm (all)" -configuration Debug -derivedDataPath build GIT_COMMIT=_${SHORT_SHA} | xcpretty && exit ${PIPESTATUS[0]}
+        # This is where you would run any tests if they are part of the project
+        # You can add any testing commands like `xcodebuild test` here
 
-    - name: Pack Artifacts
-      run: |
-        cd $BUILD_OUTPUT
-          zip -r itlwm-v${ITLWM_VER}-DEBUG-alpha-${SHORT_SHA}.zip itlwm.kext
-          while read -r tgt ; do
-            zip -r AirportItlwm-${tgt// /_}-v${ITLWM_VER}-DEBUG-alpha-${SHORT_SHA}.zip "$tgt"
-          done < <(find . -mindepth 1 -maxdepth 1 -type d -not -path "*.kext" | cut -c 3-)
-        cd -
-
-    - name: Generate Prerelease Release Notes
-      run: |
-        echo '### Disclaimer:' >> ReleaseNotes.md
-        echo '***This alpha version is for testing only.***' >> ReleaseNotes.md
-        echo 'It is not ready for daily use and we do not guarantee its usability.' >> ReleaseNotes.md
-        echo 'If you discovered an issue and you do not have debugging skills, please check with the [Gitter Chat Room](https://gitter.im/OpenIntelWireless/itlwm) in advance before opening an Issue.' >> ReleaseNotes.md
-        echo '### The latest five updates are:' >> ReleaseNotes.md
-        git log -"5" --format="- %H %s" | sed '/^$/d' >> ReleaseNotes.md
-
-    - name: Delete Old Prerelease
-      uses: dev-drprasad/delete-tag-and-release@v0.2.1
+    # Upload the build artifacts
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v3
       with:
-        tag_name: ${{ env.OLD_PRE_TAG }}
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        name: AirportItlwm-build
+        path: build/Build/Products/Debug/*.kext  # Path to your built .kext or other output artifacts
 
-    - name: Publish GitHub Release
-      if: contains(github.event.head_commit.message, 'Bump version') == false
+    # Generate release notes (optional)
+    - name: Generate Release Notes
+      run: |
+        echo '### Disclaimer:' > ReleaseNotes.md
+        echo '***This version is for testing purposes only.***' >> ReleaseNotes.md
+        echo '### Changelog:' >> ReleaseNotes.md
+        git log -n 5 --pretty=format:"- %h: %s" >> ReleaseNotes.md
+        echo '---' >> ReleaseNotes.md
+
+    # Create release on GitHub (optional)
+    - name: Create GitHub release
       uses: ncipollo/release-action@v1.12.0
       with:
-        prerelease: true
+        tag: v${{ github.sha }}
+        release-name: "v${{ github.sha }}"
         bodyFile: ReleaseNotes.md
-        artifacts: "${{ env.BUILD_OUTPUT }}/*.zip"
-        tag: "v${{ env.ITLWM_VER }}-alpha"
-        token: ${{ secrets.GITHUB_TOKEN }}
+        prerelease: true
+        artifacts: ${{ github.workspace }}/build/Build/Products/Debug/*.zip
