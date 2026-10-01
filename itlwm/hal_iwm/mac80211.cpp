@@ -3636,8 +3636,10 @@ iwm_stop(struct _ifnet *ifp)
     
     sc->sc_generation++;
     for (i = 0; i < nitems(sc->sc_cmd_resp_pkt); i++) {
-        ::free(sc->sc_cmd_resp_pkt[i]);
-        sc->sc_cmd_resp_pkt[i] = NULL;
+        /* Claim before free, same race as iwm_send_cmd()/the RX path. */
+        uint8_t *dead = (uint8_t *)iwm_claim_cmd_resp(&sc->sc_cmd_resp_pkt[i]);
+        if (dead != NULL)
+            ::free(dead);
         sc->sc_cmd_resp_len[i] = 0;
     }
     ifp->if_flags &= ~IFF_RUNNING;

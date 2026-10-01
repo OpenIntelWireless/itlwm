@@ -702,6 +702,27 @@ struct iwm_softc {
     int tx_protection;
 };
 
+/*
+ * Atomically take ownership of a command response buffer slot.
+ *
+ * sc->sc_cmd_resp_pkt[] is written both by the command sender (which sleeps
+ * up to two seconds in iwm_send_cmd() waiting for the reply) and by the RX
+ * path in rx.cpp, and the two do NOT share a lock.  Both sides used to do
+ * "free(slot); slot = NULL;", so whenever the RX path dropped a failed or
+ * oversized response while the sender was timing out, both could free the
+ * very same buffer -> "zfree_drop: double free of ... to zone
+ * kalloc.type.var5.32" kernel panic and an instant reboot.
+ *
+ * Claiming the slot with an atomic exchange guarantees that exactly one of
+ * the two racers observes a non-NULL pointer, so exactly one free.
+ * Returns the buffer to free, or NULL if somebody else got there first.
+ */
+static inline void *
+iwm_claim_cmd_resp(uint8_t **slot)
+{
+    return __atomic_exchange_n(slot, (uint8_t *)NULL, __ATOMIC_ACQ_REL);
+}
+
 struct iwm_node {
     struct ieee80211_node in_ni;
     struct iwm_phy_ctxt *in_phyctxt;
