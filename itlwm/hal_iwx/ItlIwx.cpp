@@ -6273,6 +6273,29 @@ iwx_phy_ctxt_cmd(struct iwx_softc *sc, struct iwx_phy_ctxt *ctxt,
     return iwx_send_cmd_pdu(sc, IWX_PHY_CONTEXT_CMD, 0, sizeof(cmd), &cmd);
 }
 
+/*
+ * Atomically take ownership of a command response buffer slot.
+ *
+ * sc->sc_cmd_resp_pkt[] is written both by the command sender (which
+ * sleeps up to one second waiting for the reply) and by iwx_rx_pkt()
+ * in the RX path, and the two do NOT share a lock.  The original code
+ * did "free(slot); slot = NULL;" in both places, so if iwx_rx_pkt()
+ * dropped a failed/oversized response while the sender was timing out,
+ * both could free the very same buffer -> "zfree_drop: double free of
+ * ... to zone kalloc.type.var5.32" kernel panic and an instant reboot.
+ * That happens mostly while roaming/associating, because that is when
+ * IWX_ADD_STA (iwx_drain_sta) replies come back as FAILED responses.
+ *
+ * Claiming the slot with an atomic exchange guarantees that exactly one
+ * of the two racers observes a non-NULL pointer, so exactly one free.
+ * Returns the buffer to free, or NULL if somebody else got there first.
+ */
+static inline void *
+iwx_claim_cmd_resp(uint8_t **slot)
+{
+    return __atomic_exchange_n(slot, (uint8_t *)NULL, __ATOMIC_ACQ_REL);
+}
+
 int ItlIwx::
 iwx_send_cmd(struct iwx_softc *sc, struct iwx_host_cmd *hcmd)
 {
@@ -6435,8 +6458,16 @@ iwx_send_cmd(struct iwx_softc *sc, struct iwx_host_cmd *hcmd)
             hcmd->resp_pkt = (struct iwx_rx_packet *)sc->sc_cmd_resp_pkt[idx];
             sc->sc_cmd_resp_pkt[idx] = NULL;
         } else if (generation == sc->sc_generation) {
-            ::free(sc->sc_cmd_resp_pkt[idx]);
-            sc->sc_cmd_resp_pkt[idx] = NULL;
+            /*
+             * Claim the slot before freeing: iwx_rx_pkt() may be
+             * dropping the very same response buffer concurrently
+             * (no common lock), and the previous "free() then NULL"
+             * order allowed both sides to free the same pointer.
+             */
+            uint8_t *dead = (uint8_t *)iwx_claim_cmd_resp(
+                &sc->sc_cmd_resp_pkt[idx]);
+            if (dead != NULL)
+                ::free(dead);
         }
     }
 out:
@@ -10385,8 +10416,10 @@ iwx_stop(struct _ifnet *ifp)
     
     sc->sc_generation++;
     for (i = 0; i < nitems(sc->sc_cmd_resp_pkt); i++) {
-        ::free(sc->sc_cmd_resp_pkt[i]);
-        sc->sc_cmd_resp_pkt[i] = NULL;
+        /* Claim before free, same race as iwx_send_cmd()/iwx_rx_pkt(). */
+        uint8_t *dead = (uint8_t *)iwx_claim_cmd_resp(&sc->sc_cmd_resp_pkt[i]);
+        if (dead != NULL)
+            ::free(dead);
         sc->sc_cmd_resp_len[i] = 0;
     }
     ifp->if_flags &= ~IFF_RUNNING;
@@ -11037,8 +11070,15 @@ iwx_rx_pkt(struct iwx_softc *sc, struct iwx_rx_data *data, struct mbuf_list *ml)
                 if ((pkt->hdr.group_id & IWX_CMD_FAILED_MSK) ||
                     pkt_len < sizeof(*pkt) ||
                     pkt_len > sc->sc_cmd_resp_len[idx]) {
-                    ::free(sc->sc_cmd_resp_pkt[idx]);
-                    sc->sc_cmd_resp_pkt[idx] = NULL;
+                    /*
+                     * Drop this response. Claim the slot atomically
+                     * first: the waiting sender may be timing out and
+                     * freeing the same buffer right now.
+                     */
+                    uint8_t *dead = (uint8_t *)iwx_claim_cmd_resp(
+                        &sc->sc_cmd_resp_pkt[idx]);
+                    if (dead != NULL)
+                        ::free(dead);
                     break;
                 }
                 
