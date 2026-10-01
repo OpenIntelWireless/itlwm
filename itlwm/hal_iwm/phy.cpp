@@ -645,8 +645,16 @@ iwm_send_cmd(struct iwm_softc *sc, struct iwm_host_cmd *hcmd)
             hcmd->resp_pkt = (struct iwm_rx_packet *)sc->sc_cmd_resp_pkt[idx];
             sc->sc_cmd_resp_pkt[idx] = NULL;
         } else if (generation == sc->sc_generation) {
-            ::free(sc->sc_cmd_resp_pkt[idx]);
-            sc->sc_cmd_resp_pkt[idx] = NULL;
+            /*
+             * Claim the slot before freeing: the RX path may be
+             * dropping the very same response buffer concurrently
+             * (no common lock), and the previous "free() then NULL"
+             * order allowed both sides to free the same pointer.
+             */
+            uint8_t *dead = (uint8_t *)iwm_claim_cmd_resp(
+                &sc->sc_cmd_resp_pkt[idx]);
+            if (dead != NULL)
+                ::free(dead);
         }
     }
 out:
