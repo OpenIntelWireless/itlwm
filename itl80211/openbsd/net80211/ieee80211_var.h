@@ -571,6 +571,15 @@ struct ieee80211com {
 #define	ic_if		ic_ac.ac_if
 #define	ic_softc	ic_if.if_softc
 
+/*
+ * Optional consumer of non-Key EAPOL frames on 802.1X networks, for a
+ * userspace supplicant. Called with the frame still owned by the caller
+ * (copy, don't consume); the consumer finds its driver instance from ic.
+ * Kept out of struct ieee80211com so the layout of the HAL softcs that
+ * embed it is unchanged.
+ */
+extern void (*ieee80211_eapol_input)(struct ieee80211com *, mbuf_t);
+
 /* list of APs we want to automatically use */
 /* all data is copied from struct ieee80211com */
 struct ieee80211_ess {

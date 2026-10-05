@@ -205,6 +205,69 @@ void itlwm::joinSSID(const char *ssid_name, const char *ssid_pwd)
         ic->ic_flags |= IEEE80211_F_AUTO_JOIN;
 }
 
+void itlwm::associateSSIDEnterprise(const char *ssid, size_t len)
+{
+    struct ieee80211com *ic = fHalService->get80211Controller();
+
+    flushEapol();
+
+    // The SSID is length-delimited (a 32-byte SSID has no NUL), so don't
+    // strlen() it.
+    if (len > IEEE80211_NWID_LEN)
+        len = IEEE80211_NWID_LEN;
+    memset(nwid.i_nwid, 0, sizeof(nwid.i_nwid));
+    memcpy(nwid.i_nwid, ssid, len);
+    nwid.i_len = len;
+    // sWPA_KEY only accepts a PMK for ic_des_essid, so set it before EAP starts.
+    memset(ic->ic_des_essid, 0, IEEE80211_NWID_LEN);
+    ic->ic_des_esslen = nwid.i_len;
+    memcpy(ic->ic_des_essid, nwid.i_nwid, nwid.i_len);
+    if (ic->ic_des_esslen > 0) {
+        /* 'nwid' disables auto-join magic */
+        ic->ic_flags &= ~IEEE80211_F_AUTO_JOIN;
+    } else if (!TAILQ_EMPTY(&ic->ic_ess)) {
+        /* '-nwid' re-enables auto-join */
+        ic->ic_flags |= IEEE80211_F_AUTO_JOIN;
+    }
+
+    // RSN stays on with no PSK: until sWPA_KEY adds the PMK to the PMKSA
+    // cache, ieee80211_recv_4way_msg1() just drops Message 1 and the AP
+    // retransmits it.
+    ic->ic_flags &= ~IEEE80211_F_PSK;
+    explicit_bzero(ic->ic_psk, sizeof(ic->ic_psk));
+    ieee80211_disable_wep(ic);
+
+    memset(&wpa, 0, sizeof(wpa));
+    ieee80211_ioctl_getwpaparms(ic, &wpa);
+    wpa.i_enabled = 1;
+    wpa.i_ciphers = 0;
+    wpa.i_groupcipher = 0;
+    wpa.i_protos = IEEE80211_WPA_PROTO_WPA2;
+    // Plain 802.1X only: net80211 would otherwise prefer SHA256-802.1X,
+    // which brings descriptor v3 / 802.11w requirements.
+    wpa.i_akms = IEEE80211_WPA_AKM_8021X;
+    ieee80211_ioctl_setwpaparms(ic, &wpa);
+
+    if (ic->ic_state > IEEE80211_S_AUTH && ic->ic_bss != NULL)
+        IEEE80211_SEND_MGMT(ic, ic->ic_bss, IEEE80211_FC0_SUBTYPE_DEAUTH, IEEE80211_REASON_AUTH_LEAVE);
+    ieee80211_del_ess(ic, NULL, 0, 1);
+    struct ieee80211_node *selbs = ieee80211_node_choose_bss(ic, 0, NULL);
+    if (selbs == NULL) {
+        if (ic->ic_state != IEEE80211_S_SCAN) {
+            ieee80211_new_state(ic, IEEE80211_S_SCAN, -1);
+        }
+    } else {
+        if (ic->ic_state > IEEE80211_S_AUTH) {
+            ieee80211_node_join_bss(ic, selbs, 1);
+            fHalService->getDriverController()->clearScanningFlags();
+        } else {
+            if (ic->ic_state != IEEE80211_S_SCAN) {
+                ieee80211_new_state(ic, IEEE80211_S_SCAN, -1);
+            }
+        }
+    }
+}
+
 void itlwm::associateSSID(const char *ssid, const char *pwd)
 {
     struct ieee80211com *ic = fHalService->get80211Controller();
@@ -334,6 +397,13 @@ bool itlwm::start(IOService *provider)
     }
     fHalService->initWithController(this, _fWorkloop, _fCommandGate);
     
+    fEapolLock = IOSimpleLockAlloc();
+    fEapolRing = (EapolSlot *)IOMalloc(sizeof(EapolSlot) * kEapolRingSize);
+    if (fEapolLock != NULL && fEapolRing != NULL)
+        memset(fEapolRing, 0, sizeof(EapolSlot) * kEapolRingSize);
+    else
+        XYLog("EAPOL queue allocation failed, 802.1X networks unavailable\n");
+
     if (PE_parse_boot_argn("-novht", &boot_value, sizeof(boot_value)))
         fHalService->get80211Controller()->ic_userflags |= IEEE80211_F_NOVHT;
     if (PE_parse_boot_argn("-noht40", &boot_value, sizeof(boot_value)))
@@ -397,6 +467,11 @@ bool itlwm::start(IOService *provider)
     }
     if (TAILQ_EMPTY(&fHalService->get80211Controller()->ic_ess)) {
         fHalService->get80211Controller()->ic_flags |= IEEE80211_F_AUTO_JOIN;
+    }
+    // Only once start() can no longer fail; stop() disables it again.
+    if (fEapolLock != NULL && fEapolRing != NULL) {
+        fEapolEnabled = true;
+        ieee80211_eapol_input = &itlwm::eapolInput;
     }
     registerService();
     fNetIf->registerService();
@@ -466,6 +541,11 @@ void itlwm::stop(IOService *provider)
 {
     XYLog("%s\n", __FUNCTION__);
     struct _ifnet *ifp = &fHalService->get80211Controller()->ic_ac.ac_if;
+    if (fEapolLock != NULL) {
+        IOSimpleLockLock(fEapolLock);
+        fEapolEnabled = false;
+        IOSimpleLockUnlock(fEapolLock);
+    }
     super::stop(provider);
     setLinkStatus(kIONetworkLinkValid);
     fHalService->detach(pciNub);
@@ -509,7 +589,73 @@ void itlwm::free()
         fHalService->release();
         fHalService = NULL;
     }
+    if (fEapolRing != NULL) {
+        IOFree(fEapolRing, sizeof(EapolSlot) * kEapolRingSize);
+        fEapolRing = NULL;
+    }
+    if (fEapolLock != NULL) {
+        IOSimpleLockFree(fEapolLock);
+        fEapolLock = NULL;
+    }
     super::free();
+}
+
+void itlwm::eapolInput(struct ieee80211com *ic, mbuf_t m)
+{
+    // The hook is shared by all instances; route by the controller that
+    // owns this ieee80211com.
+    IOEthernetInterface *iface = ic->ic_ac.ac_if.iface;
+    itlwm *that = iface != NULL ? OSDynamicCast(itlwm, iface->getController()) : NULL;
+    if (that == NULL || that->fEapolLock == NULL)
+        return;
+    size_t len = mbuf_pkthdr_len(m);
+    if (len == 0 || len > kEapolMaxFrame)
+        return;
+
+    IOSimpleLockLock(that->fEapolLock);
+    if (!that->fEapolEnabled) {
+        IOSimpleLockUnlock(that->fEapolLock);
+        return;
+    }
+    if (that->fEapolCount == kEapolRingSize) {
+        // Full: the supplicant isn't reading, drop the oldest frame.
+        that->fEapolHead = (that->fEapolHead + 1) % kEapolRingSize;
+        that->fEapolCount--;
+    }
+    EapolSlot *slot = &that->fEapolRing[(that->fEapolHead + that->fEapolCount) % kEapolRingSize];
+    if (mbuf_copydata(m, 0, len, slot->data) == 0) {
+        slot->len = (uint16_t)len;
+        that->fEapolCount++;
+    }
+    IOSimpleLockUnlock(that->fEapolLock);
+}
+
+bool itlwm::dequeueEapol(uint8_t *buf, size_t *len)
+{
+    if (fEapolRing == NULL || fEapolLock == NULL)
+        return false;
+    bool found = false;
+    IOSimpleLockLock(fEapolLock);
+    if (fEapolCount > 0) {
+        EapolSlot *slot = &fEapolRing[fEapolHead];
+        memcpy(buf, slot->data, slot->len);
+        *len = slot->len;
+        fEapolHead = (fEapolHead + 1) % kEapolRingSize;
+        fEapolCount--;
+        found = true;
+    }
+    IOSimpleLockUnlock(fEapolLock);
+    return found;
+}
+
+void itlwm::flushEapol()
+{
+    if (fEapolLock == NULL)
+        return;
+    IOSimpleLockLock(fEapolLock);
+    fEapolHead = 0;
+    fEapolCount = 0;
+    IOSimpleLockUnlock(fEapolLock);
 }
 
 IOReturn itlwm::enable(IONetworkInterface *netif)

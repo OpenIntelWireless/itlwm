@@ -82,6 +82,16 @@ public:
     void releaseAll();
     void joinSSID(const char *ssid, const char *pwd);
     void associateSSID(const char *ssid, const char *pwd);
+    // WPA2-Enterprise: join with RSN, AKM 802.1X and no PSK. The PMK arrives
+    // later through ItlNetworkUserClient::sWPA_KEY from the userspace
+    // supplicant.
+    void associateSSIDEnterprise(const char *ssid, size_t len);
+
+    // Non-Key EAPOL frames queued for the userspace supplicant.
+    static constexpr size_t kEapolMaxFrame = 1600;
+    static void eapolInput(struct ieee80211com *ic, mbuf_t m);
+    bool dequeueEapol(uint8_t *buf, size_t *len);
+    void flushEapol();
     void watchdogAction(IOTimerEventSource *timer);
     
     bool initPCIPowerManagment(IOPCIDevice *provider);
@@ -120,4 +130,16 @@ public:
     struct ieee80211_nwkey nwkey;
     struct ieee80211_join join;
     struct ieee80211_nwid nwid;
+
+private:
+    struct EapolSlot {
+        uint16_t len;
+        uint8_t data[kEapolMaxFrame];
+    };
+    static constexpr uint32_t kEapolRingSize = 16;
+    EapolSlot *fEapolRing;
+    IOSimpleLock *fEapolLock;
+    bool fEapolEnabled;
+    uint32_t fEapolHead;
+    uint32_t fEapolCount;
 };

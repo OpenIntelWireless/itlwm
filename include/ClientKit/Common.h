@@ -90,6 +90,32 @@ struct ioctl_wpa_key {
     char key[WPA_KEY_LEN];
 };
 
+#define PMK_LEN 32
+
+enum itl80211_eap_status {
+    ITL_EAP_STATUS_IDLE    = 0,
+    ITL_EAP_STATUS_SUCCESS = 1,    /* pmk[] is valid */
+    ITL_EAP_STATUS_FAILED  = 2,    /* authenticator rejected the credentials */
+    ITL_EAP_STATUS_TIMEOUT = 3,
+    ITL_EAP_STATUS_ERROR   = 4
+};
+
+/*
+ * IOCTL_80211_WPA_KEY (set): result of a userspace 802.1X/EAP exchange for
+ * `ssid`. On success the PMK is added to the PMKSA cache for the 4-way
+ * handshake; any other status makes the driver leave the network.
+ */
+#pragma pack(push, 1)
+struct ioctl_eap_pmk {
+    unsigned int version;
+    unsigned char ssid[NWID_LEN];
+    unsigned int ssid_len;
+    enum itl80211_eap_status status;
+    unsigned int pmk_len;
+    unsigned char pmk[PMK_LEN];
+};
+#pragma pack(pop)
+
 struct ioctl_associate {
     unsigned int version;
     struct ioctl_nw_id nwid;
@@ -99,6 +125,33 @@ struct ioctl_associate {
 struct ioctl_disassociate {
     unsigned int version;
     unsigned char ssid[NWID_LEN];
+};
+
+/*
+ * IOCTL_80211_ASSOCIATE_ENTERPRISE (set): join `nwid` with RSN, AKM 802.1X and
+ * no PSK. Send before starting EAP; WPA_KEY only accepts a result for this SSID.
+ */
+struct ioctl_associate_enterprise {
+    unsigned int version;
+    struct ioctl_nw_id nwid;
+};
+
+/*
+ * IOCTL_80211_TX_EAPOL (set) / IOCTL_80211_RX_EAPOL (get): complete Ethernet II
+ * EAPOL frames (EtherType 0x888E) between the driver and a userspace
+ * supplicant. RX returns len == 0 when no frame is queued.
+ */
+#define EAPOL_MAX_FRAME 1600
+struct ioctl_eapol_tx {
+    unsigned int version;
+    unsigned int len;
+    unsigned char frame[EAPOL_MAX_FRAME];
+};
+
+struct ioctl_eapol_rx {
+    unsigned int version;
+    unsigned int len;
+    unsigned char frame[EAPOL_MAX_FRAME];
 };
 
 struct ioctl_join {

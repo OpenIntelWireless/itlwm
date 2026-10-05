@@ -15,6 +15,8 @@
 #include "ItlNetworkUserClient.hpp"
 #include <sys/_netstat.h>
 
+static_assert(itlwm::kEapolMaxFrame == EAPOL_MAX_FRAME, "EAPOL frame size mismatch");
+
 #define super IOUserClient
 OSDefineMetaClassAndStructors( ItlNetworkUserClient, IOUserClient );
 
@@ -32,6 +34,32 @@ const IOControlMethodAction ItlNetworkUserClient::sMethods[IOCTL_ID_MAX] {
     sSCAN_RESULT,
     sTX_POWER_LEVEL,
     sNW_BSSID,
+    sRESERVED,
+    sASSOCIATE_ENTERPRISE,
+    sTX_EAPOL,
+    sRX_EAPOL,
+};
+
+// Minimum structureInput/structureOutput size for each selector; every
+// handler casts the buffer straight to its struct.
+const size_t ItlNetworkUserClient::sMethodStructSize[IOCTL_ID_MAX] {
+    sizeof(struct ioctl_driver_info),           // IOCTL_80211_DRIVER_INFO
+    sizeof(struct ioctl_sta_info),              // IOCTL_80211_STA_INFO
+    sizeof(struct ioctl_power),                 // IOCTL_80211_POWER
+    sizeof(struct ioctl_state),                 // IOCTL_80211_STATE
+    sizeof(struct ioctl_nw_id),                 // IOCTL_80211_NW_ID
+    sizeof(struct ioctl_eap_pmk),               // IOCTL_80211_WPA_KEY
+    sizeof(struct ioctl_associate),             // IOCTL_80211_ASSOCIATE
+    sizeof(struct ioctl_disassociate),          // IOCTL_80211_DISASSOCIATE
+    sizeof(struct ioctl_join),                  // IOCTL_80211_JOIN
+    sizeof(struct ioctl_scan),                  // IOCTL_80211_SCAN
+    sizeof(struct ioctl_network_info),          // IOCTL_80211_SCAN_RESULT
+    sizeof(struct ioctl_tx_power),              // IOCTL_80211_TX_POWER_LEVEL
+    sizeof(struct ioctl_nw_bssid),              // IOCTL_80211_NW_BSSID
+    0,                                          // IOCTL_80211_RESERVED
+    sizeof(struct ioctl_associate_enterprise),  // IOCTL_80211_ASSOCIATE_ENTERPRISE
+    sizeof(struct ioctl_eapol_tx),              // IOCTL_80211_TX_EAPOL
+    sizeof(struct ioctl_eapol_rx),              // IOCTL_80211_RX_EAPOL
 };
 
 bool ItlNetworkUserClient::initWithTask(task_t owningTask, void *securityID, UInt32 type, OSDictionary *properties)
@@ -81,12 +109,13 @@ IOReturn ItlNetworkUserClient::externalMethod(uint32_t selector, IOExternalMetho
     bool isSet = selector & IOCTL_MASK;
     selector &= ~IOCTL_MASK;
 //    IOLog("externalMethod invoke. selector=0x%X isSet=%d\n", selector, isSet);
-    if (selector < 0 || selector > IOCTL_ID_MAX) {
+    if (selector >= IOCTL_ID_MAX) {
         return super::externalMethod(selector, arguments, NULL, this, NULL);
     }
     void *data = isSet ? (void *)arguments->structureInput : (void *)arguments->structureOutput;
-    if (!data) {
-        return kIOReturnError;
+    size_t dataSize = isSet ? arguments->structureInputSize : arguments->structureOutputSize;
+    if (!data || dataSize < sMethodStructSize[selector]) {
+        return kIOReturnBadArgument;
     }
     return sMethods[selector](this, data, isSet);
 }
@@ -312,10 +341,62 @@ sNW_ID(OSObject* target, void* data, bool isSet)
     return kIOReturnSuccess;
 }
 
+// Runs on the driver's work loop, so the PMKSA cache and state machine
+// aren't changed while the receive path is using them.
+static IOReturn
+wpaKeyGated(OSObject *owner, void *arg0, void *arg1, void *arg2, void *arg3)
+{
+    itlwm *drv = OSDynamicCast(itlwm, owner);
+    if (drv == NULL)
+        return kIOReturnNoDevice;
+    const struct ioctl_eap_pmk *req = (const struct ioctl_eap_pmk *)arg0;
+    struct ieee80211com *ic = drv->fHalService->get80211Controller();
+
+    // Only accept a result for the network the driver is joining, so a late
+    // result from an abandoned attempt can't be applied to another one.
+    if (ic->ic_des_esslen != req->ssid_len ||
+        memcmp(ic->ic_des_essid, req->ssid, req->ssid_len) != 0) {
+        XYLog("%s: EAP result for a different SSID, ignored\n", __FUNCTION__);
+        return kIOReturnBadArgument;
+    }
+
+    if (req->status != ITL_EAP_STATUS_SUCCESS) {
+        XYLog("%s: EAP failed (status %u), leaving the network\n", __FUNCTION__, (unsigned)req->status);
+        if (ic->ic_state > IEEE80211_S_AUTH && ic->ic_bss != NULL)
+            IEEE80211_SEND_MGMT(ic, ic->ic_bss, IEEE80211_FC0_SUBTYPE_DEAUTH, IEEE80211_REASON_AUTH_LEAVE);
+        ieee80211_new_state(ic, IEEE80211_S_SCAN, -1);
+        return kIOReturnSuccess;
+    }
+
+    if (req->pmk_len != PMK_LEN)
+        return kIOReturnBadArgument;
+    // The PMKSA entry is keyed on the AP, so association must be complete.
+    if (ic->ic_state != IEEE80211_S_RUN || ic->ic_bss == NULL)
+        return kIOReturnNotReady;
+
+    // Same mechanism as OpenBSD's SIOCS80211KEYAVAIL: ieee80211_recv_4way_msg1()
+    // finds the PMK in the PMKSA cache. It matches on the negotiated AKM.
+    enum ieee80211_akm akm = (enum ieee80211_akm)ic->ic_bss->ni_rsnakms;
+    if (!ieee80211_is_8021x_akm(akm))
+        akm = IEEE80211_AKM_8021X;
+    if (ieee80211_pmksa_add(ic, akm, ic->ic_bss->ni_bssid, req->pmk, 0) == NULL)
+        return kIOReturnNoMemory;
+    return kIOReturnSuccess;
+}
+
 IOReturn ItlNetworkUserClient::
 sWPA_KEY(OSObject* target, void* data, bool isSet)
 {
-    return kIOReturnSuccess;
+    ItlNetworkUserClient *that = OSDynamicCast(ItlNetworkUserClient, target);
+    if (that == NULL)
+        return kIOReturnNoDevice;
+    if (!isSet)
+        return kIOReturnUnsupported;
+
+    struct ioctl_eap_pmk *req = (struct ioctl_eap_pmk *)data;
+    if (req->version != IOCTL_VERSION || req->ssid_len == 0 || req->ssid_len > NWID_LEN)
+        return kIOReturnBadArgument;
+    return that->fDriver->getCommandGate()->runAction(wpaKeyGated, req);
 }
 
 IOReturn ItlNetworkUserClient::
@@ -404,4 +485,84 @@ IOReturn ItlNetworkUserClient::
 sTX_POWER_LEVEL(OSObject* target, void* data, bool isSet)
 {
     return kIOReturnSuccess;
+}
+
+static IOReturn
+associateEnterpriseGated(OSObject *owner, void *arg0, void *arg1, void *arg2, void *arg3)
+{
+    itlwm *drv = OSDynamicCast(itlwm, owner);
+    if (drv == NULL)
+        return kIOReturnNoDevice;
+    const struct ioctl_associate_enterprise *req = (const struct ioctl_associate_enterprise *)arg0;
+    drv->associateSSIDEnterprise((const char *)req->nwid.nwid, req->nwid.len);
+    return kIOReturnSuccess;
+}
+
+IOReturn ItlNetworkUserClient::
+sASSOCIATE_ENTERPRISE(OSObject* target, void* data, bool isSet)
+{
+    ItlNetworkUserClient *that = OSDynamicCast(ItlNetworkUserClient, target);
+    if (that == NULL)
+        return kIOReturnNoDevice;
+    if (!isSet)
+        return kIOReturnUnsupported;
+
+    struct ioctl_associate_enterprise *req = (struct ioctl_associate_enterprise *)data;
+    if (req->version != IOCTL_VERSION || req->nwid.len == 0 || req->nwid.len > NWID_LEN)
+        return kIOReturnBadArgument;
+    return that->fDriver->getCommandGate()->runAction(associateEnterpriseGated, req);
+}
+
+IOReturn ItlNetworkUserClient::
+sTX_EAPOL(OSObject* target, void* data, bool isSet)
+{
+    ItlNetworkUserClient *that = OSDynamicCast(ItlNetworkUserClient, target);
+    if (that == NULL)
+        return kIOReturnNoDevice;
+    if (!isSet)
+        return kIOReturnUnsupported;
+
+    struct ioctl_eapol_tx *req = (struct ioctl_eapol_tx *)data;
+    // Ethernet header plus EAPOL header at minimum, and EAPOL only: anything
+    // else must go through the regular network stack.
+    if (req->version != IOCTL_VERSION || req->len < 18 || req->len > EAPOL_MAX_FRAME ||
+        req->frame[12] != 0x88 || req->frame[13] != 0x8e)
+        return kIOReturnBadArgument;
+
+    unsigned int maxChunks = 1;
+    mbuf_t m = NULL;
+    if (mbuf_allocpacket(MBUF_WAITOK, req->len, &maxChunks, &m) != 0 || m == NULL)
+        return kIOReturnNoMemory;
+    memcpy(mbuf_data(m), req->frame, req->len);
+    mbuf_setlen(m, req->len);
+    mbuf_pkthdr_setlen(m, req->len);
+
+    // Straight to the driver's send queue: until the 802.1X port is
+    // authorized the interface link is down and macOS won't send through it.
+    return that->fDriver->outputPacket(m, NULL) == kIOReturnOutputSuccess ?
+        kIOReturnSuccess : kIOReturnNotReady;
+}
+
+IOReturn ItlNetworkUserClient::
+sRX_EAPOL(OSObject* target, void* data, bool isSet)
+{
+    ItlNetworkUserClient *that = OSDynamicCast(ItlNetworkUserClient, target);
+    if (that == NULL)
+        return kIOReturnNoDevice;
+    if (isSet)
+        return kIOReturnUnsupported;
+
+    struct ioctl_eapol_rx *rx = (struct ioctl_eapol_rx *)data;
+    size_t len = 0;
+    rx->version = IOCTL_VERSION;
+    if (!that->fDriver->dequeueEapol(rx->frame, &len))
+        len = 0;
+    rx->len = (unsigned int)len;
+    return kIOReturnSuccess;
+}
+
+IOReturn ItlNetworkUserClient::
+sRESERVED(OSObject* target, void* data, bool isSet)
+{
+    return kIOReturnUnsupported;
 }

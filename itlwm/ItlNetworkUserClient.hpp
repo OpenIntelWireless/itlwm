@@ -52,7 +52,12 @@ private:
     static IOReturn sSCAN_RESULT(OSObject* target, void* data, bool isSet);
     static IOReturn sTX_POWER_LEVEL(OSObject* target, void* data, bool isSet);
     static IOReturn sNW_BSSID(OSObject* target, void* data, bool isSet);
+    static IOReturn sASSOCIATE_ENTERPRISE(OSObject* target, void* data, bool isSet);
+    static IOReturn sTX_EAPOL(OSObject* target, void* data, bool isSet);
+    static IOReturn sRX_EAPOL(OSObject* target, void* data, bool isSet);
+    static IOReturn sRESERVED(OSObject* target, void* data, bool isSet);
     static const IOControlMethodAction sMethods[IOCTL_ID_MAX];
+    static const size_t sMethodStructSize[IOCTL_ID_MAX];
     
 private:
     task_t fTask;

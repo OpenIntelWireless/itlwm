@@ -29,7 +29,16 @@ enum IOCTL_IDS {
     IOCTL_80211_SCAN_RESULT,
     IOCTL_80211_TX_POWER_LEVEL,
     IOCTL_80211_NW_BSSID,
-    
+    /*
+     * Never call: itlwm builds before these additions mis-handle a selector
+     * equal to their IOCTL_ID_MAX (13) and panic. Newer selectors are safely
+     * rejected by them, so clients can probe with IOCTL_80211_RX_EAPOL.
+     */
+    IOCTL_80211_RESERVED,
+    IOCTL_80211_ASSOCIATE_ENTERPRISE,
+    IOCTL_80211_TX_EAPOL,
+    IOCTL_80211_RX_EAPOL,
+
     IOCTL_ID_MAX
 };
 
