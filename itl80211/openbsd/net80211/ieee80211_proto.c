@@ -667,6 +667,37 @@ ieee80211_ht_negotiate(struct ieee80211com *ic, struct ieee80211_node *ni)
     XYLog("%s chan_width=%s\n", __FUNCTION__, ieee80211_chan_width_name[ni->ni_chw]);
 }
 
+/*
+ * Some APs (seen on MikroTik) advertise a 160MHz block such as channels
+ * 52-80, which is not a valid 802.11 channel. The firmware asserts
+ * when told to tune it. Like cfg80211_chandef_usable(), require the control
+ * channel to be on the 20MHz raster of the block and every 20MHz subchannel
+ * to be one we support.
+ */
+static int
+ieee80211_vht_chandef_usable(struct ieee80211com *ic,
+    struct ieee80211_channel *c, int center, int width)
+{
+    int ctrl = c->ic_freq;
+    int freq;
+    u_int chan;
+
+    if (center == 0 || ctrl <= center - width / 2 ||
+        ctrl >= center + width / 2 ||
+        (ctrl - (center - width / 2) - 10) % 20 != 0)
+        return 0;
+
+    for (freq = center - width / 2 + 10; freq < center + width / 2;
+         freq += 20) {
+        chan = ieee80211_mhz2ieee(freq, c->ic_flags);
+        if (chan == 0 || chan > IEEE80211_CHAN_MAX ||
+            ic->ic_channels[chan].ic_flags == 0 ||
+            ic->ic_channels[chan].ic_freq != freq)
+            return 0;
+    }
+    return 1;
+}
+
 void
 ieee80211_vht_negotiate(struct ieee80211com *ic, struct ieee80211_node *ni)
 {
@@ -809,7 +840,27 @@ ieee80211_vht_negotiate(struct ieee80211com *ic, struct ieee80211_node *ni)
         default:
             return;
     }
-    
+
+    if (ni->ni_chw == IEEE80211_CHAN_WIDTH_160 &&
+        !ieee80211_vht_chandef_usable(ic, ni->ni_chan,
+        ni->ni_chan->ic_center_freq1, 160)) {
+        XYLog("%s unusable 160MHz center=%d ctrl=%d, trying 80MHz\n",
+              __FUNCTION__, ni->ni_chan->ic_center_freq1, ni->ni_chan->ic_freq);
+        /* Fall back to the 80MHz half that holds the control channel. */
+        ni->ni_chw = IEEE80211_CHAN_WIDTH_80;
+        if (ni->ni_chan->ic_freq < ni->ni_chan->ic_center_freq1)
+            ni->ni_chan->ic_center_freq1 -= 40;
+        else
+            ni->ni_chan->ic_center_freq1 += 40;
+    }
+    if (ni->ni_chw == IEEE80211_CHAN_WIDTH_80 &&
+        !ieee80211_vht_chandef_usable(ic, ni->ni_chan,
+        ni->ni_chan->ic_center_freq1, 80)) {
+        XYLog("%s unusable 80MHz center=%d ctrl=%d, using HT width\n",
+              __FUNCTION__, ni->ni_chan->ic_center_freq1, ni->ni_chan->ic_freq);
+        ieee80211_ht_negotiate_chw(ic, ni);
+    }
+
     ni->ni_flags |= IEEE80211_NODE_VHT;
     
     if (ieee80211_node_supports_vht_sgi80(ni))
