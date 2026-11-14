@@ -6,7 +6,7 @@ Patching and testing is based on and being done using a AX201 wifi chip and the 
 
 https://a.co/d/0hY4N3fQ EDUP PCIE WiFi 6E Card AX210 Bluetooth 5.2 AX5400M 802.11ax Tri-Band 6G/5.8G/2.4GHz Heat Sink 6dBi Antenna PCI-E Wireless Network Cards for Desktop PC Support Windows 11/10 64-bit.
 
-A lot of credits to laobamac who enhanced Aiportitlwm to support loading in macOS Tahoe and Sequoia with AppleVTD enabled. I leveraged his implementation of IOMMU / DMA enabling AppleVTD in Airportitlwm to enhance my initial implementation of itlwm with AppleVTD enabled, and to YBronst for creating the first iteration of this downstream repository, generating the initial patches and builds attempting to allow AppleVTD enabling with this kext and sharing it with me to continue the development.
+A lot of credits to [laobamac](https://github.com/laobamac) who enhanced Aiportitlwm to support loading in macOS Tahoe and Sequoia with AppleVTD enabled. I leveraged his implementation of IOMMU / DMA enabling AppleVTD in Airportitlwm to enhance my initial implementation of itlwm with AppleVTD enabled, and to YBronst for creating the first iteration of this downstream repository, generating the initial patches and builds attempting to allow AppleVTD enabling with this kext and sharing it with me to continue the development. Kudos to [retropineaple](https://github.com/retropineaple) for enabling Airdrop in Intel wifi+bluetooth cards. I integrated the code from [ForbiddenItlwm](https://github.com/retropineaple/ForbiddenItlwm) into this fork to build and release from this fork the necessary Airportitlwm and BTLEAdvFixup kexts for Sequoia and Tahoe for the benefit of all community users.
 
 **An Intel Wi-Fi Adapter Kernel Extension for macOS, based on the OpenBSD Project.**
 
