@@ -84,7 +84,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: AirportItlwm-Sequoia
-          path: build-sequoia/AirportItlwm.kext
+          path: build-sequoia/*.kext
           if-no-files-found: error
 
       - name: Upload Sequoia BTLEAdvFixup
@@ -92,7 +92,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: BTLEAdvFixup-Sequoia
-          path: build-sequoia/btleadv/BTLEAdvFixup.kext
+          path: build-sequoia/btleadv/*.kext
           if-no-files-found: error
 
       - name: Upload Tahoe AirportItlwm
@@ -100,7 +100,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: AirportItlwm-Tahoe
-          path: build-tahoe/AirportItlwm.kext
+          path: build-tahoe/*.kext
           if-no-files-found: error
 
       - name: Upload Tahoe BTLEAdvFixup
@@ -108,5 +108,5 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: BTLEAdvFixup-Tahoe
-          path: build-tahoe/btleadv/BTLEAdvFixup.kext
+          path: build-tahoe/btleadv/*.kext
           if-no-files-found: error
