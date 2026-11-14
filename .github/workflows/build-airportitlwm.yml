@@ -1,4 +1,4 @@
-name: Build AirportItlwm
+name: Build AirportItlwm and BTLEAdvFixup
 
 on:
   workflow_dispatch:
