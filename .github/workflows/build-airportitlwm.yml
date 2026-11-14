@@ -1,4 +1,4 @@
-name: Build AirportItlwm
+name: Build AirportItlwm and BTLEAdvFixup
 
 on:
   workflow_dispatch:
@@ -24,7 +24,7 @@ jobs:
       BUILD_TARGET: ${{ inputs.target || 'both' }}
     steps:
       - name: Check out selected branch
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Set up Python
         uses: actions/setup-python@v6
@@ -81,7 +81,7 @@ jobs:
 
       - name: Upload Sequoia AirportItlwm
         if: ${{ env.BUILD_TARGET == 'both' || env.BUILD_TARGET == 'sequoia' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: AirportItlwm-Sequoia
           path: build-sequoia/AirportItlwm.kext
@@ -89,7 +89,7 @@ jobs:
 
       - name: Upload Sequoia BTLEAdvFixup
         if: ${{ env.BUILD_TARGET == 'both' || env.BUILD_TARGET == 'sequoia' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: BTLEAdvFixup-Sequoia
           path: build-sequoia/btleadv/BTLEAdvFixup.kext
@@ -97,7 +97,7 @@ jobs:
 
       - name: Upload Tahoe AirportItlwm
         if: ${{ env.BUILD_TARGET == 'both' || env.BUILD_TARGET == 'tahoe' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: AirportItlwm-Tahoe
           path: build-tahoe/AirportItlwm.kext
@@ -105,7 +105,7 @@ jobs:
 
       - name: Upload Tahoe BTLEAdvFixup
         if: ${{ env.BUILD_TARGET == 'both' || env.BUILD_TARGET == 'tahoe' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: BTLEAdvFixup-Tahoe
           path: build-tahoe/btleadv/BTLEAdvFixup.kext
