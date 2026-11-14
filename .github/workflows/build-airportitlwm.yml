@@ -79,25 +79,12 @@ jobs:
           plutil -lint build-tahoe/btleadv/BTLEAdvFixup.kext/Contents/Info.plist
           echo "Verified AirportItlwm and BTLEAdvFixup Tahoe products."
 
-      - name: Package kext bundles
-        if: ${{ env.BUILD_TARGET == 'both' || env.BUILD_TARGET == 'sequoia' || env.BUILD_TARGET == 'tahoe' }}
-        run: |
-          mkdir -p dist
-          if [[ "$BUILD_TARGET" == "both" || "$BUILD_TARGET" == "sequoia" ]]; then
-            tar -czf dist/AirportItlwm-Sequoia.tar.gz -C build-sequoia AirportItlwm.kext
-            tar -czf dist/BTLEAdvFixup-Sequoia.tar.gz -C build-sequoia/btleadv BTLEAdvFixup.kext
-          fi
-          if [[ "$BUILD_TARGET" == "both" || "$BUILD_TARGET" == "tahoe" ]]; then
-            tar -czf dist/AirportItlwm-Tahoe.tar.gz -C build-tahoe AirportItlwm.kext
-            tar -czf dist/BTLEAdvFixup-Tahoe.tar.gz -C build-tahoe/btleadv BTLEAdvFixup.kext
-          fi
-
       - name: Upload Sequoia AirportItlwm
         if: ${{ env.BUILD_TARGET == 'both' || env.BUILD_TARGET == 'sequoia' }}
         uses: actions/upload-artifact@v4
         with:
           name: AirportItlwm-Sequoia
-          path: dist/AirportItlwm-Sequoia.tar.gz
+          path: build-sequoia/AirportItlwm.kext
           if-no-files-found: error
 
       - name: Upload Sequoia BTLEAdvFixup
@@ -105,7 +92,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: BTLEAdvFixup-Sequoia
-          path: dist/BTLEAdvFixup-Sequoia.tar.gz
+          path: build-sequoia/btleadv/BTLEAdvFixup.kext
           if-no-files-found: error
 
       - name: Upload Tahoe AirportItlwm
@@ -113,7 +100,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: AirportItlwm-Tahoe
-          path: dist/AirportItlwm-Tahoe.tar.gz
+          path: build-tahoe/AirportItlwm.kext
           if-no-files-found: error
 
       - name: Upload Tahoe BTLEAdvFixup
@@ -121,5 +108,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: BTLEAdvFixup-Tahoe
-          path: dist/BTLEAdvFixup-Tahoe.tar.gz
+          path: build-tahoe/btleadv/BTLEAdvFixup.kext
           if-no-files-found: error
