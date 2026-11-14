@@ -48,6 +48,7 @@ We only accept bug reports in GitHub Issues, before opening an issue, you're rec
 - [YBronst](https://github.com/YBronst) for creating the first iteration of this downstream repository, generating the initial patches and builds attempting to allow AppleVTD enabling with this kext and sharing it with me to continue the development.
 - [kgp](https://github.com/kgp-macPro) for developing a solution to use Airportitlwm kext with AppleVTD enabled supported by YBronst which was studied and leveraged to kickstart this repository
 - [deeveedee](https://github.com/deeveedee-git) for contributing to the first release by updating the code to fix a race condition and enabling AX201 kext support.
+- [retropineaple](https://github.com/retropineaple) for enabling Airdrop in Intel wifi+bluetooth cards in [ForbiddenItlwm](https://github.com/retropineaple/ForbiddenItlwm)
 - OpenAI ChatGPT: research and architecture collaboration, evidence analysis, test strategy, independent source review and technical documentation.
 - Anthropic Claude: research and architecture collaboration, evidence analysis, test strategy, and independent source review.
 
