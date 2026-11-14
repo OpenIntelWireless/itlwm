@@ -1,0 +1,100 @@
+name: Build AirportItlwm
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: macOS target to build
+        required: true
+        default: both
+        type: choice
+        options:
+          - both
+          - sequoia
+          - tahoe
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build ${{ inputs.target || 'both' }}
+    runs-on: macos-15
+    env:
+      BUILD_TARGET: ${{ inputs.target || 'both' }}
+    steps:
+      - name: Check out selected branch
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install MacKernelSDK
+        run: |
+          git clone https://github.com/acidanthera/MacKernelSDK.git MacKernelSDK
+          git -C MacKernelSDK checkout 3f75008
+
+      - name: Download Lilu DEBUG release
+        run: |
+          curl --fail --location --retry 3 \
+            https://github.com/acidanthera/Lilu/releases/download/1.7.2/Lilu-1.7.2-DEBUG.zip \
+            --output /tmp/Lilu-DEBUG.zip
+          ditto -x -k /tmp/Lilu-DEBUG.zip /tmp/lilu-release
+          test -d /tmp/lilu-release/Lilu.kext/Contents/Resources
+          ln -s "$GITHUB_WORKSPACE/MacKernelSDK" /tmp/lilu-release/MacKernelSDK
+
+      - name: Build Sequoia AirportItlwm
+        if: ${{ env.BUILD_TARGET == 'both' || env.BUILD_TARGET == 'sequoia' }}
+        run: python3 tools/build.py --target sequoia --out build-sequoia
+
+      - name: Build Sequoia BTLEAdvFixup
+        if: ${{ env.BUILD_TARGET == 'both' || env.BUILD_TARGET == 'sequoia' }}
+        run: python3 tools/build_btleadv.py --target sequoia --out build-sequoia/btleadv --tree /tmp/lilu-release
+
+      - name: Build Tahoe AirportItlwm
+        if: ${{ env.BUILD_TARGET == 'both' || env.BUILD_TARGET == 'tahoe' }}
+        run: python3 tools/build.py --target tahoe --out build-tahoe
+
+      - name: Build Tahoe BTLEAdvFixup
+        if: ${{ env.BUILD_TARGET == 'both' || env.BUILD_TARGET == 'tahoe' }}
+        run: python3 tools/build_btleadv.py --target tahoe --out build-tahoe/btleadv --tree /tmp/lilu-release
+
+      - name: Verify Sequoia kext outputs
+        if: ${{ env.BUILD_TARGET == 'both' || env.BUILD_TARGET == 'sequoia' }}
+        run: |
+          test -x build-sequoia/AirportItlwm.kext/Contents/MacOS/AirportItlwm
+          test -x build-sequoia/btleadv/BTLEAdvFixup.kext/Contents/MacOS/BTLEAdvFixup
+          plutil -lint build-sequoia/AirportItlwm.kext/Contents/Info.plist
+          plutil -lint build-sequoia/btleadv/BTLEAdvFixup.kext/Contents/Info.plist
+          echo "Verified AirportItlwm and BTLEAdvFixup Sequoia products."
+
+      - name: Verify Tahoe kext outputs
+        if: ${{ env.BUILD_TARGET == 'both' || env.BUILD_TARGET == 'tahoe' }}
+        run: |
+          test -x build-tahoe/AirportItlwm.kext/Contents/MacOS/AirportItlwm
+          test -x build-tahoe/btleadv/BTLEAdvFixup.kext/Contents/MacOS/BTLEAdvFixup
+          plutil -lint build-tahoe/AirportItlwm.kext/Contents/Info.plist
+          plutil -lint build-tahoe/btleadv/BTLEAdvFixup.kext/Contents/Info.plist
+          echo "Verified AirportItlwm and BTLEAdvFixup Tahoe products."
+
+      - name: Upload Sequoia kexts
+        if: ${{ env.BUILD_TARGET == 'both' || env.BUILD_TARGET == 'sequoia' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: AirportItlwm-Sequoia
+          path: |
+            build-sequoia/AirportItlwm.kext
+            build-sequoia/btleadv/BTLEAdvFixup.kext
+          if-no-files-found: error
+
+      - name: Upload Tahoe kexts
+        if: ${{ env.BUILD_TARGET == 'both' || env.BUILD_TARGET == 'tahoe' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: AirportItlwm-Tahoe
+          path: |
+            build-tahoe/AirportItlwm.kext
+            build-tahoe/btleadv/BTLEAdvFixup.kext
+          if-no-files-found: error
