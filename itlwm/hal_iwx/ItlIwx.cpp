@@ -6273,6 +6273,24 @@ iwx_phy_ctxt_cmd(struct iwx_softc *sc, struct iwx_phy_ctxt *ctxt,
     return iwx_send_cmd_pdu(sc, IWX_PHY_CONTEXT_CMD, 0, sizeof(cmd), &cmd);
 }
 
+/*
+ * vik fix: splnet()/splx() are no-ops in this port, so concurrent callers
+ * (taskq threads, workloop) could pick the same command-ring slot and free
+ * the same sc_cmd_resp_pkt buffer twice (zfree_drop double free panic seen
+ * in iwx_send_cmd on network changes). Serialize slot reservation and every
+ * access to sc_cmd_resp_pkt with one mutex; never held across tsleep.
+ */
+static IOLock *iwx_cmd_lock()
+{
+    static IOLock * volatile lock = NULL;
+    if (lock == NULL) {
+        IOLock *n = IOLockAlloc();
+        if (!OSCompareAndSwapPtr(NULL, n, (void * volatile *)&lock))
+            IOLockFree(n);
+    }
+    return lock;
+}
+
 int ItlIwx::
 iwx_send_cmd(struct iwx_softc *sc, struct iwx_host_cmd *hcmd)
 {
@@ -6290,9 +6308,13 @@ iwx_send_cmd(struct iwx_softc *sc, struct iwx_host_cmd *hcmd)
     int generation = sc->sc_generation;
     unsigned int max_chunks = 1;
     IOPhysicalSegment seg;
+    IOLock *lk = iwx_cmd_lock();
+    bool locked = true;
+    uint8_t *my_resp = NULL;
     
     code = hcmd->id;
     async = hcmd->flags & IWX_CMD_ASYNC;
+    IOLockLock(lk);
     idx = (ring->cur & (ring->ring_count - 1));
     
     for (i = 0, paylen = 0; i < nitems(hcmd->len); i++) {
@@ -6306,13 +6328,18 @@ iwx_send_cmd(struct iwx_softc *sc, struct iwx_host_cmd *hcmd)
         //        KASSERT(!async);
         //        KASSERT(hcmd->resp_pkt_len >= sizeof(struct iwx_rx_packet));
         //        KASSERT(hcmd->resp_pkt_len <= IWX_CMD_RESP_MAX);
-        if (sc->sc_cmd_resp_pkt[idx] != NULL)
+        if (sc->sc_cmd_resp_pkt[idx] != NULL) {
+            IOLockUnlock(lk);
             return ENOSPC;
+        }
         resp_buf = (uint8_t *)malloc(hcmd->resp_pkt_len, 0,
                                      M_NOWAIT | M_ZERO);
-        if (resp_buf == NULL)
+        if (resp_buf == NULL) {
+            IOLockUnlock(lk);
             return ENOMEM;
+        }
         bzero(resp_buf, hcmd->resp_pkt_len);
+        my_resp = resp_buf;
         sc->sc_cmd_resp_pkt[idx] = resp_buf;
         sc->sc_cmd_resp_len[idx] = hcmd->resp_pkt_len;
     } else {
@@ -6421,6 +6448,8 @@ iwx_send_cmd(struct iwx_softc *sc, struct iwx_host_cmd *hcmd)
     ring->queued++;
     ring->cur = (ring->cur + 1) % getTxQueueSize();
     IWX_WRITE(sc, IWX_HBUS_TARG_WRPTR, ring->qid << 16 | ring->cur);
+    IOLockUnlock(lk);
+    locked = false;
     
     if (!async) {
         err = tsleep_nsec(desc, PCATCH, "iwxcmd", SEC_TO_NSEC(1));
@@ -6431,15 +6460,27 @@ iwx_send_cmd(struct iwx_softc *sc, struct iwx_host_cmd *hcmd)
                 goto out;
             }
             
-            /* Response buffer will be freed in iwx_free_resp(). */
-            hcmd->resp_pkt = (struct iwx_rx_packet *)sc->sc_cmd_resp_pkt[idx];
-            sc->sc_cmd_resp_pkt[idx] = NULL;
+            /* Response buffer will be freed in iwx_free_resp().
+             * Take only our own buffer, if it is still in the slot. */
+            IOLockLock(lk);
+            if (my_resp != NULL && sc->sc_cmd_resp_pkt[idx] == my_resp) {
+                hcmd->resp_pkt = (struct iwx_rx_packet *)my_resp;
+                sc->sc_cmd_resp_pkt[idx] = NULL;
+            }
+            IOLockUnlock(lk);
         } else if (generation == sc->sc_generation) {
-            ::free(sc->sc_cmd_resp_pkt[idx]);
-            sc->sc_cmd_resp_pkt[idx] = NULL;
+            /* Free only our own buffer; another path may already have. */
+            IOLockLock(lk);
+            if (my_resp != NULL && sc->sc_cmd_resp_pkt[idx] == my_resp) {
+                ::free(my_resp);
+                sc->sc_cmd_resp_pkt[idx] = NULL;
+            }
+            IOLockUnlock(lk);
         }
     }
 out:
+    if (locked)
+        IOLockUnlock(lk);
     splx(s);
     
     return err;
@@ -10384,11 +10425,13 @@ iwx_stop(struct _ifnet *ifp)
     /* Reset soft state. */
     
     sc->sc_generation++;
+    IOLockLock(iwx_cmd_lock());
     for (i = 0; i < nitems(sc->sc_cmd_resp_pkt); i++) {
         ::free(sc->sc_cmd_resp_pkt[i]);
         sc->sc_cmd_resp_pkt[i] = NULL;
         sc->sc_cmd_resp_len[i] = 0;
     }
+    IOLockUnlock(iwx_cmd_lock());
     ifp->if_flags &= ~IFF_RUNNING;
     ifq_clr_oactive(&ifp->if_snd);
     ifq_flush(&ifp->if_snd);
@@ -11025,8 +11068,11 @@ iwx_rx_pkt(struct iwx_softc *sc, struct iwx_rx_data *data, struct mbuf_list *ml)
             case IWX_SCD_QUEUE_CFG: {
                 size_t pkt_len;
                 
-                if (sc->sc_cmd_resp_pkt[idx] == NULL)
+                IOLockLock(iwx_cmd_lock());
+                if (sc->sc_cmd_resp_pkt[idx] == NULL) {
+                    IOLockUnlock(iwx_cmd_lock());
                     break;
+                }
                 
                 //            bus_dmamap_sync(sc->sc_dmat, data->map, 0,
                 //                sizeof(*pkt), BUS_DMASYNC_POSTREAD);
@@ -11039,12 +11085,14 @@ iwx_rx_pkt(struct iwx_softc *sc, struct iwx_rx_data *data, struct mbuf_list *ml)
                     pkt_len > sc->sc_cmd_resp_len[idx]) {
                     ::free(sc->sc_cmd_resp_pkt[idx]);
                     sc->sc_cmd_resp_pkt[idx] = NULL;
+                    IOLockUnlock(iwx_cmd_lock());
                     break;
                 }
                 
                 //            bus_dmamap_sync(sc->sc_dmat, data->map, sizeof(*pkt),
                 //                pkt_len - sizeof(*pkt), BUS_DMASYNC_POSTREAD);
                 memcpy(sc->sc_cmd_resp_pkt[idx], pkt, pkt_len);
+                IOLockUnlock(iwx_cmd_lock());
                 break;
             }
                 
