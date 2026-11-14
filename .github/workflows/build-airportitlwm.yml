@@ -79,12 +79,26 @@ jobs:
           plutil -lint build-tahoe/btleadv/BTLEAdvFixup.kext/Contents/Info.plist
           echo "Verified AirportItlwm and BTLEAdvFixup Tahoe products."
 
+      - name: Stage kext bundles with their package directories
+        if: ${{ env.BUILD_TARGET == 'both' || env.BUILD_TARGET == 'sequoia' || env.BUILD_TARGET == 'tahoe' }}
+        run: |
+          if [[ "$BUILD_TARGET" == "both" || "$BUILD_TARGET" == "sequoia" ]]; then
+            mkdir -p artifacts/AirportItlwm-Sequoia artifacts/BTLEAdvFixup-Sequoia
+            ditto build-sequoia/AirportItlwm.kext artifacts/AirportItlwm-Sequoia/AirportItlwm.kext
+            ditto build-sequoia/btleadv/BTLEAdvFixup.kext artifacts/BTLEAdvFixup-Sequoia/BTLEAdvFixup.kext
+          fi
+          if [[ "$BUILD_TARGET" == "both" || "$BUILD_TARGET" == "tahoe" ]]; then
+            mkdir -p artifacts/AirportItlwm-Tahoe artifacts/BTLEAdvFixup-Tahoe
+            ditto build-tahoe/AirportItlwm.kext artifacts/AirportItlwm-Tahoe/AirportItlwm.kext
+            ditto build-tahoe/btleadv/BTLEAdvFixup.kext artifacts/BTLEAdvFixup-Tahoe/BTLEAdvFixup.kext
+          fi
+
       - name: Upload Sequoia AirportItlwm
         if: ${{ env.BUILD_TARGET == 'both' || env.BUILD_TARGET == 'sequoia' }}
         uses: actions/upload-artifact@v7
         with:
           name: AirportItlwm-Sequoia
-          path: build-sequoia/*.kext
+          path: artifacts/AirportItlwm-Sequoia
           if-no-files-found: error
 
       - name: Upload Sequoia BTLEAdvFixup
@@ -92,7 +106,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: BTLEAdvFixup-Sequoia
-          path: build-sequoia/btleadv/*.kext
+          path: artifacts/BTLEAdvFixup-Sequoia
           if-no-files-found: error
 
       - name: Upload Tahoe AirportItlwm
@@ -100,7 +114,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: AirportItlwm-Tahoe
-          path: build-tahoe/*.kext
+          path: artifacts/AirportItlwm-Tahoe
           if-no-files-found: error
 
       - name: Upload Tahoe BTLEAdvFixup
@@ -108,5 +122,5 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: BTLEAdvFixup-Tahoe
-          path: build-tahoe/btleadv/*.kext
+          path: artifacts/BTLEAdvFixup-Tahoe
           if-no-files-found: error
