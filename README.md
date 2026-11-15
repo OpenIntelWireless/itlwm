@@ -10,7 +10,7 @@ A lot of credits to [laobamac](https://github.com/laobamac) who enhanced Aiporti
 
 Kudos to [retropineaple](https://github.com/retropineaple) for enabling Airdrop in Intel wifi+bluetooth cards. I integrated the code from [ForbiddenItlwm](https://github.com/retropineaple/ForbiddenItlwm) into this fork to build and release from this fork the necessary Airportitlwm and BTLEAdvFixup kexts for Sequoia and Tahoe for the benefit of all community users. I tested Airdrop in my AX210 transferring a file from my iPhone to my hackintosh and viceversa, and it worked. The code to enable Airdrop is published in the Airdrop-test branch.
 
-## What you need to enable Airdrop
+**What you need to enable Airdrop**
 
 | Kext | Where from | Notes |
 | --- | --- | --- |
@@ -24,7 +24,7 @@ Kudos to [retropineaple](https://github.com/retropineaple) for enabling Airdrop 
 
 For more details about AirDrop support you can refer to the original fork, [ForbiddenItlwm](https://github.com/retropineaple/ForbiddenItlwm) 
 
-# Airdrop Support Boot flags
+**Airdrop Support Boot flags**
 
 AirDrop is off unless its flags are set, so with none of them ForbiddenItlwm behaves like AirportItlwm. The beta needs a long list of flags. They are the exact set used for every tested result. The Tahoe, Sequoia and Sonoma builds use the same flags. Simpler defaults are planned.
 
