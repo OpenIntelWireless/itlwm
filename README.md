@@ -92,9 +92,9 @@ These restore earlier behaviour, for A/B testing only. Leave them off.
 
 For more details about boot-args enabling AirDrop support you can refer to the original fork, [ForbiddenItlwm](https://github.com/retropineaple/ForbiddenItlwm)
 
-**An Intel Wi-Fi Adapter Kernel Extension for macOS, based on the OpenBSD Project.**
+# An Intel Wi-Fi Adapter Kernel Extension for macOS, based on the OpenBSD Project
 
-# Upstream itlwm Repository Documentation
+## Upstream itlwm Repository Documentation
 
 We highly recommend exploring our documentation before using this Kernel Extension:
 
