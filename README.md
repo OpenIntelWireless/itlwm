@@ -59,7 +59,7 @@ What each one does:
 | `-itlawdlcoexbatrace` | Records Block Ack events in the I/O Registry for bug reports. Diagnostic only, cheap |
 | `itlawdltxqueue=4096` | Size of the driver's own transmit queue for `awdl0` |
 
-## Optional
+**Optional flags**
 
 | Flag | Effect |
 | --- | --- |
@@ -68,7 +68,7 @@ What each one does:
 | `itlawdlbtcoex=1` | Firmware Bluetooth coexistence mode 1. Fixed choppy Bluetooth audio during AirDrop on an older test build. Before 0.5.1 it only took effect in the monitor test mode |
 | `-itlawdlsamples` | Publishes raw frame samples in the I/O Registry for debugging. **They can hold device names and addresses.** Never share them publicly, and don't leave the flag on |
 
-## Comparison flags
+**Comparison flags**
 
 These restore earlier behaviour, for A/B testing only. Leave them off.
 
@@ -84,7 +84,7 @@ These restore earlier behaviour, for A/B testing only. Leave them off.
 | `-itlawdlcoexnoorder` | Lets short frames overtake a paused aggregate queue, as older builds did |
 | `-itlawdlcoexbarefill`, `-itlawdlcoexawhold`, `-itlawdlcoexbafilterhyst`, `-itlawdlcoexawsync0` | Older experiments. No gain was measured |
 
-## Don't use
+**Don't use**
 
 - **`-itlawdlcoexlowlat`** is disabled in this build and ignored. On the AX211 the firmware rejected the low-latency command, and normal Wi-Fi went down with it.
 - **The dedicated-mode test flags:** `-itlawdlrx` and the flags that build on it (`-itlawdlqueue`, `-itlawdl6`, `-itlawdloneshot`, `-itlawdlsyncprobe` and the other train and probe flags, `-itlawdlch149`, `itlawdlcc=`). They put the card in monitor mode, so normal Wi-Fi is down. They are kept for development.
@@ -94,7 +94,7 @@ For more details about boot-args enabling AirDrop support you can refer to the o
 
 **An Intel Wi-Fi Adapter Kernel Extension for macOS, based on the OpenBSD Project.**
 
-## Documentation
+# Upstream itlwm Repository Documentation
 
 We highly recommend exploring our documentation before using this Kernel Extension:
 
