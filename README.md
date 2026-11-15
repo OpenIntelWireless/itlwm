@@ -10,6 +10,18 @@ A lot of credits to [laobamac](https://github.com/laobamac) who enhanced Aiporti
 
 Kudos to [retropineaple](https://github.com/retropineaple) for enabling Airdrop in Intel wifi+bluetooth cards. I integrated the code from [ForbiddenItlwm](https://github.com/retropineaple/ForbiddenItlwm) into this fork to build and release from this fork the necessary Airportitlwm and BTLEAdvFixup kexts for Sequoia and Tahoe for the benefit of all community users. I tested Airdrop in my AX210 transferring a file from my iPhone to my hackintosh and viceversa, and it worked. The code to enable Airdrop is published in the Airdrop-test branch.
 
+## What you need to enable Airdrop
+
+| Kext | Where from | Notes |
+| --- | --- | --- |
+| `ForbiddenItlwm.kext` | This repository, Tahoe, Sequoia or Sonoma build | Replaces `AirportItlwm.kext` |
+| `BTLEAdvFixup.kext` | This repository, Tahoe, Sequoia or Sonoma build | Lets macOS start Bluetooth LE advertising on an Intel controller |
+| `Lilu.kext` | [acidanthera/Lilu](https://github.com/acidanthera/Lilu) | Tested with 1.7.2 |
+| `IntelBluetoothFirmware.kext` | [OpenIntelWireless/IntelBluetoothFirmware](https://github.com/OpenIntelWireless/IntelBluetoothFirmware) | Tested with 2.5.1 |
+| `BlueToolFixup.kext` | [acidanthera/BrcmPatchRAM](https://github.com/acidanthera/BrcmPatchRAM) | Tested with 2.7.3 |
+
+**Disable `IntelBTPatcher.kext`.** It and BTLEAdvFixup hook the same function, and Lilu panics if two plugins do. BTLEAdvFixup takes over IntelBTPatcher's job.
+
 **An Intel Wi-Fi Adapter Kernel Extension for macOS, based on the OpenBSD Project.**
 
 ## Documentation
