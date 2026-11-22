@@ -752,12 +752,14 @@ ieee80211_media_change(struct _ifnet *ifp)
     /*
      * Committed to changes, install the MCS/rate setting.
      */
-    ic->ic_flags &= ~(IEEE80211_F_HTON | IEEE80211_F_VHTON);
+    ic->ic_flags &= ~(IEEE80211_F_HTON | IEEE80211_F_VHTON | IEEE80211_F_HEON);
     ieee80211_configure_ampdu_tx(ic, 0);
     if ((ic->ic_modecaps & (1 << IEEE80211_MODE_11AX)) &&
         (newphymode == IEEE80211_MODE_AUTO ||
          newphymode == IEEE80211_MODE_11AX)) {
-        ic->ic_flags |= IEEE80211_F_HEON;
+        ic->ic_flags |= IEEE80211_F_HTON | IEEE80211_F_HEON;
+        if (ic->ic_modecaps & (1 << IEEE80211_MODE_11AC))
+            ic->ic_flags |= IEEE80211_F_VHTON;
         ieee80211_configure_ampdu_tx(ic, 1);
     } else if ((ic->ic_modecaps & (1 << IEEE80211_MODE_11AC)) &&
         (newphymode == IEEE80211_MODE_AUTO ||
@@ -770,7 +772,7 @@ ieee80211_media_change(struct _ifnet *ifp)
         ic->ic_flags |= IEEE80211_F_HTON;
         ieee80211_configure_ampdu_tx(ic, 1);
     }
-    if ((ic->ic_flags & (IEEE80211_F_HTON | IEEE80211_F_VHTON)) == 0) {
+    if ((ic->ic_flags & (IEEE80211_F_HTON | IEEE80211_F_VHTON | IEEE80211_F_HEON)) == 0) {
         ic->ic_fixed_mcs = -1;
         if (ic->ic_fixed_rate != i) {
             ic->ic_fixed_rate = i;        /* set fixed tx rate */
@@ -1054,13 +1056,13 @@ const struct ieee80211_he_rateset ieee80211_std_ratesets_11ax[] = {
     { 12, { 72, 144, 216, 288, 432, 577, 649, 721, 865, 961, 1081, 1201 }, 1 },
     
     /* MCS 0-11 2 SS, 80MHz channel */
-    { 12, { 288, 577, 865, 1153, 1729, 2306, 2594, 2882, 3459, 3843, 4324, 4804 }, 2},
+    { 12, { 144, 288, 432, 576, 865, 1153, 1297, 1441, 1729, 1922, 2162, 2402 }, 2},
     
     /* MCS 0-11 1 SS, 160MHz channel */
-    { 12, { 144, 288, 432, 564, 865, 1152, 1298, 1442, 1730, 1922, 2162, 2402 }, 1 },
+    { 12, { 144, 288, 432, 576, 865, 1153, 1297, 1441, 1729, 1922, 2162, 2402 }, 1 },
     
     /* MCS 0-11 2 SS, 160MHz channel */
-    { 12, { 576, 1154, 1730, 2306, 3458, 4612, 5188, 5764, 6918, 7686, 8648, 9608 }, 2 },
+    { 12, { 288, 576, 865, 1153, 1729, 2306, 2594, 2882, 3459, 3843, 4324, 4804 }, 2 },
 };
 
 /*

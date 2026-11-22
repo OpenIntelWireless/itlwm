@@ -570,7 +570,12 @@ getRATE(struct apple80211_rate_data *rd)
         rd->version = APPLE80211_VERSION;
         rd->num_radios = 1;
         sgi = ieee80211_node_supports_sgi(ic->ic_bss);
-        if (ic->ic_curmode == IEEE80211_MODE_11AC) {
+        /* Use firmware-selected HE initial rate only when valid. */
+        uint32_t fwHeMbps = 0;
+        if (ic->ic_curmode == IEEE80211_MODE_11AX &&
+            fHalService->getDriverInfo()->getFirmwareTxRateMbps(&fwHeMbps)) {
+            rd->rate[0] = fwHeMbps;
+        } else if (ic->ic_curmode == IEEE80211_MODE_11AC) {
             if (sgi)
                 index += 1;
             nss = fHalService->getDriverInfo()->getTxNSS();

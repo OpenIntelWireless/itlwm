@@ -325,6 +325,50 @@ getTxNSS()
     (com.sc_ic.ic_bss != NULL && com.sc_ic.ic_bss->ni_rx_nss > 1) ? 2 : 1;
 }
 
+bool ItlIwx::
+getFirmwareTxRateMbps(uint32_t *outMbps)
+{
+    if (outMbps == NULL)
+        return false;
+    *outMbps = 0;
+    if (com.sc_ic.ic_state != IEEE80211_S_RUN || com.sc_ic.ic_bss == NULL)
+        return false;
+
+    const uint32_t rate = __atomic_load_n(&fwHeRateFlags_, __ATOMIC_ACQUIRE);
+    if ((rate & IWX_RATE_MCS_MOD_TYPE_MSK) != IWX_RATE_MCS_HE_MSK ||
+        (rate & IWX_RATE_MCS_HE_TYPE_MSK) != IWX_RATE_MCS_HE_TYPE_SU ||
+        (rate & IWX_RATE_MCS_HE_106T_MSK) != 0)
+        return false;
+
+    const uint32_t mcs = rate & IWX_RATE_MCS_CODE_MSK;
+    const uint32_t width = (rate & IWX_RATE_MCS_CHAN_WIDTH_MSK) >>
+        IWX_RATE_MCS_CHAN_WIDTH_POS;
+    const uint32_t gi = (rate & IWX_RATE_MCS_HE_GI_LTF_MSK) >>
+        IWX_RATE_MCS_HE_GI_LTF_POS;
+    if (mcs > 11 || width > 3 || gi > 4)
+        return false;
+
+    const uint32_t nss = (rate & IWX_RATE_MCS_NSS_MSK) ? 2 : 1;
+    const uint16_t nsd[4] = {234, 468, 980, 1960};
+    const uint8_t bitsSixths[12] = {
+        3, 6, 9, 12, 18, 24, 27, 30, 36, 40, 45, 50
+    };
+    uint32_t symbolTenths;
+    switch (gi) {
+        case 0: case 1: case 4: symbolTenths = 136; break;
+        case 2: symbolTenths = 144; break;
+        case 3: symbolTenths = 160; break;
+        default: return false;
+    }
+    const uint64_t numerator = (uint64_t)nsd[width] *
+        bitsSixths[mcs] * nss * 10u;
+    const uint32_t mbps = (uint32_t)(numerator / (6u * symbolTenths));
+    if (mbps == 0)
+        return false;
+    *outMbps = mbps;
+    return true;
+}
+
 struct ieee80211com *ItlIwx::
 get80211Controller()
 {
@@ -4053,7 +4097,7 @@ iwx_setup_he_rates(struct iwx_softc *sc)
     struct ieee80211com *ic = &sc->sc_ic;
     
     /* enable 11ax support */
-//    ic->ic_flags |= IEEE80211_F_HEON;
+    ic->ic_flags |= IEEE80211_F_HEON;
     
     ic->ic_he_cap_elem = {
         .mac_cap_info[0] =
@@ -4076,6 +4120,9 @@ iwx_setup_he_rates(struct iwx_softc *sc)
             IEEE80211_HE_MAC_CAP5_UL_2x996_TONE_RU |
             IEEE80211_HE_MAC_CAP5_HE_DYNAMIC_SM_PS |
             IEEE80211_HE_MAC_CAP5_HT_VHT_TRIG_FRAME_RX,
+        .phy_cap_info[0] =
+            IEEE80211_HE_PHY_CAP0_CHANNEL_WIDTH_SET_40MHZ_80MHZ_IN_5G |
+            IEEE80211_HE_PHY_CAP0_CHANNEL_WIDTH_SET_160MHZ_IN_5G,
         .phy_cap_info[1] =
             IEEE80211_HE_PHY_CAP1_PREAMBLE_PUNC_RX_MASK |
             IEEE80211_HE_PHY_CAP1_DEVICE_CLASS_A |
@@ -4134,7 +4181,8 @@ iwx_setup_he_rates(struct iwx_softc *sc)
      * PPET8 set to 7
      */
     uint8_t ppe_thres[] = {0x61, 0x1c, 0xc7, 0x71};
-    memcpy(ic->ic_ppe_thres, ppe_thres, sizeof(ic->ic_ppe_thres));
+    memset(ic->ic_ppe_thres, 0, sizeof(ic->ic_ppe_thres));
+    memcpy(ic->ic_ppe_thres, ppe_thres, sizeof(ppe_thres));
 }
 
 #define IWX_MAX_RX_BA_SESSIONS 16
@@ -9083,6 +9131,8 @@ iwx_rs_update(struct iwx_softc *sc, struct iwx_tlc_update_notif *notif)
                                  rate_n_flags);
     }
     XYLog("%s new rate: %s\n", __FUNCTION__, pretty_rate);
+    /* TLC selected initial rate, normalized to current firmware format. */
+    __atomic_store_n(&fwHeRateFlags_, rate_n_flags, __ATOMIC_RELEASE);
     format = rate_n_flags & IWX_RATE_MCS_MOD_TYPE_MSK;
     if (format == IWX_RATE_MCS_VHT_MSK ||
         format == IWX_RATE_MCS_HE_MSK ||
@@ -9750,6 +9800,8 @@ iwx_newstate(struct ieee80211com *ic, enum ieee80211_state nstate, int arg)
         that->iwx_del_task(sc, systq, &sc->chan_ctxt_task);
     }
     
+    if (nstate != IEEE80211_S_RUN)
+        __atomic_store_n(&that->fwHeRateFlags_, 0u, __ATOMIC_RELEASE);
     sc->ns_nstate = nstate;
     sc->ns_arg = arg;
     
@@ -10209,6 +10261,7 @@ iwx_init(struct _ifnet *ifp)
     XYLog("%s\n", __FUNCTION__);
     struct iwx_softc *sc = (struct iwx_softc *)ifp->if_softc;
     struct ieee80211com *ic = &sc->sc_ic;
+    __atomic_store_n(&fwHeRateFlags_, 0u, __ATOMIC_RELEASE);
     int err, generation;
     int i;
 
@@ -10368,6 +10421,7 @@ iwx_stop(struct _ifnet *ifp)
     
     //    rw_assert_wrlock(&sc->ioctl_rwl);
     
+    __atomic_store_n(&fwHeRateFlags_, 0u, __ATOMIC_RELEASE);
     sc->sc_flags |= IWX_FLAG_SHUTDOWN; /* Disallow new tasks. */
     
     /* Cancel scheduled tasks and let any stale tasks finish up. */

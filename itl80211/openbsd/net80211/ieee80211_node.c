@@ -2793,11 +2793,24 @@ ieee80211_setup_hecaps(struct ieee80211_node *ni, const uint8_t *data,
     struct ieee80211_he_cap_elem *he_cap_ie_elem = (struct ieee80211_he_cap_elem *)data;
     uint8_t mcs_nss_size, he_ppe_size, he_total_size;
     
+    if (len < sizeof(ni->ni_he_cap_elem))
+        return;
+
     mcs_nss_size = ieee80211_he_mcs_nss_size(he_cap_ie_elem);
-    he_ppe_size =
-        ieee80211_he_ppe_size(data[sizeof(ni->ni_he_cap_elem) +
-                        mcs_nss_size],
-                      he_cap_ie_elem->phy_cap_info);
+    if (len < sizeof(ni->ni_he_cap_elem) + mcs_nss_size) {
+        return;
+    }
+
+    he_ppe_size = 0;
+    if (he_cap_ie_elem->phy_cap_info[6] &
+        IEEE80211_HE_PHY_CAP6_PPE_THRESHOLD_PRESENT) {
+        if (len <= sizeof(ni->ni_he_cap_elem) + mcs_nss_size)
+            return;
+        he_ppe_size =
+            ieee80211_he_ppe_size(data[sizeof(ni->ni_he_cap_elem) +
+                            mcs_nss_size],
+                          he_cap_ie_elem->phy_cap_info);
+    }
     he_total_size = sizeof(ni->ni_he_cap_elem) + mcs_nss_size +
             he_ppe_size;
     
@@ -2823,8 +2836,14 @@ ieee80211_setup_heop(struct ieee80211_node *ni, const uint8_t *data,
                      uint8_t len)
 {
     struct ieee80211_he_operation *he_op_ie = (struct ieee80211_he_operation *)data;
+    uint8_t fixed_len = __offsetof(struct ieee80211_he_operation, optional);
+    uint32_t params;
+
+    if (len < fixed_len)
+        return 0;
     
-    ni->ni_he_oper_params = le32toh(he_op_ie->he_oper_params);
+    params = le32toh(he_op_ie->he_oper_params);
+    ni->ni_he_oper_params = params;
     ni->ni_he_oper_nss_set = le16toh(he_op_ie->he_mcs_nss_set);
     bzero(&ni->ni_he_optional, sizeof(ni->ni_he_optional));
     if (len > __offsetof(struct ieee80211_he_operation, optional)) {

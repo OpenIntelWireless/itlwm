@@ -169,6 +169,10 @@ public:
     virtual bool is5GBandSupport() override;
     
     virtual int getTxNSS() override;
+    virtual bool getFirmwareTxRateMbps(uint32_t *outMbps) override;
+
+    /* Read-only firmware TLC rate reporting; never used for TX decisions. */
+    uint32_t fwHeRateFlags_ = 0;
     
     virtual const char *getFirmwareName() override;
     
