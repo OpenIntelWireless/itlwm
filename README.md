@@ -48,7 +48,7 @@ All of this goes on the EFI.
    | Sequoia | 24.0.0 | 24.99.99 |
    | Sonoma | 23.4.0 | 23.99.99 |
 
-3. **Boot arguments:** add the flags from [BOOT-FLAGS.md](BOOT-FLAGS.md) to `boot-args` under `NVRAM` → `Add` → `7C436110-AB2A-4BBB-A880-FE41995C9F82`. Keep your existing arguments. Because OpenCore only writes NVRAM keys listed under `Delete`, check that `boot-args` is listed there for the same GUID.
+3. **Boot arguments:** add the flags listed below to `boot-args` under `NVRAM` → `Add` → `7C436110-AB2A-4BBB-A880-FE41995C9F82`. Keep your existing arguments. Because OpenCore only writes NVRAM keys listed under `Delete`, check that `boot-args` is listed there for the same GUID.
 
 4. **Validate:** `plutil -lint config.plist`, and `ocvalidate` if you have it.
 
