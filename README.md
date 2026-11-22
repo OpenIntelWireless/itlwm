@@ -10,6 +10,8 @@ A lot of credits to [laobamac](https://github.com/laobamac) who enhanced Aiporti
 
 Kudos to [retropineaple](https://github.com/retropineaple) for enabling Airdrop in Intel wifi+bluetooth cards. I integrated the code from [ForbiddenItlwm](https://github.com/retropineaple/ForbiddenItlwm) into this fork to build and release from this fork the necessary Airportitlwm and BTLEAdvFixup kexts for Sequoia and Tahoe for the benefit of all community users. I tested Airdrop in my AX210 transferring a file from my iPhone to my hackintosh and viceversa, and it worked. The code to enable Airdrop is published in the Airdrop-test branch.
 
+**In my fork, an iteration of `IntelBTPatcher.kext` is generated to enable Airdrop.** BTLEAdvFixup implementation is under the hood, but the kext binary is bundled as IntelBTPatcher.
+
 **What you need to enable Airdrop under latest release**
 
 | Kext | Where from | Notes |
@@ -20,9 +22,35 @@ Kudos to [retropineaple](https://github.com/retropineaple) for enabling Airdrop 
 | `IntelBluetoothFirmware.kext` | [OpenIntelWireless/IntelBluetoothFirmware](https://github.com/OpenIntelWireless/IntelBluetoothFirmware) | Tested with 2.5.1 |
 | `BlueToolFixup.kext` | [acidanthera/BrcmPatchRAM](https://github.com/acidanthera/BrcmPatchRAM) | Tested with 2.7.3 |
 
-**In my fork, an iteration of `IntelBTPatcher.kext` is generated to enable Airdrop.** BTLEAdvFixup implementation is under the hood, but the kext binary is bundled as IntelBTPatcher.
-
 For more details about AirDrop support you can refer to the original fork, [ForbiddenItlwm](https://github.com/retropineaple/ForbiddenItlwm) 
+
+## OpenCore setup
+
+All of this goes on the EFI.
+
+1. **Kexts:** in `EFI/OC/Kexts`, add `AirportItlwm.kext` and `IntelBTPatcher.kext` from latest release.
+
+2. **`Kernel` → `Add`:** keep this order, so each kext comes after what it depends on.
+
+   | Order | BundlePath | ExecutablePath | Notes |
+   | --- | --- | --- | --- |
+   | 1 | `Lilu.kext` | `Contents/MacOS/Lilu` | |
+   | 2 | `IntelBluetoothFirmware.kext` | `Contents/MacOS/IntelBluetoothFirmware` | |
+   | 3 | `BlueToolFixup.kext` | `Contents/MacOS/BlueToolFixup` | `MinKernel` 21.0.0 |
+   | 4 | `IntelBTPatcher.kext` | `Contents/MacOS/IntelBTPatcher` | `MinKernel` 21.0.0. After BlueToolFixup, so it can undo BlueToolFixup's patches for APFS's check too (#62) |
+   | 5 | `AirportItlwm.kext` | `Contents/MacOS/AirportItlwm` |
+
+   **Recommended:** limit `AirportItlwm.kext` and `IntelBTPatcher.kext` to their macOS version with `MinKernel` and `MaxKernel`, so a stick moved to another macOS doesn't load the wrong build:
+
+   | Build | `MinKernel` | `MaxKernel` |
+   | --- | --- | --- |
+   | Tahoe | 25.0.0 | 25.99.99 |
+   | Sequoia | 24.0.0 | 24.99.99 |
+   | Sonoma | 23.4.0 | 23.99.99 |
+
+3. **Boot arguments:** add the flags from [BOOT-FLAGS.md](BOOT-FLAGS.md) to `boot-args` under `NVRAM` → `Add` → `7C436110-AB2A-4BBB-A880-FE41995C9F82`. Keep your existing arguments. Because OpenCore only writes NVRAM keys listed under `Delete`, check that `boot-args` is listed there for the same GUID.
+
+4. **Validate:** `plutil -lint config.plist`, and `ocvalidate` if you have it.
 
 **Airdrop Support Boot flags**
 
