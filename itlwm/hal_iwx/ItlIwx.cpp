@@ -107,6 +107,9 @@
  */
 
 #include "ItlIwx.hpp"
+#include "HeRateProbeV1.hpp"
+#include "HeRateFreshV1.hpp"
+#include <pexpert/pexpert.h>
 #include <linux/types.h>
 #include <linux/kernel.h>
 #include <FwData.h>
@@ -120,6 +123,50 @@
 #include <sys/_task.h>
 #include <sys/pcireg.h>
 #include <net80211/ieee80211_priv.h>
+
+#ifdef DEBUG
+/* HE-PR1063: separate, opt-in, passive infrastructure HE rate witnesses.
+ * The boot flag is independent of -itlwm-diag and AWDL experiments.
+ * No rate selection, station/queue ownership, or firmware commands change.
+ */
+static bool heRateProbeEnabled(void)
+{
+    static int enabled = -1;
+    int value = __atomic_load_n(&enabled, __ATOMIC_ACQUIRE);
+    if (value < 0) {
+        int flagValue = 0;
+        value = PE_parse_boot_argn("-itlwm-herate", &flagValue,
+                                   sizeof(flagValue)) ? 1 : 0;
+        __atomic_store_n(&enabled, value, __ATOMIC_RELEASE);
+    }
+    return value == 1;
+}
+#endif
+/* HE-PR1066: baked-in, passive HE-rate freshness for supported AX210 STA.
+ * -itlwm-herate still controls verbose DEBUG witness publication.
+ * -itlwm-hefreshoff is an explicit rollback switch (no rate changes).
+ */
+static bool heRateFreshEnabled(void)
+{
+    static int enabled = -1;
+    int value = __atomic_load_n(&enabled, __ATOMIC_ACQUIRE);
+    if (value < 0) {
+        int ignored = 0;
+        value = PE_parse_boot_argn("-itlwm-hefreshoff", &ignored,
+                                   sizeof(ignored)) ? 0 : 1;
+        __atomic_store_n(&enabled, value, __ATOMIC_RELEASE);
+    }
+    return value == 1;
+}
+/* The optional diagnostic-only path still samples when freshness is off. */
+static bool heRateSamplingEnabled(void)
+{
+#ifdef DEBUG
+    return heRateFreshEnabled() || heRateProbeEnabled();
+#else
+    return heRateFreshEnabled();
+#endif
+}
 
 #define super ItlHalService
 OSDefineMetaClassAndStructors(ItlIwx, ItlHalService)
@@ -325,16 +372,16 @@ getTxNSS()
     (com.sc_ic.ic_bss != NULL && com.sc_ic.ic_bss->ni_rx_nss > 1) ? 2 : 1;
 }
 
-bool ItlIwx::
-getFirmwareTxRateMbps(uint32_t *outMbps)
+/* The decoded HE format is shared by both rate and MCS reporters.
+ * Keep the HE-PR1062 numeric mapping exactly unchanged.
+ */
+static bool hepr1064DecodeHe(uint32_t rate, uint32_t *outMbps,
+                            uint32_t *outMcs)
 {
-    if (outMbps == NULL)
+    if (outMbps == NULL || outMcs == NULL)
         return false;
     *outMbps = 0;
-    if (com.sc_ic.ic_state != IEEE80211_S_RUN || com.sc_ic.ic_bss == NULL)
-        return false;
-
-    const uint32_t rate = __atomic_load_n(&fwHeRateFlags_, __ATOMIC_ACQUIRE);
+    *outMcs = 0;
     if ((rate & IWX_RATE_MCS_MOD_TYPE_MSK) != IWX_RATE_MCS_HE_MSK ||
         (rate & IWX_RATE_MCS_HE_TYPE_MSK) != IWX_RATE_MCS_HE_TYPE_SU ||
         (rate & IWX_RATE_MCS_HE_106T_MSK) != 0)
@@ -366,6 +413,112 @@ getFirmwareTxRateMbps(uint32_t *outMbps)
     if (mbps == 0)
         return false;
     *outMbps = mbps;
+    *outMcs = mcs;
+    return true;
+}
+
+/* Return the same source to the Mbps and MCS reporting APIs.
+ * Do not update ni_txmcs: that field is also used by host TX code.
+ * Every candidate must independently pass the HE decoder.
+ */
+bool ItlIwx::
+selectFirmwareHeReportingRate(uint32_t *outRate)
+{
+    if (outRate == NULL)
+        return false;
+    *outRate = 0;
+    if (com.sc_ic.ic_state != IEEE80211_S_RUN || com.sc_ic.ic_bss == NULL)
+        return false;
+
+    const uint32_t tlc = __atomic_load_n(&fwHeRateFlags_, __ATOMIC_ACQUIRE);
+    uint32_t tlcMbps = 0, tlcMcs = 0;
+    const bool tlcValid = hepr1064DecodeHe(tlc, &tlcMbps, &tlcMcs);
+
+    if (heRateFreshEnabled() &&
+        com.sc_device_family >= IWX_DEVICE_FAMILY_AX210 &&
+        com.sc_ic.ic_curmode == IEEE80211_MODE_11AX &&
+        com.sc_ic.ic_opmode == IEEE80211_M_STA) {
+        /* heProbeSingleTimeAbs_ is a release-store commit marker.
+         * Double-read it to prevent combining different TX samples.
+         */
+        const uint64_t sampleClock = __atomic_load_n(
+            &heProbeSingleTimeAbs_, __ATOMIC_ACQUIRE);
+        if (sampleClock != 0ULL) {
+            const uint32_t sampleRaw = __atomic_load_n(
+                &heProbeSingleRaw_, __ATOMIC_RELAXED);
+            const uint32_t sampleGeneration = __atomic_load_n(
+                &heProbeSingleGeneration_, __ATOMIC_RELAXED);
+            const uint32_t sampleEpoch = __atomic_load_n(
+                &heProbeSingleEpoch_, __ATOMIC_RELAXED);
+            const uint64_t sampleClock2 = __atomic_load_n(
+                &heProbeSingleTimeAbs_, __ATOMIC_ACQUIRE);
+            uint64_t nowClock = 0, ageNs = 0;
+            clock_get_uptime(&nowClock);
+            if (sampleClock == sampleClock2 && nowClock >= sampleClock)
+                absolutetime_to_nanoseconds(nowClock - sampleClock, &ageNs);
+            uint32_t mbps = 0, mcs = 0;
+            /* Reject an HE sample for a different negotiated channel width.
+             * 80+80 uses a 160 MHz equivalent width in this encoding.
+             */
+            const uint32_t width = (sampleRaw & IWX_RATE_MCS_CHAN_WIDTH_MSK) >>
+                IWX_RATE_MCS_CHAN_WIDTH_POS;
+            const uint32_t expectedWidth =
+                com.sc_ic.ic_bss->ni_chw == IEEE80211_CHAN_WIDTH_160 ||
+                com.sc_ic.ic_bss->ni_chw == IEEE80211_CHAN_WIDTH_80P80 ? 3U :
+                com.sc_ic.ic_bss->ni_chw == IEEE80211_CHAN_WIDTH_80 ? 2U :
+                com.sc_ic.ic_bss->ni_chw == IEEE80211_CHAN_WIDTH_40 ? 1U : 0U;
+            if (sampleClock == sampleClock2 && width == expectedWidth &&
+                hepr1064::eligible(true, true, sampleRaw,
+                    sampleGeneration, (uint32_t)com.sc_generation,
+                    sampleEpoch,
+                    __atomic_load_n(&heProbeEpoch_, __ATOMIC_ACQUIRE),
+                    sampleClock, nowClock, ageNs, 3000000000ULL) &&
+                hepr1064DecodeHe(sampleRaw, &mbps, &mcs) &&
+                com.sc_ic.ic_state == IEEE80211_S_RUN) {
+                *outRate = sampleRaw;
+                __atomic_store_n(&heFreshLastSource_, 1U, __ATOMIC_RELAXED);
+                __atomic_store_n(&heFreshLastMbps_, mbps, __ATOMIC_RELAXED);
+                __atomic_add_fetch(&heFreshUseCount_, 1U, __ATOMIC_RELAXED);
+                return true;
+            }
+        }
+        /* No recent qualified completion: retain the original TLC report. */
+        __atomic_store_n(&heFreshLastSource_, 0U, __ATOMIC_RELAXED);
+        __atomic_store_n(&heFreshLastMbps_, tlcValid ? tlcMbps : 0U,
+                         __ATOMIC_RELAXED);
+        __atomic_add_fetch(&heFreshFallbackCount_, 1U, __ATOMIC_RELAXED);
+    }
+    if (!tlcValid)
+        return false;
+    *outRate = tlc;
+    return true;
+}
+
+bool ItlIwx::
+getFirmwareTxRateMbps(uint32_t *outMbps)
+{
+    if (outMbps == NULL)
+        return false;
+    *outMbps = 0;
+    uint32_t rate = 0, mbps = 0, mcs = 0;
+    if (!selectFirmwareHeReportingRate(&rate) ||
+        !hepr1064DecodeHe(rate, &mbps, &mcs))
+        return false;
+    *outMbps = mbps;
+    return true;
+}
+
+bool ItlIwx::
+getFirmwareTxMcs(uint32_t *outMcs)
+{
+    if (outMcs == NULL)
+        return false;
+    *outMcs = 0;
+    uint32_t rate = 0, mbps = 0, mcs = 0;
+    if (!selectFirmwareHeReportingRate(&rate) ||
+        !hepr1064DecodeHe(rate, &mbps, &mcs))
+        return false;
+    *outMcs = mcs;
     return true;
 }
 
@@ -5919,6 +6072,40 @@ iwx_rx_tx_ba_notif(struct iwx_softc *sc, struct iwx_rx_packet *pkt, struct iwx_r
 
     if (!le16toh(ba_res->tfd_cnt))
         return;
+#ifdef DEBUG
+    /* Optional aggregate-rate witness; diagnostic ONLY (no rate selection).
+     * Require the complete TFD array before checking stock QID/TID mapping.
+     */
+    const uint32_t baCount = le16toh(ba_res->tfd_cnt);
+    if (heRateProbeEnabled() &&
+        sc->sc_device_family >= IWX_DEVICE_FAMILY_AX210 &&
+        ic->ic_opmode == IEEE80211_M_STA &&
+        ic->ic_curmode == IEEE80211_MODE_11AX && ic->ic_bss != NULL &&
+        baCount > 0U && baCount <= 64U &&
+        iwx_rx_packet_payload_len(pkt) >=
+            sizeof(*ba_res) + baCount * sizeof(*ba_res->tfd)) {
+        for (uint32_t heIndex = 0; heIndex < baCount; ++heIndex) {
+            const uint32_t heQid = le16toh(ba_res->tfd[heIndex].q_num);
+            const uint32_t heTid = ba_res->tfd[heIndex].tid;
+            const bool stock = heQid < nitems(sc->txq) &&
+                heTid < nitems(sc->sc_tid_data) &&
+                sc->txq[heQid].qid == heQid &&
+                sc->sc_tid_data[heTid].qid == heQid;
+            if (hepr1063::acceptBA(ic->ic_state == IEEE80211_S_RUN,
+                    true, le32toh(ba_res->flags), IWX_BA_RESP_TX_AGG,
+                    ba_res->sta_id, IWX_STATION_ID,
+                    le16toh(ba_res->txed), le16toh(ba_res->done),
+                    (uint16_t)baCount, stock)) {
+                __atomic_store_n(&heProbeBARaw_, le32toh(ba_res->tx_rate), __ATOMIC_RELAXED);
+                __atomic_store_n(&heProbeBATxed_, le16toh(ba_res->txed), __ATOMIC_RELAXED);
+                __atomic_store_n(&heProbeBADone_, le16toh(ba_res->done), __ATOMIC_RELAXED);
+                __atomic_store_n(&heProbeBAGeneration_, (uint32_t)sc->sc_generation, __ATOMIC_RELAXED);
+                __atomic_add_fetch(&heProbeBACount_, 1U, __ATOMIC_RELAXED);
+                break;
+            }
+        }
+    }
+#endif
 
     /* Free per TID */
     for (i = 0; i < le16toh(ba_res->tfd_cnt); i++) {
@@ -5988,7 +6175,49 @@ iwx_rx_tx_cmd(struct iwx_softc *sc, struct iwx_rx_packet *pkt,
 
     bus_dmamap_sync(sc->sc_dmat, data->map, 0, IWX_RBUF_SIZE,
                     BUS_DMASYNC_POSTREAD);
-    
+
+    /* HE-PR1066: passive completion witness for release + debug reporting.
+     * Reuse the HE-PR1063 host-policy filter, no per-frame IORegistry writes.
+     */
+    if (heRateSamplingEnabled() &&
+        qid >= 0 && (unsigned)qid < nitems(sc->txq) &&
+        iwx_rx_packet_payload_len(pkt) >= sizeof(*tx_resp) &&
+        hepr1063::acceptSingle(
+            sc->sc_device_family >= IWX_DEVICE_FAMILY_AX210 &&
+                sc->sc_ic.ic_state == IEEE80211_S_RUN &&
+                sc->sc_ic.ic_opmode == IEEE80211_M_STA &&
+                sc->sc_ic.ic_curmode == IEEE80211_MODE_11AX &&
+                sc->sc_ic.ic_bss != NULL,
+            true, /* full response header checked above */
+            tx_resp->frame_count, (uint8_t)IWX_TX_RES_GET_RA(tx_resp->ra_tid),
+            IWX_STATION_ID,
+            (uint16_t)(le16toh(tx_resp->status.status) & IWX_TX_STATUS_MSK),
+            IWX_TX_STATUS_SUCCESS, le16toh(tx_resp->frame_ctrl),
+            IEEE80211_FC0_TYPE_MASK, IEEE80211_FC0_TYPE_DATA,
+            sc->txq[qid].qid == qid)) {
+        /* Timestamp is the release-store commit marker. Capture the epoch
+         * BEFORE writing the witness, and do not commit if state/reset
+         * changed while the completion was being observed.
+         */
+        const uint32_t sampleEpoch =
+            __atomic_load_n(&heProbeEpoch_, __ATOMIC_ACQUIRE);
+        const uint32_t sampleGeneration = (uint32_t)sc->sc_generation;
+        __atomic_store_n(&heProbeSingleTimeAbs_, 0ULL, __ATOMIC_RELEASE);
+        __atomic_store_n(&heProbeSingleRaw_, le32toh(tx_resp->initial_rate), __ATOMIC_RELAXED);
+        __atomic_store_n(&heProbeSingleGeneration_, sampleGeneration, __ATOMIC_RELAXED);
+        __atomic_store_n(&heProbeSingleEpoch_, sampleEpoch, __ATOMIC_RELAXED);
+        uint64_t sampleClock = 0;
+        clock_get_uptime(&sampleClock);
+        if (sc->sc_ic.ic_state == IEEE80211_S_RUN &&
+            (uint32_t)sc->sc_generation == sampleGeneration &&
+            __atomic_load_n(&heProbeEpoch_, __ATOMIC_ACQUIRE) == sampleEpoch)
+            __atomic_store_n(&heProbeSingleTimeAbs_, sampleClock,
+                             __ATOMIC_RELEASE);
+#ifdef DEBUG
+        if (heRateProbeEnabled())
+            __atomic_add_fetch(&heProbeSingleCount_, 1U, __ATOMIC_RELAXED);
+#endif
+    }
     sc->sc_tx_timer = 0;
 
     if (tx_resp->frame_count > 1) {
@@ -9133,6 +9362,14 @@ iwx_rs_update(struct iwx_softc *sc, struct iwx_tlc_update_notif *notif)
     XYLog("%s new rate: %s\n", __FUNCTION__, pretty_rate);
     /* TLC selected initial rate, normalized to current firmware format. */
     __atomic_store_n(&fwHeRateFlags_, rate_n_flags, __ATOMIC_RELEASE);
+#ifdef DEBUG
+    /* RAW normalized TLC input to the existing macOS HE decoder. */
+    if (heRateProbeEnabled() && sc->sc_device_family >= IWX_DEVICE_FAMILY_AX210) {
+        __atomic_store_n(&heProbeTlcRaw_, rate_n_flags, __ATOMIC_RELAXED);
+        __atomic_store_n(&heProbeTlcGeneration_, (uint32_t)sc->sc_generation, __ATOMIC_RELAXED);
+        __atomic_add_fetch(&heProbeTlcCount_, 1U, __ATOMIC_RELAXED);
+    }
+#endif
     format = rate_n_flags & IWX_RATE_MCS_MOD_TYPE_MSK;
     if (format == IWX_RATE_MCS_VHT_MSK ||
         format == IWX_RATE_MCS_HE_MSK ||
@@ -9800,8 +10037,12 @@ iwx_newstate(struct ieee80211com *ic, enum ieee80211_state nstate, int arg)
         that->iwx_del_task(sc, systq, &sc->chan_ctxt_task);
     }
     
-    if (nstate != IEEE80211_S_RUN)
+    if (nstate != IEEE80211_S_RUN) {
         __atomic_store_n(&that->fwHeRateFlags_, 0u, __ATOMIC_RELEASE);
+        __atomic_add_fetch(&that->heProbeEpoch_, 1U, __ATOMIC_RELAXED);
+        __atomic_store_n(&that->heProbeSingleTimeAbs_, 0ULL, __ATOMIC_RELEASE);
+        __atomic_store_n(&that->heProbeSingleRaw_, 0U, __ATOMIC_RELAXED);
+    }
     sc->ns_nstate = nstate;
     sc->ns_arg = arg;
     
@@ -10262,6 +10503,9 @@ iwx_init(struct _ifnet *ifp)
     struct iwx_softc *sc = (struct iwx_softc *)ifp->if_softc;
     struct ieee80211com *ic = &sc->sc_ic;
     __atomic_store_n(&fwHeRateFlags_, 0u, __ATOMIC_RELEASE);
+    __atomic_add_fetch(&heProbeEpoch_, 1U, __ATOMIC_RELAXED);
+    __atomic_store_n(&heProbeSingleTimeAbs_, 0ULL, __ATOMIC_RELEASE);
+    __atomic_store_n(&heProbeSingleRaw_, 0U, __ATOMIC_RELAXED);
     int err, generation;
     int i;
 
@@ -10338,6 +10582,52 @@ _iwx_start_task(OSObject *target, void *arg0, void *arg1, void *arg2, void *arg3
     if (!(ifp->if_flags & IFF_RUNNING) ||  ifq_is_oactive(&ifp->if_snd)) {
         return kIOReturnError;
     }
+
+#ifdef DEBUG
+    /* Portable HE diagnostic publisher; no AWDL dependency or IRQ writes.
+     * Publish at most once per 64 output starts when witness counters change.
+     * Visible on the PCI provider in IORegistry with -itlwm-herate.
+     */
+    if (heRateProbeEnabled() && that->pci.pa_tag != nullptr) {
+        const uint32_t starts = __atomic_add_fetch(
+            &that->heProbeStartCalls_, 1U, __ATOMIC_RELAXED);
+        if ((starts & 63U) == 1U) {
+            const uint32_t epoch = __atomic_load_n(&that->heProbeEpoch_, __ATOMIC_RELAXED);
+            const uint32_t tlc = __atomic_load_n(&that->heProbeTlcCount_, __ATOMIC_RELAXED);
+            const uint32_t ba = __atomic_load_n(&that->heProbeBACount_, __ATOMIC_RELAXED);
+            const uint32_t single = __atomic_load_n(&that->heProbeSingleCount_, __ATOMIC_RELAXED);
+            if (epoch != that->heProbePublishedEpoch_ ||
+                tlc != that->heProbePublishedTlc_ ||
+                ba != that->heProbePublishedBA_ ||
+                single != that->heProbePublishedSingle_) {
+                that->heProbePublishedEpoch_ = epoch;
+                that->heProbePublishedTlc_ = tlc;
+                that->heProbePublishedBA_ = ba;
+                that->heProbePublishedSingle_ = single;
+#define HEWITNESS(name, member) that->pci.pa_tag->setProperty( \
+    name, (unsigned long long)__atomic_load_n(&that->member, __ATOMIC_RELAXED), 32)
+                that->pci.pa_tag->setProperty("HEPR1063Schema", (unsigned long long)1U, 32);
+                HEWITNESS("HEPR1063Epoch", heProbeEpoch_);
+                HEWITNESS("HEPR1063TlcCount", heProbeTlcCount_);
+                HEWITNESS("HEPR1063TlcRaw", heProbeTlcRaw_);
+                HEWITNESS("HEPR1063TlcGeneration", heProbeTlcGeneration_);
+                HEWITNESS("HEPR1063SingleCount", heProbeSingleCount_);
+                HEWITNESS("HEPR1063SingleRaw", heProbeSingleRaw_);
+                HEWITNESS("HEPR1063SingleGeneration", heProbeSingleGeneration_);
+                HEWITNESS("HEPR1063BACount", heProbeBACount_);
+                HEWITNESS("HEPR1063BARaw", heProbeBARaw_);
+                HEWITNESS("HEPR1063BATxed", heProbeBATxed_);
+                HEWITNESS("HEPR1063BADone", heProbeBADone_);
+                HEWITNESS("HEPR1063BAGeneration", heProbeBAGeneration_);
+                HEWITNESS("HEPR1064LastSource", heFreshLastSource_);
+                HEWITNESS("HEPR1064LastMbps", heFreshLastMbps_);
+                HEWITNESS("HEPR1064FreshUses", heFreshUseCount_);
+                HEWITNESS("HEPR1064TlcFallbacks", heFreshFallbackCount_);
+#undef HEWITNESS
+            }
+        }
+    }
+#endif
     
     for (;;) {
         /* why isn't this done per-queue? */
@@ -10422,6 +10712,9 @@ iwx_stop(struct _ifnet *ifp)
     //    rw_assert_wrlock(&sc->ioctl_rwl);
     
     __atomic_store_n(&fwHeRateFlags_, 0u, __ATOMIC_RELEASE);
+    __atomic_add_fetch(&heProbeEpoch_, 1U, __ATOMIC_RELAXED);
+    __atomic_store_n(&heProbeSingleTimeAbs_, 0ULL, __ATOMIC_RELEASE);
+    __atomic_store_n(&heProbeSingleRaw_, 0U, __ATOMIC_RELAXED);
     sc->sc_flags |= IWX_FLAG_SHUTDOWN; /* Disallow new tasks. */
     
     /* Cancel scheduled tasks and let any stale tasks finish up. */

@@ -13,7 +13,22 @@ This branch of [ReAWDL-Sonoma](https://github.com/maddog860/ReAWDL-Sonoma/tree/w
 - Firmware-selected transmit-rate reporting through the macOS Wi-Fi interfaces.
 - Independent operation without experimental AWDL modifications.
 
-**Source changes:** 11 existing files modified, 149 additions and 45 deletions.
+**Source history:** Original focused HE changes retained; the HE-PR1066 reporting follow-up is a separate patch and commit.
+
+## HE-PR1066 — Wi-Fi 6 reporting follow-up (November 22, 2026)
+
+A focused update on the existing Wi-Fi 6-only branch. It does **not** import ReAWDL/AWDL-specific source or require its diagnostic infrastructure.
+
+- **Freshness-aware HE PHY rate enabled by default** in Debug and Release builds for AX210 infrastructure Wi-Fi 6. A valid recent, successful single-frame firmware TX completion can replace the older firmware TLC initial-rate report for up to three seconds.
+- **Consistent MCS reporting:** legacy and Skywalk `getMCS`/`getMCS_VHT` use the same HE rate-source selection as the transmit-rate API, without altering the `ni_txmcs` value used by the driver.
+- **Connection/reset fences:** rate witnesses are invalidated on disconnect, stop, and initialization; the selection also checks firmware generation, connection epoch, validity, and negotiated bandwidth.
+- **Safe fallback:** if no recent eligible completion exists, the original TLC-selected HE rate is reported. The code does not change Intel firmware rate-control decisions or select TX queues.
+- **Optional Debug telemetry:** `-itlwm-herate` enables HE-PR1063/1064 IORegistry counters on the Intel PCI provider; there is no AWDL trace dependency. Aggregated Block ACK rate evidence is diagnostic-only, not used for the display.
+- **Opt-out:** `-itlwm-hefreshoff` restores TLC-only reporting; `-itlwm-hefresh` is unnecessary in this version.
+
+The developer observed 1,200 Mbps / MCS 11 (80 MHz, two spatial streams) after router channel changes, without resetting Wi-Fi. One transient MCS/rate mismatch also recovered spontaneously. These are **PHY reporting observations**, not proof of sustained user-data throughput or continuously exact instantaneous rate tracking.
+
+**Verification note:** The complete HE-PR1066 ReAWDL Debug source passed a Sonoma Xcode build and runtime observations. This standalone branch follow-up requires its own independent macOS build and runtime validation before it is distributed as a tested binary.
 
 ## Tested configuration
 
@@ -58,7 +73,9 @@ See the [upstream hardware compatibility list](https://openintelwireless.github.
 
 Source branch: `wifi6-he-fix`
 
-Verified commit: `1935cc3`
+Original Wi-Fi 6 implementation: `1935cc3`
+
+Base of this update: `c23f4ac`
 
 ```bash
 git clone --branch wifi6-he-fix --single-branch \

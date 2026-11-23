@@ -768,7 +768,10 @@ getMCS_VHT(OSObject *object, struct apple80211_mcs_vht_data *data)
     memset(data, 0, sizeof(struct apple80211_mcs_vht_data));
     data->version = APPLE80211_VERSION;
     data->guard_interval = (ieee80211_node_supports_vht_sgi80(ic->ic_bss) || ieee80211_node_supports_vht_sgi160(ic->ic_bss)) ? APPLE80211_GI_SHORT : APPLE80211_GI_LONG;
-    data->index = ic->ic_bss->ni_txmcs;
+    uint32_t heMcs = 0;
+    data->index = (ic->ic_curmode == IEEE80211_MODE_11AX &&
+                   fHalService->getDriverInfo()->getFirmwareTxMcs(&heMcs)) ?
+                  heMcs : ic->ic_bss->ni_txmcs;
     data->nss = fHalService->getDriverInfo()->getTxNSS();
     switch (ic->ic_bss->ni_chw) {
         case IEEE80211_CHAN_WIDTH_40:
@@ -1304,7 +1307,11 @@ getMCS(OSObject *object, struct apple80211_mcs_data* md)
     if (ic->ic_state != IEEE80211_S_RUN ||  ic->ic_bss == NULL || !md)
         return 6;
     md->version = APPLE80211_VERSION;
-    md->index = ic->ic_bss->ni_txmcs;
+    /* Reporting only: do not overwrite ni_txmcs, which TX also uses. */
+    uint32_t heMcs = 0;
+    md->index = (ic->ic_curmode == IEEE80211_MODE_11AX &&
+                 fHalService->getDriverInfo()->getFirmwareTxMcs(&heMcs)) ?
+                heMcs : ic->ic_bss->ni_txmcs;
     return kIOReturnSuccess;
 }
 

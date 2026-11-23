@@ -33,6 +33,12 @@ public:
         return false;
     }
     
+    /* HE MCS selection uses the same passive firmware witness as Mbps. */
+    virtual bool getFirmwareTxMcs(uint32_t *outMcs) {
+        if (outMcs) *outMcs = 0;
+        return false;
+    }
+
     virtual const char *getFirmwareName() = 0;
     
     virtual UInt32 supportedFeatures() = 0;

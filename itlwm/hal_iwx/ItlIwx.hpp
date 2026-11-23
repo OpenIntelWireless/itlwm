@@ -170,9 +170,40 @@ public:
     
     virtual int getTxNSS() override;
     virtual bool getFirmwareTxRateMbps(uint32_t *outMbps) override;
+    virtual bool getFirmwareTxMcs(uint32_t *outMcs) override;
+    bool selectFirmwareHeReportingRate(uint32_t *outRate);
 
     /* Read-only firmware TLC rate reporting; never used for TX decisions. */
     uint32_t fwHeRateFlags_ = 0;
+    /* HE-PR1066: compact, always-available freshness sample (Debug/Release).
+     * No new firmware commands or TX-rate decisions; private to reporting.
+     */
+    uint32_t heProbeEpoch_ = 0;
+    uint32_t heProbeSingleRaw_ = 0;
+    uint32_t heProbeSingleGeneration_ = 0;
+    uint64_t heProbeSingleTimeAbs_ = 0;
+    uint32_t heProbeSingleEpoch_ = 0;
+    uint32_t heFreshLastSource_ = 0; /* 0=TLC fallback, 1=fresh single TX */
+    uint32_t heFreshLastMbps_ = 0;
+    uint32_t heFreshUseCount_ = 0;
+    uint32_t heFreshFallbackCount_ = 0;
+#ifdef DEBUG
+    /* HE-PR1063: optional, read-only, per-device firmware diagnostic data. */
+    uint32_t heProbeTlcCount_ = 0;
+    uint32_t heProbeTlcRaw_ = 0;
+    uint32_t heProbeTlcGeneration_ = 0;
+    uint32_t heProbeBACount_ = 0;
+    uint32_t heProbeBARaw_ = 0;
+    uint32_t heProbeBATxed_ = 0;
+    uint32_t heProbeBADone_ = 0;
+    uint32_t heProbeBAGeneration_ = 0;
+    uint32_t heProbeSingleCount_ = 0;
+    uint32_t heProbeStartCalls_ = 0;
+    uint32_t heProbePublishedEpoch_ = 0xffffffffU;
+    uint32_t heProbePublishedTlc_ = 0xffffffffU;
+    uint32_t heProbePublishedBA_ = 0xffffffffU;
+    uint32_t heProbePublishedSingle_ = 0xffffffffU;
+#endif
     
     virtual const char *getFirmwareName() override;
     
