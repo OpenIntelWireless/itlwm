@@ -150,7 +150,33 @@ sSTA_INFO(OSObject* target, void* data, bool isSet)
     st->rssi = -(0 - IWM_MIN_DBM - ic_bss->ni_rssi);
     st->noise = that->fDriver->fHalService->getDriverInfo()->getBSSNoise();
     sgi = ieee80211_node_supports_sgi(ic_bss);
-    if (ic->ic_curmode == IEEE80211_MODE_11AC) {
+    if (ic->ic_curmode == IEEE80211_MODE_11AX) {
+        switch (ic_bss->ni_chw) {
+            case IEEE80211_CHAN_WIDTH_40:
+                index = IEEE80211_HE_RATESET_SISO_40;
+                break;
+            case IEEE80211_CHAN_WIDTH_80:
+                index = IEEE80211_HE_RATESET_SISO_80;
+                break;
+            case IEEE80211_CHAN_WIDTH_80P80:
+            case IEEE80211_CHAN_WIDTH_160:
+                index = IEEE80211_HE_RATESET_SISO_160;
+                break;
+            default:
+                index = IEEE80211_HE_RATESET_SISO;
+                break;
+        }
+        if (ic_bss->ni_rx_nss > 1)
+            index++;
+
+        const struct ieee80211_he_rateset *rs = &ieee80211_std_ratesets_11ax[index];
+        int mcs = ic_bss->ni_txmcs;
+        if (mcs < 0)
+            mcs = 0;
+        else if (mcs >= rs->nrates)
+            mcs = rs->nrates - 1;
+        st->rate = rs->rates[mcs] / 2;
+    } else if (ic->ic_curmode == IEEE80211_MODE_11AC) {
         if (sgi) {
             index += 1;
         }

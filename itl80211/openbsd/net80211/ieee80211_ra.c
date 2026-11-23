@@ -217,8 +217,8 @@ static void build_rateset(struct ieee80211_ra_node *rn, enum ieee80211_phymode m
             break;
         
         case IEEE80211_MODE_11AX:
-            rn->active_rs_count = IEEE80211_HT_NUM_RATESETS;
-            for (i = 0; i < IEEE80211_HT_NUM_RATESETS; i++) {
+            rn->active_rs_count = IEEE80211_HE_NUM_RATESETS;
+            for (i = 0; i < IEEE80211_HE_NUM_RATESETS; i++) {
                 ra_rate = &rn->active_rs[i];
                 he_rate = &ieee80211_std_ratesets_11ax[i];
                 int bw = IEEE80211_CHAN_WIDTH_20;
@@ -242,7 +242,7 @@ static void build_rateset(struct ieee80211_ra_node *rn, enum ieee80211_phymode m
                 ra_rate->max_mcs = he_rate->nrates - 1;
                 ra_rate->min_mcs = 0;
                 ra_rate->sgi = 0;
-                ra_rate->nss = ((i + 1) % 2) + 1;
+                ra_rate->nss = he_rate->num_ss;
                 ra_rate->nrates = he_rate->nrates;
                 ra_rate->rs_index = i;
                 memcpy(ra_rate->rates, he_rate->rates, sizeof(he_rate->rates));

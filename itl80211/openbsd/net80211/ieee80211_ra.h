@@ -46,7 +46,7 @@ struct ieee80211_ra_goodput_stats {
     uint32_t nprobe_fail;    /* Number of failed packets. */
 };
 
-#define IEEE80211_RATESET_MAX_NRATES    11
+#define IEEE80211_RATESET_MAX_NRATES    12
 #define IEEE80211_RATESET_MAX_RATE_SET    max(IEEE80211_HT_NUM_RATESETS, IEEE80211_VHT_NUM_RATESETS)
 
 struct ieee80211_ra_rate {

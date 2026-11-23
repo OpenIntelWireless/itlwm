@@ -26,7 +26,19 @@ public:
     virtual bool is5GBandSupport() = 0;
     
     virtual int getTxNSS() = 0;
+
+    /* Optional firmware-selected initial HE rate in Mbps. */
+    virtual bool getFirmwareTxRateMbps(uint32_t *outMbps) {
+        if (outMbps) *outMbps = 0;
+        return false;
+    }
     
+    /* HE MCS selection uses the same passive firmware witness as Mbps. */
+    virtual bool getFirmwareTxMcs(uint32_t *outMcs) {
+        if (outMcs) *outMcs = 0;
+        return false;
+    }
+
     virtual const char *getFirmwareName() = 0;
     
     virtual UInt32 supportedFeatures() = 0;
