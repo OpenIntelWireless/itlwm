@@ -6,6 +6,12 @@ This fork enables itlwm loading with AppleVTD enabled in macOS Tahoe and Airport
 
 https://a.co/d/0hY4N3fQ EDUP PCIE WiFi 6E Card AX210 Bluetooth 5.2 AX5400M 802.11ax Tri-Band 6G/5.8G/2.4GHz Heat Sink 6dBi Antenna PCI-E Wireless Network Cards for Desktop PC Support Windows 11/10 64-bit.
 
+**Kexts you can find in this fork:**
+
+1. itlwm with AppleVTD support in macOS Tahoe
+2. AirportItlwm with AppleVTD and Airdrop support in macOS Tahoe and Sequoia without root patching
+3. IntelBTPatcher with Airdrop support in macOS Tahoe and Sequoia
+   
 A lot of credits to [laobamac](https://github.com/laobamac) who enhanced Aiportitlwm to support loading in macOS Tahoe and Sequoia with AppleVTD enabled. I leveraged his implementation of IOMMU / DMA enabling AppleVTD in Airportitlwm to enhance my initial implementation of itlwm with AppleVTD enabled, and to YBronst for creating the first iteration of this downstream repository, generating the initial patches and builds attempting to allow AppleVTD enabling with this kext and sharing it with me to continue the development. 
 
 Kudos to [retropineaple](https://github.com/retropineaple) for enabling Airdrop in Intel wifi+bluetooth cards. I integrated the code from [ForbiddenItlwm](https://github.com/retropineaple/ForbiddenItlwm) into this fork to build and release from this fork the necessary Airportitlwm and IntelBTPatcher (BTLEAdvFixup in ForbiddenItlwm repo) kexts for Sequoia and Tahoe with Airdrop support for the benefit of all community users. I tested Airdrop in my AX210 transferring files from my iPhone to my hackintosh and viceversa, and it works and gets better and faster with every new release. The code to enable Airdrop is published in the Airdrop-test branch.
