@@ -1,4 +1,4 @@
-name: Build itlwm for build alongside AirportItlwm and IntelBTPatcher kexts being built from Airdrop-test branch
+name: Build itlwm for release alongside AirportItlwm and IntelBTPatcher kexts being built from Airdrop-test branch
 
 on:
   workflow_dispatch:
