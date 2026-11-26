@@ -8,7 +8,7 @@
 
 #include "ItlIwm.hpp"
 
-#if defined(AIRPORT_VTD) && defined(AIRPORT_WCL)
+#ifdef AIRPORT_VTD
 template <typename Action>
 static IOReturn rs_run_gated(struct iwm_softc *sc, Action action)
 {
@@ -612,7 +612,7 @@ static void rs_tl_turn_on_agg(struct iwm_softc *sc,
     struct iwm_tx_ba *tid_data;
     struct ieee80211_tx_ba *tx_ba;
     struct ieee80211com *ic = &sc->sc_ic;
-    
+
     if ((ic->ic_caps & IEEE80211_C_TX_AMPDU_SETUP_IN_RS) == 0)
         return;
 
@@ -1384,7 +1384,7 @@ static u32 rs_bw_from_sta_bw(struct ieee80211_node *ni)
         .vht_cap_info = cpu_to_le32(ni->ni_vhtcaps),
         .supp_mcs = ni->ni_vht_mcsinfo,
     };
-    
+
     if (ni->ni_chw == IEEE80211_CHAN_WIDTH_40 &&
         IEEE80211_IS_CHAN_2GHZ(ni->ni_chan))
         return RATE_MCS_CHAN_WIDTH_20;
@@ -1567,7 +1567,7 @@ int iwl_mvm_send_lq_cmd(struct iwm_softc *sc, struct iwm_lq_cmd *lq)
 
 int iwl_mvm_rs_set_agg_limit(struct iwm_softc *sc, u8 limit)
 {
-#if defined(AIRPORT_VTD) && defined(AIRPORT_WCL)
+#ifdef AIRPORT_VTD
     return rs_run_gated(sc, [=]() -> IOReturn {
         sc->lq_sta.rs_drv.lq.agg_frame_cnt_limit = limit;
         return iwl_mvm_send_lq_cmd(sc, &sc->lq_sta.rs_drv.lq);
@@ -2113,7 +2113,7 @@ static void rs_rate_scale_perform(struct iwm_softc *mvm,
     u8 prev_agg = lq_sta->is_agg;
     struct rs_rate *rate;
     int i;
-    
+
     lq_sta->is_agg = false;
     for (i = 0; i <= IWM_MAX_TID_COUNT; i++) {
         if (mvm->sc_tx_ba[i].wn != NULL) {
@@ -2646,9 +2646,9 @@ out:
 
 /* Save info about RSSI of last Rx */
 void rs_update_last_rssi(struct iwm_softc *mvm,
-            struct ieee80211_rx_status *rx_status)
+             struct ieee80211_rx_status *rx_status)
 {
-#if defined(AIRPORT_VTD) && defined(AIRPORT_WCL)
+#ifdef AIRPORT_VTD
     ItlIwm *that = container_of(mvm, ItlIwm, com);
     if (!that->inRateControlGate()) {
         rs_run_gated(mvm, [=]() -> IOReturn {
@@ -2736,7 +2736,7 @@ static void rs_drv_get_rate(struct iwm_softc *mvm, struct ieee80211_node *sta,
     if (!sta)
         return;
 
-#if defined(AIRPORT_VTD) && defined(AIRPORT_WCL)
+#ifdef AIRPORT_VTD
     ItlIwm *that = container_of(mvm, ItlIwm, com);
     if (!that->inRateControlGate()) {
         rs_run_gated(mvm, [=]() -> IOReturn {
@@ -2747,8 +2747,8 @@ static void rs_drv_get_rate(struct iwm_softc *mvm, struct ieee80211_node *sta,
     }
 #endif
     lq_sta = &mvm->lq_sta.rs_drv;
-    
-#if !defined(AIRPORT_VTD) || !defined(AIRPORT_WCL)
+
+#ifndef AIRPORT_VTD
     IOSimpleLockLock(mvm->lq_sta.rs_drv.pers.lock);
 #endif
     iwl_mvm_hwrate_to_tx_rate(lq_sta->last_rate_n_flags,
@@ -2762,28 +2762,28 @@ static void rs_drv_get_rate(struct iwm_softc *mvm, struct ieee80211_node *sta,
         last_ucode_rate = ucode_rate_from_rs_rate(mvm,
                               optimal_rate);
         iwl_mvm_hwrate_to_tx_rate(last_ucode_rate, IEEE80211_IS_CHAN_2GHZ(sta->ni_chan) ? NL80211_BAND_2GHZ : NL80211_BAND_5GHZ,
-                                  r);
-                }
-            #if !defined(AIRPORT_VTD) || !defined(AIRPORT_WCL)
-                IOSimpleLockUnlock(mvm->lq_sta.rs_drv.pers.lock);
-            #endif
-            }
+                      r);
+    }
+#ifndef AIRPORT_VTD
+    IOSimpleLockUnlock(mvm->lq_sta.rs_drv.pers.lock);
+#endif
+}
 
-            void *rs_drv_alloc_sta(iwm_softc *sc, struct ieee80211_node *ni)
-            {
-            #if defined(AIRPORT_VTD) && defined(AIRPORT_WCL)
-                ItlIwm *that = container_of(sc, ItlIwm, com);
-                if (!that->inRateControlGate()) {
-                    IOReturn result = rs_run_gated(sc, [=]() -> IOReturn {
-                        rs_drv_alloc_sta(sc, ni);
-                        return kIOReturnSuccess;
-                    });
-                    return result == kIOReturnSuccess ? &sc->lq_sta.rs_drv : nullptr;
-                }
-            #endif
-                struct iwl_lq_sta *lq_sta = &sc->lq_sta.rs_drv;
+void *rs_drv_alloc_sta(iwm_softc *sc, struct ieee80211_node *ni)
+{
+#ifdef AIRPORT_VTD
+    ItlIwm *that = container_of(sc, ItlIwm, com);
+    if (!that->inRateControlGate()) {
+        IOReturn result = rs_run_gated(sc, [=]() -> IOReturn {
+            rs_drv_alloc_sta(sc, ni);
+            return kIOReturnSuccess;
+        });
+        return result == kIOReturnSuccess ? &sc->lq_sta.rs_drv : nullptr;
+    }
+#endif
+    struct iwl_lq_sta *lq_sta = &sc->lq_sta.rs_drv;
 
-                IWL_DEBUG_RATE(mvm, "create station rate scale window\n");
+    IWL_DEBUG_RATE(mvm, "create station rate scale window\n");
 
     lq_sta->pers.drv = sc;
     lq_sta->pers.chains = 0;
@@ -3057,20 +3057,20 @@ static void rs_drv_rate_init(struct iwm_softc *mvm, struct ieee80211_node *sta,
 
 void rs_drv_rate_update(struct iwm_softc *mvm,
                    struct ieee80211_node *sta,
-                        enum nl80211_band band, u32 changed)
-     {
-     #if defined(AIRPORT_VTD) && defined(AIRPORT_WCL)
-         ItlIwm *that = container_of(mvm, ItlIwm, com);
-         if (!that->inRateControlGate()) {
-             rs_run_gated(mvm, [=]() -> IOReturn {
-                 rs_drv_rate_update(mvm, sta, band, changed);
-                 return kIOReturnSuccess;
-             });
-             return;
-         }
-     #endif
-         /* Stop any ongoing aggregations as rs starts off assuming no agg */
-         ieee80211_stop_ampdu_tx(&mvm->sc_ic, sta, 0);
+                   enum nl80211_band band, u32 changed)
+{
+#ifdef AIRPORT_VTD
+    ItlIwm *that = container_of(mvm, ItlIwm, com);
+    if (!that->inRateControlGate()) {
+        rs_run_gated(mvm, [=]() -> IOReturn {
+            rs_drv_rate_update(mvm, sta, band, changed);
+            return kIOReturnSuccess;
+        });
+        return;
+    }
+#endif
+    /* Stop any ongoing aggregations as rs starts off assuming no agg */
+    ieee80211_stop_ampdu_tx(&mvm->sc_ic, sta, 0);
 
     iwl_mvm_rs_rate_init(mvm, sta, band, true);
 }
@@ -3285,7 +3285,7 @@ static void __iwl_mvm_rs_tx_status(struct iwm_softc *mvm,
         int index = iwl_mvm_legacy_rate_to_mac80211_idx(lq_sta->last_rate_n_flags, (enum nl80211_band)info->band);
         if (index < 0 || index >= ieee80211_std_rateset_11g.rs_nrates)
             goto done;
-        
+
         sta->ni_txrate = ieee80211_std_rateset_11g.rs_rates[index] / 2;
     }
     IWL_DEBUG_RATE(mvm, "reduced txpower: %d\n", reduced_txp);
@@ -3296,17 +3296,17 @@ done:
 }
 
 void iwl_mvm_rs_tx_status(struct iwm_softc *mvm, struct ieee80211_node *sta,
-                          int tid, struct ieee80211_tx_info *info, bool ndp)
-            {
-            #if defined(AIRPORT_VTD) && defined(AIRPORT_WCL)
-                rs_run_gated(mvm, [=]() -> IOReturn {
-                    __iwl_mvm_rs_tx_status(mvm, sta, tid, info, ndp);
-                    return kIOReturnSuccess;
-                });
-            #else
-                /* If it's locked we are in middle of init flow
-                 * just wait for next tx status to update the lq_sta data
-                 */
+              int tid, struct ieee80211_tx_info *info, bool ndp)
+{
+#ifdef AIRPORT_VTD
+    rs_run_gated(mvm, [=]() -> IOReturn {
+        __iwl_mvm_rs_tx_status(mvm, sta, tid, info, ndp);
+        return kIOReturnSuccess;
+    });
+#else
+    /* If it's locked we are in middle of init flow
+     * just wait for next tx status to update the lq_sta data
+     */
     if (!IOSimpleLockTryLock(mvm->lq_sta.rs_drv.pers.lock))
         return;
 
@@ -3660,9 +3660,9 @@ int rs_pretty_print_rate(char *buf, int bufsz, const u32 rate)
 }
 
 void iwl_mvm_rs_rate_init(struct iwm_softc *mvm, struct ieee80211_node *sta,
-            enum nl80211_band band, bool update)
+              enum nl80211_band band, bool update)
 {
-#if defined(AIRPORT_VTD) && defined(AIRPORT_WCL)
+#ifdef AIRPORT_VTD
     rs_run_gated(mvm, [=]() -> IOReturn {
         rs_drv_rate_init(mvm, sta, band);
         return kIOReturnSuccess;
@@ -3699,9 +3699,9 @@ static int rs_drv_tx_protection(struct iwm_softc *mvm,
  * @enable: Enable Tx protection?
  */
 int iwl_mvm_tx_protection(struct iwm_softc *mvm,
-            bool enable)
+              bool enable)
 {
-#if defined(AIRPORT_VTD) && defined(AIRPORT_WCL)
+#ifdef AIRPORT_VTD
     return rs_run_gated(mvm, [=]() -> IOReturn {
         return rs_drv_tx_protection(mvm, enable);
     });
@@ -3713,14 +3713,14 @@ int iwl_mvm_tx_protection(struct iwm_softc *mvm,
 void
 iwm_rs_alloc(struct iwm_softc *sc)
 {
-#if !defined(AIRPORT_VTD) || !defined(AIRPORT_WCL)
+#ifndef AIRPORT_VTD
     sc->lq_sta.rs_drv.pers.lock = IOSimpleLockAlloc();
 #endif
 }
 
 void iwm_rs_free(struct iwm_softc *sc)
 {
-#if !defined(AIRPORT_VTD) || !defined(AIRPORT_WCL)
+#ifndef AIRPORT_VTD
     if (sc->lq_sta.rs_drv.pers.lock) {
         IOSimpleLockFree(sc->lq_sta.rs_drv.pers.lock);
         sc->lq_sta.rs_drv.pers.lock = NULL;

@@ -58,7 +58,9 @@ public:
     virtual void _RESERVEDIOSkywalkEthernetInterface9();
     virtual void _RESERVEDIOSkywalkEthernetInterface10();
     bool initRegistrationInfo(RegistrationInfo *, unsigned int, unsigned long);
-    bool registerEthernetInterface(const RegistrationInfo *, IOSkywalkPacketQueue **, unsigned int, IOSkywalkPacketBufferPool *, IOSkywalkPacketBufferPool *, unsigned int);
+    // Returns IOReturn, as on Tahoe: 24H241 passes registerNetworkInterface's result straight through.
+    IOReturn registerEthernetInterface(const RegistrationInfo *, IOSkywalkPacketQueue **, unsigned int, IOSkywalkPacketBufferPool *, IOSkywalkPacketBufferPool *, unsigned int);
+    IOReturn deregisterEthernetInterface(unsigned int);
     struct ExpansionData { RegistrationInfo *fRegistrationInfo; ifnet_t fBSDInterface; };
     uint8_t _layout0[0x38];
     ExpansionData *mExpansionData2;

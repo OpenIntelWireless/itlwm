@@ -4,7 +4,7 @@
 #include "IO80211Interface.h"
 #include "apple_private_spi.h"
 
-typedef UInt64 IO80211FlowQueueHash;
+struct IO80211FlowQueueHash;   // Sonoma 14.8.9 (23J631): a struct
 typedef UInt kIO80211InterfaceType;
 class IO80211PeerManager;
 class RSNSupplicant;
@@ -20,7 +20,7 @@ struct apple80211_awdl_sidecar_statistics;
 
 class IO80211VirtualInterface : public IOService {
     OSDeclareDefaultStructors(IO80211VirtualInterface)
-    
+
 public:
     virtual void free(void) APPLE_KEXT_OVERRIDE;
 #if __IO80211_TARGET >= __MAC_11_0

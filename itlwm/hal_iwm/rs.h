@@ -1280,7 +1280,7 @@ struct lq_sta_pers {
     s8 last_rssi;
     struct rs_rate_stats tx_stats[RS_COLUMN_COUNT][IWL_RATE_COUNT];
     struct iwm_softc *drv;
-#if !defined(AIRPORT_VTD) || !defined(AIRPORT_WCL)
+#ifndef AIRPORT_VTD
     IOSimpleLock *lock; /* for races in reinit/update table */
 #endif
 };

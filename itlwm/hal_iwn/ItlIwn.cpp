@@ -35,7 +35,7 @@
  */
 
 #ifdef AIRPORT_WCL
-#include "../../AirportItlwm/WCL/WCL.hpp"
+#include "../../ForbiddenItlwm/WCL/WCL.hpp"
 #endif
 #include "ItlIwn.hpp"
 #include <linux/types.h>
@@ -121,7 +121,7 @@ detach(IOPCIDevice *device)
     releaseAll();
     taskq_destroy(systq);
 #endif
-    
+
     for (int txq_i = 0; txq_i < nitems(sc->txq); txq_i++)
         iwn_free_tx_ring(sc, &sc->txq[txq_i]);
     iwn_free_rx_ring(sc, &sc->rxq);
@@ -140,7 +140,7 @@ void ItlIwn::
 releaseAll()
 {
     pci_intr_handle *intrHandler = com.ih;
-    
+
     if (com.calib_to) {
         timeout_del(&com.calib_to);
         timeout_free(&com.calib_to);
@@ -531,7 +531,7 @@ iwn_attach(struct iwn_softc *sc, struct pci_attach_args *pa)
         sc->nrxchains, sc->eeprom_domain, ether_sprintf(ic->ic_myaddr));
 
     taskq_init();
-    
+
     ic->ic_phytype = IEEE80211_T_OFDM;    /* not only, but not used */
     ic->ic_opmode = IEEE80211_M_STA;    /* default to BSS mode */
     ic->ic_state = IEEE80211_S_INIT;
@@ -605,7 +605,7 @@ iwn_attach(struct iwn_softc *sc, struct pci_attach_args *pa)
 
     /* IBSS channel undefined for now. */
     ic->ic_ibss_chan = &ic->ic_channels[0];
-    
+
     ic->ic_max_rssi = IWN_MAX_DBM - IWN_MIN_DBM;
 
     ifp->if_softc = sc;
@@ -898,7 +898,7 @@ iwn_nic_lock(struct iwn_softc *sc)
             return 0;
         DELAY(10);
     }
-    
+
     XYLog("%s acquiring device failed.", __FUNCTION__);
     return ETIMEDOUT;
 }
@@ -1134,24 +1134,24 @@ bool allocDmaMemory2(bus_dma_tag_t tag, struct iwn_dma_info *dma, size_t size, i
     IODMACommand::Segment64 seg;
     UInt64 ofs = 0;
     UInt32 numSegs = 1;
-    
+
     bmd = IOBufferMemoryDescriptor::inTaskWithPhysicalMask(kernel_task, kIODirectionInOut | kIOMemoryPhysicallyContiguous | kIOMapInhibitCache, size, DMA_BIT_MASK(64));
-    
+
     if (bmd == NULL) {
         XYLog("%s alloc DMA memory failed.\n", __FUNCTION__);
         return false;
     }
-    
+
     bmd->prepare();
     IODMACommand *cmd = IODMACommand::withSpecification(kIODMACommandOutputHost64, 64, 0, IODMACommand::kMapped, 0, alignment);
-    
+
     if (cmd == NULL) {
         XYLog("%s alloc IODMACommand memory failed.\n", __FUNCTION__);
         bmd->complete();
         bmd->release();
         return false;
     }
-    
+
     cmd->setMemoryDescriptor(bmd);
 
     if (cmd->gen64IOVMSegments(&ofs, &seg, &numSegs) != kIOReturnSuccess) {
@@ -1179,7 +1179,7 @@ iwn_dma_contig_alloc(bus_dma_tag_t tag, struct iwn_dma_info *dma,
     if (!allocDmaMemory2(tag, dma, size, alignment)) {
         return 1;
     }
-    
+
     if (kvap != NULL)
         *kvap = dma->vaddr;
 
@@ -1323,9 +1323,9 @@ iwn_alloc_rx_ring(struct iwn_softc *sc, struct iwn_rx_ring *ring)
             error = ENOMEM;
             goto fail;
         }
-        
+
         data->m = m;
-        
+
 //        data->m = MCLGETI(NULL, M_DONTWAIT, NULL, IWN_RBUF_SIZE);
 //        if (data->m == NULL) {
 //            XYLog("%s: could not allocate RX mbuf\n",
@@ -1605,7 +1605,7 @@ void ItlIwn::
 iwn4965_read_eeprom(struct iwn_softc *sc)
 {
     ItlIwn *that = container_of(sc, ItlIwn, com);
-    
+
     uint32_t addr;
     uint16_t val;
     int i;
@@ -1937,6 +1937,10 @@ iwn_newstate(struct ieee80211com *ic, enum ieee80211_state nstate, int arg)
         sc->calib.state = IWN_CALIB_STATE_INIT;
         if (sc->sc_flags & IWN_FLAG_BGSCAN)
             that->iwn_scan_abort(sc);
+        // Leaving RUN ends any background scan, so net80211's flag goes too: the abort clears only the
+        // driver's flags, and a following scan that finds nothing never clears IEEE80211_F_BGSCAN, which made
+        // the WCL scan path refuse every macOS scan as busy until Wi-Fi was turned off and on.
+        ic->ic_flags &= ~IEEE80211_F_BGSCAN;
     }
 
     if (ic->ic_state == IEEE80211_S_SCAN) {
@@ -2184,6 +2188,15 @@ iwn_rx_done(struct iwn_softc *sc, struct iwn_rx_desc *desc,
         len = letoh16(stat->len);
     }
 
+    /* The frame and its trailing status word must fit in the RX buffer. */
+    if (len < 0 || head < (caddr_t)desc ||
+        (size_t)(head - (caddr_t)desc) + (size_t)len + sizeof(uint32_t) >
+        IWN_RBUF_SIZE) {
+        ic->ic_stats.is_rx_tooshort++;
+        ifp->netStat->inputErrors++;
+        return;
+    }
+
     flags = letoh32(*(uint32_t *)(head + len));
 
     /* Discard frames with a bad FCS early. */
@@ -2205,7 +2218,7 @@ iwn_rx_done(struct iwn_softc *sc, struct iwn_rx_desc *desc,
         ifp->netStat->inputErrors++;
         return;
     }
-    
+
     m1 = getController()->allocatePacket(IWN_RBUF_SIZE);
     if (m1 == NULL) {
         XYLog("could not allocate RX mbuf\n");
@@ -2220,7 +2233,7 @@ iwn_rx_done(struct iwn_softc *sc, struct iwn_rx_desc *desc,
         ifp->netStat->inputErrors++;
         return;
     }
-    
+
 //    m1 = MCLGETI(NULL, M_DONTWAIT, NULL, IWN_RBUF_SIZE);
 //    if (m1 == NULL) {
 //        ic->ic_stats.is_rx_nombuf++;
@@ -2416,14 +2429,14 @@ iwn_ampdu_rate_control(struct iwn_softc *sc, struct ieee80211_node *ni,
              */
             ieee80211_ra_add_stats_ht(&wn->rn, ic, ni,
                                       txdata->ampdu_txmcs, 1, 0);
-            
+
             /* Report this frame only once. */
             txdata->ampdu_nframes = 0;
         }
-        
+
         idx = (idx + 1) % IWN_TX_RING_COUNT;
     }
-    
+
     iwn_ra_choose(sc, ni);
 }
 
@@ -2436,7 +2449,7 @@ iwn_ht_single_rate_control(struct iwn_softc *sc, struct ieee80211_node *ni,
     int mcs = rate;
     const struct ieee80211_ra_rate *rs;
     unsigned int retries = 0, i;
-    
+
     /*
      * Ignore Tx reports which don't match our last LQ command.
      */
@@ -2448,9 +2461,9 @@ iwn_ht_single_rate_control(struct iwn_softc *sc, struct ieee80211_node *ni,
         }
         return;
     }
-    
+
     wn->lq_rate_mismatch = 0;
-    
+
     rs = ieee80211_ra_get_rateset(&wn->rn, ic, ni, rate);
     /*
      * Firmware has attempted rates in this rate set in sequence.
@@ -2463,12 +2476,12 @@ iwn_ht_single_rate_control(struct iwn_softc *sc, struct ieee80211_node *ni,
         } else
             retries++;
     }
-    
+
     if (txfail && ackfailcnt == 0)
         ieee80211_ra_add_stats_ht(&wn->rn, ic, ni, mcs, 1, 1);
     else
         ieee80211_ra_add_stats_ht(&wn->rn, ic, ni, mcs, retries + 1, retries);
-    
+
     iwn_ra_choose(sc, ni);
 }
 
@@ -2531,7 +2544,7 @@ iwn_rx_compressed_ba(struct iwn_softc *sc, struct iwn_rx_desc *desc,
      * have been acked.
      */
     ssn = le16toh(cba->ssn);
-    
+
     if (SEQ_LT(ssn, ba->ba_winstart))
         return;
 
@@ -2566,6 +2579,10 @@ iwn5000_rx_calib_results(struct iwn_softc *sc, struct iwn_rx_desc *desc,
         return;
 
     len = (letoh32(desc->len) & IWN_RX_DESC_LEN_MASK) - 4;
+    /* Reject a length that underflows or runs past the RX buffer. */
+    if (len < (int)sizeof(*calib) ||
+        (size_t)len > IWN_RBUF_SIZE - sizeof(*desc))
+        return;
     bus_dmamap_sync(sc->sc_dmat, data->map, sizeof (*desc), len,
         BUS_DMASYNC_POSTREAD);
 
@@ -2634,7 +2651,7 @@ iwn_rx_statistics(struct iwn_softc *sc, struct iwn_rx_desc *desc,
 
     DPRINTFN(3, ("received statistics (cmd=%d)\n", desc->type));
     sc->calib_cnt = 0;    /* Reset TX power calibration timeout. */
-    
+
     sc->rx_stats_flags = htole32(stats->flags);
 
     /* Test if temperature has changed. */
@@ -2727,7 +2744,7 @@ iwn_ampdu_tx_done(struct iwn_softc *sc, struct iwn_tx_ring *txq,
 
     if (nframes > 1) {
         int i;
-        
+
         /*
          * Collect information about this A-MPDU.
          */
@@ -2736,17 +2753,17 @@ iwn_ampdu_tx_done(struct iwn_softc *sc, struct iwn_tx_ring *txq,
             uint8_t idx = agg_status[i].idx;
             uint16_t txstatus = (le16toh(agg_status[i].status) &
                                  IWN_AGG_TX_STATUS_MASK);
-            
+
             if (txstatus != IWN_AGG_TX_STATE_TRANSMITTED)
                 continue;
-            
+
             if (qid != desc->qid)
                 continue;
-            
+
             txdata = &txq->data[idx];
             if (txdata->ni == NULL)
                 continue;
-            
+
             /* The Tx rate was the same for all subframes. */
             txdata->ampdu_txmcs = rate;
             txdata->ampdu_nframes = nframes;
@@ -2781,7 +2798,7 @@ iwn_ampdu_tx_done(struct iwn_softc *sc, struct iwn_tx_ring *txq,
             ieee80211_ra_add_stats_ht(&wn->rn, ic, ni,
                                       txdata->ampdu_txmcs, 1, 1);
         }
-        
+
         /* Report the final single-frame Tx attempt. */
         if (rflags & IWN_RFLAG_MCS)
             iwn_ht_single_rate_control(sc, ni, rate, rflags,
@@ -2969,7 +2986,7 @@ iwn_tx_done(struct iwn_softc *sc, struct iwn_rx_desc *desc,
             }
         } else {
             wn->lq_rate_mismatch = 0;
-            
+
             wn->amn.amn_txcnt++;
             if (ackfailcnt > 0)
                 wn->amn.amn_retrycnt++;
@@ -3039,8 +3056,10 @@ iwn_notif_intr(struct iwn_softc *sc)
 //    bus_dmamap_sync(sc->sc_dmat, sc->rxq.stat_dma.map,
 //        0, sc->rxq.stat_dma.size, BUS_DMASYNC_POSTREAD);
 
-    hw = letoh16(sc->rxq.stat->closed_count) & 0xfff;
-    while (sc->rxq.cur != hw) {
+    /* Keep the firmware's index inside the ring, and walk it at most once. */
+    hw = (letoh16(sc->rxq.stat->closed_count) & 0xfff) % IWN_RX_RING_COUNT;
+    for (int budget = IWN_RX_RING_COUNT; sc->rxq.cur != hw && budget > 0;
+        budget--) {
         struct iwn_rx_data *data = &sc->rxq.data[sc->rxq.cur];
         struct iwn_rx_desc *desc;
 
@@ -3497,7 +3516,7 @@ iwn_is_mimo_mcs(int mcs)
 {
     int ridx = iwn_mcs2ridx[mcs];
     return iwn_is_mimo_ht_plcp(iwn_rates[ridx].ht_plcp);
-    
+
 }
 
 int ItlIwn::
@@ -3938,7 +3957,7 @@ sendit:
         sc->sc_tx_timer = 5;
         ifp->if_timer = 1;
     }
-    
+
     return kIOReturnSuccess;
 }
 
@@ -4194,7 +4213,7 @@ int ItlIwn::
 iwn5000_add_node(struct iwn_softc *sc, struct iwn_node_info *node, int async)
 {
     ItlIwn *that = container_of(sc, ItlIwn, com);
-    
+
     /* Direct mapping. */
     return that->iwn_cmd(sc, IWN_CMD_ADD_NODE, node, sizeof (*node), async);
 }
@@ -4231,7 +4250,7 @@ iwn_set_link_quality(struct iwn_softc *sc, struct ieee80211_node *ni)
             sc->hw_type != IWN_HW_REV_TYPE_5100)
             linkq.flags |= IWN_LINK_QUAL_FLAGS_SET_STA_TLC_RTS;
 #endif
-    
+
     /*
      * Fill the LQ rate selection table with legacy and/or HT rates
      * in descending order, i.e. with the node's current TX rate first.
@@ -4248,7 +4267,7 @@ iwn_set_link_quality(struct iwn_softc *sc, struct ieee80211_node *ni)
     for (ridx = ridx_max; ridx >= ridx_min; ridx--) {
         uint8_t plcp = iwn_rates[ridx].plcp;
         uint8_t ht_plcp = iwn_rates[ridx].ht_plcp;
-        
+
         if (j >= IWN_MAX_TX_RETRIES)
             break;
         tab = 0;
@@ -4285,15 +4304,15 @@ iwn_set_link_quality(struct iwn_softc *sc, struct ieee80211_node *ni)
                 }
             }
         }
-        
+
         if (tab == 0 && rflags == 0)
             continue;
-        
+
         if (iwn_is_mimo_ht_plcp(ht_plcp))
             rflags |= IWN_RFLAG_ANT(sc->txchainmask);
         else
             rflags |= IWN_RFLAG_ANT(txant);
-        
+
         if (IWN_RIDX_IS_CCK(ridx))
             rflags |= IWN_RFLAG_CCK;
 
@@ -4302,9 +4321,9 @@ iwn_set_link_quality(struct iwn_softc *sc, struct ieee80211_node *ni)
         linkq.retry[j].rflags = rflags;
         j++;
     }
-    
+
     linkq.mimo = (mimo ? j : 0);
-    
+
     /* Fill the rest with the lowest possible rate */
     while (j < IWN_MAX_TX_RETRIES) {
         tab = iwn_rates[ridx_min].plcp;
@@ -4548,7 +4567,7 @@ iwn4965_set_txpower(struct iwn_softc *sc, int async)
         return EINVAL;
     chans = sc->bands[i].chans;
     DPRINTF(("chan %d sub-band=%d\n", chan, i));
-    
+
     if (that->iwn_rxon_ht40_enabled(sc)) {
         is_ht40 = 1;
         if (le32toh(sc->rxon.flags) & IWN_RXON_HT_HT40MINUS)
@@ -5800,10 +5819,10 @@ iwn_rxon_configure_ht40(struct ieee80211com *ic, struct ieee80211_node *ni)
     uint8_t sco = (ni->ni_htop0 & IEEE80211_HTOP0_SCO_MASK);
     int htprot = (ni->ni_htop1 &
                   IEEE80211_HTOP1_PROT_MASK);
-    
+
     sc->rxon.flags &= ~htole32(IWN_RXON_HT_CHANMODE_MIXED2040 |
                                IWN_RXON_HT_CHANMODE_PURE40 | IWN_RXON_HT_HT40MINUS);
-    
+
     if (ieee80211_node_supports_ht_chan40(ni) &&
         (sco == IEEE80211_HTOP0_SCO_SCA ||
          sco == IEEE80211_HTOP0_SCO_SCB)) {
@@ -6008,7 +6027,7 @@ iwn_run(struct iwn_softc *sc)
             (ic->ic_ampdu_params & IEEE80211_AMPDU_PARAM_LE)) |
             IWN_AMDPU_DENSITY(
             (ic->ic_ampdu_params & IEEE80211_AMPDU_PARAM_SS) >> 2));
-        
+
         if (iwn_rxon_ht40_enabled(sc))
             node.htflags |= htole32(IWN_40MHZ_ENABLE);
     }
@@ -6114,10 +6133,10 @@ iwn_update_chw(struct ieee80211com *ic)
     XYLog("%s update channel info\n", __FUNCTION__);
     struct iwn_softc *sc = (struct iwn_softc *)ic->ic_softc;
     ItlIwn *that = container_of(sc, ItlIwn, com);
-    
+
     if (ic->ic_state != IEEE80211_S_RUN)
         return;
-    
+
     that->iwn_rxon_configure_ht40(ic, ic->ic_bss);
     sc->ops.update_rxon(sc);
     that->iwn_set_link_quality(sc, ic->ic_bss);
@@ -6129,10 +6148,10 @@ iwn_updateprot(struct ieee80211com *ic)
     XYLog("%s\n", __FUNCTION__);
     struct iwn_softc *sc = (struct iwn_softc *)ic->ic_softc;
     enum ieee80211_htprot htprot;
-    
+
     if (ic->ic_state != IEEE80211_S_RUN)
         return;
-    
+
     /* Update ERP protection setting. */
     if (ic->ic_flags & IEEE80211_F_USEPROT)
         sc->rxon.flags |= htole32(IWN_RXON_TGG_PROT);
@@ -6153,20 +6172,20 @@ iwn_updateslot(struct ieee80211com *ic)
 {
     XYLog("%s\n", __FUNCTION__);
     struct iwn_softc *sc = (struct iwn_softc *)ic->ic_softc;
-    
+
     if (ic->ic_state != IEEE80211_S_RUN)
         return;
-    
+
     if (ic->ic_flags & IEEE80211_F_SHSLOT)
         sc->rxon.flags |= htole32(IWN_RXON_SHSLOT);
     else
         sc->rxon.flags &= ~htole32(IWN_RXON_SHSLOT);
-    
+
     if (ic->ic_flags & IEEE80211_F_SHPREAMBLE)
         sc->rxon.flags |= htole32(IWN_RXON_SHPREAMBLE);
     else
         sc->rxon.flags &= ~htole32(IWN_RXON_SHPREAMBLE);
-    
+
     sc->ops.update_rxon(sc);
 }
 
@@ -6176,16 +6195,16 @@ iwn_update_rxon_restore_power(struct iwn_softc *sc)
     struct ieee80211com *ic = &sc->sc_ic;
     struct iwn_ops *ops = &sc->ops;
     int error;
-    
+
     DELAY(100);
-    
+
     /* All RXONs wipe the firmware's txpower table. Restore it. */
     error = ops->set_txpower(sc, 1);
     if (error != 0)
         printf("%s: could not set TX power\n", sc->sc_dev.dv_xname);
-    
+
     DELAY(100);
-    
+
     /* Restore power saving level */
     if (ic->ic_flags & IEEE80211_F_PMGTON)
         error = iwn_set_pslevel(sc, 0, 3, 1);
@@ -6201,7 +6220,7 @@ iwn5000_update_rxon(struct iwn_softc *sc)
     ItlIwn *that = container_of(sc, ItlIwn, com);
     struct iwn_rxon_assoc rxon_assoc;
     int s, error;
-    
+
     /* Update RXON config. */
     memset(&rxon_assoc, 0, sizeof(rxon_assoc));
     rxon_assoc.flags = sc->rxon.flags;
@@ -6213,15 +6232,15 @@ iwn5000_update_rxon(struct iwn_softc *sc)
     rxon_assoc.ht_triple_mask = sc->rxon.ht_triple_mask;
     rxon_assoc.rxchain = sc->rxon.rxchain;
     rxon_assoc.acquisition = sc->rxon.acquisition;
-    
+
     s = splnet();
-    
+
     error = that->iwn_cmd(sc, IWN_CMD_RXON_ASSOC, &rxon_assoc, sizeof(rxon_assoc), 1);
     if (error != 0)
         printf("%s: RXON_ASSOC command failed\n", sc->sc_dev.dv_xname);
-    
+
     that->iwn_update_rxon_restore_power(sc);
-    
+
     splx(s);
 }
 
@@ -6231,7 +6250,7 @@ iwn4965_update_rxon(struct iwn_softc *sc)
     ItlIwn *that = container_of(sc, ItlIwn, com);
     struct iwn4965_rxon_assoc rxon_assoc;
     int s, error;
-    
+
     /* Update RXON config. */
     memset(&rxon_assoc, 0, sizeof(rxon_assoc));
     rxon_assoc.flags = sc->rxon.flags;
@@ -6241,15 +6260,15 @@ iwn4965_update_rxon(struct iwn_softc *sc)
     rxon_assoc.ht_single_mask = sc->rxon.ht_single_mask;
     rxon_assoc.ht_dual_mask = sc->rxon.ht_dual_mask;
     rxon_assoc.rxchain = sc->rxon.rxchain;
-    
+
     s = splnet();
-    
+
     error = that->iwn_cmd(sc, IWN_CMD_RXON_ASSOC, &rxon_assoc, sizeof(rxon_assoc), 1);
     if (error != 0)
         printf("%s: RXON_ASSOC command failed\n", sc->sc_dev.dv_xname);
-    
+
     that->iwn_update_rxon_restore_power(sc);
-    
+
     splx(s);
 }
 
@@ -7187,7 +7206,7 @@ iwn_read_firmware(struct iwn_softc *sc)
     uncompressFirmware((u_char *)fw->data, (uint *)&fw->size, (u_char *)fwData->getBytesNoCopy(), fwData->getLength());
     XYLog("load firmware %s done\n", sc->fwname);
     OSSafeReleaseNULL(fwData);
-    
+
     if (fw->size < sizeof (uint32_t)) {
         XYLog("%s: firmware too short: %zu bytes\n",
             sc->sc_dev.dv_xname, fw->size);
@@ -7219,7 +7238,7 @@ iwn_read_firmware(struct iwn_softc *sc)
         ::free(fw->data);
         return EINVAL;
     }
-  
+
     /* We can proceed with loading the firmware. */
     return 0;
 }

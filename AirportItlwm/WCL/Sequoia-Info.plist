@@ -62,6 +62,8 @@
 	<string>Copyright © 2026 laobamac. Based on AirportItlwm by OpenIntelWireless.</string>
 	<key>OSBundleLibraries</key>
 	<dict>
+		<key>com.apple.iokit.IOACPIFamily</key>
+		<string>1.0.0d1</string>
 		<key>com.apple.driver.corecapture</key>
 		<string>1.0.0</string>
 		<key>com.apple.iokit.IO80211Family</key>

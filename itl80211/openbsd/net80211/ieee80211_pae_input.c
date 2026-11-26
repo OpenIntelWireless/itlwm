@@ -53,6 +53,7 @@
 
 #include <net80211/ieee80211_var.h>
 #include <net80211/ieee80211_priv.h>
+#include <EAPOLKeyLength.hpp>
 
 void	ieee80211_recv_4way_msg1(struct ieee80211com *,
                                  struct ieee80211_eapol_key *, struct ieee80211_node *);
@@ -96,16 +97,16 @@ ieee80211_eapol_key_input(struct ieee80211com *ic, mbuf_t m,
     struct ieee80211_eapol_key *key;
     u_int16_t info, desc;
     int totlen, bodylen, paylen;
-    
+
     ifp->if_ibytes += mbuf_pkthdr_len(m);
-    
+
     eh = mtod(m, struct ether_header *);
     if (IEEE80211_IS_MULTICAST(eh->ether_dhost)) {
         ifp->if_imcasts++;
         goto done;
     }
     mbuf_adj(m, sizeof(*eh));
-    
+
     if (mbuf_pkthdr_len(m) < sizeof(*key))
         goto done;
     if (mbuf_len(m) < sizeof(*key) &&
@@ -114,51 +115,61 @@ ieee80211_eapol_key_input(struct ieee80211com *ic, mbuf_t m,
         goto done;
     }
     key = mtod(m, struct ieee80211_eapol_key *);
-    
+
     if (key->type != EAPOL_KEY)
         goto done;
     ic->ic_stats.is_rx_eapol_key++;
-    
+
     if ((ni->ni_rsnprotos == IEEE80211_PROTO_RSN &&
          key->desc != EAPOL_KEY_DESC_IEEE80211) ||
         (ni->ni_rsnprotos == IEEE80211_PROTO_WPA &&
          key->desc != EAPOL_KEY_DESC_WPA))
         goto done;
-    
-    /* check packet body length */
+
+    /*
+     * Check the packet body and key data lengths. The declared frame must
+     * hold the whole fixed header: comparing against totlen - sizeof(*key)
+     * wrapped when it did not, and any key data length passed.
+     */
     bodylen = BE_READ_2(key->len);
     totlen = 4 + bodylen;
-    if (mbuf_pkthdr_len(m) < totlen || totlen > MCLBYTES)
-        goto done;
-    
-    /* check key data length */
     paylen = BE_READ_2(key->paylen);
-    if (paylen > totlen - sizeof(*key))
+    if (!ItlEAPOL::keyLengthsValid(mbuf_pkthdr_len(m), uint16_t(bodylen),
+                                   uint16_t(paylen), sizeof(*key), MCLBYTES))
         goto done;
-    
+
     info = BE_READ_2(key->info);
-    
+
     /* discard EAPOL-Key frames with an unknown descriptor version */
     desc = info & EAPOL_KEY_VERSION_MASK;
-    if (desc < EAPOL_KEY_DESC_V1 || desc > EAPOL_KEY_DESC_V3)
+    if (ieee80211_node_allow_wpa3(ic, ni) &&
+        ni->ni_sae.sae_state == SAE_STATE_ACCEPTED) {
+        /*
+         * WPA3-Personal uses descriptor version 0 ("use the AKM's MIC"),
+         * which maps to AES-CMAC just like V3.
+         */
+        if (desc != EAPOL_KEY_DESC_USE_AKM)
+            goto done;
+    } else if (desc < EAPOL_KEY_DESC_V1 || desc > EAPOL_KEY_DESC_V3)
         goto done;
-    
+
     if (ieee80211_is_sha256_akm((enum ieee80211_akm)ni->ni_rsnakms)) {
-        if (desc != EAPOL_KEY_DESC_V3)
+        if (desc != EAPOL_KEY_DESC_V3 &&
+            desc != EAPOL_KEY_DESC_USE_AKM)
             goto done;
     } else if (ni->ni_rsncipher == IEEE80211_CIPHER_CCMP ||
                ni->ni_rsngroupcipher == IEEE80211_CIPHER_CCMP) {
         if (desc != EAPOL_KEY_DESC_V2)
             goto done;
     }
-    
+
     /* make sure the key data field is contiguous */
     if (mbuf_len(m) < totlen && mbuf_pullup(&m, totlen)) {
         ic->ic_stats.is_rx_nombuf++;
         goto done;
     }
     key = mtod(m, struct ieee80211_eapol_key *);
-    
+
     /* determine message type (see 8.5.3.7) */
     if (info & EAPOL_KEY_REQUEST) {
 #ifndef IEEE80211_STA_ONLY
@@ -207,7 +218,7 @@ ieee80211_recv_4way_msg1(struct ieee80211com *ic,
     struct ieee80211_pmk *pmk;
     const u_int8_t *frm, *efrm;
     const u_int8_t *pmkid;
-    
+
 #ifndef IEEE80211_STA_ONLY
     if (ic->ic_opmode != IEEE80211_M_STA &&
         ic->ic_opmode != IEEE80211_M_IBSS)
@@ -227,11 +238,11 @@ ieee80211_recv_4way_msg1(struct ieee80211com *ic,
         ic->ic_stats.is_rx_eapol_replay++;
         return;
     }
-    
+
     /* parse key data field (may contain an encapsulated PMKID) */
     frm = (const u_int8_t *)&key[1];
     efrm = frm + BE_READ_2(key->paylen);
-    
+
     pmkid = NULL;
     while (frm + 2 <= efrm) {
         if (frm + 2 + frm[1] > efrm)
@@ -254,7 +265,7 @@ ieee80211_recv_4way_msg1(struct ieee80211com *ic,
     /* check that the PMKID KDE is valid (if present) */
     if (pmkid != NULL && pmkid[1] != 4 + 16)
         return;
-    
+
     if (ieee80211_is_8021x_akm((enum ieee80211_akm)ni->ni_rsnakms)) {
         /* retrieve the PMK for this (AP,PMKID) */
         pmk = ieee80211_pmksa_find(ic, ni,
@@ -265,28 +276,32 @@ ieee80211_recv_4way_msg1(struct ieee80211com *ic,
             return;
         }
         memcpy(ni->ni_pmk, pmk->pmk_key, IEEE80211_PMK_LEN);
+    } else if (ieee80211_node_allow_wpa3(ic, ni) &&
+        ni->ni_sae.sae_state == SAE_STATE_ACCEPTED) {
+        /* SAE completed the commit/confirm exchange and derived the PMK. */
+        memcpy(ni->ni_pmk, ni->ni_sae.sae_pmk, IEEE80211_PMK_LEN);
     } else    /* use pre-shared key */
         memcpy(ni->ni_pmk, ic->ic_psk, IEEE80211_PMK_LEN);
     ni->ni_flags |= IEEE80211_NODE_PMK;
-    
+
     /* save authenticator's nonce (ANonce) */
     memcpy(ni->ni_nonce, key->nonce, EAPOL_KEY_NONCE_LEN);
-    
+
     /* generate supplicant's nonce (SNonce) */
     arc4random_buf(ic->ic_nonce, EAPOL_KEY_NONCE_LEN);
-    
+
     /* TPTK = CalcPTK(PMK, ANonce, SNonce) */
     ieee80211_derive_ptk((enum ieee80211_akm)ni->ni_rsnakms, ni->ni_pmk, ni->ni_macaddr,
                          ic->ic_myaddr, ni->ni_nonce, ic->ic_nonce, &tptk);
-    
+
     /* We are now expecting a new pairwise key. */
     ni->ni_flags |= IEEE80211_NODE_RSN_NEW_PTK;
-    
+
     if (ic->ic_if.if_flags & IFF_DEBUG)
         XYLog("%s: received msg %d/%d of the %s handshake from %s\n",
               ic->ic_if.if_xname, 1, 4, "4-way",
               ether_sprintf(ni->ni_macaddr));
-    
+
     /* send message 2 to authenticator using TPTK */
     (void)ieee80211_send_4way_msg2(ic, ni, key->replaycnt, &tptk);
 }
@@ -302,11 +317,11 @@ ieee80211_recv_4way_msg2(struct ieee80211com *ic,
 {
     XYLog("%s\n", __FUNCTION__);
     struct ieee80211_ptk tptk;
-    
+
     if (ic->ic_opmode != IEEE80211_M_HOSTAP &&
         ic->ic_opmode != IEEE80211_M_IBSS)
         return;
-    
+
     /* discard if we're not expecting this message */
     if (ni->ni_rsn_state != RSNA_PTKSTART &&
         ni->ni_rsn_state != RSNA_PTKCALCNEGOTIATING) {
@@ -314,27 +329,27 @@ ieee80211_recv_4way_msg2(struct ieee80211com *ic,
         return;
     }
     ni->ni_rsn_state = RSNA_PTKCALCNEGOTIATING;
-    
+
     /* NB: replay counter has already been verified by caller */
-    
+
     /* PTK = CalcPTK(ANonce, SNonce) */
     ieee80211_derive_ptk((enum ieee80211_akm)ni->ni_rsnakms, ni->ni_pmk, ic->ic_myaddr,
                          ni->ni_macaddr, ni->ni_nonce, key->nonce, &tptk);
-    
+
     /* check Key MIC field using KCK */
     if (ieee80211_eapol_key_check_mic(key, tptk.kck) != 0) {
         DPRINTF(("key MIC failed\n"));
         ic->ic_stats.is_rx_eapol_badmic++;
         return;    /* will timeout.. */
     }
-    
+
     timeout_del(&ni->ni_eapol_to);
     ni->ni_rsn_state = RSNA_PTKCALCNEGOTIATING_2;
     ni->ni_rsn_retries = 0;
-    
+
     /* install TPTK as PTK now that MIC is verified */
     memcpy(&ni->ni_ptk, &tptk, sizeof(tptk));
-    
+
     /*
      * The RSN IE must match bit-wise with what the STA included in its
      * (Re)Association Request.
@@ -346,18 +361,18 @@ ieee80211_recv_4way_msg2(struct ieee80211com *ic,
         ieee80211_node_leave(ic, ni);
         return;
     }
-    
+
     if (ic->ic_if.if_flags & IFF_DEBUG)
         XYLog("%s: received msg %d/%d of the %s handshake from %s\n",
               ic->ic_if.if_xname, 2, 4, "4-way",
               ether_sprintf(ni->ni_macaddr));
-    
+
     /* send message 3 to supplicant */
     (void)ieee80211_send_4way_msg3(ic, ni);
 }
 #endif	/* IEEE80211_STA_ONLY */
 
-/* 
+/*
  * Check if a group key must be updated with a new GTK from an EAPOL frame.
  * Manipulated group key handshake messages could trick clients into
  * reinstalling an already used group key and hence lower or reset the
@@ -383,10 +398,10 @@ ieee80211_recv_4way_msg3(struct ieee80211com *ic,
     struct ieee80211_ptk tptk;
     struct ieee80211_key *k;
     const u_int8_t *frm, *efrm;
-    const u_int8_t *rsnie1, *rsnie2, *gtk, *igtk;
+    const u_int8_t *rsnie1, *rsnie2, *rsnxe, *gtk, *igtk;
     u_int16_t info, reason = 0;
     int keylen, deferlink = 0;
-    
+
 #ifndef IEEE80211_STA_ONLY
     if (ic->ic_opmode != IEEE80211_M_STA &&
         ic->ic_opmode != IEEE80211_M_IBSS)
@@ -418,9 +433,9 @@ ieee80211_recv_4way_msg3(struct ieee80211com *ic,
     /* TPTK = CalcPTK(PMK, ANonce, SNonce) */
     ieee80211_derive_ptk((enum ieee80211_akm)ni->ni_rsnakms, ni->ni_pmk, ni->ni_macaddr,
                          ic->ic_myaddr, key->nonce, ic->ic_nonce, &tptk);
-    
+
     info = BE_READ_2(key->info);
-    
+
     /* check Key MIC field using KCK */
     if (ieee80211_eapol_key_check_mic(key, tptk.kck) != 0) {
         DPRINTF(("key MIC failed\n"));
@@ -429,24 +444,24 @@ ieee80211_recv_4way_msg3(struct ieee80211com *ic,
     }
     /* install TPTK as PTK now that MIC is verified */
     memcpy(&ni->ni_ptk, &tptk, sizeof(tptk));
-    
+
     /* if encrypted, decrypt Key Data field using KEK */
     if ((info & EAPOL_KEY_ENCRYPTED) &&
         ieee80211_eapol_key_decrypt(key, ni->ni_ptk.kek) != 0) {
         DPRINTF(("decryption failed\n"));
         return;
     }
-    
+
     /* parse key data field */
     frm = (const u_int8_t *)&key[1];
     efrm = frm + BE_READ_2(key->paylen);
-    
+
     /*
      * Some WPA1+WPA2 APs (like hostapd) appear to include both WPA and
      * RSN IEs in message 3/4.  We only take into account the IE of the
      * version of the protocol we negotiated at association time.
      */
-    rsnie1 = rsnie2 = gtk = igtk = NULL;
+    rsnie1 = rsnie2 = rsnxe = gtk = igtk = NULL;
     while (frm + 2 <= efrm) {
         if (frm + 2 + frm[1] > efrm)
             break;
@@ -459,6 +474,9 @@ ieee80211_recv_4way_msg3(struct ieee80211com *ic,
                 else if (rsnie2 == NULL)
                     rsnie2 = frm;
                 /* ignore others if more than two RSN IEs */
+                break;
+            case IEEE80211_ELEMID_RSNXE:
+                rsnxe = frm;
                 break;
             case IEEE80211_ELEMID_VENDOR:
                 if (frm[1] < 4)
@@ -502,13 +520,28 @@ ieee80211_recv_4way_msg3(struct ieee80211com *ic,
         DPRINTF(("IGTK KDE found but GTK KDE missing\n"));
         return;
     }
+    /*
+     * WPA3-Personal mandates management frame protection, so message 3
+     * must carry the IGTK KDE and echo the RSNXE we saw before joining.
+     */
+    if (ieee80211_node_allow_wpa3(ic, ni) && igtk == NULL) {
+        reason = IEEE80211_REASON_AUTH_LEAVE;
+        goto deauth;
+    }
+    if (ieee80211_node_allow_wpa3(ic, ni) && ni->ni_sae.sae_h2e &&
+        (rsnxe == NULL ||
+         !ieee80211_rsnxe_matches(ni->ni_rsnxe, ni->ni_rsnxe_len,
+             rsnxe, (size_t)rsnxe[1] + 2))) {
+        reason = IEEE80211_REASON_AUTH_LEAVE;
+        goto deauth;
+    }
     /* check that the Install bit is set if using pairwise keys */
     if (ni->ni_rsncipher != IEEE80211_CIPHER_USEGROUP &&
         !(info & EAPOL_KEY_INSTALL)) {
         DPRINTF(("pairwise cipher but !Install\n"));
         return;
     }
-    
+
     /*
      * Check that first WPA/RSN IE is identical to the one received in
      * the beacon or probe response frame.
@@ -518,14 +551,14 @@ ieee80211_recv_4way_msg3(struct ieee80211com *ic,
         reason = IEEE80211_REASON_RSN_DIFFERENT_IE;
         goto deauth;
     }
-    
+
     /*
      * If a second RSN information element is present, use its pairwise
      * cipher suite or deauthenticate.
      */
     if (rsnie2 != NULL) {
         struct ieee80211_rsnparams rsn;
-        
+
         if (ieee80211_parse_rsn(ic, rsnie2, &rsn) == 0) {
             if (rsn.rsn_akms != ni->ni_rsnakms ||
                 rsn.rsn_groupcipher != ni->ni_rsngroupcipher ||
@@ -539,20 +572,20 @@ ieee80211_recv_4way_msg3(struct ieee80211com *ic,
             ni->ni_rsncipher = (enum ieee80211_cipher)ni->ni_rsnciphers;
         }
     }
-    
+
     /* update the last seen value of the key replay counter field */
     ni->ni_replaycnt = BE_READ_8(key->replaycnt);
     ni->ni_replaycnt_ok = 1;
-    
+
     if (ic->ic_if.if_flags & IFF_DEBUG)
         XYLog("%s: received msg %d/%d of the %s handshake from %s\n",
               ic->ic_if.if_xname, 3, 4, "4-way",
               ether_sprintf(ni->ni_macaddr));
-    
+
     /* send message 4 to authenticator */
     if (ieee80211_send_4way_msg4(ic, ni) != 0)
         return;    /* ..authenticator will retry */
-    
+
     /*
      * Only install a new pairwise key if we are still expecting a new key,
      * as indicated by the NODE_RSN_NEW_PTK flag. An adversary could be
@@ -567,7 +600,7 @@ ieee80211_recv_4way_msg3(struct ieee80211com *ic,
     if (ni->ni_rsncipher != IEEE80211_CIPHER_USEGROUP &&
         (ni->ni_flags & IEEE80211_NODE_RSN_NEW_PTK)) {
         u_int64_t prsc;
-        
+
         /* check that key length matches that of pairwise cipher */
         keylen = ieee80211_cipher_keylen(ni->ni_rsncipher);
         if (BE_READ_2(key->keylen) != keylen) {
@@ -575,7 +608,7 @@ ieee80211_recv_4way_msg3(struct ieee80211com *ic,
             goto deauth;
         }
         prsc = (gtk == NULL) ? LE_READ_6(key->rsc) : 0;
-        
+
         /* map PTK to 802.11 key */
         k = &ni->ni_pairwise_key;
         memset(k, 0, sizeof(*k));
@@ -600,10 +633,10 @@ ieee80211_recv_4way_msg3(struct ieee80211com *ic,
     } else if (ni->ni_rsncipher != IEEE80211_CIPHER_USEGROUP)
         XYLog("%s: unexpected pairwise key update received from %s\n",
               ic->ic_if.if_xname, ether_sprintf(ni->ni_macaddr));
-    
+
     if (gtk != NULL) {
         u_int8_t kid;
-        
+
         /* check that key length matches that of group cipher */
         keylen = ieee80211_cipher_keylen(ni->ni_rsngroupcipher);
         if (gtk[1] != 6 + keylen) {
@@ -640,7 +673,7 @@ ieee80211_recv_4way_msg3(struct ieee80211com *ic,
     }
     if (igtk != NULL) {    /* implies MFP && gtk != NULL */
         u_int16_t kid;
-        
+
         /* check that the IGTK KDE is valid */
         if (igtk[1] != 4 + 24) {
             reason = IEEE80211_REASON_AUTH_LEAVE;
@@ -665,6 +698,10 @@ ieee80211_recv_4way_msg3(struct ieee80211com *ic,
             /* install the IGTK */
             switch ((*ic->ic_set_key)(ic, ni, k)) {
                 case 0:
+                    /* 802.11w protection becomes active for MMPDUs now. */
+                    ni->ni_flags |= IEEE80211_NODE_TXMGMTPROT;
+                    ni->ni_flags |= IEEE80211_NODE_RXMGMTPROT;
+                    ic->ic_igtk_kid = kid;
                     break;
                 case EBUSY:
                     deferlink = 1;
@@ -673,11 +710,13 @@ ieee80211_recv_4way_msg3(struct ieee80211com *ic,
                     reason = IEEE80211_REASON_AUTH_LEAVE;
                     goto deauth;
             }
+        } else {
+            ic->ic_igtk_kid = kid;
         }
     }
     if (info & EAPOL_KEY_INSTALL)
         ni->ni_flags |= IEEE80211_NODE_TXRXPROT;
-    
+
     if (info & EAPOL_KEY_SECURE) {
         ni->ni_flags |= IEEE80211_NODE_TXRXPROT;
 #ifndef IEEE80211_STA_ONLY
@@ -716,29 +755,29 @@ ieee80211_recv_4way_msg4(struct ieee80211com *ic,
     if (ic->ic_opmode != IEEE80211_M_HOSTAP &&
         ic->ic_opmode != IEEE80211_M_IBSS)
         return;
-    
+
     /* discard if we're not expecting this message */
     if (ni->ni_rsn_state != RSNA_PTKINITNEGOTIATING) {
         DPRINTF(("unexpected in state: %d\n", ni->ni_rsn_state));
         return;
     }
-    
+
     /* NB: replay counter has already been verified by caller */
-    
+
     /* check Key MIC field using KCK */
     if (ieee80211_eapol_key_check_mic(key, ni->ni_ptk.kck) != 0) {
         DPRINTF(("key MIC failed\n"));
         ic->ic_stats.is_rx_eapol_badmic++;
         return;    /* will timeout.. */
     }
-    
+
     timeout_del(&ni->ni_eapol_to);
     ni->ni_rsn_state = RSNA_PTKINITDONE;
     ni->ni_rsn_retries = 0;
-    
+
     if (ni->ni_rsncipher != IEEE80211_CIPHER_USEGROUP) {
         struct ieee80211_key *k;
-        
+
         /* map PTK to 802.11 key */
         k = &ni->ni_pairwise_key;
         memset(k, 0, sizeof(*k));
@@ -764,12 +803,12 @@ ieee80211_recv_4way_msg4(struct ieee80211com *ic,
                  ether_sprintf(ni->ni_macaddr)));
         ni->ni_port_valid = 1;
     }
-    
+
     if (ic->ic_if.if_flags & IFF_DEBUG)
         XYLog("%s: received msg %d/%d of the %s handshake from %s\n",
               ic->ic_if.if_xname, 4, 4, "4-way",
               ether_sprintf(ni->ni_macaddr));
-    
+
     /* initiate a group key handshake for WPA */
     if (ni->ni_rsnprotos == IEEE80211_PROTO_WPA)
         (void)ieee80211_send_group_msg1(ic, ni);
@@ -788,16 +827,16 @@ ieee80211_recv_4way_msg2or4(struct ieee80211com *ic,
     XYLog("%s\n", __FUNCTION__);
     const u_int8_t *frm, *efrm;
     const u_int8_t *rsnie;
-    
+
     if (BE_READ_8(key->replaycnt) != ni->ni_replaycnt) {
         ic->ic_stats.is_rx_eapol_replay++;
         return;
     }
-    
+
     /* parse key data field (check if an RSN IE is present) */
     frm = (const u_int8_t *)&key[1];
     efrm = frm + BE_READ_2(key->paylen);
-    
+
     rsnie = NULL;
     while (frm + 2 <= efrm) {
         if (frm + 2 + frm[1] > efrm)
@@ -839,7 +878,7 @@ ieee80211_recv_rsn_group_msg1(struct ieee80211com *ic,
     const u_int8_t *gtk, *igtk;
     u_int16_t info, kid, reason = 0;
     int keylen;
-    
+
 #ifndef IEEE80211_STA_ONLY
     if (ic->ic_opmode != IEEE80211_M_STA &&
         ic->ic_opmode != IEEE80211_M_IBSS)
@@ -862,18 +901,18 @@ ieee80211_recv_rsn_group_msg1(struct ieee80211com *ic,
         return;
     }
     info = BE_READ_2(key->info);
-    
+
     /* check that encrypted and decrypt Key Data field using KEK */
     if (!(info & EAPOL_KEY_ENCRYPTED) ||
         ieee80211_eapol_key_decrypt(key, ni->ni_ptk.kek) != 0) {
         DPRINTF(("decryption failed\n"));
         return;
     }
-    
+
     /* parse key data field (shall contain a GTK KDE) */
     frm = (const u_int8_t *)&key[1];
     efrm = frm + BE_READ_2(key->paylen);
-    
+
     gtk = igtk = NULL;
     while (frm + 2 <= efrm) {
         if (frm + 2 + frm[1] > efrm)
@@ -902,12 +941,12 @@ ieee80211_recv_rsn_group_msg1(struct ieee80211com *ic,
         DPRINTF(("GTK KDE missing\n"));
         return;
     }
-    
+
     /* check that key length matches that of group cipher */
     keylen = ieee80211_cipher_keylen(ni->ni_rsngroupcipher);
     if (gtk[1] != 6 + keylen)
         return;
-    
+
     /* map GTK to 802.11 key */
     kid = gtk[6] & 3;
     k = &ic->ic_nw_keys[kid];
@@ -956,12 +995,19 @@ ieee80211_recv_rsn_group_msg1(struct ieee80211com *ic,
             /* install the IGTK */
             switch ((*ic->ic_set_key)(ic, ni, k)) {
                 case 0:
+                    /* a group-key update also (re)enables 802.11w */
+                    ni->ni_flags |= IEEE80211_NODE_TXMGMTPROT;
+                    ni->ni_flags |= IEEE80211_NODE_RXMGMTPROT;
+                    ic->ic_igtk_kid = kid;
+                    break;
                 case EBUSY:
                     break;
                 default:
                     reason = IEEE80211_REASON_AUTH_LEAVE;
                     goto deauth;
             }
+        } else {
+            ic->ic_igtk_kid = kid;
         }
     }
     if (info & EAPOL_KEY_SECURE) {
@@ -979,12 +1025,12 @@ ieee80211_recv_rsn_group_msg1(struct ieee80211com *ic,
     }
     /* update the last seen value of the key replay counter field */
     ni->ni_replaycnt = BE_READ_8(key->replaycnt);
-    
+
     if (ic->ic_if.if_flags & IFF_DEBUG)
         XYLog("%s: received msg %d/%d of the %s handshake from %s\n",
               ic->ic_if.if_xname, 1, 2, "group key",
               ether_sprintf(ni->ni_macaddr));
-    
+
     /* send message 2 to authenticator */
     (void)ieee80211_send_group_msg2(ic, ni, NULL);
     return;
@@ -1006,7 +1052,7 @@ ieee80211_recv_wpa_group_msg1(struct ieee80211com *ic,
     u_int8_t kid;
     int keylen;
     const uint8_t *gtk;
-    
+
 #ifndef IEEE80211_STA_ONLY
     if (ic->ic_opmode != IEEE80211_M_STA &&
         ic->ic_opmode != IEEE80211_M_IBSS)
@@ -1036,18 +1082,18 @@ ieee80211_recv_wpa_group_msg1(struct ieee80211com *ic,
         DPRINTF(("decryption failed\n"));
         return;
     }
-    
+
     /* check that key length matches that of group cipher */
     keylen = ieee80211_cipher_keylen(ni->ni_rsngroupcipher);
     if (BE_READ_2(key->keylen) != keylen)
         return;
-    
+
     /* check that the data length is large enough to hold the key */
     if (BE_READ_2(key->paylen) < keylen)
         return;
-    
+
     info = BE_READ_2(key->info);
-    
+
     /* map GTK to 802.11 key */
     kid = (info >> EAPOL_KEY_WPA_KID_SHIFT) & 3;
     k = &ic->ic_nw_keys[kid];
@@ -1089,12 +1135,12 @@ ieee80211_recv_wpa_group_msg1(struct ieee80211com *ic,
     }
     /* update the last seen value of the key replay counter field */
     ni->ni_replaycnt = BE_READ_8(key->replaycnt);
-    
+
     if (ic->ic_if.if_flags & IFF_DEBUG)
         XYLog("%s: received msg %d/%d of the %s handshake from %s\n",
               ic->ic_if.if_xname, 1, 2, "group key",
               ether_sprintf(ni->ni_macaddr));
-    
+
     /* send message 2 to authenticator */
     (void)ieee80211_send_group_msg2(ic, ni, k);
 }
@@ -1111,7 +1157,7 @@ ieee80211_recv_group_msg2(struct ieee80211com *ic,
     if (ic->ic_opmode != IEEE80211_M_HOSTAP &&
         ic->ic_opmode != IEEE80211_M_IBSS)
         return;
-    
+
     /* discard if we're not expecting this message */
     if (ni->ni_rsn_gstate != RSNA_REKEYNEGOTIATING) {
         DPRINTF(("%s: unexpected in state: %d\n", ic->ic_if.if_xname,
@@ -1129,10 +1175,10 @@ ieee80211_recv_group_msg2(struct ieee80211com *ic,
         ic->ic_stats.is_rx_eapol_badmic++;
         return;
     }
-    
+
     timeout_del(&ni->ni_eapol_to);
     ni->ni_rsn_gstate = RSNA_REKEYESTABLISHED;
-    
+
     if (ni->ni_flags & IEEE80211_NODE_REKEY) {
         int rekeysta = 0;
         ni->ni_flags &= ~IEEE80211_NODE_REKEY;
@@ -1142,10 +1188,10 @@ ieee80211_recv_group_msg2(struct ieee80211com *ic,
             ieee80211_setkeysdone(ic);
     }
     ni->ni_flags |= IEEE80211_NODE_TXRXPROT;
-    
+
     ni->ni_rsn_gstate = RSNA_IDLE;
     ni->ni_rsn_retries = 0;
-    
+
     if (ic->ic_if.if_flags & IFF_DEBUG)
         XYLog("%s: received msg %d/%d of the %s handshake from %s\n",
               ic->ic_if.if_xname, 2, 2, "group key",
@@ -1163,11 +1209,11 @@ ieee80211_recv_eapol_key_req(struct ieee80211com *ic,
 {
     XYLog("%s\n", __FUNCTION__);
     u_int16_t info;
-    
+
     if (ic->ic_opmode != IEEE80211_M_HOSTAP &&
         ic->ic_opmode != IEEE80211_M_IBSS)
         return;
-    
+
     /* discard if we're not expecting this message */
     if (ni->ni_rsn_state != RSNA_PTKINITDONE) {
         DPRINTF(("unexpected in state: %d\n", ni->ni_rsn_state));
@@ -1180,7 +1226,7 @@ ieee80211_recv_eapol_key_req(struct ieee80211com *ic,
         return;
     }
     info = BE_READ_2(key->info);
-    
+
     if (!(info & EAPOL_KEY_KEYMIC) ||
         ieee80211_eapol_key_check_mic(key, ni->ni_ptk.kck) != 0) {
         DPRINTF(("key request MIC failed\n"));
@@ -1190,7 +1236,7 @@ ieee80211_recv_eapol_key_req(struct ieee80211com *ic,
     /* update key request replay counter now that MIC is verified */
     ni->ni_reqreplaycnt = BE_READ_8(key->replaycnt);
     ni->ni_reqreplaycnt_ok = 1;
-    
+
     if (info & EAPOL_KEY_ERROR) {    /* TKIP MIC failure */
         /* ignore reports from STAs not using TKIP */
         if (ic->ic_bss->ni_rsngroupcipher != IEEE80211_CIPHER_TKIP &&
@@ -1201,10 +1247,10 @@ ieee80211_recv_eapol_key_req(struct ieee80211com *ic,
         }
         ic->ic_stats.is_rx_remmicfail++;
         ieee80211_michael_mic_failure(ic, LE_READ_6(key->rsc));
-        
+
     } else if (info & EAPOL_KEY_PAIRWISE) {
         /* initiate a 4-Way Handshake */
-        
+
     } else {
         /*
          * Should change the GTK, initiate the 4-Way Handshake and

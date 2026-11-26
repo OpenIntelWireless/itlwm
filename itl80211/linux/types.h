@@ -44,7 +44,7 @@
 #define MODULE_DESCRIPTION(x)
 #define MODULE_AUTHOR(x)
 #define MODULE_LICENSE(x)
- 
+
 
 #define __init
 #define __exit
@@ -110,10 +110,23 @@
 
 #define BUILD_BUG_ON(condition) ((void)sizeof(char[1 - 2*!!(condition)]))
 
+// -itlawdlrx keeps the driver's messages in a ring published in the I/O Registry.
+extern bool itlLogOn;
+// Set while AirportItlwm::start runs, so a failed start can leave its messages behind (#14).
+extern bool itlLogStartup;
+void itlLogRing(const char *fmt, ...) __printflike(1, 2);
+uint32_t itlLogMark(void);
+#ifdef __cplusplus
+class OSArray;
+// The ring's lines written since mark, oldest first (at most the ring's size). Caller releases.
+OSArray *itlLogCopySince(uint32_t mark);
+#endif
+
 #define XYLog(fmt, x...)\
 do\
 {\
 kprintf("%s: " fmt, "itlwm", ##x);\
+if (itlLogOn || itlLogStartup) itlLogRing(fmt, ##x);\
 }while(0)
 
 typedef UInt8  u8;

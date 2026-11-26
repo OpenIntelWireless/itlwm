@@ -607,10 +607,10 @@ struct iwx_softc {
 
 	/* Task for firmware BlockAck setup/teardown and its arguments. */
 	struct task	ba_task;
-    
+
     struct iwx_ba_task_data    ba_rx;
     struct iwx_ba_task_data    ba_tx;
-    
+
     struct iwx_tid_data sc_tid_data[IWX_MAX_TID_COUNT + 1];//per tid data + mgmt. Look at %iwx_tid_data.
 
     /* Task for ERP/HT prot/slot-time/EDCA updates. */
@@ -627,9 +627,9 @@ struct iwx_softc {
 	int sc_msix;
 
 	/* TX/RX rings. */
-    struct iwx_tx_ring txq[IWX_MAX_TVQM_QUEUES];
-    struct iwx_rx_ring rxq;
-    ItlQueueMask<IWX_MAX_TVQM_QUEUES> qfullmsk;
+	struct iwx_tx_ring txq[IWX_MAX_TVQM_QUEUES];
+	struct iwx_rx_ring rxq;
+	ItlQueueMask<IWX_MAX_TVQM_QUEUES> qfullmsk;
     struct iwx_tx_ring sc_tvqm_ring;
     int first_data_qid;
 
@@ -714,13 +714,13 @@ struct iwx_softc {
 	int sc_scan_last_antenna;
 
 	int sc_fixed_ridx;
-    
+
     uint8_t sc_mgmt_last_antenna_idx; /* for MGMT frames using*/
 
 	int sc_staid;
 	int sc_nodecolor;
 
-	uint8_t *sc_cmd_resp_pkt[IWX_TFD_QUEUE_SIZE_MAX_GEN3];	
+	uint8_t *sc_cmd_resp_pkt[IWX_TFD_QUEUE_SIZE_MAX_GEN3];
 	size_t sc_cmd_resp_len[IWX_TFD_QUEUE_SIZE_MAX_GEN3];
 	int sc_nic_locks;
 
@@ -747,7 +747,7 @@ struct iwx_softc {
     int sc_ltr_delay;
     int sc_xtal_latency;
     int sc_low_latency_xtal;
-    
+
     int sc_uhb_supported;
 
 #if NBPFILTER > 0
@@ -776,7 +776,7 @@ struct iwx_node {
 
 	uint16_t in_id;
 	uint16_t in_color;
-    
+
     struct iwx_rxq_dup_data dup_data;
 };
 #define IWX_STATION_ID 0

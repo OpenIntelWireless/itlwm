@@ -144,7 +144,7 @@ ppsratecheck(struct timeval *lasttime, int *curpps, int maxpps)
      */
     *curpps = *curpps + 1;
 #endif
-    
+
     return (rv);
 }
 
@@ -194,11 +194,20 @@ static u_int32_t ether_crc32_le_update(u_int32_t crc, const u_int8_t *buf, size_
     return (crc);
 }
 
+// Every caller is a log line, and with -itllog the log is published in the I/O Registry, where any
+// local process can read it. Only the last two bytes of an address are printed, as in the driver's own
+// lines (audit HL02): enough to tell devices apart in one log, not enough to identify one. A few
+// buffers in rotation, so two addresses in one call (or two threads) don't overwrite each other.
 static char* ether_sprintf(const uint8_t *ap)
 {
-         static char etherbuf[18];
-         snprintf(etherbuf, sizeof (etherbuf), "%6D", ap, ":");
-         return (etherbuf);
+         static char etherbuf[4][sizeof("..:00:00")];
+         static unsigned int next;
+         char *buf = etherbuf[__atomic_fetch_add(&next, 1, __ATOMIC_RELAXED) & 3];
+         if (ap == NULL)
+                 snprintf(buf, sizeof(etherbuf[0]), "..:??:??");
+         else
+                 snprintf(buf, sizeof(etherbuf[0]), "..:%02x:%02x", ap[4], ap[5]);
+         return (buf);
 }
 
 static void array_sprintf(char *output, uint8_t output_size, const uint8_t *array, const uint8_t len)
@@ -453,20 +462,22 @@ struct ieee80211com {
     uint64_t ic_wcl_rx_packets[4];
 #endif
     void            (*ic_event_handler)(struct ieee80211com *, int, void *);
-    CTimeout*        ic_bgscan_timeout;
+	CTimeout*		ic_bgscan_timeout;
 	uint32_t		ic_bgscan_fail;
 	u_int8_t		ic_myaddr[IEEE80211_ADDR_LEN];
 	struct ieee80211_rateset ic_sup_rates[IEEE80211_MODE_MAX];
 	struct ieee80211_channel ic_channels[IEEE80211_CHAN_MAX+1];
 	u_char			ic_chan_avail[howmany(IEEE80211_CHAN_MAX,NBBY)];
 	u_char			ic_chan_active[howmany(IEEE80211_CHAN_MAX, NBBY)];
+	/* Channels where a beaconing AP was heard on its own channel (beacon hint). */
+	u_char			ic_beacon_hint[howmany(IEEE80211_CHAN_MAX, NBBY)];
 	u_char			ic_chan_scan[howmany(IEEE80211_CHAN_MAX,NBBY)];
 	struct mbuf_queue	ic_mgtq;
 	struct mbuf_queue	ic_pwrsaveq;
 	u_int8_t		ic_scan_count;	/* count scans */
 	u_int32_t		ic_flags;	/* state flags */
 	u_int32_t		ic_xflags;	/* more flags */
-    
+
 	u_int32_t		ic_userflags;	/* yet more flags */
 	u_int32_t		ic_caps;	/* capabilities */
 	u_int16_t		ic_modecaps;	/* set of mode capabilities */
@@ -531,6 +542,18 @@ struct ieee80211com {
 	u_int8_t		ic_globalcnt[EAPOL_KEY_NONCE_LEN];
 	u_int8_t		ic_nonce[EAPOL_KEY_NONCE_LEN];
 	u_int8_t		ic_psk[IEEE80211_PMK_LEN];
+	/*
+	 * WPA3-Personal (SAE) state.  The password token (PT) is derived once
+	 * from password + SSID, the password element (PWE) once per peer, and
+	 * both are cached because each derivation is expensive.  ic_wpa3 is
+	 * 0 unless the -itlwmwpa3 boot argument enabled SAE.
+	 */
+	u_int8_t		ic_sae_pt[IEEE80211_SAE_MAX_ECC_PRIME_LEN * 2];
+	u_int8_t		ic_sae_pwe[IEEE80211_SAE_MAX_ECC_PRIME_LEN * 2];
+	struct ieee80211_sae_auth ic_sae_auth;
+	int			ic_sae_pt_valid;
+	int			ic_sae_pwe_valid;
+	int			ic_wpa3;
 	CTimeout*		ic_rsn_timeout;
 	int			ic_tkip_micfail;
 	u_int64_t		ic_tkip_micfail_last_tsc;
@@ -574,16 +597,16 @@ struct ieee80211com {
     uint16_t        ic_vht_tx_highest;
     uint16_t        ic_vht_rx_highest;
     uint16_t        ic_vht_sup_mcs[howmany(80, NBBY)];
-    
+
     /* HE state */
     struct ieee80211_he_cap_elem ic_he_cap_elem;   /* Fixed portion of the HE capabilities element. */
     struct ieee80211_he_mcs_nss_supp ic_he_mcs_nss_supp;   /* The supported NSS/MCS combinations. */
     uint8_t ic_ppe_thres[IEEE80211_HE_PPE_THRES_MAX_LEN]; /* Holds the PPE Thresholds data. */
-    
+
 	TAILQ_HEAD(, ieee80211_ess)	 ic_ess;
 };
-#define    ic_if        ic_ac.ac_if
-#define    ic_softc    ic_if.if_softc
+#define	ic_if		ic_ac.ac_if
+#define	ic_softc	ic_if.if_softc
 
 #ifdef AIRPORT_WCL
 static inline unsigned ieee80211_wcl_ac(unsigned tid)
@@ -653,6 +676,7 @@ struct ieee80211_ess {
 
 /* ic_xflags */
 #define	IEEE80211_F_TX_MGMT_ONLY 0x00000001	/* leave data frames on ifq */
+#define	IEEE80211_F_SAE_PWE	 0x00000002	/* STATUS: SAE PWE set */
 
 /* ic_caps */
 #define	IEEE80211_C_WEP		0x00000001	/* CAPABILITY: WEP available */
@@ -702,6 +726,34 @@ struct ieee80211_beacon_event {
 };
 #endif
 
+/*
+ * SAE commits are bound to the pair of MAC addresses that derived them.
+ * This driver never uses MLD/multi-link addressing, so the addresses are
+ * simply our own address and the peer's address.
+ */
+static inline int
+ieee80211_sae_select_auth(const struct ieee80211com *ic,
+    const struct ieee80211_node *ni, struct ieee80211_sae_auth *auth)
+{
+	memset(auth, 0, sizeof(*auth));
+	IEEE80211_ADDR_COPY(auth->ownaddr, ic->ic_myaddr);
+	IEEE80211_ADDR_COPY(auth->peeraddr, ni->ni_macaddr);
+	return 0;
+}
+
+static inline int
+ieee80211_sae_auth_current(const struct ieee80211com *ic,
+    const struct ieee80211_node *ni)
+{
+	struct ieee80211_sae_auth auth;
+
+	return ieee80211_sae_select_auth(ic, ni, &auth) == 0 &&
+	    memcmp(&auth, &ic->ic_sae_auth, sizeof(auth)) == 0 &&
+	    memcmp(&auth, &ni->ni_sae.sae_auth, sizeof(auth)) == 0 &&
+	    (ni->ni_sae.sae_state == SAE_STATE_NOTHING ||
+	    IEEE80211_ADDR_EQ(ni->ni_sae.sae_ownaddr, ic->ic_myaddr));
+}
+
 
 void	ieee80211_ifattach(struct _ifnet *, IOEthernetController *controller);
 void	ieee80211_ifdetach(struct _ifnet *);
@@ -731,8 +783,8 @@ int	ieee80211_setmode(struct ieee80211com *, enum ieee80211_phymode);
 enum ieee80211_phymode ieee80211_next_mode(struct _ifnet *);
 enum ieee80211_phymode ieee80211_chan2mode(struct ieee80211com *,
 		const struct ieee80211_channel *);
-void	ieee80211_disable_wep(struct ieee80211com *); 
-void	ieee80211_disable_rsn(struct ieee80211com *); 
+void	ieee80211_disable_wep(struct ieee80211com *);
+void	ieee80211_disable_rsn(struct ieee80211com *);
 int	ieee80211_add_ess(struct ieee80211com *, struct ieee80211_join *);
 void	ieee80211_del_ess(struct ieee80211com *, char *, int, int);
 void	ieee80211_set_ess(struct ieee80211com *, struct ieee80211_ess *,

@@ -59,7 +59,8 @@ enum ieee80211_akm {
 	IEEE80211_AKM_8021X		= 0x00000001,
 	IEEE80211_AKM_PSK		= 0x00000002,
 	IEEE80211_AKM_SHA256_8021X	= 0x00000004,	/* 11w */
-	IEEE80211_AKM_SHA256_PSK	= 0x00000008	/* 11w */
+	IEEE80211_AKM_SHA256_PSK	= 0x00000008,	/* 11w */
+	IEEE80211_AKM_SAE		= 0x00000010	/* WPA3-Personal */
 };
 
 #define IEEE80211_TKIP_HDRLEN	8
@@ -82,7 +83,10 @@ enum ieee80211_akm {
 
 #define IEEE80211_PMK_LEN	32
 
-#ifdef _KERNEL 
+#ifdef _KERNEL
+
+void ieee80211_kdf(const u_int8_t *, size_t, const u_int8_t *, size_t,
+    const u_int8_t *, size_t, u_int8_t *, size_t);
 
 static __inline int
 ieee80211_is_8021x_akm(enum ieee80211_akm akm)
@@ -95,7 +99,7 @@ static __inline int
 ieee80211_is_sha256_akm(enum ieee80211_akm akm)
 {
 	return akm == IEEE80211_AKM_SHA256_8021X ||
-	    akm == IEEE80211_AKM_SHA256_PSK;
+	    akm == IEEE80211_AKM_SHA256_PSK || akm == IEEE80211_AKM_SAE;
 }
 
 struct ieee80211_key {

@@ -861,7 +861,7 @@ struct apple80211_vht_mcs_index_set_data
     u_int16_t    mcs_map;
 } __attribute__((packed));
 
-struct apple80211_mcs_vht_data 
+struct apple80211_mcs_vht_data
 {
     u_int32_t   version;
     u_int32_t   index;
@@ -1039,7 +1039,22 @@ struct apple80211_awdl_extension_state_machine_parameter {
 struct apple80211_awdl_sync_state {
     uint32_t    version;
     uint32_t    state;
+#if __IO80211_TARGET == __MAC_26_0
+    // Tahoe 25G241: public get/set wrappers require exactly 0x18 bytes.
+    // Native configure supplies the address at +8 and flags at +16;
+    // the native driver also reads a byte at +20. Names remain provisional.
+    uint8_t     address[APPLE80211_ADDR_LEN];
+    uint8_t     reserved[2];
+    uint32_t    flags;
+    uint8_t     driver_flags;
+    uint8_t     reserved_tail[3];
+#endif
 } __attribute__((packed));
+#if __IO80211_TARGET == __MAC_26_0
+static_assert(sizeof(apple80211_awdl_sync_state) == 24, "Tahoe AWDL sync-state ABI");
+static_assert(__offsetof(apple80211_awdl_sync_state, flags) == 16, "AWDL sync flags offset");
+static_assert(__offsetof(apple80211_awdl_sync_state, driver_flags) == 20, "AWDL driver flags offset");
+#endif
 
 struct apple80211_awdl_sync_params {
     uint32_t    version;

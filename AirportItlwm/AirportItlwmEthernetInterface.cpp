@@ -55,11 +55,12 @@ attachToDataLinkLayer( IOOptionBits options, void *parameter )
     if (ret == kIOReturnSuccess && interface) {
         UInt8 builtIn = 0;
         IOEthernetAddress addr;
-        interface->setProperty("built-in", OSData::withBytes(&builtIn, sizeof(builtIn)));
+        // The overloads that copy the value, so nothing is leaked per attach (audit ST03).
+        interface->setProperty("built-in", &builtIn, sizeof(builtIn));
         snprintf(infName, sizeof(infName), "%s%u", ifnet_name(getIfnet()), ifnet_unit(getIfnet()));
-        interface->setProperty("IOInterfaceName", OSString::withCString(infName));
-        interface->setProperty(kIOInterfaceUnit, OSNumber::withNumber(ifnet_unit(getIfnet()), 8));
-        interface->setProperty(kIOInterfaceNamePrefix, OSString::withCString(ifnet_name(getIfnet())));
+        interface->setProperty("IOInterfaceName", infName);
+        interface->setProperty(kIOInterfaceUnit, (unsigned long long)ifnet_unit(getIfnet()), 8);
+        interface->setProperty(kIOInterfaceNamePrefix, ifnet_name(getIfnet()));
         if (OSDynamicCast(IOEthernetController, getController())->getHardwareAddress(&addr) == kIOReturnSuccess)
             setProperty(kIOMACAddress,  (void *) &addr,
                         kIOEthernetAddressSize);
@@ -184,18 +185,7 @@ inputPacket(mbuf_t packet, UInt32 length, IOOptionBits options, void *param)
     if (directInput)
         param = packet;
 #endif
-#ifndef AIRPORT_WCL
-    ether_header_t *eh;
-    size_t len = mbuf_len(packet);
-    
-    eh = (ether_header_t *)mbuf_data(packet);
-
-    if (len >= sizeof(ether_header_t) && eh->ether_type == htons(ETHERTYPE_PAE)) { // EAPOL packet
-        const char* dump = hexdump((uint8_t*)mbuf_data(packet), len);
-        XYLog("input EAPOL packet, len: %zu, data: %s\n", len, dump ? dump : "Failed to allocate memory");
-        if (dump)
-            IOFree((void*)dump, 3 * len + 1);
-    }
-#endif
+    // The non-WCL (Sonoma) build used to log every received EAPOL frame as hex, handshake and encrypted
+    // group key included (audit D04, HL02). Removed.
     return IOEthernetInterface::inputPacket(packet, length, options, param);
 }

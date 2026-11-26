@@ -15,6 +15,17 @@
 
 namespace AirportWCL {
 
+// The kernel's IFNET_LQM_THRESH_OFF: link quality "off".
+constexpr int32_t kLinkQualityOff = -2;
+
+template <typename Report>
+inline void resetLinkQuality(int32_t &reported, Report report) {
+    if (!reported)
+        return;
+    report(kLinkQualityOff);
+    reported = 0;
+}
+
 enum class MacUpdate { Invalid, Unchanged, Busy, Change };
 inline MacUpdate planMacUpdate(const uint8_t *current, const uint8_t *requested,
                                size_t length, bool initializing) {
@@ -77,10 +88,25 @@ struct SequoiaLqmUpdate {
 static_assert(sizeof(SequoiaLqmUpdate) == 0x150, "Sequoia LQM size");
 static_assert(offsetof(SequoiaLqmUpdate, rssi) == 4, "Sequoia LQM RSSI offset");
 
-// WCLNetManager::handleLqmUpdate consumes this 0x1dc snapshot.
-// Only beacon reception is valid; unavailable radio measurements stay invalid.
+// WCLNetManager::handleLqmUpdate consumes this 0x1dc snapshot. Read from its 25G241 code: byte 0 is
+// the RSSI valid flag and the int32 at 4 the RSSI in dBm, which it stores as the link's current RSSI.
+// Without them WCL sees 0 dBm, airportd rates en0's LinkQuality "off" (-2), and apsd then treats Wi-Fi
+// as unusable, so push, iMessage and other Apple services can't connect. Beacon reception is the
+// only other part filled unless measured SNR/noise are available. Those offsets
+// were tested only on Tahoe 26.7.2/26.7.3 (25G332/25G342), not 26.7.1.
+// Population remains enabled on Tahoe; 26.7.1 still needs validation.
+// Core RSSI and CCA stay invalid.
 struct LqmBeaconUpdate {
-    uint8_t prefix[0x28];
+    uint8_t rssiValid;
+    uint8_t reserved0[3];
+    int32_t rssi;
+    uint8_t reservedCore[3];                     // 0x08..0x0a
+    uint8_t snrValid;                            // 0x0b
+    int16_t snr;                                 // 0x0c
+    uint8_t noiseValid;                          // 0x0e
+    uint8_t reservedPad;
+    int16_t noise;                               // 0x10
+    uint8_t prefix[0x28 - 0x12];                 // includes unused CCA
     uint32_t receivedDelta;
     uint32_t scheduledDelta;
     uint8_t beaconValid;
@@ -90,7 +116,12 @@ struct LqmBeaconUpdate {
     uint8_t tail[2];
 };
 static_assert(sizeof(LqmBeaconUpdate) == 0x1dc, "WCL LQM update size");
+static_assert(offsetof(LqmBeaconUpdate, snrValid) == 0x0b, "WCL SNR valid offset");
+static_assert(offsetof(LqmBeaconUpdate, snr) == 0x0c, "WCL SNR offset");
+static_assert(offsetof(LqmBeaconUpdate, noiseValid) == 0x0e, "WCL noise valid offset");
+static_assert(offsetof(LqmBeaconUpdate, noise) == 0x10, "WCL noise offset");
 static_assert(offsetof(LqmBeaconUpdate, receivedDelta) == 0x28, "WCL beacon delta offset");
+static_assert(offsetof(LqmBeaconUpdate, rssi) == 4, "WCL LQM RSSI offset");
 static_assert(offsetof(LqmBeaconUpdate, beaconValid) == 0x30, "WCL beacon valid offset");
 static_assert(offsetof(LqmBeaconUpdate, snapshotValid) == 0x1d8, "WCL snapshot valid offset");
 inline bool makeBeaconUpdate(uint32_t receivedDelta, LqmBeaconUpdate &out)
@@ -101,6 +132,18 @@ inline bool makeBeaconUpdate(uint32_t receivedDelta, LqmBeaconUpdate &out)
     out.receivedDelta = receivedDelta;
     out.beaconValid = out.snapshotValid = out.countersValid = 1;
     return true;
+}
+
+inline void setBeaconRadio(LqmBeaconUpdate &out, int32_t rssi, int16_t noise) {
+    // sc_noise is 0 before statistics and -127 when no antenna has a reading.
+    if (rssi >= 0 || noise >= 0 || noise < -120)
+        return;
+    const int32_t snr = rssi - noise;
+    if (snr < INT16_MIN || snr > INT16_MAX)
+        return;
+    out.noiseValid = out.snrValid = 1;
+    out.noise = noise;
+    out.snr = static_cast<int16_t>(snr);
 }
 
 struct DriverAvailability {
@@ -300,15 +343,18 @@ struct ScanTiming {
 // i.e. low latency. Splitting by default made each passive channel cost
 // ~0.8 s and full scans ~20 s. A 30 TU home time on quiet links (Linux's
 // lighter setting) coincided with firmware resets on AX210, so it is not used.
+// maxOutOverrideTU (boot flag itlwm_scanout=120..480) lengthens each visit so
+// several passive dwells fit before returning home; the 120 TU home time stays.
+// For Macs whose Wi-Fi carries little traffic. 0 keeps the 120 TU default.
 inline ScanTiming scanTiming(uint32_t awayMilliseconds, bool associated,
-                             bool supportsFragmentation)
+                             bool supportsFragmentation, uint32_t maxOutOverrideTU = 0)
 {
     if (!associated)
         return {0, false, 0};
     uint64_t requested = uint64_t(awayMilliseconds) * 1000 / 1024;
     if (awayMilliseconds && requested < 100 && supportsFragmentation)
         return {requested < 44 ? 44 : uint32_t(requested), true, 95};
-    return {120, false, 120};
+    return {maxOutOverrideTU > 120 ? maxOutOverrideTU : 120, false, 120};
 }
 
 inline uint16_t read16(const uint8_t *p) {
@@ -340,6 +386,46 @@ inline bool scanUsesProbes(bool requested, bool activeRequest) {
 // This operates on the scan-message copy, never the received beacon or the
 // net80211 RSN IE used to validate the four-way handshake. SAE-only, mandatory
 // PMF and other AKM combinations must not be converted into WPA2 networks.
+// True if the IEs carry an RSN Extension element (244) with SAE hash-to-element (bit 5).
+// The driver only does H2E, so -itlwmwpa3 shows macOS the SAE AKM only when this holds.
+inline bool advertisesSAEH2E(const uint8_t *ies, size_t length) {
+    if (!validIEs(ies, length))
+        return false;
+    for (size_t offset = 0; offset < length; offset += size_t(ies[offset + 1]) + 2) {
+        if (ies[offset] == 244 && ies[offset + 1] >= 1 && (ies[offset + 2] & 0x20))
+            return true;
+    }
+    return false;
+}
+
+// True if a beacon's IEs hide the network's name: no SSID element, an empty one, or one of zero bytes only
+// (the two ways access points hide it). Such a network answers only a probe that names it.
+inline bool hidesSsid(const uint8_t *ies, size_t length) {
+    if (!validIEs(ies, length))
+        return false;
+    for (size_t offset = 0; offset < length; offset += size_t(ies[offset + 1]) + 2) {
+        if (ies[offset] != 0)
+            continue;
+        for (size_t i = 0; i < ies[offset + 1]; ++i)
+            if (ies[offset + 2 + i])
+                return false;
+        return true;
+    }
+    return true;
+}
+
+inline bool zeroAddress(const uint8_t *address) {
+    for (unsigned i = 0; i < 6; ++i)
+        if (address[i])
+            return false;
+    return true;
+}
+
+// Two network names are the same and not empty.
+inline bool sameSsid(const uint8_t *a, size_t aLength, const uint8_t *b, size_t bLength) {
+    return aLength && aLength == bLength && aLength <= 32 && !memcmp(a, b, aLength);
+}
+
 inline size_t selectWPA2TransitionMode(uint8_t *ies, size_t length) {
     if (!validIEs(ies, length))
         return length;
@@ -347,8 +433,6 @@ inline size_t selectWPA2TransitionMode(uint8_t *ies, size_t length) {
     for (size_t offset = 0; offset < length; ) {
         uint8_t *ie = ies + offset;
         size_t size = size_t(ie[1]) + 2;
-        if (offset + size > length)
-            break;
         if (ie[0] != 48 || size < 10 || read16(ie + 2) != 1) {
             offset += size;
             continue;
@@ -383,9 +467,9 @@ inline size_t selectWPA2TransitionMode(uint8_t *ies, size_t length) {
             else if (suite[3] == 2)
                 psk = true;
             else if (suite[3] == 6)
-                continue; // PSK-SHA256 is recognized, but ordinary PSK is still required.
+                continue;      // PSK-SHA256: dropped with SAE, as long as plain PSK is offered too
             else if (suite[3] == 8 || suite[3] == 24)
-                sae = true;
+                sae = true;    // SAE, and SAE with group-dependent hash
             else
                 other = true;
         }
@@ -407,24 +491,33 @@ inline size_t selectWPA2TransitionMode(uint8_t *ies, size_t length) {
         offset += size - removed;
         converted = true;
     }
+    // The RSN Extension element only describes SAE features (H2E, protected TWT and the like). Once
+    // the network is shown as WPA2-PSK, macOS must not see it either.
     if (converted) {
-        for (size_t offset = 0; offset < length; ) {
-            uint8_t *ie = ies + offset;
-            size_t size = size_t(ie[1]) + 2;
-            if (offset + size > length)
+        for (size_t offset = 0; offset + 2 <= length; ) {
+            const size_t size = size_t(ies[offset + 1]) + 2;
+            if (size > length - offset)     // never past the list, whatever ran before (audit P-W01)
                 break;
-            if (ie[0] == 244) {
-                memmove(ie, ie + size, length - offset - size);
+            if (ies[offset] == 244) {
+                memmove(ies + offset, ies + offset + size, length - offset - size);
                 length -= size;
-                continue;
+            } else {
+                offset += size;
             }
-            offset += size;
         }
     }
     return length;
 }
 inline bool probeChannel(bool active, bool passiveOnly, bool dfs) {
     return active && !passiveOnly && !dfs;
+}
+// iwx (UMAC scan): an active scan selects its SSID on every channel entry, passive and radar channels included,
+// as iwlwifi (iwl_mvm_umac_scan_cfg_channels_v7) and OpenBSD's iwx do; the firmware itself keeps those channels
+// passive until it may transmit there. Leaving the SSID off them made AX210 firmware assert (UMAC 0x20002806,
+// last command SCAN_REQ_UMAC, a passive 5 GHz channel in the data word) during unassociated scans (#69,
+// runmain's finding). iwm and iwn keep probeChannel: their firmware is asked per channel by the driver.
+inline bool umacScanSelectsSsid(bool active) {
+    return active;
 }
 
 struct ScanRequest {
@@ -479,7 +572,8 @@ struct JoinRequest {
     uint32_t keyLength;
     uint32_t keyCipher;
     uint16_t keyIndex;
-    uint8_t key[32];
+    /* SAE passphrase: raw bytes up to 63; PSK: 32 bytes. */
+    uint8_t key[64];
     uint8_t bssid[6];
     uint16_t channelSpec;
     uint16_t rsnLength;
@@ -503,7 +597,7 @@ inline bool validRSNOverride(const uint8_t *ie, size_t length) {
         ie[4] == 0xf2 && ie[5] == 1 && ie[6] == 1 && ie[7] == 0;
 }
 
-enum class LegacyAuth { Invalid, Open, Wep, Personal, Enterprise };
+enum class LegacyAuth { Invalid, Open, Wep, Personal, PersonalSAE, Enterprise };
 inline LegacyAuth classifyLegacyAuth(const JoinRequest &j) {
     // Values from apple80211_authtype/cipher_type, used by the WCL association request.
     if (!validRSNOverride(j.rsn, j.rsnLength)) return LegacyAuth::Invalid;
@@ -517,11 +611,34 @@ inline LegacyAuth classifyLegacyAuth(const JoinRequest &j) {
     }
     const uint32_t personal = (1u << 1) | (1u << 3) | (1u << 10);
     const uint32_t enterprise = (1u << 0) | (1u << 2) | (1u << 11);
-    if (j.upperAuth & ~(personal | enterprise)) return LegacyAuth::Invalid;
+    const uint32_t sae = 1u << 12;
+    if (j.upperAuth & ~(personal | enterprise | sae)) return LegacyAuth::Invalid;
+    // WPA3-Personal is its own authentication type; mixing it with WPA2 is invalid.
+    if ((j.upperAuth & sae) && j.upperAuth != sae) {
+        return LegacyAuth::Invalid;
+    }
     if ((j.upperAuth & personal) && (j.upperAuth & enterprise)) return LegacyAuth::Invalid;
-    if (j.upperAuth & personal)
-        return j.keyLength == 32 && (j.keyCipher == 6 || j.keyCipher == 7) ?
-            LegacyAuth::Personal : LegacyAuth::Invalid;
+    if (j.upperAuth & personal) {
+        if (j.keyLength == 32 && (j.keyCipher == 6 || j.keyCipher == 7))
+            return LegacyAuth::Personal;
+        // WPA3 transition networks can hand over the raw passphrase too.
+        if (j.keyCipher == 10 && j.keyLength >= 8 && j.keyLength <= 63 &&
+            !memchr(j.key, 0, j.keyLength)) {
+            return LegacyAuth::Personal;
+        }
+        return LegacyAuth::Invalid;
+    }
+    // Native WCL carries the raw SAE password (cipher 10), not a PMK.
+    if (j.upperAuth == sae) {
+        if (j.keyLength < 1 || j.keyLength > 63 || j.keyCipher != 10)
+            return LegacyAuth::Invalid;
+        if (j.rsnLength >= 8 &&
+            (j.rsn[4] != 0 || j.rsn[5] != 0x0f || j.rsn[6] != 0xac ||
+             j.rsn[7] != 4)) {
+            return LegacyAuth::Invalid;
+        }
+        return LegacyAuth::PersonalSAE;
+    }
     if (j.upperAuth & enterprise)
         return (!j.keyLength || (j.keyLength == 32 && (j.keyCipher == 6 || j.keyCipher == 7))) ?
             LegacyAuth::Enterprise : LegacyAuth::Invalid;
@@ -536,7 +653,7 @@ inline bool decodeJoin(const void *buffer, size_t length, JoinRequest &out) {
     uint32_t keyLength = read32(p + 0x44);
     uint16_t rsnLength = read16(p + 0xd4);
     if (!count || count > 10 || !ssidLength || ssidLength > 32 ||
-        keyLength > 32 || rsnLength > 257 || length < 0x218 + size_t(count) * 18)
+        keyLength > 64 || rsnLength > 257 || length < 0x218 + size_t(count) * 18)
         return false;
     if (p[0x21c] & 1)
         return false;

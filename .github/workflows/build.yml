@@ -1,4 +1,4 @@
-name: Build itlwm (HeliPort), AirportItlwm (Sequoia, Tahoe) and IntelBTPatcher (Sequoia, Tahoe)  
+name: Build itlwm (HeliPort), AirportItlwm (Sequoia, Tahoe) and IntelBTPatcher (Sequoia, Tahoe)
 
 on:
   workflow_dispatch:
@@ -96,3 +96,42 @@ jobs:
         with:
           name: build-logs-${{ matrix.platform }}-${{ matrix.configuration }}
           path: logs
+
+  intelbtpatcher:
+    name: IntelBTPatcher (${{ matrix.platform }})
+    runs-on: macos-15-intel
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [Sequoia, Tahoe]
+    steps:
+      - uses: actions/checkout@v6
+      - name: Install MacKernelSDK (pinned)
+        uses: actions/checkout@v6
+        with:
+          repository: acidanthera/MacKernelSDK
+          ref: ${{ env.MACKERNELSDK_REF }}
+          path: MacKernelSDK
+      - name: Download Lilu DEBUG release
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 \
+            https://github.com/acidanthera/Lilu/releases/download/1.7.2/Lilu-1.7.2-DEBUG.zip \
+            --output /tmp/Lilu-DEBUG.zip
+          ditto -x -k /tmp/Lilu-DEBUG.zip /tmp/lilu-release
+          test -d /tmp/lilu-release/Lilu.kext/Contents/Resources
+          ln -s "$GITHUB_WORKSPACE/MacKernelSDK" /tmp/lilu-release/MacKernelSDK
+      - name: Build IntelBTPatcher.kext
+        env:
+          PLATFORM: ${{ matrix.platform }}
+        run: |
+          set -euo pipefail
+          TARGET="$(echo "$PLATFORM" | tr '[:upper:]' '[:lower:]')"
+          python3 tools/build_btleadv.py --target "$TARGET" --out "build/$PLATFORM" --tree /tmp/lilu-release
+          test -x "build/$PLATFORM/IntelBTPatcher.kext/Contents/MacOS/IntelBTPatcher"
+          plutil -lint "build/$PLATFORM/IntelBTPatcher.kext/Contents/Info.plist"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: IntelBTPatcher-${{ matrix.platform }}
+          path: build/${{ matrix.platform }}/*.kext
+          if-no-files-found: error

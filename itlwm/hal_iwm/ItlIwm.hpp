@@ -35,13 +35,13 @@
 
 class ItlIwm : public ItlHalService, ItlDriverInfo, ItlDriverController {
     OSDeclareDefaultStructors(ItlIwm)
-    
+
 public:
     //kext
     void free() override;
     virtual bool attach(IOPCIDevice *device) override;
     virtual void detach(IOPCIDevice *device) override;
-#if defined(AIRPORT_VTD) && defined(AIRPORT_WCL)
+#ifdef AIRPORT_VTD
     bool inRateControlGate() {
         return getMainWorkLoop()->inGate();
     }
@@ -65,56 +65,56 @@ public:
         return kIOReturnSuccess;
     }
 #endif
-    
+
     static bool intrFilter(OSObject *object, IOFilterInterruptEventSource *src);
     static IOReturn _iwm_start_task(OSObject *target, void *arg0, void *arg1, void *arg2, void *arg3);
-    
+
     void releaseAll();
-    
+
     struct _ifnet *getIfp();
     struct iwm_softc *getSoft();
     IOEthernetInterface *getNetworkInterface();
-    
+
     virtual ItlDriverInfo *getDriverInfo() override;
-    
+
     virtual ItlDriverController *getDriverController() override;
-    
+
     //driver info
     virtual const char *getFirmwareVersion() override;
-    
+
     virtual int16_t getBSSNoise() override;
-    
+
     virtual bool is5GBandSupport() override;
-    
+
     virtual int getTxNSS() override;
-    
+
     virtual const char *getFirmwareName() override;
-    
+
     virtual UInt32 supportedFeatures() override;
 
     virtual const char *getFirmwareCountryCode() override;
 
     virtual uint32_t getTxQueueSize() override;
-    
+
     //driver controller
     virtual void clearScanningFlags() override;
-    
+
     virtual IOReturn setMulticastList(IOEthernetAddress *addr, int count) override;
-    
+
     //utils
     int    iwm_send_bt_init_conf(struct iwm_softc *);
-    
+
     //fw
     static uint8_t iwm_fw_valid_tx_ant(struct iwm_softc *sc);
     static uint8_t iwm_fw_valid_rx_ant(struct iwm_softc *sc);
     void    iwm_toggle_tx_ant(struct iwm_softc *sc, uint8_t *ant);
     uint32_t iwm_get_tx_ant(struct iwm_softc *sc, struct ieee80211_node *ni,
                             int type, struct ieee80211_frame *wh);
-    
+
     //scan
     uint8_t iwm_umac_scan_fill_channels(struct iwm_softc *sc,
                                         struct iwm_scan_channel_cfg_umac *chan, int n_ssids, int bgscan);
-    
+
     //coex
     uint16_t iwm_coex_agg_time_limit(struct iwm_softc *, struct ieee80211_node *);
     uint8_t iwm_coex_tx_prio(struct iwm_softc *, struct ieee80211_frame *, uint8_t);
@@ -122,7 +122,7 @@ public:
     static bool iwm_coex_is_mimo_allowed(struct iwm_softc *, struct ieee80211_node *);
     static bool iwm_coex_is_tpc_allowed(struct iwm_softc *, bool);
     static bool iwm_coex_is_shared_ant_avail(struct iwm_softc *);
-    
+
     uint8_t iwm_lookup_cmd_ver(struct iwm_softc *, uint8_t, uint8_t);
     int    iwm_store_cscheme(struct iwm_softc *, uint8_t *, size_t);
     int    iwm_firmware_store_section(struct iwm_softc *, enum iwm_ucode_type,
@@ -241,7 +241,7 @@ public:
     int iwm_sta_tx_agg(struct iwm_softc *, struct ieee80211_node *,
                         uint8_t, uint8_t, uint16_t, int);
     static void    iwm_ba_task(void *);
-    
+
     int    iwm_parse_nvm_data(struct iwm_softc *, const uint16_t *,
                               const uint16_t *, const uint16_t *,
                               const uint16_t *, const uint16_t *,
@@ -437,9 +437,9 @@ public:
     static void    iwm_init_task(void *);
     int    iwm_activate(struct iwm_softc *, int);
     int    iwm_resume(struct iwm_softc *);
-    
-    
-    
+
+
+
 public:
     IOInterruptEventSource* fInterrupt;
     IOPCIDevice *pciNub;

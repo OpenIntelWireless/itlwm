@@ -618,6 +618,7 @@ enum {
     IEEE80211_ELEMID_FILS_INDICATION = 240,
     IEEE80211_ELEMID_DILS           = 241,
     IEEE80211_ELEMID_FRAGMENT       = 242,
+    IEEE80211_ELEMID_RSNXE          = 244,
     IEEE80211_ELEMID_EXTENSION      = 255,
 };
 
@@ -768,6 +769,82 @@ enum {
 #define IEEE80211_RSNCAP_SPPAMSDUR		0x0800	/* 11n */
 #define IEEE80211_RSNCAP_PBAC			0x1000	/* 11n */
 #define IEEE80211_RSNCAP_EXTENDED_KEYID		0x2000
+
+/*
+ * RSN Extension element capabilities (see 802.11-2020 9.4.2.241).
+ * Only the SAE hash-to-element bit matters for WPA3-Personal.
+ */
+#define IEEE80211_RSNXECAP_LENGTH_MASK		0x000f
+#define IEEE80211_RSNXECAP_LENGTH_SHIFT		0
+#define IEEE80211_RSNXECAP_H2E			0x0020
+
+static inline u_int8_t *
+ieee80211_add_rsnxe_h2e(u_int8_t *frm)
+{
+	*frm++ = IEEE80211_ELEMID_RSNXE;
+	*frm++ = 1;
+	*frm++ = IEEE80211_RSNXECAP_H2E;
+	return frm;
+}
+
+static inline int
+ieee80211_rsnxe_valid(const u_int8_t *rsnxe, size_t len)
+{
+	return rsnxe != NULL && len >= 3 && len <= 18 &&
+	    rsnxe[0] == IEEE80211_ELEMID_RSNXE &&
+	    (size_t)rsnxe[1] + 2 == len &&
+	    rsnxe[1] <= 16 &&
+	    (size_t)(rsnxe[2] & IEEE80211_RSNXECAP_LENGTH_MASK) + 1 ==
+	    rsnxe[1];
+}
+
+static inline int
+ieee80211_rsnxe_has_h2e(const u_int8_t *rsnxe, size_t len)
+{
+	return ieee80211_rsnxe_valid(rsnxe, len) &&
+	    (rsnxe[2] & IEEE80211_RSNXECAP_H2E) != 0;
+}
+
+static inline int
+ieee80211_rsnxe_matches(const u_int8_t *expected, size_t expected_len,
+    const u_int8_t *actual, size_t actual_len)
+{
+	size_t i;
+
+	if (!ieee80211_rsnxe_valid(expected, expected_len) ||
+	    !ieee80211_rsnxe_valid(actual, actual_len) ||
+	    expected_len != actual_len)
+		return 0;
+	for (i = 0; i < expected_len; i++) {
+		if (expected[i] != actual[i])
+			return 0;
+	}
+	return 1;
+}
+
+/*
+ * Robust action frame categories (802.11-2020 Table 9-51): the ones
+ * management frame protection covers.  The others are always sent in
+ * the clear, also on a PMF association, and must not be dropped or
+ * protected.  Same list as Linux mac80211.
+ */
+static inline int
+ieee80211_action_is_robust(u_int8_t category)
+{
+	switch (category) {
+	case IEEE80211_CATEG_PUB:
+	case IEEE80211_CATEG_HT:
+	case IEEE80211_CATEG_UNPROT_WNM:
+	case IEEE80211_CATEG_SELF_PROT:
+	case 20:	/* Unprotected DMG */
+	case 21:	/* VHT */
+	case 22:	/* Unprotected S1G */
+	case IEEE80211_CATEG_VENDOR:
+		return 0;
+	default:
+		return 1;
+	}
+}
 
 /*
  * HT Capabilities Info (see 802.11-2012 8.4.2.58.2).
@@ -963,6 +1040,7 @@ enum ieee80211_edca_ac {
  */
 #define IEEE80211_AUTH_ALG_OPEN			0x0000
 #define IEEE80211_AUTH_ALG_SHARED		0x0001
+#define IEEE80211_AUTH_ALG_SAE			0x0003
 #define IEEE80211_AUTH_ALG_LEAP			0x0080
 
 /*
@@ -1064,7 +1142,34 @@ enum {
 	IEEE80211_STATUS_BAD_AKMP		= 43,
 	IEEE80211_STATUS_RSN_IE_VER_UNSUP	= 44,
 
-	IEEE80211_STATUS_CIPHER_REJ_POLICY	= 46
+	IEEE80211_STATUS_CIPHER_REJ_POLICY	= 46,
+
+	/*
+	 * SAE uses status codes outside the 802.11 base table: 76 asks the
+	 * peer to resend its commit with an anti-clogging token, and 126 marks
+	 * a commit element derived with hash-to-element.
+	 */
+	IEEE80211_STATUS_ANTI_CLOGGING_TOKEN_REQ = 76,
+	IEEE80211_STATUS_BAD_FC_GROUP		= 77,
+	IEEE80211_STATUS_H2E			= 126
+};
+
+/*
+ * Simultaneous Authentication of Equals (SAE), see 802.11-2020 12.4.
+ * The commit element carries a P-256 scalar and point; H2E peers may also
+ * append an anti-clogging token element.
+ */
+#define IEEE80211_SAE_CURVE_ID_P256	19
+#define IEEE80211_SAE_MAX_ECC_PRIME_LEN 32
+#define IEEE80211_SAE_COMMIT_MIN_LEN	(2 + (3 * IEEE80211_SAE_MAX_ECC_PRIME_LEN))
+#define IEEE80211_SAE_CONFIRM_MIN_LEN	(2 + 32)
+#define IEEE80211_SAE_TOKEN_MAX_LEN	255
+#define IEEE80211_SAE_H2E_TOKEN_MAX_LEN 254
+#define IEEE80211_EID_EXT_ANTI_CLOGGING_TOKEN 93
+
+struct ieee80211_sae_auth {
+	u_int8_t ownaddr[IEEE80211_ADDR_LEN];
+	u_int8_t peeraddr[IEEE80211_ADDR_LEN];
 };
 
 #define	IEEE80211_WEP_KEYLEN			5	/* 40bit */
@@ -1202,6 +1307,7 @@ struct ieee80211_eapol_key {
 #define EAPOL_KEY_DESC_V1	1
 #define EAPOL_KEY_DESC_V2	2
 #define EAPOL_KEY_DESC_V3	3		/* 11r */
+#define EAPOL_KEY_DESC_USE_AKM	0		/* SAE/WPA3: MIC algorithm from AKM */
 #define EAPOL_KEY_PAIRWISE	(1 <<  3)
 #define EAPOL_KEY_INSTALL	(1 <<  6)	/* I */
 #define EAPOL_KEY_KEYACK	(1 <<  7)	/* A */
@@ -1255,7 +1361,7 @@ enum {
  */
 enum ieee80211_htprot {
 	IEEE80211_HTPROT_NONE = 0,	/* only 20/40MHz HT STAs exist */
-	IEEE80211_HTPROT_NONMEMBER,	/* non-HT STA overlaps our channel */ 
+	IEEE80211_HTPROT_NONMEMBER,	/* non-HT STA overlaps our channel */
 	IEEE80211_HTPROT_20MHZ,		/* 20MHz HT STA on a 40MHz channel */
 	IEEE80211_HTPROT_NONHT_MIXED	/* non-HT STA associated to our BSS */
 };

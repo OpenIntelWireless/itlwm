@@ -125,10 +125,10 @@ struct iwm_phy_db_entry * ItlIwm::
 iwm_phy_db_get_section(struct iwm_softc *sc, uint16_t type, uint16_t chg_id)
 {
     struct iwm_phy_db *phy_db = &sc->sc_phy_db;
-    
+
     if (type >= IWM_PHY_DB_MAX)
         return NULL;
-    
+
     switch (type) {
         case IWM_PHY_DB_CFG:
             return &phy_db->cfg;
@@ -156,15 +156,20 @@ iwm_phy_db_set_section(struct iwm_softc *sc,
     uint16_t size  = le16toh(phy_db_notif->length);
     struct iwm_phy_db_entry *entry;
     uint16_t chg_id = 0;
-    
+
+    // The caller checked that size bytes of data are in the notification. A channel-group section
+    // starts with its 16-bit group ID (audit HL05, IWM half).
     if (type == IWM_PHY_DB_CALIB_CHG_PAPD ||
-        type == IWM_PHY_DB_CALIB_CHG_TXP)
+        type == IWM_PHY_DB_CALIB_CHG_TXP) {
+        if (size < sizeof(uint16_t))
+            return EINVAL;
         chg_id = le16toh(*(uint16_t *)phy_db_notif->data);
-    
+    }
+
     entry = iwm_phy_db_get_section(sc, type, chg_id);
     if (!entry)
         return EINVAL;
-    
+
     if (entry->data)
         ::free(entry->data);
     entry->data = (uint8_t*)malloc(size, M_DEVBUF, M_NOWAIT);
@@ -174,7 +179,7 @@ iwm_phy_db_set_section(struct iwm_softc *sc,
     }
     memcpy(entry->data, phy_db_notif->data, size);
     entry->size = size;
-    
+
     return 0;
 }
 
@@ -184,19 +189,19 @@ iwm_phy_db_get_section_data(struct iwm_softc *sc, uint32_t type, uint8_t **data,
 {
     struct iwm_phy_db_entry *entry;
     uint16_t ch_group_id = 0;
-    
+
     if (type == IWM_PHY_DB_CALIB_CHG_PAPD)
         ch_group_id = iwm_channel_id_to_papd(ch_id);
     else if (type == IWM_PHY_DB_CALIB_CHG_TXP)
         ch_group_id = iwm_channel_id_to_txp(sc, ch_id);
-    
+
     entry = iwm_phy_db_get_section(sc, type, ch_group_id);
     if (!entry)
         return EINVAL;
-    
+
     *data = entry->data;
     *size = entry->size;
-    
+
     return 0;
 }
 
@@ -210,15 +215,15 @@ iwm_send_phy_db_cmd(struct iwm_softc *sc, uint16_t type, uint16_t length,
         .id = IWM_PHY_DB_CMD,
         .flags = IWM_CMD_ASYNC,
     };
-    
+
     phy_db_cmd.type = le16toh(type);
     phy_db_cmd.length = le16toh(length);
-    
+
     cmd.data[0] = &phy_db_cmd;
     cmd.len[0] = sizeof(struct iwm_phy_db_cmd);
     cmd.data[1] = data;
     cmd.len[1] = length;
-    
+
     return iwm_send_cmd(sc, &cmd);
 }
 
@@ -230,22 +235,22 @@ iwm_phy_db_send_all_channel_groups(struct iwm_softc *sc, uint16_t type,
     uint16_t i;
     int err;
     struct iwm_phy_db_entry *entry;
-    
+
     for (i = 0; i < max_ch_groups; i++) {
         entry = iwm_phy_db_get_section(sc, type, i);
         if (!entry)
             return EINVAL;
-        
+
         if (!entry->size)
             continue;
-        
+
         err = iwm_send_phy_db_cmd(sc, type, entry->size, entry->data);
         if (err)
             return err;
-        
+
         DELAY(1000);
     }
-    
+
     return 0;
 }
 
@@ -256,34 +261,34 @@ iwm_send_phy_db_data(struct iwm_softc *sc)
     uint8_t *data = NULL;
     uint16_t size = 0;
     int err;
-    
+
     err = iwm_phy_db_get_section_data(sc, IWM_PHY_DB_CFG, &data, &size, 0);
     if (err)
         return err;
-    
+
     err = iwm_send_phy_db_cmd(sc, IWM_PHY_DB_CFG, size, data);
     if (err)
         return err;
-    
+
     err = iwm_phy_db_get_section_data(sc, IWM_PHY_DB_CALIB_NCH,
                                       &data, &size, 0);
     if (err)
         return err;
-    
+
     err = iwm_send_phy_db_cmd(sc, IWM_PHY_DB_CALIB_NCH, size, data);
     if (err)
         return err;
-    
+
     err = iwm_phy_db_send_all_channel_groups(sc,
                                              IWM_PHY_DB_CALIB_CHG_PAPD, IWM_NUM_PAPD_CH_GROUPS);
     if (err)
         return err;
-    
+
     err = iwm_phy_db_send_all_channel_groups(sc,
                                              IWM_PHY_DB_CALIB_CHG_TXP, IWM_NUM_TXP_CH_GROUPS);
     if (err)
         return err;
-    
+
     return 0;
 }
 
@@ -307,25 +312,25 @@ iwm_send_time_event_cmd(struct iwm_softc *sc,
     };
     uint32_t resp_len;
     int err;
-    
+
     hcmd.data[0] = cmd;
     hcmd.len[0] = sizeof(*cmd);
     err = iwm_send_cmd(sc, &hcmd);
     if (err)
         return err;
-    
+
     pkt = hcmd.resp_pkt;
     if (!pkt || (pkt->hdr.flags & IWM_CMD_FAILED_MSK)) {
         err = EIO;
         goto out;
     }
-    
+
     resp_len = iwm_rx_packet_payload_len(pkt);
     if (resp_len != sizeof(*resp)) {
         err = EIO;
         goto out;
     }
-    
+
     resp = (struct iwm_time_event_resp *)pkt->data;
     if (le32toh(resp->status) == 0)
         sc->sc_time_event_uid = le32toh(resp->unique_id);
@@ -341,20 +346,20 @@ iwm_protect_session(struct iwm_softc *sc, struct iwm_node *in,
                     uint32_t duration, uint32_t max_delay)
 {
     struct iwm_time_event_cmd time_cmd;
-    
+
     /* Do nothing if a time event is already scheduled. */
     if (sc->sc_flags & IWM_FLAG_TE_ACTIVE)
         return;
-    
+
     memset(&time_cmd, 0, sizeof(time_cmd));
-    
+
     time_cmd.action = htole32(IWM_FW_CTXT_ACTION_ADD);
     time_cmd.id_and_color =
     htole32(IWM_FW_CMD_ID_AND_COLOR(in->in_id, in->in_color));
     time_cmd.id = htole32(IWM_TE_BSS_STA_AGGRESSIVE_ASSOC);
-    
+
     time_cmd.apply_time = htole32(0);
-    
+
     time_cmd.max_frags = IWM_TE_V2_FRAG_NONE;
     time_cmd.max_delay = htole32(max_delay);
     /* TODO: why do we need to interval = bi if it is not periodic? */
@@ -365,10 +370,10 @@ iwm_protect_session(struct iwm_softc *sc, struct iwm_node *in,
     = htole16(IWM_TE_V2_NOTIF_HOST_EVENT_START |
               IWM_TE_V2_NOTIF_HOST_EVENT_END |
               IWM_T2_V2_START_IMMEDIATELY);
-    
+
     if (iwm_send_time_event_cmd(sc, &time_cmd) == 0)
         sc->sc_flags |= IWM_FLAG_TE_ACTIVE;
-    
+
     DELAY(100);
 }
 
@@ -376,21 +381,21 @@ void ItlIwm::
 iwm_unprotect_session(struct iwm_softc *sc, struct iwm_node *in)
 {
     struct iwm_time_event_cmd time_cmd;
-    
+
     /* Do nothing if the time event has already ended. */
     if ((sc->sc_flags & IWM_FLAG_TE_ACTIVE) == 0)
         return;
-    
+
     memset(&time_cmd, 0, sizeof(time_cmd));
-    
+
     time_cmd.action = htole32(IWM_FW_CTXT_ACTION_REMOVE);
     time_cmd.id_and_color =
     htole32(IWM_FW_CMD_ID_AND_COLOR(in->in_id, in->in_color));
     time_cmd.id = htole32(sc->sc_time_event_uid);
-    
+
     if (iwm_send_time_event_cmd(sc, &time_cmd) == 0)
         sc->sc_flags &= ~IWM_FLAG_TE_ACTIVE;
-    
+
     DELAY(100);
 }
 
@@ -400,13 +405,13 @@ iwm_send_phy_cfg_cmd(struct iwm_softc *sc)
     XYLog("%s\n", __FUNCTION__);
     struct iwm_phy_cfg_cmd phy_cfg_cmd;
     enum iwm_ucode_type ucode_type = sc->sc_uc_current;
-    
+
     phy_cfg_cmd.phy_cfg = htole32(sc->sc_fw_phy_config);
     phy_cfg_cmd.calib_control.event_trigger =
     sc->sc_default_calib[ucode_type].event_trigger;
     phy_cfg_cmd.calib_control.flow_trigger =
     sc->sc_default_calib[ucode_type].flow_trigger;
-    
+
     return iwm_send_cmd_pdu(sc, IWM_PHY_CONFIGURATION_CMD, 0,
                             sizeof(phy_cfg_cmd), &phy_cfg_cmd);
 }
@@ -418,7 +423,7 @@ iwm_send_dqa_cmd(struct iwm_softc *sc)
         .cmd_queue = htole32(IWM_DQA_CMD_QUEUE),
     };
     uint32_t cmd_id;
-    
+
     cmd_id = iwm_cmd_id(IWM_DQA_ENABLE_CMD, IWM_DATA_PATH_GROUP, 0);
     return iwm_send_cmd_pdu(sc, cmd_id, 0, sizeof(dqa_cmd), &dqa_cmd);
 }
@@ -432,7 +437,7 @@ iwm_binding_cmd(struct iwm_softc *sc, struct iwm_node *in, uint32_t action)
     int i, err, active = (sc->sc_flags & IWM_FLAG_BINDING_ACTIVE);
     uint32_t status;
     size_t len;
-    
+
     if (action == IWM_FW_CTXT_ACTION_ADD && active) {
         XYLog("binding already added\n");
         return 0;
@@ -441,38 +446,38 @@ iwm_binding_cmd(struct iwm_softc *sc, struct iwm_node *in, uint32_t action)
         XYLog("binding already removed\n");
         return 0;
     }
-    
+
     if (phyctxt == NULL) /* XXX race with iwm_stop() */
         return EINVAL;
-    
+
     memset(&cmd, 0, sizeof(cmd));
-    
+
     cmd.id_and_color
     = htole32(IWM_FW_CMD_ID_AND_COLOR(phyctxt->id, phyctxt->color));
     cmd.action = htole32(action);
     cmd.phy = htole32(IWM_FW_CMD_ID_AND_COLOR(phyctxt->id, phyctxt->color));
-    
+
     cmd.macs[0] = htole32(mac_id);
     for (i = 1; i < IWM_MAX_MACS_IN_BINDING; i++)
         cmd.macs[i] = htole32(IWM_FW_CTXT_INVALID);
-    
+
     if (IEEE80211_IS_CHAN_2GHZ(phyctxt->channel) ||
         !isset(sc->sc_enabled_capa, IWM_UCODE_TLV_CAPA_CDB_SUPPORT))
         cmd.lmac_id = htole32(IWM_LMAC_24G_INDEX);
     else
         cmd.lmac_id = htole32(IWM_LMAC_5G_INDEX);
-    
+
     if (isset(sc->sc_enabled_capa, IWM_UCODE_TLV_CAPA_BINDING_CDB_SUPPORT))
         len = sizeof(cmd);
     else
         len = sizeof(struct iwm_binding_cmd_v1);
-    
+
     status = 0;
     err = iwm_send_cmd_pdu_status(sc, IWM_BINDING_CONTEXT_CMD, len, &cmd,
                                   &status);
     if (err == 0 && status != 0)
         err = EIO;
-    
+
     return err;
 }
 
@@ -504,7 +509,7 @@ iwm_send_cmd(struct iwm_softc *sc, struct iwm_host_cmd *hcmd)
     int generation = sc->sc_generation;
     unsigned int max_chunks = 1;
     IOPhysicalSegment seg;
-    
+
     code = hcmd->id;
     async = hcmd->flags & IWM_CMD_ASYNC;
     idx = ring->cur;
@@ -518,11 +523,11 @@ iwm_send_cmd(struct iwm_softc *sc, struct iwm_host_cmd *hcmd)
         return EINVAL;
 #endif
 
-    
+
     for (i = 0, paylen = 0; i < nitems(hcmd->len); i++) {
         paylen += hcmd->len[i];
     }
-    
+
     /* If this command waits for a response, allocate response buffer. */
     hcmd->resp_pkt = NULL;
     if (hcmd->flags & IWM_CMD_WANT_RESP) {
@@ -541,12 +546,12 @@ iwm_send_cmd(struct iwm_softc *sc, struct iwm_host_cmd *hcmd)
     } else {
         sc->sc_cmd_resp_pkt[idx] = NULL;
     }
-    
+
     s = splnet();
-    
+
     desc = &ring->desc[idx];
     txdata = &ring->data[idx];
-    
+
     group_id = iwm_cmd_groupid(code);
     if (group_id != 0) {
         hdrlen = sizeof(cmd->hdr_wide);
@@ -555,7 +560,7 @@ iwm_send_cmd(struct iwm_softc *sc, struct iwm_host_cmd *hcmd)
         hdrlen = sizeof(cmd->hdr);
         datasz = sizeof(cmd->data);
     }
-    
+
 #ifdef AIRPORT_VTD
     if (hdrlen + paylen > 0xfff) {
         err = EINVAL;
@@ -596,7 +601,7 @@ iwm_send_cmd(struct iwm_softc *sc, struct iwm_host_cmd *hcmd)
         cmd = &ring->cmd[idx];
         paddr = txdata->cmd_paddr;
     }
-    
+
     if (group_id != 0) {
         cmd->hdr_wide.opcode = iwm_cmd_opcode(code);
         cmd->hdr_wide.group_id = group_id;
@@ -612,7 +617,7 @@ iwm_send_cmd(struct iwm_softc *sc, struct iwm_host_cmd *hcmd)
         cmd->hdr.idx = idx;
         data = cmd->data;
     }
-    
+
     for (i = 0, off = 0; i < nitems(hcmd->data); i++) {
         if (hcmd->len[i] == 0)
             continue;
@@ -627,14 +632,14 @@ iwm_send_cmd(struct iwm_softc *sc, struct iwm_host_cmd *hcmd)
         goto out;
     }
 
-    
+
     /* lo field is not aligned */
     addr_lo = htole32((uint32_t)paddr);
     memcpy(&desc->tbs[0].lo, &addr_lo, sizeof(uint32_t));
     desc->tbs[0].hi_n_len  = htole16(iwm_get_dma_hi_addr(paddr)
                                      | ((hdrlen + paylen) << 4));
     desc->num_tbs = 1;
-    
+
     //    if (paylen > datasz) {
     //        bus_dmamap_sync(sc->sc_dmat, txdata->map, 0,
     //            hdrlen + paylen, BUS_DMASYNC_PREWRITE);
@@ -646,7 +651,7 @@ iwm_send_cmd(struct iwm_softc *sc, struct iwm_host_cmd *hcmd)
     //    bus_dmamap_sync(sc->sc_dmat, ring->desc_dma.map,
     //        (char *)(void *)desc - (char *)(void *)ring->desc_dma.vaddr,
     //        sizeof (*desc), BUS_DMASYNC_PREWRITE);
-    
+
     /*
      * Wake up the NIC to make sure that the firmware will see the host
      * command - we will let the NIC sleep once all the host commands
@@ -658,7 +663,7 @@ iwm_send_cmd(struct iwm_softc *sc, struct iwm_host_cmd *hcmd)
             goto out;
         }
     }
-    
+
     DPRINTFN(2, ("%s: sending command 0x%x\n", __func__, code));
 
     iwm_update_sched(sc, ring->qid, ring->cur, 0, 0);
@@ -671,7 +676,7 @@ iwm_send_cmd(struct iwm_softc *sc, struct iwm_host_cmd *hcmd)
     ring->queued++;
     ring->cur = (ring->cur + 1) % IWM_TX_RING_COUNT;
     IWM_WRITE(sc, IWM_HBUS_TARG_WRPTR, ring->qid << 8 | ring->cur);
-    
+
 #ifdef AIRPORT_VTD
     if (!async) {
         uint64_t deadline;
@@ -701,7 +706,7 @@ iwm_send_cmd(struct iwm_softc *sc, struct iwm_host_cmd *hcmd)
                 err = ENXIO;
                 goto out;
             }
-            
+
             /* Response buffer will be freed in iwm_free_resp(). */
             hcmd->resp_pkt = (struct iwm_rx_packet *)sc->sc_cmd_resp_pkt[idx];
             sc->sc_cmd_resp_pkt[idx] = NULL;
@@ -724,7 +729,7 @@ out:
     }
 #endif
     splx(s);
-    
+
     return err;
 }
 
@@ -738,7 +743,7 @@ iwm_send_cmd_pdu(struct iwm_softc *sc, uint32_t id, uint32_t flags,
         .data = { data, },
         .flags = flags,
     };
-    
+
     return iwm_send_cmd(sc, &cmd);
 }
 
@@ -749,25 +754,25 @@ iwm_send_cmd_status(struct iwm_softc *sc, struct iwm_host_cmd *cmd,
     struct iwm_rx_packet *pkt;
     struct iwm_cmd_response *resp;
     int err, resp_len;
-    
+
     KASSERT((cmd->flags & IWM_CMD_WANT_RESP) == 0, "(cmd->flags & IWM_CMD_WANT_RESP) == 0");
     cmd->flags |= IWM_CMD_WANT_RESP;
     cmd->resp_pkt_len = sizeof(*pkt) + sizeof(*resp);
-    
+
     err = iwm_send_cmd(sc, cmd);
     if (err)
         return err;
-    
+
     pkt = cmd->resp_pkt;
     if (pkt == NULL || (pkt->hdr.flags & IWM_CMD_FAILED_MSK))
         return EIO;
-    
+
     resp_len = iwm_rx_packet_payload_len(pkt);
     if (resp_len != sizeof(*resp)) {
         iwm_free_resp(sc, cmd);
         return EIO;
     }
-    
+
     resp = (struct iwm_cmd_response *)pkt->data;
     *status = le32toh(resp->status);
     iwm_free_resp(sc, cmd);
@@ -783,7 +788,7 @@ iwm_send_cmd_pdu_status(struct iwm_softc *sc, uint32_t id, uint16_t len,
         .len = { len, },
         .data = { data, },
     };
-    
+
     return iwm_send_cmd_status(sc, &cmd, status);
 }
 
@@ -800,11 +805,11 @@ iwm_cmd_done(struct iwm_softc *sc, int qid, int idx, int code)
 {
     struct iwm_tx_ring *ring = &sc->txq[sc->cmdqid];
     struct iwm_tx_data *data;
-    
+
     if (qid != sc->cmdqid || idx < 0 || idx >= IWM_TX_RING_COUNT) {
         return;    /* Not a command ack. */
     }
-    
+
     data = &ring->data[idx];
 #ifdef AIRPORT_VTD
     if (!data->commandPending)
@@ -812,7 +817,7 @@ iwm_cmd_done(struct iwm_softc *sc, int qid, int idx, int code)
     data->commandPending = false;
 #endif
 
-    
+
     if (data->m != NULL) {
         //        bus_dmamap_sync(sc->sc_dmat, data->map, 0,
         //            data->map->dm_mapsize, BUS_DMASYNC_POSTWRITE);
@@ -826,9 +831,9 @@ iwm_cmd_done(struct iwm_softc *sc, int qid, int idx, int code)
 #else
     wakeupOn(&ring->desc[idx]);
 #endif
-    
+
     DPRINTFN(2, ("%s: command 0x%x done\n", __func__, code));
-    
+
     if (ring->queued == 0) {
         XYLog("%s: unexpected firmware response to command 0x%x\n",
               DEVNAME(sc), code);
@@ -849,7 +854,7 @@ iwm_phy_ctxt_update(struct iwm_softc *sc, struct iwm_phy_ctxt *phyctxt,
 {
     uint16_t band_flags = (IEEE80211_CHAN_2GHZ | IEEE80211_CHAN_5GHZ);
     int err;
-    
+
     if (isset(sc->sc_enabled_capa,
               IWM_UCODE_TLV_CAPA_BINDING_CDB_SUPPORT) &&
         (phyctxt->channel->ic_flags & band_flags) !=
@@ -879,6 +884,6 @@ iwm_phy_ctxt_update(struct iwm_softc *sc, struct iwm_phy_ctxt *phyctxt,
             return err;
         }
     }
-    
+
     return 0;
 }

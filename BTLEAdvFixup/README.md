@@ -1,0 +1,18 @@
+# BTLEAdvFixup
+
+A Lilu plugin that lets macOS start Bluetooth LE advertising, which AirDrop needs, on an Intel Bluetooth controller.
+
+- **Turn it on** with the boot flag `-btleadv`, and off with `-btleadvoff`. Without the flag it does nothing.
+- **What it changes:** it patches `/usr/sbin/bluetoothd` in memory as its pages are validated, so `bluetoothd` takes its "extended advertising supported" path. It also adjusts some outgoing HCI commands, such as the random address of each advertising set, and does IntelBTPatcher's fix-up before the first scan. Nothing on disk changes.
+- **One build per macOS version:** the Tahoe build's patterns match macOS 26.7.1 (25G241) and, from 0.8.1, 26.7.3 (25G342) and 26.7.2 (25G332), which shares 26.7.3's bytes (from 0.9.1, 26.7.2 also gets its own pattern for one extended-connection site where its bytes differ), the Sequoia build's (`tools/build_btleadv.py --target sequoia`) match 15.8.3 (24H241) and, checked for 0.9.0, 15.8 (24H23) and 15.8.2 (24H232), and from 0.9.6 also 15.8.1 and, with a set of their own, 15.7.3, 15.7.8 and 15.7.9; the Sonoma build's (`--target sonoma`, from 0.9.0) match 14.8.9 (23J631), and from 0.9.6 14.8.8 and 14.8.7 (two sites of its own). From 0.8.3 each build tells Lilu its own macOS version; before that, Lilu never started the Sequoia build. On another build of the same macOS version they may or may not match: where its `bluetoothd` has the same bytes they're applied (26.7's is identical to 26.7.1's, for example), and otherwise nothing is patched. A match alone doesn't mean the build was checked.
+- **Keeps `bluetoothd` from crashing (#62, from 0.9.4):** it keeps the original bytes of every patched `bluetoothd` page, BlueToolFixup's too when it loads after BlueToolFixup, and gives APFS's integrity check a copy with those bytes, so a reloaded page no longer fails the check. `BTLEAdvVerifyHook` shows 1 when it's active. From 0.9.8 a page macOS checks again while it still holds the patches gets its original bytes for the code-signature check too, and the patches back afterwards, so `bluetoothd` is no longer killed with "Code Signature Invalid". `BTLEAdvVerifyRevalidations` counts these.
+- **Duplicate filter (experimental):** with `-btleadvnodupfilter` it also turns off `bluetoothd`'s scan duplicate filter, so the Mac sees an iPhone's changed advertising at once instead of at the next scan restart.
+- **Advertising addresses (#102, from 0.9.7):** an advertising set never gets another set's address, and a set whose address only this kext sent gets it once more just before it's first switched on, since the kext can't see whether the controller accepted it. `BTLEAdvSetAddresses` and `BTLEAdvEnableAddresses` count them.
+- **Before a macOS update, boot without `-btleadv` and `-btleadvnodupfilter`.** The second is new in 0.9.5 and hasn't been tried with an update yet. While the kext is active, reading `bluetoothd` returns the patched pages, and an incremental update that checks the file can fail.
+- **Disable IntelBTPatcher when you use BTLEAdvFixup.** Both hook the same function, and Lilu panics if two plugins do. BTLEAdvFixup takes over IntelBTPatcher's jobs: the fix-up before the first scan, and, from 0.9.1, the fix that lets new LE mice and keyboards finish pairing. If you don't use `-btleadv`, leave BTLEAdvFixup out and keep IntelBTPatcher (or IntelBTUnified) instead, as [docs/INSTALL.md](../docs/INSTALL.md) describes.
+
+Build it with `tools/build_btleadv.py`, as described in [docs/INSTALL.md](../docs/INSTALL.md).
+
+## License
+
+GPL-3.0-only. The HCI hook follows IntelBTPatcher (OpenIntelWireless/IntelBluetoothFirmware, GPL-3.0), and the page hook follows BlueToolFixup (acidanthera/BrcmPatchRAM). The full text is in [LICENSE](LICENSE).

@@ -25,6 +25,7 @@
 #include <IOKit/IOLib.h>
 #include <libkern/OSKextLib.h>
 #include <libkern/c++/OSMetaClass.h>
+#include <AWDLTxPass.hpp>
 #include <IOKit/IOFilterInterruptEventSource.h>
 
 #include "ItlIwm.hpp"
@@ -59,7 +60,7 @@ ret = get##REQ(interface, (struct DATA_TYPE* )data); \
 } else { \
 ret = set##REQ(interface, (struct DATA_TYPE* )data); \
 }
-    
+
 #define IOCTL_GET(REQ_TYPE, REQ, DATA_TYPE) \
 if (REQ_TYPE == SIOCGA80211) { \
 ret = get##REQ(interface, (struct DATA_TYPE* )data); \
@@ -75,12 +76,30 @@ FUNC_IOCTL_SET(REQ, DATA_TYPE)
 IOReturn get##REQ(OSObject *object, struct DATA_TYPE *data);
 #define FUNC_IOCTL_SET(REQ, DATA_TYPE) \
 IOReturn set##REQ(OSObject *object, struct DATA_TYPE *data);
-    
+
 public:
+    IOReturn receiveAWDLActionFrame(mbuf_t, size_t, uint32_t, int32_t);
+    void observeAWDLDataFrame(const uint8_t*, size_t);
+    IOReturn buildAWDLSyncProbe(mbuf_t*, uint64_t);
+    IOReturn buildAWDLTransmit(mbuf_t*, const uint8_t *holdPayloadFor = nullptr, bool holdEverySize = false,
+                               const ItlAWDL::TxPassList *pass = nullptr);
+    IOReturn buildAWDLTransmitFor(mbuf_t*, const uint8_t *destination, size_t maxLength);
+    bool serviceAWDLTransmit();
+    unsigned queuedAWDLTransmit();
+    unsigned heldShortAWDLTransmit();
     virtual bool init(OSDictionary *properties) override;
     virtual void free() override;
     virtual IOService* probe(IOService* provider, SInt32* score) override;
     virtual bool start(IOService *provider) override;
+    bool startDriver(IOService *provider);
+    // What startDriver has done so far, for failStart (audit P-A07).
+    struct StartProgress {
+        bool superStarted;
+        bool halAttached;
+        bool netIfAttached;      // fNetIf->attach(this)
+        bool interfaceAttached;  // attachInterface(fNetIf, this)
+    };
+    bool failStart(IOService *provider, const StartProgress &progress);
     virtual void stop(IOService *provider) override;
     virtual IOReturn enable(IO80211SkywalkInterface *netif) AIRPORT_LEGACY_OVERRIDE;
     virtual IOReturn disable(IO80211SkywalkInterface *netif) AIRPORT_LEGACY_OVERRIDE;
@@ -115,13 +134,13 @@ public:
                                UInt64                  speed        = 0,
                                OSData *                data         = 0) override;
     static IOReturn setLinkStateGated(OSObject *target, void *arg0, void *arg1, void *arg2, void *arg3);
-    
+
     static IOReturn tsleepHandler(OSObject* owner, void* arg0 = 0, void* arg1 = 0, void* arg2 = 0, void* arg3 = 0);
     static void eventHandler(struct ieee80211com *, int, void *);
     IOReturn enableAdapter(IONetworkInterface *netif);
     void disableAdapter(IONetworkInterface *netif);
     bool initCCLogs();
-    
+
     #ifdef AIRPORT_WCL
     virtual IOWorkLoop *getWorkLoop() const override;
     virtual IO80211WorkQueue *getWorkQueue() const override;
@@ -129,6 +148,12 @@ public:
     CCLogStream *driverLogger;
 #else
     virtual IO80211WorkQueue *getWorkQueue() override;
+    // Sonoma 14.8.9 (23J631) uses IONetworkController's reserved slots 6 and 7. Point them at Apple's
+    // functions, which the SDK still declares as reserved. Declared only: never called from the driver.
+private:
+    virtual void _RESERVEDIONetworkController6() override __asm__("__ZN19IONetworkController20allocatePacketNoWaitEj");
+    virtual void _RESERVEDIONetworkController7() override __asm__("__ZN19IONetworkController18setHardwareAssistsEjj");
+public:
 #endif
     virtual bool requiresExplicitMBufRelease() override {
         return false;
@@ -143,23 +168,29 @@ public:
         XYLog("%s\n", __FUNCTION__);
         return kIOReturnSuccess;
     }
-    
+
     virtual bool getLogPipes(CCPipe**, CCPipe**, CCPipe**) override;
-    
+
 #ifdef AIRPORT_WCL
     virtual CommonFaultReporter *getFaultReporterFromDriver() override;
 #else
     virtual void *getFaultReporterFromDriver() override;
 #endif
-    
+
     virtual SInt32 apple80211_ioctl(IO80211SkywalkInterface *,unsigned long,void *, bool, bool) AIRPORT_LEGACY_OVERRIDE;
     virtual SInt32 apple80211SkywalkRequest(UInt,int,IO80211SkywalkInterface *,void *) AIRPORT_LEGACY_OVERRIDE;
     virtual SInt32 apple80211SkywalkRequest(UInt,int,IO80211SkywalkInterface *,void *,void *) AIRPORT_LEGACY_OVERRIDE;
+    virtual IO80211VirtualInterface *createVirtualInterface(ether_addr *, UInt) override;
 
     bool createMediumTables(const IONetworkMedium **primary);
     void releaseAll();
     void watchdogAction(IOTimerEventSource *timer);
-    
+    void publishRxErrors();
+    uint32_t rxErrorsTick = 0;
+    uint32_t rxErrorsLastSum = 0;
+    bool rxErrorsPublished = false;
+    void reportInfraTraffic();   // (-itlinfrastats), non-virtual
+
     virtual SInt32 enableFeature(IO80211FeatureCode, void*) override;
     virtual bool isCommandProhibited(int command) override {
 //        if (!ml_at_interrupt_context())
@@ -202,10 +233,10 @@ public:
         XYLog("%s\n", __FUNCTION__);
         return kIOReturnSuccess;
     }
-    
+
     //scan
     static void fakeScanDone(OSObject *owner, IOTimerEventSource *sender);
-    
+
     //-----------------------------------------------------------------------
     // Power management support.
     //-----------------------------------------------------------------------
@@ -223,7 +254,7 @@ public:
     FUNC_IOCTL_GET(DRIVER_VERSION, apple80211_version_data)
     FUNC_IOCTL_GET(HARDWARE_VERSION, apple80211_version_data)
     FUNC_IOCTL(COUNTRY_CODE, apple80211_country_code_data)
-    
+
 public:
     IOInterruptEventSource* fInterrupt;
     IOTimerEventSource *watchdogTimer;
@@ -237,29 +268,41 @@ public:
 #endif
     IOWorkLoop *fWatchdogWorkLoop;
     ItlHalService *fHalService;
-    
+
     //IO80211
     uint8_t power_state;
     struct ieee80211_node *fNextNodeToSend;
     bool fScanResultWrapping;
     IOTimerEventSource *scanSource;
-    
+
     u_int32_t current_authtype_lower;
     u_int32_t current_authtype_upper;
     UInt64 currentSpeed;
     UInt32 currentStatus;
     bool disassocIsVoluntary;
     char geo_location_cc[3];
-    
+
     //pm
     thread_call_t powerOnThreadCall;
     thread_call_t powerOffThreadCall;
     UInt32 pmPowerState;
-    IOService *pmPolicyMaker;
+    // Wi-Fi was asked to start while the card's power was still off (#38); started in setPowerStateOn.
+    bool enableAwaitingPowerOn = false;
+    uint32_t enableDeferrals = 0;
+    void enableAdapterWhenPowered();
+    IOService *pmPolicyMaker = nullptr;
     UInt8 pmPCICapPtr;
     bool magicPacketEnabled;
     bool magicPacketSupported;
-    
+    IO80211VirtualInterface *fAWDLInterface;
+    bool awdlInterfaceTest;
+    bool awdlExtendFrames;
+    uint16_t awdlProbeSequence = 0;
+    bool awdlManagementInputEnabled;
+    UInt32 awdlManagementActive;
+    void teardownAWDLInterface();
+    UInt32 awdlCreateRequests;
+
     //AWDL
     uint8_t *syncFrameTemplate;
     uint32_t syncFrameTemplateLength;
@@ -275,11 +318,11 @@ public:
     uint32_t btcMode;
     uint32_t btcOptions;
     bool awdlSyncEnable;
-    
+
     CCPipe *driverLogPipe;
     CCPipe *driverDataPathPipe;
     CCPipe *driverSnapshotsPipe;
-    
+
 #ifdef AIRPORT_WCL
     bool driverLogPipeStarted = false;
     bool driverDataPathPipeStarted = false;
