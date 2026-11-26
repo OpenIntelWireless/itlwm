@@ -1,6 +1,6 @@
 # itlwm
 
-**Patches to the original itlwm Kernel Extension to allow it loading in macOS 26 with AppleVTD enabled**
+**Patches to the original itlwm Kernel Extension to allow it loading in macOS 26 with AppleVTD enabled and supporting Airdrop when loading AirportItlwm kext in Sequoia and Tahoe**
 
 This fork enables itlwm loading with AppleVTD enabled in macOS Tahoe and Airportitlwm kexts loading in Tahoe and Sequoia without root patches and with AppleVTD enabled. The fork kext binaries also allow bi-directional Airdrop support in Tahoe and Sequoia. Patching and testing is based on and being done using a AX201 wifi chip and the AX210 wifi chip below:
 
