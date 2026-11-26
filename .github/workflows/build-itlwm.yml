@@ -1,0 +1,67 @@
+name: Build itlwm for build alongside AirportItlwm and IntelBTPatcher kexts being built from Airdrop-test branch
+
+on:
+  workflow_dispatch:
+
+env:
+  # Same MacKernelSDK commit laobamac pins.
+  MACKERNELSDK_REF: 3f750085caa17ec3a7880f11c11bf4f48cd6a164
+    
+jobs:
+  itlwm:
+    name: itlwm (${{ matrix.configuration }})
+    runs-on: macos-15-intel
+    strategy:
+      fail-fast: false
+      matrix:
+        configuration: [Debug, Release]
+    steps:
+      - name: Check out selected branch
+        uses: actions/checkout@v6
+      - name: Restore itlwm Xcode project from master if missing
+        run: |
+          set -euo pipefail
+          if [[ ! -f itlwm.xcodeproj/project.pbxproj ]]; then
+            echo "itlwm.xcodeproj is missing on this branch; retrieving project files from origin/master."
+            git fetch origin master
+            git checkout FETCH_HEAD -- itlwm.xcodeproj
+          else
+            echo "itlwm.xcodeproj is present on this branch."
+          fi
+          test -f itlwm.xcodeproj/project.pbxproj
+      - name: Install MacKernelSDK (pinned)
+        uses: actions/checkout@v6
+        with:
+          repository: acidanthera/MacKernelSDK
+          ref: 3f750085caa17ec3a7880f11c11bf4f48cd6a164
+          path: MacKernelSDK
+      - name: Build itlwm.kext
+        env:
+          CONFIGURATION: ${{ matrix.configuration }}
+        run: |
+          set -euo pipefail
+          mkdir -p logs
+          xcodebuild -project itlwm.xcodeproj -scheme itlwm \
+            -configuration "$CONFIGURATION" -jobs 3 ARCHS=x86_64 \
+            SYMROOT="$PWD/build/products" OBJROOT="$PWD/build/obj" \
+            CODE_SIGNING_ALLOWED=NO \
+            build > logs/itlwm.log 2>&1 || { tail -100 logs/itlwm.log; exit 1; }
+      - name: Package itlwm.kext
+        env:
+          CONFIGURATION: ${{ matrix.configuration }}
+        run: |
+          mkdir -p artifacts
+          ditto -c -k --keepParent "build/products/$CONFIGURATION/itlwm.kext" "artifacts/itlwm-$CONFIGURATION.zip"
+      - name: Upload itlwm build
+        uses: actions/upload-artifact@v7
+        with:
+          name: itlwm-${{ matrix.configuration }}
+          path: artifacts/*.zip
+          if-no-files-found: error
+      - name: Upload itlwm build logs
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: build-logs-itlwm-${{ matrix.configuration }}
+          path: logs
+          if-no-files-found: warn
