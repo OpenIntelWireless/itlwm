@@ -2,7 +2,7 @@
 
 **Patches to the original itlwm Kernel Extension to allow it loading in macOS 26 with AppleVTD enabled and supporting Airdrop when loading AirportItlwm kext in Sequoia and Tahoe**
 
-This fork enables itlwm loading with AppleVTD enabled in macOS Tahoe and Airportitlwm kexts loading in Tahoe and Sequoia without root patches and with AppleVTD enabled. The fork kext binaries also allow bi-directional Airdrop support in Tahoe and Sequoia. Patching is based on and testing being done using a AX201 wifi chip and the AX210 wifi chip below, but other Intel WiFi cards from AX200 family should work with the fork kexts.
+This fork enables itlwm loading with AppleVTD enabled in macOS Tahoe and Airportitlwm kexts loading in Tahoe and Sequoia without root patches and with AppleVTD enabled. The fork kext binaries also allow bi-directional Airdrop support in Tahoe and Sequoia. Patching is based on and testing being done using a AX201 wifi chip and the AX210 wifi chip below, but other Intel WiFi card families should work with the fork kexts, except for BE200.
 
 https://a.co/d/0hY4N3fQ EDUP PCIE WiFi 6E Card AX210 Bluetooth 5.2 AX5400M 802.11ax Tri-Band 6G/5.8G/2.4GHz Heat Sink 6dBi Antenna PCI-E Wireless Network Cards for Desktop PC Support Windows 11/10 64-bit.
 
