@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build IntelBTPatcher.kext (the renamed BTLEAdvFixup implementation), the Lilu plugin that lets macOS start Bluetooth LE advertising on Intel controllers.
+"""Build IntelBTPatcher.kext, the Lilu plugin that lets macOS start Bluetooth LE advertising on Intel controllers.
 
 One build per macOS version, because the bluetoothd patterns are per build:
 --target tahoe (macOS 26.7.1, default), --target sequoia (macOS 15.8.3) or --target sonoma (macOS 14.8.9)."""
@@ -15,7 +15,7 @@ def main():
     sdk=a.tree/'MacKernelSDK';lilu=a.tree/'Lilu.kext/Contents/Resources'
     base=FLAGS(sdk,lilu)+{'tahoe':[],'sequoia':['-DBTLEADV_SEQUOIA'],'sonoma':['-DBTLEADV_SONOMA']}[a.target]
     bundle=a.out/(NAME+'.kext')/'Contents';(bundle/'MacOS').mkdir(parents=True,exist_ok=True);objs=[]
-    for s in (ROOT/'BTLEAdvFixup/kern_start.cpp',lilu/'Library/plugin_start.cpp'):
+    for s in (ROOT/'IntelBTPatcher/IntelBTPatcher.cpp',lilu/'Library/plugin_start.cpp'):
         o=a.out/(s.stem+'.o');run(base+['-DPRODUCT_NAME='+NAME,'-DMODULE_VERSION='+VERSION,'-c',s,'-o',o]);objs.append(o)
     exe=bundle/'MacOS'/NAME
     # The same source gives the same kext anywhere: ld's UUID otherwise mixes in the objects' times
@@ -36,5 +36,5 @@ def main():
     print('built',a.target,exe,hashlib.sha256(exe.read_bytes()).hexdigest())
 def FLAGS(sdk,lilu):
     # The usual kernel C++ ABI choices for a Lilu plugin.
-    return ['xcrun','clang++','-arch','x86_64','-std=c++17','-O2','-mkernel' if False else '-g','-fapple-kext','-fno-exceptions','-fno-rtti','-fno-stack-protector','-fno-builtin','-fno-asynchronous-unwind-tables','-mno-red-zone','-nostdinc','-DKERNEL','-DKERNEL_PRIVATE','-D__APPLE__','-D__MACH__','-I'+str(sdk/'Headers'),'-I'+str(lilu),'-I'+str(ROOT/'BTLEAdvFixup'),'-mmacosx-version-min=10.6','-DAPPLE_KEXT_ASSERTIONS=1','-DDRIVER_PRIVATE','-DAPPLE','-DNeXT','-fno-common','-fasm-blocks','-mmmx','-msse','-msse2','-msse3','-mssse3','-mfpmath=sse','-ftree-vectorize','-fno-non-call-exceptions','-Wall','-Wextra','-Wno-unused-parameter','-Wno-deprecated-declarations','-Wno-vla','-Wno-ossharedptr-misuse','-fdebug-compilation-dir=.','-ffile-prefix-map='+str(ROOT)+'=/itlwm','-ffile-prefix-map='+str(sdk)+'=/MacKernelSDK','-ffile-prefix-map='+str(lilu)+'=/Lilu']
+    return ['xcrun','clang++','-arch','x86_64','-std=c++17','-O2','-mkernel' if False else '-g','-fapple-kext','-fno-exceptions','-fno-rtti','-fno-stack-protector','-fno-builtin','-fno-asynchronous-unwind-tables','-mno-red-zone','-nostdinc','-DKERNEL','-DKERNEL_PRIVATE','-D__APPLE__','-D__MACH__','-I'+str(sdk/'Headers'),'-I'+str(lilu),'-I'+str(ROOT/'IntelBTPatcher'),'-mmacosx-version-min=10.6','-DAPPLE_KEXT_ASSERTIONS=1','-DDRIVER_PRIVATE','-DAPPLE','-DNeXT','-fno-common','-fasm-blocks','-mmmx','-msse','-msse2','-msse3','-mssse3','-mfpmath=sse','-ftree-vectorize','-fno-non-call-exceptions','-Wall','-Wextra','-Wno-unused-parameter','-Wno-deprecated-declarations','-Wno-vla','-Wno-ossharedptr-misuse','-fdebug-compilation-dir=.','-ffile-prefix-map='+str(ROOT)+'=/itlwm','-ffile-prefix-map='+str(sdk)+'=/MacKernelSDK','-ffile-prefix-map='+str(lilu)+'=/Lilu']
 if __name__=='__main__':main()

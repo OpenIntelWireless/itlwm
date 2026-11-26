@@ -15,9 +15,9 @@
 #include <kern/thread_call.h>
 #include <mach/mach_time.h>
 #include <sys/vnode.h>
-#include "BTLEAdvPatches.hpp"
-#include "BTLEAdvHci.hpp"
-#include "BTLEAdvVerify.hpp"
+#include "IntelBTPatcherPatches.hpp"
+#include "IntelBTPatcherHci.hpp"
+#include "IntelBTPatcherVerify.hpp"
 
 // Patches bluetoothd's pages as they're validated, the same way BlueToolFixup does.
 // Lilu's onProcLoad route was tried first and didn't apply to this process.
@@ -28,8 +28,8 @@ static bool patchScanning {};
 // Experimental, off by default: -btleadvnodupfilter turns bluetoothd's scan duplicate filter off.
 static bool patchDuplicateFilter {};
 
-// The original bytes of every bluetoothd page a kext patched, for APFS's integrity check (BTLEAdvVerify.hpp, #62).
-// This hook sees BlueToolFixup's patches too when it runs outside BlueToolFixup's, that is when BTLEAdvFixup loads
+// The original bytes of every bluetoothd page a kext patched, for APFS's integrity check (IntelBTPatcherVerify.hpp, #62).
+// This hook sees BlueToolFixup's patches too when it runs outside BlueToolFixup's, that is when IntelBTPatcher loads
 // after BlueToolFixup. pagesLock, a mutex, guards patchedPages, pageScratch and the bluetoothd vnode; it's held
 // across the validation of one bluetoothd page, never across an allocation, a registry write or the check itself.
 static BTLEAdv::PatchedPages *patchedPages {};
@@ -557,7 +557,7 @@ PluginConfiguration ADDPR(config) {
         if (pagesLock && patchedPages && pageScratch)
             publishCall = thread_call_allocate(publishVerify, nullptr);
         if (!pagesLock || !patchedPages || !pageScratch || !publishCall) {
-            SYSLOG("btleadv", "no memory for the integrity check fix, it stays off");
+            SYSLOG("IntelBTPatcher", "no memory for the integrity check fix, it stays off");
             if (patchedPages)
                 IOFree(patchedPages, sizeof(BTLEAdv::PatchedPages));
             if (pageScratch)
@@ -571,7 +571,7 @@ PluginConfiguration ADDPR(config) {
         lilu.onPatcherLoadForce([](void *, KernelPatcher &patcher) {
             KernelPatcher::RouteRequest route("_cs_validate_page", patched_cs_validate_page, orig_cs_validate);
             if (!patcher.routeMultipleLong(KernelPatcher::KernelID, &route, 1))
-                SYSLOG("btleadv", "failed to route cs validation");
+                SYSLOG("IntelBTPatcher", "failed to route cs validation");
         });
         // Routed on its own: if it fails, bluetoothd is still patched, as before.
         if (pagesLock)
@@ -581,7 +581,7 @@ PluginConfiguration ADDPR(config) {
                 KernelPatcher::RouteRequest route("_apfs_vnop_verify", patched_apfs_verify, orig_apfs_verify);
                 const bool routed = patcher.routeMultipleLong(index, &route, 1, address, size);
                 if (!routed) {
-                    SYSLOG("btleadv", "failed to route the integrity check");
+                    SYSLOG("IntelBTPatcher", "failed to route the integrity check");
                     patcher.clearError();
                 }
                 noteHook("BTLEAdvVerifyHook", routed ? 1 : 0);
@@ -589,7 +589,7 @@ PluginConfiguration ADDPR(config) {
         hciLock = IOLockAlloc();
         lengthLock = IOSimpleLockAlloc();
         if (!lengthLock)
-            SYSLOG("btleadv", "no lock for the data length fix, it stays off");
+            SYSLOG("IntelBTPatcher", "no lock for the data length fix, it stays off");
         lilu.onKextLoadForce(&usbHostInfo, 1, [](void *, KernelPatcher &patcher, size_t index, mach_vm_address_t address, size_t size) {
             if (index != usbHostInfo.loadIndex || !hciLock)
                 return;
@@ -598,7 +598,7 @@ PluginConfiguration ADDPR(config) {
                 patched_device_request, orig_device_request);
             const bool routed = patcher.routeMultiple(index, &route, 1, address, size);
             if (!routed) {
-                SYSLOG("btleadv", "failed to route device request");
+                SYSLOG("IntelBTPatcher", "failed to route device request");
                 patcher.clearError();
             }
             noteHook("BTLEAdvHookRouted", routed ? 1 : 0);
@@ -607,7 +607,7 @@ PluginConfiguration ADDPR(config) {
                                                 patched_pipe_io, orig_pipe_io);
             const bool ioRouted = patcher.routeMultiple(index, &ioRoute, 1, address, size);
             if (!ioRouted) {
-                SYSLOG("btleadv", "failed to route pipe io");
+                SYSLOG("IntelBTPatcher", "failed to route pipe io");
                 patcher.clearError();
             }
             // 26.5 and later take the configuration descriptor where older builds take the
@@ -623,7 +623,7 @@ PluginConfiguration ADDPR(config) {
             if (!initRouted)
                 patcher.clearError();
             if (!configRouted && !initRouted)
-                SYSLOG("btleadv", "failed to route pipe creation");
+                SYSLOG("IntelBTPatcher", "failed to route pipe creation");
             noteHook("BTLEAdvPipeHooks", (configRouted ? 1U : 0U) | (initRouted ? 2U : 0U) | (ioRouted ? 4U : 0U));
         });
     }

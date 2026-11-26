@@ -14,9 +14,9 @@ https://a.co/d/0hY4N3fQ EDUP PCIE WiFi 6E Card AX210 Bluetooth 5.2 AX5400M 802.1
    
 A lot of credits to [laobamac](https://github.com/laobamac) who enhanced Aiportitlwm to support loading in macOS Tahoe and Sequoia with AppleVTD enabled. I leveraged his implementation of IOMMU / DMA enabling AppleVTD in Airportitlwm to enhance my initial implementation of itlwm with AppleVTD enabled, and to YBronst for creating the first iteration of this downstream repository, generating the initial patches and builds attempting to allow AppleVTD enabling with this kext and sharing it with me to continue the development. 
 
-Kudos to [retropineaple](https://github.com/retropineaple) for enabling Airdrop in Intel wifi+bluetooth cards. I integrated the code from [ForbiddenItlwm](https://github.com/retropineaple/ForbiddenItlwm) into this fork to build and release from this fork the necessary Airportitlwm and IntelBTPatcher (BTLEAdvFixup in ForbiddenItlwm repo) kexts for Sequoia and Tahoe with Airdrop support for the benefit of all community users. I tested Airdrop in my AX210 transferring files from my iPhone to my hackintosh and viceversa, and it works and gets better and faster with every new release. The code to enable Airdrop is published in the Airdrop-test branch.
+Kudos to [retropineaple](https://github.com/retropineaple) for enabling Airdrop in Intel wifi+bluetooth cards. I integrated the code from [ForbiddenItlwm](https://github.com/retropineaple/ForbiddenItlwm) into this fork to build and release from this fork the necessary `AirportItlwm.kext` and `IntelBTPatcher.kext` builds for Sequoia and Tahoe with Airdrop support for the benefit of all community users. I tested Airdrop in my AX210 transferring files from my iPhone to my hackintosh and viceversa, and it works and gets better and faster with every new release. The code to enable Airdrop is published in the Airdrop-test branch.
 
-**In my fork, an iteration of `IntelBTPatcher.kext` is generated to enable Airdrop.** BTLEAdvFixup implementation is under the hood, but the kext binary is bundled as IntelBTPatcher.
+**This fork builds the Bluetooth advertising kext as `IntelBTPatcher.kext` from the `IntelBTPatcher/` source folder.**
 
 **What you need to enable Airdrop under latest release**
 
@@ -74,7 +74,7 @@ What each one does:
 
 | Flag | Effect |
 | --- | --- |
-| `-btleadv` | Turns BTLEAdvFixup on, so `bluetoothd` can start Bluetooth LE advertising on the Intel controller. `-btleadvoff` turns it off again |
+| `-btleadv` | Turns IntelBTPatcher on, so `bluetoothd` can start Bluetooth LE advertising on the Intel controller. `-btleadvoff` turns it off again |
 | `-itlawdlcoexprobe` | Adds a second firmware context, the AWDL listener, beside the normal Wi-Fi station |
 | `-itlawdliface` | Tells macOS the card can do AWDL and creates the `awdl0` interface |
 | `-itlawdlnativeup` | Accepts the requests that let macOS's AWDL peer manager start |

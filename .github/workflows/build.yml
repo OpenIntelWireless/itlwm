@@ -127,7 +127,7 @@ jobs:
         run: |
           set -euo pipefail
           TARGET="$(echo "$PLATFORM" | tr '[:upper:]' '[:lower:]')"
-          python3 tools/build_btleadv.py --target "$TARGET" --out "build/$PLATFORM" --tree /tmp/lilu-release
+          python3 tools/build_intelbtpatcher.py --target "$TARGET" --out "build/$PLATFORM" --tree /tmp/lilu-release
           test -x "build/$PLATFORM/IntelBTPatcher.kext/Contents/MacOS/IntelBTPatcher"
           plutil -lint "build/$PLATFORM/IntelBTPatcher.kext/Contents/Info.plist"
       - uses: actions/upload-artifact@v7
