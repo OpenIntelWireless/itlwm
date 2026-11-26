@@ -1,4 +1,4 @@
-name: Build itlwm (HeliPort) and AirportItlwm (Sequoia, Tahoe)
+name: Build itlwm (HeliPort), AirportItlwm (Sequoia, Tahoe) and IntelBTPatcher (Sequoia, Tahoe)  
 
 on:
   workflow_dispatch:
