@@ -122,7 +122,7 @@
 #include "ItlIwm.hpp"
 #include "rs.h"
 #ifdef AIRPORT_WCL
-#include "../../ForbiddenItlwm/WCL/WCL.hpp"
+#include "../../AirportItlwm/WCL/WCL.hpp"
 // Away cap for full scans while associated, from itlwm_scanout (0 = default 120 TU); defined in ItlIwx.cpp.
 extern uint32_t itlScanMaxOutTU;
 #endif

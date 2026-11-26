@@ -111,8 +111,13 @@
 #endif
 #include "ItlIwx.hpp"
 // The tested set, on by default from 0.7.0-alpha.2 (AWDLBuildGuard.cpp).
+#if defined(ITL_AWDL_NATIVE)
 extern bool itlAWDLFlag(const char *name);
 extern bool itlAWDLDefaults();
+#else
+static inline bool itlAWDLFlag(const char *) { return false; }
+static inline bool itlAWDLDefaults() { return false; }
+#endif
 #include <linux/types.h>
 #include <linux/kernel.h>
 #include <FwData.h>
@@ -6376,11 +6381,15 @@ extern IOReturn itlAWDLBuildTransmitFor(IOEthernetController*, mbuf_t*, const ui
 extern unsigned itlAWDLTransmitHeldShort(IOEthernetController*);
 extern bool itlAWDLServiceTransmit(IOEthernetController*);
 extern unsigned itlAWDLTransmitQueued(IOEthernetController*);
-#else
-// No AirDrop interface on this macOS target: nothing is ever queued for it.
-static inline unsigned itlAWDLTransmitQueued(IOEthernetController*) { return 0; }
-#endif
 extern bool itlAWDLBuildAllowed();
+#else
+// No AirDrop interface on this macOS target: keep the shared iwx code inert.
+static inline unsigned itlAWDLTransmitQueued(IOEthernetController*) { return 0; }
+static inline bool itlAWDLBuildAllowed() { return false; }
+static inline IOReturn itlAWDLBuildTransmitFor(IOEthernetController*, mbuf_t*, const uint8_t*, size_t) {
+    return kIOReturnNotReady;
+}
+#endif
 static bool awdlRx;
 static bool awdlQueueProbe;
 static bool awdlQueueProbeAttempted;
