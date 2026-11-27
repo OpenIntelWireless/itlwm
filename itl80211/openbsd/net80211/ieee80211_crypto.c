@@ -58,6 +58,7 @@
 #include <crypto/aes.h>
 #include <crypto/cmac.h>
 #include <crypto/key_wrap.h>
+#include <PTKDerivation.hpp>
 
 void    ieee80211_prf(const u_int8_t *, size_t, const u_int8_t *, size_t,
         const u_int8_t *, size_t, u_int8_t *, size_t);
@@ -175,7 +176,7 @@ ieee80211_set_key(struct ieee80211com *ic, struct ieee80211_node *ni,
 
     if (error == 0)
         k->k_flags |= IEEE80211_KEY_SWCRYPTO;
-    
+
     XYLog("%s kid=%d cipher=%d, error=%d\n", __FUNCTION__, k->k_id, k->k_cipher, error);
 
     return error;
@@ -279,7 +280,7 @@ ieee80211_encrypt(struct ieee80211com *ic, mbuf_t m0,
         mbuf_freem(m0);
         return NULL;
     }
-    
+
     XYLog("%s kid=%d cipher=%d\n", __FUNCTION__, k->k_id, k->k_cipher);
 
 	switch (k->k_cipher) {
@@ -402,29 +403,19 @@ ieee80211_kdf(const u_int8_t *key, size_t key_len, const u_int8_t *label,
 /*
  * Derive Pairwise Transient Key (PTK) (see 8.5.1.2).
  */
+static_assert(sizeof(struct ieee80211_ptk) >= PTKDerivation::kCcmpPtkLen,
+    "struct ieee80211_ptk must hold a 48-byte CCMP PTK");
+static_assert(IEEE80211_PMK_LEN == PTKDerivation::kPmkLen,
+    "PTK derivation assumes a 32-byte PMK");
+
 void
 ieee80211_derive_ptk(enum ieee80211_akm akm, const u_int8_t *pmk,
     const u_int8_t *aa, const u_int8_t *spa, const u_int8_t *anonce,
     const u_int8_t *snonce, struct ieee80211_ptk *ptk)
 {
-	void (*kdf)(const u_int8_t *, size_t, const u_int8_t *, size_t,
-        const u_int8_t *, size_t, u_int8_t *, size_t);
-    u_int8_t buf[2 * IEEE80211_ADDR_LEN + 2 * EAPOL_KEY_NONCE_LEN];
-    int ret;
-
-    /* Min(AA,SPA) || Max(AA,SPA) */
-    ret = memcmp(aa, spa, IEEE80211_ADDR_LEN) < 0;
-    memcpy(&buf[ 0], ret ? aa : spa, IEEE80211_ADDR_LEN);
-    memcpy(&buf[ 6], ret ? spa : aa, IEEE80211_ADDR_LEN);
-
-    /* Min(ANonce,SNonce) || Max(ANonce,SNonce) */
-    ret = memcmp(anonce, snonce, EAPOL_KEY_NONCE_LEN) < 0;
-    memcpy(&buf[12], ret ? anonce : snonce, EAPOL_KEY_NONCE_LEN);
-    memcpy(&buf[44], ret ? snonce : anonce, EAPOL_KEY_NONCE_LEN);
-
-    kdf = ieee80211_is_sha256_akm(akm) ? ieee80211_kdf : ieee80211_prf;
-    (*kdf)(pmk, IEEE80211_PMK_LEN, (const u_int8_t *)"Pairwise key expansion", 23,
-        buf, sizeof buf, (u_int8_t *)ptk, sizeof(*ptk));
+    PTKDerivation::derive(ieee80211_is_sha256_akm(akm), pmk, aa, spa,
+        anonce, snonce, (u_int8_t *)ptk, sizeof(*ptk),
+        ieee80211_kdf, ieee80211_prf);
 }
 
 static void
@@ -507,6 +498,12 @@ ieee80211_eapol_key_mic(struct ieee80211_eapol_key *key, const u_int8_t *kck)
         memcpy(key->mic, digest, EAPOL_KEY_MIC_LEN);
         break;
     case EAPOL_KEY_DESC_V3:
+    case EAPOL_KEY_DESC_USE_AKM:
+        /*
+         * SAE uses descriptor version 0 ("use the AKM") and AES-CMAC for
+         * the MIC, just like V3.  OWE is not supported here, and it is the
+         * only other AKM that selects version 0.
+         */
         AES_CMAC_Init(&ctx.cmac);
         AES_CMAC_SetKey(&ctx.cmac, kck);
         AES_CMAC_Update(&ctx.cmac, (u_int8_t *)key, len);
@@ -573,6 +570,7 @@ ieee80211_eapol_key_encrypt(struct ieee80211com *ic,
         break;
     case EAPOL_KEY_DESC_V2:
     case EAPOL_KEY_DESC_V3:
+    case EAPOL_KEY_DESC_USE_AKM:
         if (len < 16 || (len & 7) != 0) {
             /* insert padding */
             n = (len < 16) ? 16 - len : 8 - (len & 7);
@@ -626,6 +624,7 @@ ieee80211_eapol_key_decrypt(struct ieee80211_eapol_key *key,
         return 0;
     case EAPOL_KEY_DESC_V2:
     case EAPOL_KEY_DESC_V3:
+    case EAPOL_KEY_DESC_USE_AKM:
         /* Key Data Length must be a multiple of 8 */
         if (len < 16 + 8 || (len & 7) != 0)
             return 1;

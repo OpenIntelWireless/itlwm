@@ -174,6 +174,10 @@ extern	void ieee80211_auth_open_confirm(struct ieee80211com *,
 extern	void ieee80211_auth_open(struct ieee80211com *,
 	    const struct ieee80211_frame *, struct ieee80211_node *,
 	    struct ieee80211_rxinfo *rs, u_int16_t, u_int16_t);
+extern	void ieee80211_auth_sae(struct ieee80211com *,
+	    const struct ieee80211_frame *, const uint8_t *, size_t,
+	    struct ieee80211_node *, struct ieee80211_rxinfo *,
+	    u_int16_t, u_int16_t);
 extern	void ieee80211_stop_ampdu_tx(struct ieee80211com *,
 	    struct ieee80211_node *, int);
 extern	void ieee80211_gtk_rekey_timeout(void *);
@@ -189,6 +193,7 @@ extern	void ieee80211_ht_negotiate(struct ieee80211com *,
     struct ieee80211_node *);
 extern  void ieee80211_vht_negotiate(struct ieee80211com *,
     struct ieee80211_node *);
+extern int ieee80211_he_supported(struct ieee80211com *, struct ieee80211_node *);
 extern  void ieee80211_he_negotiate(struct ieee80211com *,
     struct ieee80211_node *);
 extern  void ieee80211_sta_set_rx_nss(struct ieee80211com *, struct ieee80211_node *);

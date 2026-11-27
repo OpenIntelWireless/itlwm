@@ -6,6 +6,13 @@
 //  Copyright © 2023 钟先耀. All rights reserved.
 //
 
+#ifdef AIRPORT_WCL
+#if __IO80211_TARGET == __MAC_15_2
+#include "macOS15/IOSkywalkNetworkInterface.h"
+#else
+#include "macOS26/IOSkywalkNetworkInterface.h"
+#endif
+#else
 #ifndef IOSkywalkNetworkInterface_h
 #define IOSkywalkNetworkInterface_h
 
@@ -13,20 +20,20 @@
 
 #include "IOSkywalkInterface.h"
 
-typedef UInt if_link_status;
+struct if_link_status;   // Sonoma 14.8.9 (23J631): a struct
 class IOSkywalkPacketQueue;
 class IOSkywalkLogicalLink;
 class IOSkywalkPacketBufferPool;
 
 class IOSkywalkNetworkInterface : public IOSkywalkInterface {
     OSDeclareAbstractStructors( IOSkywalkNetworkInterface )
-    
+
 public:
     struct RegistrationInfo {
         uint8_t pad[304];
     } __attribute__((packed));
     struct IOSkywalkTSOOptions;
-    
+
 public:
     virtual void free() APPLE_KEXT_OVERRIDE;
     virtual bool init(OSDictionary *) APPLE_KEXT_OVERRIDE;
@@ -40,9 +47,9 @@ public:
     virtual SInt32 initBSDInterfaceParameters(ifnet_init_eparams *,sockaddr_dl **) = 0;
     virtual bool prepareBSDInterface(ifnet_t,UInt);
     virtual void finalizeBSDInterface(ifnet_t,UInt);
-    virtual ifnet_t getBSDInterface(void);
+    virtual ifnet_t getBSDInterface(void) const;
     virtual void setBSDName(char const*);
-    virtual const char *getBSDName(void);
+    virtual const char *getBSDName(void) const;
     virtual IOReturn processBSDCommand(ifnet_t,UInt,void *);
     virtual IOReturn processInterfaceCommand(ifdrv *);
     virtual IOReturn interfaceAdvisoryEnable(bool);
@@ -51,10 +58,10 @@ public:
     virtual IOReturn handleChosenMedia(UInt);
     virtual void *getSupportedMediaArray(UInt *,UInt *);
     virtual void *getPacketTapInfo(UInt *,UInt *);
-    virtual UInt getUnsentDataByteCount(UInt *,UInt *,UInt);
+    virtual UInt getUnsentDataByteCount(UInt *,UInt *,UInt) const;
     virtual UInt32 getSupportedWakeFlags(UInt *);
     virtual void enableNetworkWake(UInt);
-    virtual void calculateRingSizeForQueue(IOSkywalkPacketQueue const*,UInt *);
+    virtual void calculateRingSizeForQueue(IOSkywalkPacketQueue const*,UInt *) const;
     virtual UInt getMaxTransferUnit(void);
     virtual void setMaxTransferUnit(UInt);
     virtual UInt getMinPacketSize(void);
@@ -87,10 +94,10 @@ public:
     OSMetaClassDeclareReservedUnused( IOSkywalkNetworkInterface,  7);
     OSMetaClassDeclareReservedUnused( IOSkywalkNetworkInterface,  8);
     OSMetaClassDeclareReservedUnused( IOSkywalkNetworkInterface,  9);
-    
+
 public:
     void reportLinkStatus(unsigned int, unsigned int);
-    
+
 public:
     void *vptr;
     struct ExpansionData
@@ -105,3 +112,5 @@ public:
 static_assert(sizeof(IOSkywalkNetworkInterface) == 0xD0, "Invalid class size");
 
 #endif /* IOSkywalkNetworkInterface_h */
+
+#endif

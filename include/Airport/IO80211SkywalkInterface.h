@@ -6,6 +6,13 @@
 //  Copyright © 2019 钟先耀. All rights reserved.
 //
 
+#ifdef AIRPORT_WCL
+#if __IO80211_TARGET == __MAC_15_2
+#include "macOS15/IO80211SkywalkInterface.h"
+#else
+#include "macOS26/IO80211SkywalkInterface.h"
+#endif
+#else
 #ifndef _IO80211SKYWALK_H
 #define _IO80211SKYWALK_H
 
@@ -21,7 +28,8 @@ class TxSubmissionDequeueStats;
 class TxCompletionEnqueueStats;
 class IO80211NetworkPacket;
 class PacketSkywalkScratch;
-typedef UInt64 IO80211FlowQueueHash;
+// Sonoma 14.8.9 (23J631): a struct (by value in the flow queue methods), not a 64-bit integer.
+struct IO80211FlowQueueHash;
 class IO80211Peer;
 class CCPipe;
 class IO80211APIUserClient;
@@ -59,7 +67,7 @@ class IO80211SkywalkInterface : public IOSkywalkEthernetInterface {
     OSDeclareAbstractStructors(IO80211SkywalkInterface)
 
 public:
-    
+
     virtual bool init() APPLE_KEXT_OVERRIDE;
     virtual void free() APPLE_KEXT_OVERRIDE;
     virtual IOReturn configureReport(IOReportChannelList *,UInt,void *,void *) APPLE_KEXT_OVERRIDE;
@@ -149,13 +157,18 @@ public:
     virtual ether_addr *getSelfMacAddr(void);
     virtual void setSelfMacAddr(ether_addr *);
     virtual void *getPacketPool(OSString *);
-    virtual void *getLogger(void);
+    virtual void *getLogger(void) const;
     virtual IOReturn handleSIOCSIFADDR(void);
     virtual IOReturn debugHandler(apple80211_debug_command *);
     virtual void statsDump(void);
     virtual void powerOnNotification(void);
     virtual void powerOffNotification(void);
     virtual UInt64 getTxQueueDepth(void);
+    // Sonoma 14.8.9 (23J631) overrides these three; the subclass's table must point at its versions.
+    virtual IOReturn newUserClient(task_t owningTask, void *securityID, UInt32 type, OSDictionary *properties,
+                                   LIBKERN_RETURNS_RETAINED IOUserClient **handler) APPLE_KEXT_OVERRIDE;
+    virtual const char *stringFromReturn(IOReturn rtn) APPLE_KEXT_OVERRIDE;
+    virtual int errnoFromReturn(IOReturn rtn) APPLE_KEXT_OVERRIDE;
     virtual UInt64 getRxQueueCapacity(void);
     virtual void updateRxCounter(unsigned long long);
     virtual void *getMultiCastQueue(void);
@@ -178,14 +191,19 @@ public:
     virtual void postMessageIOUC(char const*,UInt,void *,unsigned long);
     virtual bool isIOUCPipeOpened(void);
     virtual void *getRingMD(IO80211APIUserClient *,unsigned long long);
-    
+
 public:
     OSString *setInterfaceRole(UInt role);
     void *setInterfaceId(UInt id);
     int getInterfaceRole();
-    
-public:
-    char _data[0x118];
+
+private:
+    // Sonoma 14.8.9 (23J631): the object is 0x118 bytes, as on Sequoia (its MetaClass constructor).
+    // Exact, so the AirDrop interface declarations built on this class line up with Apple's.
+    uint8_t _layout[0x118 - sizeof(IOSkywalkEthernetInterface)];
 };
+static_assert(sizeof(IO80211SkywalkInterface) == 0x118, "Sonoma IO80211SkywalkInterface ABI");
 
 #endif /* _IO80211SKYWALK_H */
+
+#endif

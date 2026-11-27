@@ -1,0 +1,159 @@
+diff --git a/itlwm/hal_iwx/ItlIwx.cpp b/itlwm/hal_iwx/ItlIwx.cpp
+index c9ef2d7..4b72977 100644
+--- a/itlwm/hal_iwx/ItlIwx.cpp
++++ b/itlwm/hal_iwx/ItlIwx.cpp
+@@ -2341,6 +2341,10 @@ static bool allocDmaMemory2(struct iwx_dma_info *dma, size_t size, int alignment
+ bool ItlIwx::applevtdTxAllocate()
+ {
+     if (fAppleVTDTxReady) return true;
++    if (!fAppleVTDTxLock) {
++        fAppleVTDTxLock = IOLockAlloc();
++        if (!fAppleVTDTxLock) return false;
++    }
+     for (unsigned i = 0; i < kAppleVTDTxCount; ++i) {
+         if (!allocDmaMemory2(&fAppleVTDTx[i].dma, kAppleVTDTxSize, PAGE_SIZE)) {
+             applevtdTxFree();
+@@ -2361,7 +2365,9 @@ int ItlIwx::applevtdTxPrepare(struct iwx_tx_data *data, mbuf_t packet,
+         mbuf_pkthdr_len(packet) == 0 || mbuf_pkthdr_len(packet) > kAppleVTDTxSize ||
+         data->applevtd_token != 0)
+         return 0;
++
+     unsigned token = 0;
++    if (fAppleVTDTxLock) IOLockLock(fAppleVTDTxLock);
+     for (unsigned n = 0; n < kAppleVTDTxCount; ++n) {
+         unsigned i = (fAppleVTDTxNext + n) % kAppleVTDTxCount;
+         if (fAppleVTDTx[i].state == AppleVTDTxFree) {
+@@ -2371,6 +2377,8 @@ int ItlIwx::applevtdTxPrepare(struct iwx_tx_data *data, mbuf_t packet,
+             break;
+         }
+     }
++    if (fAppleVTDTxLock) IOLockUnlock(fAppleVTDTxLock);
++
+     if (!token) return 0;
+     AppleVTDTxBacking &b = fAppleVTDTx[token - 1];
+     b.owner = data;
+@@ -2378,7 +2386,10 @@ int ItlIwx::applevtdTxPrepare(struct iwx_tx_data *data, mbuf_t packet,
+     const size_t length = mbuf_pkthdr_len(packet);
+     if (mbuf_copydata(packet, 0, length, b.dma.vaddr) != 0 ||
+         b.dma.cmd->synchronize(kIODirectionOut) != kIOReturnSuccess) {
+-        data->applevtd_token = 0; b.owner = NULL; b.state = AppleVTDTxFree; return 0;
++        if (fAppleVTDTxLock) IOLockLock(fAppleVTDTxLock);
++        data->applevtd_token = 0; b.owner = NULL; b.state = AppleVTDTxFree;
++        if (fAppleVTDTxLock) IOLockUnlock(fAppleVTDTxLock);
++        return 0;
+     }
+     unsigned count = 0;
+     for (size_t offset = 0; offset < length && count < maxSegments; ) {
+@@ -2389,33 +2400,67 @@ int ItlIwx::applevtdTxPrepare(struct iwx_tx_data *data, mbuf_t packet,
+         segments[count].length = bytes;
+         ++count; offset += bytes;
+     }
+-    if (!count) { data->applevtd_token = 0; b.owner = NULL; b.state = AppleVTDTxFree; return 0; }
++    if (!count) {
++        if (fAppleVTDTxLock) IOLockLock(fAppleVTDTxLock);
++        data->applevtd_token = 0; b.owner = NULL; b.state = AppleVTDTxFree;
++        if (fAppleVTDTxLock) IOLockUnlock(fAppleVTDTxLock);
++        return 0;
++    }
++
++    if (fAppleVTDTxLock) IOLockLock(fAppleVTDTxLock);
+     b.state = AppleVTDTxInflight;
++    if (fAppleVTDTxLock) IOLockUnlock(fAppleVTDTxLock);
++
+     return (int)count;
+ }
+
+ void ItlIwx::applevtdTxRetire(struct iwx_tx_data *data, bool normal)
+ {
+     if (!data || !data->applevtd_token) return;
++    if (fAppleVTDTxLock) IOLockLock(fAppleVTDTxLock);
+     unsigned token = data->applevtd_token;
+     data->applevtd_token = 0;
+-    if (token > kAppleVTDTxCount || fAppleVTDTx[token - 1].owner != data) return;
+-    AppleVTDTxBacking &b = fAppleVTDTx[token - 1];
+-    if (normal && b.state == AppleVTDTxInflight) {
+-        b.owner = NULL; b.state = AppleVTDTxFree;
+-    } else {
+-        /* Reset does not by itself prove the device stopped DMA. */
+-        b.state = AppleVTDTxQuarantined;
++    if (token <= kAppleVTDTxCount && fAppleVTDTx[token - 1].owner == data) {
++        AppleVTDTxBacking &b = fAppleVTDTx[token - 1];
++        if (normal && b.state == AppleVTDTxInflight) {
++            b.owner = NULL; b.state = AppleVTDTxFree;
++        } else {
++            /* Reset does not by itself prove the device stopped DMA. */
++            b.owner = NULL; b.state = AppleVTDTxQuarantined;
++        }
+     }
++    if (fAppleVTDTxLock) IOLockUnlock(fAppleVTDTxLock);
++}
++
++void ItlIwx::applevtdTxResetQuarantine()
++{
++    if (fAppleVTDTxLock) IOLockLock(fAppleVTDTxLock);
++    for (unsigned i = 0; i < kAppleVTDTxCount; ++i) {
++        if (fAppleVTDTx[i].state == AppleVTDTxQuarantined) {
++            fAppleVTDTx[i].owner = NULL;
++            fAppleVTDTx[i].state = AppleVTDTxFree;
++        }
++    }
++    if (fAppleVTDTxLock) IOLockUnlock(fAppleVTDTxLock);
+ }
+
+ void ItlIwx::applevtdTxFree()
+ {
++    if (fAppleVTDTxLock) IOLockLock(fAppleVTDTxLock);
+     for (unsigned i = 0; i < kAppleVTDTxCount; ++i) {
+-        if (fAppleVTDTx[i].dma.cmd && fAppleVTDTx[i].state == AppleVTDTxFree)
++        if (fAppleVTDTx[i].dma.cmd) {
+             iwx_dma_contig_free(&fAppleVTDTx[i].dma);
++            fAppleVTDTx[i].owner = NULL;
++            fAppleVTDTx[i].state = AppleVTDTxFree;
++        }
+     }
+     fAppleVTDTxReady = false;
++    if (fAppleVTDTxLock) {
++        IOLock *lock = fAppleVTDTxLock;
++        fAppleVTDTxLock = NULL;
++        IOLockUnlock(lock);
++        IOLockFree(lock);
++    }
+ }
+ 
+ bool allocDmaMemory2(struct iwx_dma_info *dma, size_t size, int alignment)
+@@ -2775,6 +2820,9 @@ iwx_reset_tx_ring(struct iwx_softc *sc, struct iwx_tx_ring *ring)
+         }
+     }
+
++    if (sc->sc_device_family >= IWX_DEVICE_FAMILY_AX210)
++        applevtdTxResetQuarantine();
++
+     if (ring->qid == IWX_INVALID_QUEUE || !ring->desc) {
+         return;
+     }
+@@ -3293,6 +3341,9 @@ iwx_stop_device(struct iwx_softc *sc)
+     iwx_reset_rx_ring(sc, &sc->rxq);
+     for (qid = 0; qid < nitems(sc->txq); qid++)
+         iwx_reset_tx_ring(sc, &sc->txq[qid]);
++
++    if (sc->sc_device_family >= IWX_DEVICE_FAMILY_AX210)
++        applevtdTxResetQuarantine();
+
+     /* Make sure (redundant) we've released our request to stay awake */
+     IWX_CLRBITS(sc, IWX_CSR_GP_CNTRL,
+diff --git a/itlwm/hal_iwx/ItlIwx.hpp b/itlwm/hal_iwx/ItlIwx.hpp
+index f2bcb7e..6c4625b 100644
+--- a/itlwm/hal_iwx/ItlIwx.hpp
++++ b/itlwm/hal_iwx/ItlIwx.hpp
+@@ -198,9 +198,11 @@ public:
+     AppleVTDTxBacking fAppleVTDTx[kAppleVTDTxCount] = {};
+     uint32_t fAppleVTDTxNext = 0;
+     bool fAppleVTDTxReady = false;
++    IOLock *fAppleVTDTxLock = NULL;
+     bool applevtdTxAllocate();
+     int applevtdTxPrepare(struct iwx_tx_data *, mbuf_t, IOPhysicalSegment *, unsigned);
+     void applevtdTxRetire(struct iwx_tx_data *, bool normal);
++    void applevtdTxResetQuarantine();
+     void applevtdTxFree();
+     
+     //utils

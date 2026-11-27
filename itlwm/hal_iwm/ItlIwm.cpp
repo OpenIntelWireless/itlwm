@@ -20,8 +20,34 @@ OSDefineMetaClassAndStructors(ItlIwm, ItlHalService)
 void ItlIwm::
 detach(IOPCIDevice *device)
 {
+#ifdef AIRPORT_VTD
+    getMainCommandGate()->runAction(
+        [](OSObject *, void *arg0, void *arg1, void *, void *) -> IOReturn {
+            auto that = static_cast<ItlIwm *>(arg0);
+            auto pci = static_cast<IOPCIDevice *>(arg1);
+            that->dmaDetaching = true;
+            that->dmaEpoch++;
+            that->com.sc_ic.ic_ac.ac_if.if_flags &= ~(IFF_UP | IFF_RUNNING);
+            that->com.sc_ic.ic_state = IEEE80211_S_INIT;
+            timeout_del(&that->com.sc_ic.ic_bgscan_timeout);
+            that->com.sc_flags |= IWM_FLAG_SHUTDOWN;
+            that->com.sc_generation++;
+            pci->setBusMasterEnable(false);
+            auto intr = that->com.ih;
+            if (intr && intr->intr)
+                intr->intr->disable();
+            for (unsigned int i = 0; i < nitems(that->com.txq); i++)
+                that->iwm_reset_tx_ring(&that->com, &that->com.txq[i]);
+            return kIOReturnSuccess;
+        }, this, device);
+#endif
     struct _ifnet *ifp = &com.sc_ic.ic_ac.ac_if;
     struct iwm_softc *sc = &com;
+#ifdef AIRPORT_VTD
+    releaseAll();
+    taskq_destroy(systq);
+    taskq_destroy(com.sc_nswq);
+#endif
     
     for (int txq_i = 0; txq_i < nitems(sc->txq); txq_i++)
         iwm_free_tx_ring(sc, &sc->txq[txq_i]);
@@ -31,9 +57,14 @@ detach(IOPCIDevice *device)
     iwm_dma_contig_free(&sc->kw_dma);
     iwm_dma_contig_free(&sc->sched_dma);
     iwm_dma_contig_free(&sc->fw_dma);
+#ifdef AIRPORT_VTD
+    iwm_free_fw_paging(sc);
+#endif
     ieee80211_ifdetach(ifp);
+#ifndef AIRPORT_VTD
     taskq_destroy(systq);
     taskq_destroy(com.sc_nswq);
+#endif
     releaseAll();
 }
 
@@ -42,6 +73,11 @@ attach(IOPCIDevice *device)
 {
     pci.pa_tag = device;
     pci.workloop = getMainWorkLoop();
+#ifdef AIRPORT_VTD
+    if (!prepareDma(device, 36))
+        return false;
+    pci.pa_dmat = dmaArena;
+#endif
     if (!iwm_attach(&com, &pci)) {
         detach(device);
         releaseAll();

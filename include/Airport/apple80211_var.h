@@ -430,14 +430,14 @@ struct apple80211_rate
 /*
  DSCP TOS/Traffic class values for WME access categories taken from
  WiFi WMM Test Plan v 1.3.1 Appendix C.
- 
+
  TOS/Traffic class field looks like:
- 
+
  0   1   2   3   4   5   6   7
  +---+---+---+---+---+---+---+---+
  |          DSCP         |  ECN  |
  +---+---+---+---+---+---+---+---+
- 
+
  These bits are numbered according to rfc 2474, but might be misleading.
  It looks like bit 0 is actually the high order bit.
  */
@@ -578,7 +578,7 @@ enum apple80211_virtual_interface_type
     APPLE80211_VIF_P2P_GO,
     APPLE80211_VIF_AWDL,
     APPLE80211_VIF_SOFT_AP,
-    
+
     APPLE80211_VIF_MAX
 };
 
@@ -609,7 +609,7 @@ struct apple80211_status_msg_hdr
 {
     u_int32_t    msg_type;        //    type of message
     u_int32_t    msg_len;         //  length of data (not including msg_type and msg_len)
-    
+
     // data follows
 };
 
@@ -649,8 +649,13 @@ struct apple80211_status_msg_hdr
 #define APPLE80211_M_DEAUTH_RECEIVED         32
 #define APPLE80211_M_RSSI_CHANGED            39
 #define APPLE80211_M_PEER_STATE              40
-#define APPLE80211_M_AWDL_AVAILABILITY_WINDOW_START 42
-#define APPLE80211_M_AWDL_AVAILABILITY_WINDOW_EXTENSIONS_END    43
+// AW events on 25G241, from AppleBCMWLANProximityInterface's producers (IO80211Controller::postMessage):
+// handleAvailabilityWindowStart posts 41 with 36 bytes, ...Extension 42 with 8 bytes, ...End 43 with
+// 40 bytes. IO80211AWDLPeerManager::reportDataPathEvents switches on (event - 41). Earlier versions of
+// this header named 42 the start. Nothing in this driver posts them yet.
+#define APPLE80211_M_AWDL_AVAILABILITY_WINDOW_START     41
+#define APPLE80211_M_AWDL_AVAILABILITY_WINDOW_EXTENSION 42
+#define APPLE80211_M_AWDL_AVAILABILITY_WINDOW_END       43
 #define APPLE80211_M_AWDL_SYNC_STATE_CHANGED 46
 #define APPLE80211_M_AWDL_PEER_PRESENCE      47
 #define APPLE80211_M_RESET_INTERFACE         49

@@ -1,0 +1,90 @@
+diff --git a/AirportItlwm/WCL/WCL.cpp b/AirportItlwm/WCL/WCL.cpp
+index e038bc6..0479b34 100644
+--- a/AirportItlwm/WCL/WCL.cpp
++++ b/AirportItlwm/WCL/WCL.cpp
+@@ -464,8 +464,10 @@ IOReturn AirportItlwmSkywalkInterface::startWCLJoin(AirportWCL::JoinRequest &joi
+             wpa.i_akms |= IEEE80211_WPA_AKM_PSK;
+         if (join.upperAuth & (APPLE80211_AUTHTYPE_WPA | APPLE80211_AUTHTYPE_WPA2))
+             wpa.i_akms |= IEEE80211_WPA_AKM_8021X;
+-        if (join.upperAuth & APPLE80211_AUTHTYPE_SHA256_PSK)
++        if (join.upperAuth & APPLE80211_AUTHTYPE_SHA256_PSK) {
+             wpa.i_akms |= IEEE80211_WPA_AKM_SHA256_PSK;
++            wpa.i_akms |= IEEE80211_WPA_AKM_PSK;
++        }
+         if (join.upperAuth & APPLE80211_AUTHTYPE_SHA256_8021X)
+             wpa.i_akms |= IEEE80211_WPA_AKM_SHA256_8021X;
+         wpa.i_ciphers = IEEE80211_WPA_CIPHER_CCMP | IEEE80211_WPA_CIPHER_TKIP;
+diff --git a/AirportItlwm/WCL/WCL.hpp b/AirportItlwm/WCL/WCL.hpp
+index e3820dd..04795ab 100644
+--- a/AirportItlwm/WCL/WCL.hpp
++++ b/AirportItlwm/WCL/WCL.hpp
+@@ -343,9 +343,12 @@ inline bool scanUsesProbes(bool requested, bool activeRequest) {
+ inline size_t selectWPA2TransitionMode(uint8_t *ies, size_t length) {
+     if (!validIEs(ies, length))
+         return length;
++    bool converted = false;
+     for (size_t offset = 0; offset < length; ) {
+         uint8_t *ie = ies + offset;
+         size_t size = size_t(ie[1]) + 2;
++        if (offset + size > length)
++            break;
+         if (ie[0] != 48 || size < 10 || read16(ie + 2) != 1) {
+             offset += size;
+             continue;
+@@ -379,7 +382,9 @@ inline size_t selectWPA2TransitionMode(uint8_t *ies, size_t length) {
+                 other = true;
+             else if (suite[3] == 2)
+                 psk = true;
+-            else if (suite[3] == 8)
++            else if (suite[3] == 6)
++                continue; // PSK-SHA256 is recognized, but ordinary PSK is still required.
++            else if (suite[3] == 8 || suite[3] == 24)
+                 sae = true;
+             else
+                 other = true;
+@@ -400,6 +405,21 @@ inline size_t selectWPA2TransitionMode(uint8_t *ies, size_t length) {
+         ie[1] -= removed;
+         length -= removed;
+         offset += size - removed;
++        converted = true;
++    }
++    if (converted) {
++        for (size_t offset = 0; offset < length; ) {
++            uint8_t *ie = ies + offset;
++            size_t size = size_t(ie[1]) + 2;
++            if (offset + size > length)
++                break;
++            if (ie[0] == 244) {
++                memmove(ie, ie + size, length - offset - size);
++                length -= size;
++                continue;
++            }
++            offset += size;
++        }
+     }
+     return length;
+ }
+diff --git a/itl80211/openbsd/net80211/ieee80211_node.c b/itl80211/openbsd/net80211/ieee80211_node.c
+index 198b817..b8fce74 100644
+--- a/itl80211/openbsd/net80211/ieee80211_node.c
++++ b/itl80211/openbsd/net80211/ieee80211_node.c
+@@ -1594,14 +1594,16 @@ ieee80211_choose_rsnparams(struct ieee80211com *ic)
+     
+     /* filter out unsupported AKMPs */
+     ni->ni_rsnakms &= ic->ic_rsnakms;
+-    /* prefer SHA-256 based AKMPs */
++    /* prefer SHA-256 based AKMPs if MFP is supported */
+     if ((ic->ic_flags & IEEE80211_F_PSK) && (ni->ni_rsnakms &
+                                              (IEEE80211_AKM_PSK | IEEE80211_AKM_SHA256_PSK))) {
+         /* AP supports PSK AKMP and a PSK is configured */
+-        if (ni->ni_rsnakms & IEEE80211_AKM_SHA256_PSK)
++        if ((ni->ni_rsnakms & IEEE80211_AKM_SHA256_PSK) && (ic->ic_caps & IEEE80211_C_MFP))
+             ni->ni_rsnakms = IEEE80211_AKM_SHA256_PSK;
+-        else
++        else if (ni->ni_rsnakms & IEEE80211_AKM_PSK)
+             ni->ni_rsnakms = IEEE80211_AKM_PSK;
++        else
++            ni->ni_rsnakms = IEEE80211_AKM_SHA256_PSK;
+     } else {
+         if (ni->ni_rsnakms & IEEE80211_AKM_SHA256_8021X)
+             ni->ni_rsnakms = IEEE80211_AKM_SHA256_8021X;

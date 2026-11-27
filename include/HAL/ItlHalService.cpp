@@ -20,6 +20,15 @@ OSDefineMetaClassAndAbstractStructors(ItlHalService, OSObject)
 bool ItlHalService::
 initWithController(IOEthernetController *controller, IOWorkLoop *workloop, IOCommandGate *commandGate)
 {
+    // Only once per HAL: a second call would leak the first references and lock (audit P-R02).
+    if (shutDown || this->controller || !controller || !workloop || !commandGate)
+        return false;
+#ifdef AIRPORT_WCL
+    auto ic = get80211Controller();
+    ic->ic_wcl_scan_away_time_ms = 0;
+    bzero(ic->ic_wcl_tx_packets, sizeof(ic->ic_wcl_tx_packets));
+    bzero(ic->ic_wcl_rx_packets, sizeof(ic->ic_wcl_rx_packets));
+#endif
     this->controller = controller;
     this->controller->retain();
     this->mainWorkLoop = workloop;
@@ -64,6 +73,9 @@ tsleep_nsec(void *ident, int priority, const char *wmesg, int timo)
 //    XYLog("%s %s\n", __FUNCTION__, wmesg);
     struct timespec ts;
     int err;
+    // Never on a lock shutdown() has freed (audit P-R02); nothing sleeps once the HAL is detached.
+    if (!this->inner_lock)
+        return EWOULDBLOCK;
     memset(&ts, 0, sizeof(struct timespec));
     ts.tv_nsec = timo;
     lck_mtx_lock(this->inner_lock);
@@ -73,27 +85,44 @@ tsleep_nsec(void *ident, int priority, const char *wmesg, int timo)
 }
 
 void ItlHalService::
-free()
+shutdown()
 {
-    XYLog("%s\n", __PRETTY_FUNCTION__);
-    if (this->mainWorkLoop) {
-        this->mainWorkLoop->release();
+#ifdef AIRPORT_VTD
+    if (dmaArena) {
+        dmaArena->destroy();
+        dmaArena = nullptr;
     }
-    this->mainWorkLoop = NULL;
-    if (this->mainCommandGate) {
-        this->mainCommandGate->release();
-    }
-    this->mainCommandGate = NULL;
-    if (this->controller) {
-        this->controller->release();
-    }
+#endif
+    OSSafeReleaseNULL(this->mainWorkLoop);
+    OSSafeReleaseNULL(this->mainCommandGate);
+    OSSafeReleaseNULL(this->controller);
     if (this->inner_lock) {
-        lck_attr_free(this->inner_attr);
         lck_mtx_free(this->inner_lock, this->inner_gp);
         lck_grp_free(this->inner_gp);
         lck_grp_attr_free(this->inner_gp_attr);
+        lck_attr_free(this->inner_attr);
         this->inner_lock = NULL;
+        this->inner_gp = NULL;
+        this->inner_gp_attr = NULL;
+        this->inner_attr = NULL;
     }
-    this->controller = NULL;
+    shutDown = true;
+}
+
+void ItlHalService::
+free()
+{
+    XYLog("%s\n", __PRETTY_FUNCTION__);
+    shutdown();
     super::free();
 }
+
+#ifdef AIRPORT_VTD
+bool ItlHalService::prepareDma(IOPCIDevice *device, uint8_t addressBits)
+{
+    if (dmaArena || !mainWorkLoop || mainWorkLoop->inGate())
+        return false;
+    dmaArena = ItlDmaArena::create(device, controller, addressBits);
+    return dmaArena != nullptr;
+}
+#endif

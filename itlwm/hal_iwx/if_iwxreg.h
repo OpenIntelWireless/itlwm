@@ -2007,6 +2007,7 @@ struct iwx_tx_queue_cfg_rsp {
 #define IWX_MAC_CONF_GROUP    0x3
 #define IWX_PHY_OPS_GROUP    0x4
 #define IWX_DATA_PATH_GROUP    0x5
+#define IWX_STA_HE_CTXT_CMD    0x7
 #define IWX_PROT_OFFLOAD_GROUP    0xb
 #define IWX_REGULATORY_AND_NVM_GROUP    0xc
 
@@ -2948,6 +2949,34 @@ struct iwx_fw_cmd_version {
     uint8_t notif_ver;
 } __packed;
 
+/* HE station context ABI, Intel iwlwifi fw/api/mac.h (Linux v5.15,
+ * dual BSD-3-Clause/GPL-2.0). Firmware 68 advertises command version 2. */
+struct iwx_he_backoff_conf {
+    uint16_t cwmin, cwmax, aifsn, mu_time;
+} __packed;
+struct iwx_he_sta_context_cmd {
+    uint8_t sta_id, tid_limit, reserved1, reserved2;
+    uint32_t flags;
+    uint8_t ref_bssid_addr[6];
+    uint16_t reserved0;
+    uint32_t htc_flags;
+    uint8_t frag_flags, frag_level, frag_max_num, frag_min_size;
+    uint8_t pkt_ext[2][4][2]; /* NSS, RU size, PPET8/PPET16 */
+    uint8_t bss_color, htc_trig_based_pkt_ext;
+    uint16_t frame_time_rts_th;
+    uint8_t rand_alloc_ecwmin, rand_alloc_ecwmax;
+    uint16_t reserved3;
+    struct iwx_he_backoff_conf trig_based_txf[4];
+    uint8_t max_bssid_indicator, bssid_index, ema_ap, profile_periodicity;
+    uint8_t bssid_count, reserved4[3];
+} __packed;
+#define IWX_HE_BSS_COLOR_DIS       (1U << 5)
+#define IWX_HE_PARTIAL_BSS_COLOR   (1U << 6)
+#define IWX_HE_32BIT_BA_BITMAP     (1U << 7)
+#define IWX_HE_PACKET_EXT          (1U << 8)
+#define IWX_HE_ACK_ENABLED         (1U << 11)
+#define IWX_HE_MU_EDCA_CW          (1U << 12)
+#define IWX_HE_NIC_NOT_ACK_ENABLED (1U << 13)
 /* Common PHY, MAC and Bindings definitions */
 
 #define IWX_MAX_MACS_IN_BINDING    (3)

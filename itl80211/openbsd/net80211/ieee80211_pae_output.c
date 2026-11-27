@@ -81,7 +81,7 @@ ieee80211_send_eapol_key(struct ieee80211com *ic, mbuf_t m,
     struct ieee80211_eapol_key *key;
     u_int16_t info;
     int len, error = 0;
-    
+
     mbuf_prepend(&m, sizeof(struct ether_header), MBUF_DONTWAIT);
     if (m == NULL)
         return ENOMEM;
@@ -90,17 +90,26 @@ ieee80211_send_eapol_key(struct ieee80211com *ic, mbuf_t m,
     eh->ether_type = htons(ETHERTYPE_PAE);
     IEEE80211_ADDR_COPY(eh->ether_shost, ic->ic_myaddr);
     IEEE80211_ADDR_COPY(eh->ether_dhost, ni->ni_macaddr);
-    
+
     key = (struct ieee80211_eapol_key *)&eh[1];
     key->version = EAPOL_VERSION;
     key->type = EAPOL_KEY;
     key->desc = (ni->ni_rsnprotos == IEEE80211_PROTO_RSN) ?
     EAPOL_KEY_DESC_IEEE80211 : EAPOL_KEY_DESC_WPA;
-    
+
     info = BE_READ_2(key->info);
     /* use V3 descriptor if KDF is SHA256-based */
-    if (ieee80211_is_sha256_akm((enum ieee80211_akm)ni->ni_rsnakms))
-        info |= EAPOL_KEY_DESC_V3;
+    if (ieee80211_is_sha256_akm((enum ieee80211_akm)ni->ni_rsnakms)) {
+        /*
+         * WPA3-Personal sets the "use the AKM" descriptor version (0);
+         * the MIC is AES-CMAC because the AKM is SAE.
+         */
+        if (ieee80211_node_allow_wpa3(ic, ni) &&
+            ni->ni_sae.sae_state == SAE_STATE_ACCEPTED)
+            info |= EAPOL_KEY_DESC_USE_AKM;
+        else
+            info |= EAPOL_KEY_DESC_V3;
+    }
     /* use V2 descriptor if pairwise or group cipher is CCMP */
     else if (ni->ni_rsncipher == IEEE80211_CIPHER_CCMP ||
              ni->ni_rsngroupcipher == IEEE80211_CIPHER_CCMP)
@@ -108,11 +117,11 @@ ieee80211_send_eapol_key(struct ieee80211com *ic, mbuf_t m,
     else
         info |= EAPOL_KEY_DESC_V1;
     BE_WRITE_2(key->info, info);
-    
+
     len = mbuf_len(m) - sizeof(struct ether_header);
     BE_WRITE_2(key->paylen, len - sizeof(*key));
     BE_WRITE_2(key->len, len - 4);
-    
+
 #ifndef IEEE80211_STA_ONLY
     if (info & EAPOL_KEY_ENCRYPTED) {
         if (ni->ni_rsnprotos == IEEE80211_PROTO_WPA) {
@@ -121,7 +130,7 @@ ieee80211_send_eapol_key(struct ieee80211com *ic, mbuf_t m,
             BE_WRITE_2(key->info, info);
         }
         ieee80211_eapol_key_encrypt(ic, key, ptk->kek);
-        
+
         if ((info & EAPOL_KEY_VERSION_MASK) != EAPOL_KEY_DESC_V1) {
             /* AES Key Wrap adds 8 bytes + padding */
             size_t l = sizeof(*eh) + 4 + BE_READ_2(key->len);
@@ -132,13 +141,13 @@ ieee80211_send_eapol_key(struct ieee80211com *ic, mbuf_t m,
 #endif
     if (info & EAPOL_KEY_KEYMIC)
         ieee80211_eapol_key_mic(key, ptk->kck);
-    
+
 #ifndef IEEE80211_STA_ONLY
     /* start a 100ms timeout if an answer is expected from supplicant */
     if (info & EAPOL_KEY_KEYACK)
         timeout_add_msec(&ni->ni_eapol_to, 100);
 #endif
-    
+
     error = ifq_enqueue(&ifp->if_snd, m);
     if (error) {
         XYLog("%s enqueue fail!!\n", __FUNCTION__);
@@ -158,7 +167,7 @@ ieee80211_eapol_timeout(void *arg)
     struct ieee80211_node *ni = (struct ieee80211_node *)arg;
     struct ieee80211com *ic = ni->ni_ic;
     int s;
-    
+
     DPRINTF(("no answer from station %s in state %d\n",
         ether_sprintf(ni->ni_macaddr), ni->ni_rsn_state));
 
@@ -191,7 +200,7 @@ ieee80211_add_gtk_kde(u_int8_t *frm, struct ieee80211_node *ni,
                       const struct ieee80211_key *k)
 {
     _KASSERT(k->k_flags & IEEE80211_KEY_GROUP);
-    
+
     *frm++ = IEEE80211_ELEMID_VENDOR;
     *frm++ = 6 + k->k_len;
     memcpy(frm, IEEE80211_OUI, 3); frm += 3;
@@ -230,7 +239,7 @@ u_int8_t *
 ieee80211_add_igtk_kde(u_int8_t *frm, const struct ieee80211_key *k)
 {
     _KASSERT(k->k_flags & IEEE80211_KEY_IGTK);
-    
+
     *frm++ = IEEE80211_ELEMID_VENDOR;
     *frm++ = 4 + 24;
     memcpy(frm, IEEE80211_OUI, 3); frm += 3;
@@ -246,11 +255,11 @@ mbuf_t
 ieee80211_get_eapol_key(int flags, int type, u_int pktlen)
 {
     mbuf_t m;
-    
+
     /* reserve space for 802.11 encapsulation and EAPOL-Key header */
     pktlen += sizeof(struct ieee80211_frame) + LLC_SNAPFRAMELEN +
     sizeof(struct ieee80211_eapol_key);
-    
+
     if (pktlen > MCLBYTES)
         panic("EAPOL-Key frame too large: %u", pktlen);
     mbuf_gethdr(flags, type, &m);
@@ -280,7 +289,7 @@ ieee80211_send_4way_msg1(struct ieee80211com *ic, struct ieee80211_node *ni)
     mbuf_t m;
     u_int16_t info, keylen;
     u_int8_t *frm;
-    
+
     ni->ni_rsn_state = RSNA_PTKSTART;
     if (++ni->ni_rsn_retries > 3) {
         IEEE80211_SEND_MGMT(ic, ni, IEEE80211_FC0_SUBTYPE_DEAUTH,
@@ -296,34 +305,34 @@ ieee80211_send_4way_msg1(struct ieee80211com *ic, struct ieee80211_node *ni)
     }
     key = mtod(m, struct ieee80211_eapol_key *);
     memset(key, 0, sizeof(*key));
-    
+
     info = EAPOL_KEY_PAIRWISE | EAPOL_KEY_KEYACK;
     BE_WRITE_2(key->info, info);
-    
+
     /* copy the authenticator's nonce (ANonce) */
     memcpy(key->nonce, ni->ni_nonce, EAPOL_KEY_NONCE_LEN);
-    
+
     keylen = ieee80211_cipher_keylen(ni->ni_rsncipher);
     BE_WRITE_2(key->keylen, keylen);
-    
+
     frm = (u_int8_t *)&key[1];
     /* NB: WPA does not have PMKID KDE */
     if (ni->ni_rsnprotos == IEEE80211_PROTO_RSN &&
         ieee80211_is_8021x_akm((enum ieee80211_akm)ni->ni_rsnakms))
         frm = ieee80211_add_pmkid_kde(frm, ni->ni_pmkid);
-    
+
     size_t l = frm - (u_int8_t *)key;
     mbuf_pkthdr_setlen(m, l);
     mbuf_setlen(m, l);
-    
+
     if (ic->ic_if.if_flags & IFF_DEBUG)
         XYLog("%s: sending msg %d/%d of the %s handshake to %s\n",
                ic->ic_if.if_xname, 1, 4, "4-way",
                ether_sprintf(ni->ni_macaddr));
-    
+
     ni->ni_replaycnt++;
     BE_WRITE_8(key->replaycnt, ni->ni_replaycnt);
-    
+
     return ieee80211_send_eapol_key(ic, m, ni, NULL);
 }
 #endif	/* IEEE80211_STA_ONLY */
@@ -340,26 +349,33 @@ ieee80211_send_4way_msg2(struct ieee80211com *ic, struct ieee80211_node *ni,
     mbuf_t m;
     u_int16_t info;
     u_int8_t *frm;
-    
+
     ni->ni_rsn_supp_state = RSNA_SUPP_PTKNEGOTIATING;
-    m = ieee80211_get_eapol_key(MBUF_DONTWAIT, MT_DATA,
-                                (ni->ni_rsnprotos == IEEE80211_PROTO_WPA) ?
-                                2 + IEEE80211_WPAIE_MAXLEN :
-                                2 + IEEE80211_RSNIE_MAXLEN);
+    size_t pktlen;
+    if (ni->ni_rsnprotos == IEEE80211_PROTO_WPA)
+        pktlen = 2 + IEEE80211_WPAIE_MAXLEN;
+    else {
+        pktlen = 2 + IEEE80211_RSNIE_MAXLEN;
+        /* WPA3 must echo the RSNXE in message 2 as well. */
+        if (ieee80211_node_allow_wpa3(ic, ni) &&
+            ni->ni_sae.sae_state == SAE_STATE_ACCEPTED)
+            pktlen += 2 + IEEE80211_RSNXEIE_MAXLEN;
+    }
+    m = ieee80211_get_eapol_key(MBUF_DONTWAIT, MT_DATA, pktlen);
     if (m == NULL)
         return ENOMEM;
     key = mtod(m, struct ieee80211_eapol_key *);
     memset(key, 0, sizeof(*key));
-    
+
     info = EAPOL_KEY_PAIRWISE | EAPOL_KEY_KEYMIC;
     BE_WRITE_2(key->info, info);
-    
+
     /* copy key replay counter from Message 1/4 */
     memcpy(key->replaycnt, replaycnt, 8);
-    
+
     /* copy the supplicant's nonce (SNonce) */
     memcpy(key->nonce, ic->ic_nonce, EAPOL_KEY_NONCE_LEN);
-    
+
     frm = (u_int8_t *)&key[1];
     /* add the WPA/RSN IE used in the (Re)Association Request */
     if (ni->ni_rsnprotos == IEEE80211_PROTO_WPA) {
@@ -368,17 +384,21 @@ ieee80211_send_4way_msg2(struct ieee80211com *ic, struct ieee80211_node *ni,
         /* WPA sets the key length field here */
         keylen = ieee80211_cipher_keylen(ni->ni_rsncipher);
         BE_WRITE_2(key->keylen, keylen);
-    } else	/* RSN */
+    } else {	/* RSN */
         frm = ieee80211_add_rsn(frm, ic, ni);
+        if (ieee80211_node_allow_wpa3(ic, ni) &&
+            ni->ni_sae.sae_state == SAE_STATE_ACCEPTED)
+            frm = ieee80211_add_rsnxe_h2e(frm);
+    }
     size_t l = frm - (u_int8_t *)key;
     mbuf_pkthdr_setlen(m, l);
     mbuf_setlen(m, l);
-    
+
     if (ic->ic_if.if_flags & IFF_DEBUG)
         XYLog("%s: sending msg %d/%d of the %s handshake to %s, type=%s\n",
                ic->ic_if.if_xname, 2, 4, "4-way",
               ether_sprintf(ni->ni_macaddr), ni->ni_rsnprotos == IEEE80211_PROTO_WPA ? "WPA" : "RSN");
-    
+
     return ieee80211_send_eapol_key(ic, m, ni, tptk);
 }
 
@@ -395,7 +415,7 @@ ieee80211_send_4way_msg3(struct ieee80211com *ic, struct ieee80211_node *ni)
     mbuf_t m;
     u_int16_t info, keylen;
     u_int8_t *frm;
-    
+
     ni->ni_rsn_state = RSNA_PTKINITNEGOTIATING;
     if (++ni->ni_rsn_retries > 3) {
         IEEE80211_SEND_MGMT(ic, ni, IEEE80211_FC0_SUBTYPE_DEAUTH,
@@ -417,20 +437,20 @@ ieee80211_send_4way_msg3(struct ieee80211com *ic, struct ieee80211_node *ni)
         return ENOMEM;
     key = mtod(m, struct ieee80211_eapol_key *);
     memset(key, 0, sizeof(*key));
-    
+
     info = EAPOL_KEY_PAIRWISE | EAPOL_KEY_KEYACK | EAPOL_KEY_KEYMIC;
     if (ni->ni_rsncipher != IEEE80211_CIPHER_USEGROUP)
         info |= EAPOL_KEY_INSTALL;
-    
+
     /* use same nonce as in Message 1 */
     memcpy(key->nonce, ni->ni_nonce, EAPOL_KEY_NONCE_LEN);
-    
+
     ni->ni_replaycnt++;
     BE_WRITE_8(key->replaycnt, ni->ni_replaycnt);
-    
+
     keylen = ieee80211_cipher_keylen(ni->ni_rsncipher);
     BE_WRITE_2(key->keylen, keylen);
-    
+
     frm = (u_int8_t *)&key[1];
     /* add the WPA/RSN IE included in Beacon/Probe Response */
     if (ni->ni_rsnprotos == IEEE80211_PROTO_RSN) {
@@ -447,19 +467,19 @@ ieee80211_send_4way_msg3(struct ieee80211com *ic, struct ieee80211_node *ni)
         info |= EAPOL_KEY_ENCRYPTED | EAPOL_KEY_SECURE;
     } else	/* WPA */
         frm = ieee80211_add_wpa(frm, ic, ic->ic_bss);
-    
+
     /* write the key info field */
     BE_WRITE_2(key->info, info);
-    
+
     size_t l = frm - (u_int8_t *)key;
     mbuf_pkthdr_setlen(m, l);
     mbuf_setlen(m, l);
-    
+
     if (ic->ic_if.if_flags & IFF_DEBUG)
         XYLog("%s: sending msg %d/%d of the %s handshake to %s\n",
                ic->ic_if.if_xname, 3, 4, "4-way",
                ether_sprintf(ni->ni_macaddr));
-    
+
     return ieee80211_send_eapol_key(ic, m, ni, &ni->ni_ptk);
 }
 #endif	/* IEEE80211_STA_ONLY */
@@ -474,19 +494,19 @@ ieee80211_send_4way_msg4(struct ieee80211com *ic, struct ieee80211_node *ni)
     struct ieee80211_eapol_key *key;
     mbuf_t m;
     u_int16_t info;
-    
+
     ni->ni_rsn_supp_state = RNSA_SUPP_PTKDONE;
     m = ieee80211_get_eapol_key(MBUF_DONTWAIT, MT_DATA, 0);
     if (m == NULL)
         return ENOMEM;
     key = mtod(m, struct ieee80211_eapol_key *);
     memset(key, 0, sizeof(*key));
-    
+
     info = EAPOL_KEY_PAIRWISE | EAPOL_KEY_KEYMIC;
-    
+
     /* copy key replay counter from authenticator */
     BE_WRITE_8(key->replaycnt, ni->ni_replaycnt);
-    
+
     if (ni->ni_rsnprotos == IEEE80211_PROTO_WPA) {
         int keylen;
         /* WPA sets the key length field here */
@@ -494,19 +514,19 @@ ieee80211_send_4way_msg4(struct ieee80211com *ic, struct ieee80211_node *ni)
         BE_WRITE_2(key->keylen, keylen);
     } else
         info |= EAPOL_KEY_SECURE;
-    
+
     /* write the key info field */
     BE_WRITE_2(key->info, info);
-    
+
     /* empty key data field */
     mbuf_pkthdr_setlen(m, sizeof(*key));
     mbuf_setlen(m, sizeof(*key));
-    
+
     if (ic->ic_if.if_flags & IFF_DEBUG)
         XYLog("%s: sending msg %d/%d of the %s handshake to %s\n",
                ic->ic_if.if_xname, 4, 4, "4-way",
                ether_sprintf(ni->ni_macaddr));
-    
+
     return ieee80211_send_eapol_key(ic, m, ni, &ni->ni_ptk);
 }
 
@@ -524,7 +544,7 @@ ieee80211_send_group_msg1(struct ieee80211com *ic, struct ieee80211_node *ni)
     u_int16_t info;
     u_int8_t *frm;
     u_int8_t kid;
-    
+
     ni->ni_rsn_gstate = RSNA_REKEYNEGOTIATING;
     if (++ni->ni_rsn_retries > 3) {
         IEEE80211_SEND_MGMT(ic, ni, IEEE80211_FC0_SUBTYPE_DEAUTH,
@@ -537,7 +557,7 @@ ieee80211_send_group_msg1(struct ieee80211com *ic, struct ieee80211_node *ni)
     else
         kid = ic->ic_def_txkey;
     k = &ic->ic_nw_keys[kid];
-    
+
     m = ieee80211_get_eapol_key(MBUF_DONTWAIT, MT_DATA,
                                 ((ni->ni_rsnprotos == IEEE80211_PROTO_WPA) ?
                                  k->k_len : 2 + 6 + k->k_len) +
@@ -547,13 +567,13 @@ ieee80211_send_group_msg1(struct ieee80211com *ic, struct ieee80211_node *ni)
         return ENOMEM;
     key = mtod(m, struct ieee80211_eapol_key *);
     memset(key, 0, sizeof(*key));
-    
+
     info = EAPOL_KEY_KEYACK | EAPOL_KEY_KEYMIC | EAPOL_KEY_SECURE |
     EAPOL_KEY_ENCRYPTED;
-    
+
     ni->ni_replaycnt++;
     BE_WRITE_8(key->replaycnt, ni->ni_replaycnt);
-    
+
     frm = (u_int8_t *)&key[1];
     if (ni->ni_rsnprotos == IEEE80211_PROTO_WPA) {
         /* WPA does not have GTK KDE */
@@ -576,19 +596,19 @@ ieee80211_send_group_msg1(struct ieee80211com *ic, struct ieee80211_node *ni)
     }
     /* RSC = last transmit sequence number for the GTK */
     LE_WRITE_6(key->rsc, k->k_tsc);
-    
+
     /* write the key info field */
     BE_WRITE_2(key->info, info);
-    
+
     size_t l = frm - (u_int8_t *)key;
     mbuf_pkthdr_setlen(m, l);
     mbuf_setlen(m, l);
-    
+
     if (ic->ic_if.if_flags & IFF_DEBUG)
         XYLog("%s: sending msg %d/%d of the %s handshake to %s\n",
                ic->ic_if.if_xname, 1, 2, "group key",
                ether_sprintf(ni->ni_macaddr));
-    
+
     return ieee80211_send_eapol_key(ic, m, ni, &ni->ni_ptk);
 }
 #endif	/* IEEE80211_STA_ONLY */
@@ -604,36 +624,36 @@ ieee80211_send_group_msg2(struct ieee80211com *ic, struct ieee80211_node *ni,
     struct ieee80211_eapol_key *key;
     u_int16_t info;
     mbuf_t m;
-    
+
     m = ieee80211_get_eapol_key(MBUF_DONTWAIT, MT_DATA, 0);
     if (m == NULL)
         return ENOMEM;
     key = mtod(m, struct ieee80211_eapol_key *);
     memset(key, 0, sizeof(*key));
-    
+
     info = EAPOL_KEY_KEYMIC | EAPOL_KEY_SECURE;
-    
+
     /* copy key replay counter from authenticator */
     BE_WRITE_8(key->replaycnt, ni->ni_replaycnt);
-    
+
     if (ni->ni_rsnprotos == IEEE80211_PROTO_WPA) {
         /* WPA sets the key length and key id fields here */
         BE_WRITE_2(key->keylen, k->k_len);
         info |= (k->k_id & 3) << EAPOL_KEY_WPA_KID_SHIFT;
     }
-    
+
     /* write the key info field */
     BE_WRITE_2(key->info, info);
-    
+
     /* empty key data field */
     mbuf_pkthdr_setlen(m, sizeof(*key));
     mbuf_setlen(m, sizeof(*key));
-    
+
     if (ic->ic_if.if_flags & IFF_DEBUG)
         XYLog("%s: sending msg %d/%d of the %s handshake to %s\n",
                ic->ic_if.if_xname, 2, 2, "group key",
                ether_sprintf(ni->ni_macaddr));
-    
+
     return ieee80211_send_eapol_key(ic, m, ni, &ni->ni_ptk);
 }
 
@@ -649,31 +669,31 @@ ieee80211_send_eapol_key_req(struct ieee80211com *ic,
     XYLog("%s\n", __FUNCTION__);
     struct ieee80211_eapol_key *key;
     mbuf_t m;
-    
+
     m = ieee80211_get_eapol_key(MBUF_DONTWAIT, MT_DATA, 0);
     if (m == NULL)
         return ENOMEM;
     key = mtod(m, struct ieee80211_eapol_key *);
     memset(key, 0, sizeof(*key));
-    
+
     info |= EAPOL_KEY_REQUEST;
     BE_WRITE_2(key->info, info);
-    
+
     /* in case of TKIP MIC failure, fill the RSC field */
     if (info & EAPOL_KEY_ERROR)
         LE_WRITE_6(key->rsc, tsc);
-    
+
     /* use our separate key replay counter for key requests */
     BE_WRITE_8(key->replaycnt, ni->ni_reqreplaycnt);
     ni->ni_reqreplaycnt++;
-    
+
     /* empty key data field */
     mbuf_pkthdr_setlen(m, sizeof(*key));
     mbuf_setlen(m, sizeof(*key));
-    
+
     if (ic->ic_if.if_flags & IFF_DEBUG)
         XYLog("%s: sending EAPOL-Key request to %s\n",
                ic->ic_if.if_xname, ether_sprintf(ni->ni_macaddr));
-    
+
     return ieee80211_send_eapol_key(ic, m, ni, &ni->ni_ptk);
 }

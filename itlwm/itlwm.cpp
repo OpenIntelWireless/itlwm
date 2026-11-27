@@ -45,7 +45,7 @@ bool itlwm::init(OSDictionary *properties)
 static void pciMsiSetEnable(IOPCIDevice *device, UInt8 msiCap, int enable)
 {
     u16 control;
-    
+
     control = device->configRead16(msiCap + PCI_MSI_FLAGS);
     control &= ~PCI_MSI_FLAGS_ENABLE;
     if (enable)
@@ -56,7 +56,7 @@ static void pciMsiSetEnable(IOPCIDevice *device, UInt8 msiCap, int enable)
 static void pciMsiXClearAndSet(IOPCIDevice *device, UInt8 msixCap, UInt16 clear, UInt16 set)
 {
     u16 ctrl;
-    
+
     ctrl = device->configRead16(msixCap + PCI_MSIX_FLAGS);
     ctrl &= ~clear;
     ctrl |= set;
@@ -109,12 +109,12 @@ bool itlwm::configureInterface(IONetworkInterface *netif)
 {
     IONetworkData *nd;
     struct _ifnet *ifp = &fHalService->get80211Controller()->ic_ac.ac_if;
-    
+
     if (super::configureInterface(netif) == false) {
         XYLog("super failed\n");
         return false;
     }
-    
+
     nd = netif->getParameter(kIONetworkStatsKey);
     if (!nd || !(fpNetStats = (IONetworkStats *)nd->getBuffer())) {
         XYLog("network statistics buffer unavailable?\n");
@@ -126,7 +126,7 @@ bool itlwm::configureInterface(IONetworkInterface *netif)
 #ifdef __PRIVATE_SPI__
     netif->configureOutputPullModel(fHalService->getDriverInfo()->getTxQueueSize(), 0, 0, IOEthernetInterface::kOutputPacketSchedulingModelNormal, 0);
 #endif
-    
+
     return true;
 }
 
@@ -143,20 +143,20 @@ IOEthernetInterface *itlwm::getNetworkInterface()
 bool itlwm::createMediumTables(const IONetworkMedium **primary)
 {
     IONetworkMedium    *medium;
-    
+
     OSDictionary *mediumDict = OSDictionary::withCapacity(1);
     if (mediumDict == NULL) {
         XYLog("Cannot allocate OSDictionary\n");
         return false;
     }
-    
+
     medium = IONetworkMedium::medium(kIOMediumEthernetAuto, 100 * 1000000);
     IONetworkMedium::addMedium(mediumDict, medium);
     medium->release();
     if (primary) {
         *primary = medium;
     }
-    
+
     bool result = publishMediumDictionary(mediumDict);
     if (!result) {
         XYLog("Cannot publish medium dictionary!\n");
@@ -169,7 +169,7 @@ bool itlwm::createMediumTables(const IONetworkMedium **primary)
 void itlwm::joinSSID(const char *ssid_name, const char *ssid_pwd)
 {
     struct ieee80211com *ic = fHalService->get80211Controller();
-    
+
     if (strlen(ssid_pwd) == 0) {
         memset(&nwkey, 0, sizeof(ieee80211_nwkey));
         nwkey.i_wepon = IEEE80211_NWKEY_OPEN;
@@ -333,12 +333,12 @@ bool itlwm::start(IOService *provider)
         return false;
     }
     fHalService->initWithController(this, _fWorkloop, _fCommandGate);
-    
+
     if (PE_parse_boot_argn("-novht", &boot_value, sizeof(boot_value)))
         fHalService->get80211Controller()->ic_userflags |= IEEE80211_F_NOVHT;
     if (PE_parse_boot_argn("-noht40", &boot_value, sizeof(boot_value)))
         fHalService->get80211Controller()->ic_userflags |= IEEE80211_F_NOHT40;
-    
+
     if (!fHalService->attach(pciNub)) {
         XYLog("attach fail\n");
         super::stop(pciNub);
@@ -390,7 +390,7 @@ bool itlwm::start(IOService *provider)
             if (ssidObj == NULL || pwdObj == NULL || ssidObj->isEqualTo("")) {
                 continue;
             }
-            
+
             joinSSID(ssidObj->getCStringNoCopy(), pwdObj->getCStringNoCopy());
         }
         iterator->release();
@@ -669,7 +669,7 @@ tsleepHandler(OSObject* owner, void* arg0, void* arg1, void* arg2, void* arg3)
     itlwm* dev = OSDynamicCast(itlwm, owner);
     if (dev == 0)
         return kIOReturnError;
-    
+
     if (arg1 == 0) {
         if (_fCommandGate->commandSleep(arg0, THREAD_INTERRUPTIBLE) == THREAD_AWAKENED)
             return kIOReturnSuccess;

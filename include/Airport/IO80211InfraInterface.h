@@ -6,6 +6,13 @@
 //  Copyright © 2023 钟先耀. All rights reserved.
 //
 
+#ifdef AIRPORT_WCL
+#if __IO80211_TARGET == __MAC_15_2
+#include "macOS15/IO80211InfraInterface.h"
+#else
+#include "macOS26/IO80211InfraInterface.h"
+#endif
+#else
 #ifndef IO80211InfraInterface_h
 #define IO80211InfraInterface_h
 
@@ -82,3 +89,5 @@ public:
 };
 
 #endif /* IO80211InfraInterface_h */
+
+#endif

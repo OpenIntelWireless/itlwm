@@ -291,8 +291,17 @@ iwm_clear_bits_prph(struct iwm_softc *sc, uint32_t reg, uint32_t bits)
     iwm_set_bits_mask_prph(sc, reg, 0, ~bits);
 }
 
-bool allocDmaMemory2(struct iwm_dma_info *dma, size_t size, int alignment)
+bool allocDmaMemory2(bus_dma_tag_t tag, struct iwm_dma_info *dma, size_t size, int alignment)
 {
+#ifdef AIRPORT_VTD
+    if (!tag || !dma || size > UINT32_MAX || alignment < 0 ||
+        !tag->allocate(static_cast<uint32_t>(size), alignment, dma->mapping))
+        return false;
+    dma->vaddr = dma->mapping.vaddr;
+    dma->paddr = dma->mapping.address;
+    dma->size = static_cast<bus_size_t>(size);
+    return true;
+#else
     IOBufferMemoryDescriptor *bmd;
     IODMACommand::Segment64 seg;
     UInt64 ofs = 0;
@@ -332,11 +341,22 @@ bool allocDmaMemory2(struct iwm_dma_info *dma, size_t size, int alignment)
     dma->cmd = cmd;
     memset(dma->vaddr, 0, dma->size);
     return true;
+#endif
 }
 
 void ItlIwm::
 iwm_dma_contig_free(struct iwm_dma_info *dma)
 {
+#ifdef AIRPORT_VTD
+    if (!dma)
+        return;
+    if (dma->mapping.arena)
+        dma->mapping.arena->deallocate(dma->mapping);
+    dma->vaddr = nullptr;
+    dma->paddr = 0;
+    dma->size = 0;
+    return;
+#endif
     if (dma == NULL || dma->cmd == NULL)
         return;
     if (dma->vaddr == NULL)
@@ -353,7 +373,7 @@ iwm_dma_contig_free(struct iwm_dma_info *dma)
 int ItlIwm::
 iwm_dma_contig_alloc(bus_dma_tag_t tag, struct iwm_dma_info *dma, bus_size_t size, bus_size_t alignment)
 {
-    if (!allocDmaMemory2(dma, size, alignment)) {
+    if (!allocDmaMemory2(tag, dma, size, alignment)) {
         return 1;
     }
     

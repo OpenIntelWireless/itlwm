@@ -15,7 +15,7 @@ apple80211VirtualRequest(UInt request_type, int request_number, IO80211VirtualIn
     if (request_type != SIOCGA80211 && request_type != SIOCSA80211)
         return kIOReturnError;
     IOReturn ret = kIOReturnError;
-    
+
     switch (request_number) {
         case APPLE80211_IOC_CARD_CAPABILITIES:
             IOCTL_GET(request_type, CARD_CAPABILITIES, apple80211_capability_data);
@@ -87,7 +87,7 @@ apple80211VirtualRequest(UInt request_type, int request_number, IO80211VirtualIn
             IOCTL(request_type, PEER_CACHE_MAXIMUM_SIZE, apple80211_peer_cache_maximum_size);
             break;
         case APPLE80211_IOC_AWDL_ELECTION_ID:
-            IOCTL(request_type, AWDL_ELECTION_ID, apple80211_awdl_election_id);            
+            IOCTL(request_type, AWDL_ELECTION_ID, apple80211_awdl_election_id);
             break;
         case APPLE80211_IOC_AWDL_MASTER_CHANNEL:
             IOCTL(request_type, AWDL_MASTER_CHANNEL, apple80211_awdl_master_channel);
@@ -144,7 +144,7 @@ apple80211VirtualRequest(UInt request_type, int request_number, IO80211VirtualIn
                       request_number, request_type == SIOCGA80211 ? "get" : (request_type == SIOCSA80211 ? "set" : "other"));
             break;
     }
-    
+
     return ret;
 }
 
@@ -159,12 +159,12 @@ setAWDL_PEER_TRAFFIC_REGISTRATION(OSObject *object, struct apple80211_awdl_peer_
     XYLog("%s name=%s, name_len=%d, active=%d\n", __FUNCTION__, name, data->name_len, data->active);
     if (!strncmp(data->name, "wifid-assisted-discovery", data->name_len)) {
         if (data->active) {
-            
+
         } else {
-            
+
         }
     } else if (!strncmp(data->name, "sidecar", data->name_len)) {
-        
+
     }
     return kIOReturnSuccess;
 }
@@ -296,6 +296,18 @@ getCHANNELS_INFO(OSObject *object, struct apple80211_channels_info *data)
                 break;
         }
     }
+    // Diagnostic (#21): when macOS asks on this path, and what 6, 36, 44 and 149 looked like then:
+    // '-' not listed, 'a' active, 'p' passive, 'd' radar.
+    static uint32_t queries;
+    char last[48];
+    auto state = [ic](unsigned ch) {
+        const ieee80211_channel &c = ic->ic_channels[ch];
+        if (!c.ic_freq) return '-';
+        return (c.ic_flags & IEEE80211_CHAN_DFS) ? 'd' : (c.ic_flags & IEEE80211_CHAN_PASSIVE) ? 'p' : 'a';
+    };
+    snprintf(last, sizeof(last), "#%u 6=%c 36=%c 44=%c 149=%c", ++queries, state(6), state(36), state(44),
+             state(149));
+    setProperty("ItlwmChannelsInfoVirtualLast", last);
     return kIOReturnSuccess;
 }
 
@@ -329,7 +341,7 @@ IOReturn AirportItlwm::
 setPEER_CACHE_MAXIMUM_SIZE(OSObject *object, struct apple80211_peer_cache_maximum_size *data)
 {
     XYLog("%s max_peers=%d\n", __FUNCTION__, data->max_peers);
-    
+
     return kIOReturnSuccess;
 }
 
@@ -370,7 +382,7 @@ IOReturn AirportItlwm::
 setAWDL_MIN_RATE(OSObject *object, struct apple80211_awdl_min_rate *data)
 {
     XYLog("%s min_rate=%d plus=%d\n", __FUNCTION__, data->min_rate, 2 *data->min_rate);
-    
+
     return kIOReturnSuccess;
 }
 
@@ -379,7 +391,7 @@ getAWDL_MIN_RATE(OSObject *object, struct apple80211_awdl_min_rate *data)
 {
     XYLog("%s\n", __FUNCTION__);
     data->version = APPLE80211_VERSION;
-    
+
     return kIOReturnSuccess;
 }
 
@@ -394,7 +406,7 @@ IOReturn AirportItlwm::
 setAWDL_ELECTION_RSSI_THRESHOLDS(OSObject *object, struct apple80211_awdl_election_rssi_thresholds *data)
 {
     XYLog("%s unk1=%d unk2=%d unk3=%d\n", __FUNCTION__, data->unk1, data->unk2, data->unk3);
-    
+
     return kIOReturnSuccess;
 }
 
@@ -403,7 +415,7 @@ getAWDL_SYNCHRONIZATION_CHANNEL_SEQUENCE(OSObject *object, struct apple80211_awd
 {
     XYLog("%s\n", __FUNCTION__);
     data->version = APPLE80211_VERSION;
-    
+
     return kIOReturnSuccess;
 }
 
@@ -455,7 +467,7 @@ getAWDL_EXTENSION_STATE_MACHINE_PARAMETERS(OSObject *object, struct apple80211_a
 {
     XYLog("%s\n", __FUNCTION__);
     data->version = APPLE80211_VERSION;
-    
+
     return kIOReturnSuccess;
 }
 
@@ -463,7 +475,7 @@ IOReturn AirportItlwm::
 setAWDL_EXTENSION_STATE_MACHINE_PARAMETERS(OSObject *object, struct apple80211_awdl_extension_state_machine_parameter *data)
 {
     XYLog("%s unk1=%d unk2=%d unk3=%d unk4=%d\n", __FUNCTION__, data->unk1, data->unk2, data->unk3, data->unk4);
-    
+
     return kIOReturnSuccess;
 }
 

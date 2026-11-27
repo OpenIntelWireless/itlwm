@@ -1,0 +1,126 @@
+name: Build AirportItlwm and IntelBTPatcher
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: macOS target to build
+        required: true
+        default: both
+        type: choice
+        options:
+          - both
+          - sequoia
+          - tahoe
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build ${{ inputs.target || 'both' }}
+    runs-on: macos-15
+    env:
+      BUILD_TARGET: ${{ inputs.target || 'both' }}
+    steps:
+      - name: Check out selected branch
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Install MacKernelSDK
+        run: |
+          git clone https://github.com/acidanthera/MacKernelSDK.git MacKernelSDK
+          git -C MacKernelSDK checkout 3f75008
+
+      - name: Download Lilu DEBUG release
+        run: |
+          curl --fail --location --retry 3 \
+            https://github.com/acidanthera/Lilu/releases/download/1.7.2/Lilu-1.7.2-DEBUG.zip \
+            --output /tmp/Lilu-DEBUG.zip
+          ditto -x -k /tmp/Lilu-DEBUG.zip /tmp/lilu-release
+          test -d /tmp/lilu-release/Lilu.kext/Contents/Resources
+          ln -s "$GITHUB_WORKSPACE/MacKernelSDK" /tmp/lilu-release/MacKernelSDK
+
+      - name: Build Sequoia AirportItlwm
+        if: ${{ env.BUILD_TARGET == 'both' || env.BUILD_TARGET == 'sequoia' }}
+        run: python3 tools/build.py --target sequoia --out build-sequoia
+
+      - name: Build Sequoia IntelBTPatcher
+        if: ${{ env.BUILD_TARGET == 'both' || env.BUILD_TARGET == 'sequoia' }}
+        run: python3 tools/build_intelbtpatcher.py --target sequoia --out build-sequoia/IntelBTPatcher --tree /tmp/lilu-release
+
+      - name: Build Tahoe AirportItlwm
+        if: ${{ env.BUILD_TARGET == 'both' || env.BUILD_TARGET == 'tahoe' }}
+        run: python3 tools/build.py --target tahoe --out build-tahoe
+
+      - name: Build Tahoe IntelBTPatcher
+        if: ${{ env.BUILD_TARGET == 'both' || env.BUILD_TARGET == 'tahoe' }}
+        run: python3 tools/build_intelbtpatcher.py --target tahoe --out build-tahoe/IntelBTPatcher --tree /tmp/lilu-release
+
+      - name: Verify Sequoia kext outputs
+        if: ${{ env.BUILD_TARGET == 'both' || env.BUILD_TARGET == 'sequoia' }}
+        run: |
+          test -x build-sequoia/AirportItlwm.kext/Contents/MacOS/AirportItlwm
+          test -x build-sequoia/IntelBTPatcher/IntelBTPatcher.kext/Contents/MacOS/IntelBTPatcher
+          plutil -lint build-sequoia/AirportItlwm.kext/Contents/Info.plist
+          plutil -lint build-sequoia/IntelBTPatcher/IntelBTPatcher.kext/Contents/Info.plist
+          echo "Verified AirportItlwm and IntelBTPatcher Sequoia products."
+
+      - name: Verify Tahoe kext outputs
+        if: ${{ env.BUILD_TARGET == 'both' || env.BUILD_TARGET == 'tahoe' }}
+        run: |
+          test -x build-tahoe/AirportItlwm.kext/Contents/MacOS/AirportItlwm
+          test -x build-tahoe/IntelBTPatcher/IntelBTPatcher.kext/Contents/MacOS/IntelBTPatcher
+          plutil -lint build-tahoe/AirportItlwm.kext/Contents/Info.plist
+          plutil -lint build-tahoe/IntelBTPatcher/IntelBTPatcher.kext/Contents/Info.plist
+          echo "Verified AirportItlwm and IntelBTPatcher Tahoe products."
+
+      - name: Stage kext bundles with their package directories
+        if: ${{ env.BUILD_TARGET == 'both' || env.BUILD_TARGET == 'sequoia' || env.BUILD_TARGET == 'tahoe' }}
+        run: |
+          if [[ "$BUILD_TARGET" == "both" || "$BUILD_TARGET" == "sequoia" ]]; then
+            mkdir -p artifacts/AirportItlwm-Sequoia artifacts/IntelBTPatcher-Sequoia
+            ditto build-sequoia/AirportItlwm.kext artifacts/AirportItlwm-Sequoia/AirportItlwm.kext
+            ditto build-sequoia/IntelBTPatcher/IntelBTPatcher.kext artifacts/IntelBTPatcher-Sequoia/IntelBTPatcher.kext
+          fi
+          if [[ "$BUILD_TARGET" == "both" || "$BUILD_TARGET" == "tahoe" ]]; then
+            mkdir -p artifacts/AirportItlwm-Tahoe artifacts/IntelBTPatcher-Tahoe
+            ditto build-tahoe/AirportItlwm.kext artifacts/AirportItlwm-Tahoe/AirportItlwm.kext
+            ditto build-tahoe/IntelBTPatcher/IntelBTPatcher.kext artifacts/IntelBTPatcher-Tahoe/IntelBTPatcher.kext
+          fi
+
+      - name: Upload Sequoia AirportItlwm
+        if: ${{ env.BUILD_TARGET == 'both' || env.BUILD_TARGET == 'sequoia' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: AirportItlwm-Sequoia
+          path: artifacts/AirportItlwm-Sequoia
+          if-no-files-found: error
+
+      - name: Upload Sequoia IntelBTPatcher
+        if: ${{ env.BUILD_TARGET == 'both' || env.BUILD_TARGET == 'sequoia' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: IntelBTPatcher-Sequoia
+          path: artifacts/IntelBTPatcher-Sequoia
+          if-no-files-found: error
+
+      - name: Upload Tahoe AirportItlwm
+        if: ${{ env.BUILD_TARGET == 'both' || env.BUILD_TARGET == 'tahoe' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: AirportItlwm-Tahoe
+          path: artifacts/AirportItlwm-Tahoe
+          if-no-files-found: error
+
+      - name: Upload Tahoe IntelBTPatcher
+        if: ${{ env.BUILD_TARGET == 'both' || env.BUILD_TARGET == 'tahoe' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: IntelBTPatcher-Tahoe
+          path: artifacts/IntelBTPatcher-Tahoe
+          if-no-files-found: error

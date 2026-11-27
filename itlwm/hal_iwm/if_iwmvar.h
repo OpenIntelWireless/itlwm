@@ -257,6 +257,9 @@ struct iwm_host_cmd {
  */
 
 struct iwm_dma_info {
+#ifdef AIRPORT_VTD
+    ItlDmaBuffer mapping;
+#endif
 	IOBufferMemoryDescriptor* buffer;
     bus_addr_t        paddr;
     void             *vaddr;
@@ -279,6 +282,10 @@ struct iwm_fw_paging {
 #define IWM_TX_RING_HIMARK    224
 
 struct iwm_tx_data {
+#ifdef AIRPORT_VTD
+    bool commandPending;
+    bool commandWaiting;
+#endif
     bus_dmamap_t    map;
     bus_addr_t    cmd_paddr;
     bus_addr_t    scratch_paddr;

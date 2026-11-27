@@ -83,9 +83,29 @@ struct ieee80211_rsnparams {
 	enum ieee80211_cipher	rsn_groupcipher;
 	enum ieee80211_cipher	rsn_groupmgmtcipher;
 	u_int16_t		rsn_caps;
+	u_int8_t		rsnxe_caps;
 	u_int8_t		rsn_npmkids;
 	const u_int8_t		*rsn_pmkids;
 };
+
+#define IEEE80211_RSNXEIE_MAXLEN	1
+
+int ieee80211_sae_derive_password_elem(uint8_t *, const uint8_t *,
+	const uint8_t *, const uint8_t *);
+int ieee80211_sae_password_to_pt(uint8_t *, const uint8_t *, size_t,
+	const uint8_t *, size_t);
+int ieee80211_sae_derive_commit_elem(uint8_t *, uint8_t *, uint8_t *,
+	uint8_t *, const uint8_t *);
+uint16_t ieee80211_sae_verify_commit_elem(const uint8_t **,
+	const uint8_t **, const uint8_t **, const uint8_t *, size_t,
+	const unsigned char *, const unsigned char *, const unsigned char *);
+uint16_t ieee80211_sae_derive_shared_secret(uint8_t *, const uint8_t *,
+	const uint8_t *, const uint8_t *, const uint8_t *, const uint8_t *);
+int ieee80211_sae_derive_secret_keys(uint8_t *, uint8_t *, uint8_t *,
+	const uint8_t *, const uint8_t *, const uint8_t *);
+int ieee80211_sae_verify_confirm(const uint8_t *, size_t, const uint8_t *,
+	const uint8_t *, const uint8_t *, const uint8_t *, const uint8_t *,
+	const uint8_t *, const uint8_t *);
 
 /* unaligned big endian access */
 #define BE_READ_2(p)				\

@@ -20,3 +20,12 @@ typedef u_int32_t ifnet_ctl_cmd_t;
 #ifndef __MAC_14_4
 #define __MAC_14_4  140400
 #endif
+
+#ifndef __MAC_26_0
+#define __MAC_26_0 260000
+#endif
+
+#ifndef __MAC_15_2
+#define __MAC_15_2 150200
+#endif
+#include <ItlAWDLTargets.hpp>

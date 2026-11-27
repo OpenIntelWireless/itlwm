@@ -197,6 +197,48 @@ enum ieee80211_node_psstate {
 	IEEE80211_PS_DOZE
 };
 
+/*
+ * SAE finite state machine (802.11-2020 12.4.8).  Each bit records an
+ * event of the commit/confirm exchange; the combined values below are the
+ * named states the auth frame handlers test.
+ */
+#define SAE_STATE_NOTHING		0x00
+#define SAE_EVENT_COMMIT_SENT		0x01
+#define SAE_EVENT_PEER_COMMIT_RECEIVED	0x02
+#define SAE_EVENT_CONFIRM_SENT		0x04
+#define SAE_EVENT_PEER_CONFIRM_RECEIVED	0x08
+#define SAE_STATE_COMMITTED	SAE_EVENT_COMMIT_SENT
+#define SAE_STATE_CONFIRMED	(SAE_EVENT_COMMIT_SENT | SAE_EVENT_CONFIRM_SENT | \
+	SAE_EVENT_PEER_COMMIT_RECEIVED)
+#define SAE_STATE_ACCEPTED	(SAE_EVENT_COMMIT_SENT | SAE_EVENT_CONFIRM_SENT | \
+	SAE_EVENT_PEER_COMMIT_RECEIVED | SAE_EVENT_PEER_CONFIRM_RECEIVED)
+
+struct ieee80211_sae {
+	uint8_t sae_scalar[IEEE80211_SAE_MAX_ECC_PRIME_LEN];
+	uint8_t sae_element_x[IEEE80211_SAE_MAX_ECC_PRIME_LEN];
+	uint8_t sae_element_y[IEEE80211_SAE_MAX_ECC_PRIME_LEN];
+	uint8_t sae_rand[IEEE80211_SAE_MAX_ECC_PRIME_LEN];
+	uint8_t sae_peer_scalar[IEEE80211_SAE_MAX_ECC_PRIME_LEN];
+	uint8_t sae_peer_element_x[IEEE80211_SAE_MAX_ECC_PRIME_LEN];
+	uint8_t sae_peer_element_y[IEEE80211_SAE_MAX_ECC_PRIME_LEN];
+	uint8_t sae_kck[IEEE80211_SAE_MAX_ECC_PRIME_LEN];
+	uint8_t sae_pmk[IEEE80211_PMK_LEN];
+	uint8_t sae_pmkid[IEEE80211_PMKID_LEN];
+	uint8_t sae_token[IEEE80211_SAE_TOKEN_MAX_LEN];
+	size_t sae_token_len;
+	int sae_state;
+	int sae_h2e;		/* PWE derived with hash-to-element */
+	/*
+	 * Transmitter address the commit elements were derived for.  The
+	 * element is a function of both MAC addresses, so it stops being
+	 * ours as soon as the private address rotates.
+	 */
+	uint8_t sae_ownaddr[IEEE80211_ADDR_LEN];
+	uint16_t sae_send_confirm;
+	uint16_t sae_peer_send_confirm;
+	struct ieee80211_sae_auth sae_auth;
+};
+
 #define	IEEE80211_PS_MAX_QUEUE	50	/* maximum saved packets */
 
 /* Authenticator state machine: 4-Way Handshake (see 8.5.6.1.1) */
@@ -369,6 +411,9 @@ struct ieee80211_node {
 	enum ieee80211_cipher	ni_rsngroupcipher;
 	enum ieee80211_cipher	ni_rsngroupmgmtcipher;
 	u_int16_t		ni_rsncaps;
+	u_int8_t		ni_rsnxecaps;
+	u_int8_t		ni_rsnxe[18];
+	u_int8_t		ni_rsnxe_len;
 	enum ieee80211_cipher	ni_rsncipher;
 	u_int8_t		ni_nonce[EAPOL_KEY_NONCE_LEN];
 	u_int8_t		ni_pmk[IEEE80211_PMK_LEN];
@@ -382,6 +427,7 @@ struct ieee80211_node {
     uint32_t        ni_rsnie_tlv_len;
 	struct ieee80211_key	ni_pairwise_key;
 	struct ieee80211_ptk	ni_ptk;
+	struct ieee80211_sae	ni_sae;
 	u_int8_t		ni_key_count;
 	int			ni_port_valid;
 
@@ -409,7 +455,7 @@ struct ieee80211_node {
 
     uint8_t            ni_ht2ndchan;    /* HT 2nd channel */
     uint8_t            ni_chw;        /* negotiated channel width */
-    
+
     /* VHT state */
     uint32_t        ni_vhtcaps;
     uint16_t        ni_vht_basicmcs;
@@ -420,15 +466,19 @@ struct ieee80211_node {
     uint8_t            ni_vht_chanwidth;    /* IEEE80211_VHT_CHANWIDTH_ */
     uint8_t            ni_vht_pad1;
     uint32_t        ni_vht_spare[8];
-    
+
     /* HE state */
     struct ieee80211_he_cap_elem ni_he_cap_elem;   /* Fixed portion of the HE capabilities element. */
     struct ieee80211_he_mcs_nss_supp ni_he_mcs_nss_supp;   /* The supported NSS/MCS combinations. */
     uint8_t ni_ppe_thres[IEEE80211_HE_PPE_THRES_MAX_LEN]; /* Holds the PPE Thresholds data. */
     uint32_t        ni_he_oper_params;
     uint16_t        ni_he_oper_nss_set;
-    uint8_t         ni_he_optional[8];
-    
+    uint8_t         ni_he_optional[9];
+    uint8_t         ni_he_mu_edca[13]; /* QoS info + four AC records */
+    uint32_t        ni_he_txrate_kbps; /* Last firmware HE SU rate, 0 if unknown */
+    uint8_t         ni_he_tx_nss;
+    uint8_t         ni_he_requested; /* HE capabilities sent in association request */
+
 	/* Timeout handlers which trigger Tx Block Ack negotiation. */
 	CTimeout*		ni_addba_req_to[IEEE80211_NUM_TID];
 	int			ni_addba_req_intval[IEEE80211_NUM_TID];
@@ -440,7 +490,7 @@ struct ieee80211_node {
 
 	int			ni_txmcs;	/* current MCS used for TX */
 	int			ni_vht_ss;	/* VHT # spatial streams */
-    
+
     uint8_t     ni_rx_nss;
 
 	/* others */
@@ -481,21 +531,24 @@ struct ieee80211_node {
 #define IEEE80211_NODE_SA_QUERY		0x0800	/* SA Query in progress */
 #define IEEE80211_NODE_SA_QUERY_FAILED	0x1000	/* last SA Query failed */
 #define IEEE80211_NODE_RSN_NEW_PTK	0x2000	/* expecting a new PTK */
-#define IEEE80211_NODE_HT_SGI20		0x4000	/* SGI on 20 MHz negotiated */ 
-#define IEEE80211_NODE_HT_SGI40		0x8000	/* SGI on 40 MHz negotiated */ 
+#define IEEE80211_NODE_HT_SGI20		0x4000	/* SGI on 20 MHz negotiated */
+#define IEEE80211_NODE_HT_SGI40		0x8000	/* SGI on 40 MHz negotiated */
 #define IEEE80211_NODE_VHT		0x10000	/* VHT negotiated */
 #define IEEE80211_NODE_HTCAP		0x20000	/* claims to support HT */
 #define IEEE80211_NODE_VHTCAP       0x40000 /* claims to support VHT */
 #define IEEE80211_NODE_VHT_SGI80    0x80000    /* SGI on 80 MHz negotiated */
 #define IEEE80211_NODE_VHT_SGI160   0x100000    /* SGI on 160 MHz negotiated */
 #define IEEE80211_NODE_HE       0x200000    /* HE negotiated */
+#define IEEE80211_NODE_HECAP    0x400000    /* validated HE capabilities */
+#define IEEE80211_NODE_HEOP     0x800000    /* validated HE operation */
+#define IEEE80211_NODE_HE_MU_EDCA 0x1000000 /* validated MU EDCA */
 
 	/* If not NULL, this function gets called when ni_refcnt hits zero. */
 	void			(*ni_unref_cb)(struct ieee80211com *,
 					struct ieee80211_node *);
 	void *			ni_unref_arg;
 	size_t 			ni_unref_arg_size;
-    
+
 #ifdef AIRPORT
     uint8_t verb[0x1024];//冗余信息 zxy
 #endif
@@ -550,7 +603,7 @@ ieee80211_unref_node(struct ieee80211_node **ni)
 	*ni = NULL;			/* guard against use */
 }
 
-/* 
+/*
  * Check if the peer supports HT.
  * Require a HT capabilities IE and at least one of the mandatory MCS.
  * MCS 0-7 are mandatory but some APs have particular MCS disabled.
@@ -681,7 +734,7 @@ int ieee80211_setup_htop(struct ieee80211_node *, const uint8_t *,
 void ieee80211_setup_vhtcaps(struct ieee80211com *, struct ieee80211_node *, const uint8_t *);
 void ieee80211_setup_vhtopmode(struct ieee80211_node *, const uint8_t *);
 void ieee80211_clear_vhtcaps(struct ieee80211_node *);
-void ieee80211_setup_hecaps(struct ieee80211_node *, const uint8_t *,
+int ieee80211_setup_hecaps(struct ieee80211_node *, const uint8_t *,
                            uint8_t);
 int ieee80211_setup_heop(struct ieee80211_node *, const uint8_t *,
     uint8_t);
@@ -701,6 +754,8 @@ int ieee80211_match_bss(struct ieee80211com *, struct ieee80211_node *, int);
 struct ieee80211_node *ieee80211_node_choose_bss(struct ieee80211com *, int,
 		struct ieee80211_node **);
 void ieee80211_node_join_bss(struct ieee80211com *, struct ieee80211_node *, int force_reauth = 0);
+int ieee80211_node_allow_wpa3(struct ieee80211com *,
+		const struct ieee80211_node *);
 void ieee80211_create_ibss(struct ieee80211com* ,
 		struct ieee80211_channel *);
 void ieee80211_notify_dtim(struct ieee80211com *);

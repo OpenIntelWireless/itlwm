@@ -1280,7 +1280,9 @@ struct lq_sta_pers {
     s8 last_rssi;
     struct rs_rate_stats tx_stats[RS_COLUMN_COUNT][IWL_RATE_COUNT];
     struct iwm_softc *drv;
+#ifndef AIRPORT_VTD
     IOSimpleLock *lock; /* for races in reinit/update table */
+#endif
 };
 
 /**
@@ -1482,6 +1484,8 @@ static inline void iwl_mvm_hwrate_to_tx_status(u32 rate_n_flags,
 }
 
 int iwl_mvm_send_lq_cmd(struct iwm_softc *sc, struct iwm_lq_cmd *lq);
+
+int iwl_mvm_rs_set_agg_limit(struct iwm_softc *sc, u8 limit);
 
 /* Initialize station's rate scaling information after adding station */
 void iwl_mvm_rs_rate_init(struct iwm_softc *mvm, struct ieee80211_node *sta,

@@ -29,6 +29,9 @@
 #include <IOKit/IOBufferMemoryDescriptor.h>
 #include <sys/kpi_mbuf.h>
 #include <IOKit/network/IOMbufMemoryCursor.h>
+#ifdef AIRPORT_VTD
+#include "ItlDma.hpp"
+#endif
 #include <net80211/ieee80211_var.h>
 #include <net80211/ieee80211_mira.h>
 #include <net80211/ieee80211_amrr.h>
@@ -149,7 +152,11 @@ enum {
 	BUS_DMASYNC_POSTWRITE
 };
 
-typedef int				bus_dma_tag_t;
+#ifdef AIRPORT_VTD
+typedef ItlDmaArena *bus_dma_tag_t;
+#else
+typedef int bus_dma_tag_t;
+#endif
 typedef IOBufferMemoryDescriptor*	bus_dma_segment_t;
 typedef caddr_t				bus_space_handle_t; // pointer to device memory
 typedef int				pci_chipset_tag_t;
@@ -201,6 +208,11 @@ struct bus_dmamap {
 	IOMbufNaturalMemoryCursor*	cursor;
 	int				dm_nsegs;
 	IOPhysicalSegment		dm_segs[23]; // reserve space for 8 segments
+#ifdef AIRPORT_VTD
+    ItlDmaBuffer dma;
+    uint32_t maxSegmentSize;
+    uint32_t maxSegments;
+#endif
 };
 typedef struct bus_dmamap* bus_dmamap_t;
 
@@ -290,6 +302,11 @@ void		bus_dmamem_unmap(bus_dma_segment_t seg); // XXX changed args
 void		bus_dmamem_free(bus_dma_tag_t tag, bus_dma_segment_t *segs, int nsegs);
 void		bus_dmamap_destroy(bus_dma_tag_t tag, bus_dmamap_t dmam);
 int		bus_dmamap_load(bus_dmamap_t map, mbuf_t m);
+UInt32 bus_dmamap_packet(bus_dmamap_t map, mbuf_t m, IOPhysicalSegment *segments, UInt32 count, bool receive);
+bool bus_dmamap_read(bus_dmamap_t map, mbuf_t m, size_t size);
+const void *bus_dmamap_rx_data(bus_dmamap_t map, size_t size);
+bool bus_dmamap_read_used(bus_dmamap_t map, mbuf_t m, size_t used, size_t size);
+bool bus_dmamap_write(bus_dmamap_t map, mbuf_t m);
 #define bus_dmamap_load_mbuf bus_dmamap_load
 
 #endif

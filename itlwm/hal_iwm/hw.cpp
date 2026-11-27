@@ -605,6 +605,11 @@ iwm_clear_persistence_bit(struct iwm_softc *sc)
 int ItlIwm::
 iwm_start_hw(struct iwm_softc *sc)
 {
+#ifdef AIRPORT_VTD
+    if (dmaDetaching)
+        return ENXIO;
+    sc->sc_pcitag->setBusMasterEnable(true);
+#endif
     XYLog("%s\n", __FUNCTION__);
     int err;
     
@@ -638,6 +643,17 @@ iwm_start_hw(struct iwm_softc *sc)
 void ItlIwm::
 iwm_stop_device(struct iwm_softc *sc)
 {
+#ifdef AIRPORT_VTD
+    if (!getMainWorkLoop()->inGate()) {
+        getMainCommandGate()->runAction(
+            [](OSObject *, void *arg0, void *arg1, void *, void *) -> IOReturn {
+                static_cast<ItlIwm *>(arg0)->iwm_stop_device(static_cast<iwm_softc *>(arg1));
+                return kIOReturnSuccess;
+            }, this, sc);
+        return;
+    }
+    dmaEpoch++;
+#endif
     XYLog("%s\n", __FUNCTION__);
     int chnl, ntries;
     int qid;
@@ -667,10 +683,12 @@ iwm_stop_device(struct iwm_softc *sc)
     }
     iwm_disable_rx_dma(sc);
     
+#ifndef AIRPORT_VTD
     iwm_reset_rx_ring(sc, &sc->rxq);
     
     for (qid = 0; qid < nitems(sc->txq); qid++)
         iwm_reset_tx_ring(sc, &sc->txq[qid]);
+#endif
     
     if (sc->sc_device_family == IWM_DEVICE_FAMILY_7000) {
         if (iwm_nic_lock(sc)) {
@@ -696,6 +714,13 @@ iwm_stop_device(struct iwm_softc *sc)
     /* Reset the on-board processor. */
     IWM_WRITE(sc, IWM_CSR_RESET, IWM_CSR_RESET_REG_FLAG_SW_RESET);
     DELAY(5000);
+#ifdef AIRPORT_VTD
+    sc->sc_pcitag->setBusMasterEnable(false);
+    iwm_reset_rx_ring(sc, &sc->rxq);
+
+    for (qid = 0; qid < nitems(sc->txq); qid++)
+        iwm_reset_tx_ring(sc, &sc->txq[qid]);
+#endif
     
     /*
      * Upon stop, the IVAR table gets erased, so msi-x won't

@@ -177,6 +177,7 @@ ieee80211_channel_init(struct _ifnet *ifp)
      * a default channel if not already specified.
      */
     memset(ic->ic_chan_avail, 0, sizeof(ic->ic_chan_avail));
+    ic->ic_caps &= ~IEEE80211_C_HE;
     ic->ic_modecaps |= 1<<IEEE80211_MODE_AUTO;
     for (i = 0; i <= IEEE80211_CHAN_MAX; i++) {
         c = &ic->ic_channels[i];
@@ -205,7 +206,11 @@ ieee80211_channel_init(struct _ifnet *ifp)
             if (IEEE80211_IS_CHAN_N(c))
                 ic->ic_modecaps |= 1<<IEEE80211_MODE_11N;
             if (IEEE80211_IS_CHAN_AC(c))
-                ic->ic_modecaps |= 1<<IEEE80211_MODE_11AC | 1<<IEEE80211_MODE_11AX;
+                ic->ic_modecaps |= 1<<IEEE80211_MODE_11AC;
+            if (IEEE80211_IS_CHAN_N(c) && (ic->ic_flags & IEEE80211_F_HEON)) {
+                ic->ic_modecaps |= 1<<IEEE80211_MODE_11AX;
+                ic->ic_caps |= IEEE80211_C_HE;
+            }
         }
     }
     /* validate ic->ic_curmode */
@@ -752,17 +757,17 @@ ieee80211_media_change(struct _ifnet *ifp)
     /*
      * Committed to changes, install the MCS/rate setting.
      */
-    ic->ic_flags &= ~(IEEE80211_F_HTON | IEEE80211_F_VHTON);
+    ic->ic_flags &= ~(IEEE80211_F_HTON | IEEE80211_F_VHTON | IEEE80211_F_HEON);
     ieee80211_configure_ampdu_tx(ic, 0);
     if ((ic->ic_modecaps & (1 << IEEE80211_MODE_11AX)) &&
         (newphymode == IEEE80211_MODE_AUTO ||
          newphymode == IEEE80211_MODE_11AX)) {
-        ic->ic_flags |= IEEE80211_F_HEON;
+        ic->ic_flags |= IEEE80211_F_HEON | IEEE80211_F_VHTON | IEEE80211_F_HTON;
         ieee80211_configure_ampdu_tx(ic, 1);
     } else if ((ic->ic_modecaps & (1 << IEEE80211_MODE_11AC)) &&
         (newphymode == IEEE80211_MODE_AUTO ||
          newphymode == IEEE80211_MODE_11AC)) {
-        ic->ic_flags |= IEEE80211_F_VHTON;
+        ic->ic_flags |= IEEE80211_F_VHTON | IEEE80211_F_HTON;
         ieee80211_configure_ampdu_tx(ic, 1);
     } else if ((ic->ic_modecaps & (1 << IEEE80211_MODE_11N)) &&
                (newphymode == IEEE80211_MODE_AUTO ||

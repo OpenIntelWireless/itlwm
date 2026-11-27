@@ -430,7 +430,23 @@ struct apple80211_bssid_data
     struct ether_addr    bssid;
 };
 
-#if __IO80211_TARGET >= __MAC_14_0
+#ifdef AIRPORT_WCL
+struct apple80211_capability_data
+{
+    u_int32_t    version;
+#if __IO80211_TARGET == __MAC_15_2
+    u_int8_t     capabilities[19];
+#else
+    u_int8_t     capabilities[21];
+#endif
+};
+#if __IO80211_TARGET == __MAC_15_2
+static_assert(sizeof(apple80211_capability_data) == 0x18, "Sequoia capability ABI");
+#else
+static_assert(sizeof(apple80211_capability_data) == 0x1c, "WCL capability ABI");
+#endif
+static_assert(__offsetof(apple80211_capability_data, capabilities) == 4, "WCL capability offset");
+#elif __IO80211_TARGET >= __MAC_14_0
 struct apple80211_capability_data
 {
     u_int32_t    version;
@@ -845,7 +861,7 @@ struct apple80211_vht_mcs_index_set_data
     u_int16_t    mcs_map;
 } __attribute__((packed));
 
-struct apple80211_mcs_vht_data 
+struct apple80211_mcs_vht_data
 {
     u_int32_t   version;
     u_int32_t   index;
@@ -1023,7 +1039,22 @@ struct apple80211_awdl_extension_state_machine_parameter {
 struct apple80211_awdl_sync_state {
     uint32_t    version;
     uint32_t    state;
+#if __IO80211_TARGET == __MAC_26_0
+    // Tahoe 25G241: public get/set wrappers require exactly 0x18 bytes.
+    // Native configure supplies the address at +8 and flags at +16;
+    // the native driver also reads a byte at +20. Names remain provisional.
+    uint8_t     address[APPLE80211_ADDR_LEN];
+    uint8_t     reserved[2];
+    uint32_t    flags;
+    uint8_t     driver_flags;
+    uint8_t     reserved_tail[3];
+#endif
 } __attribute__((packed));
+#if __IO80211_TARGET == __MAC_26_0
+static_assert(sizeof(apple80211_awdl_sync_state) == 24, "Tahoe AWDL sync-state ABI");
+static_assert(__offsetof(apple80211_awdl_sync_state, flags) == 16, "AWDL sync flags offset");
+static_assert(__offsetof(apple80211_awdl_sync_state, driver_flags) == 20, "AWDL driver flags offset");
+#endif
 
 struct apple80211_awdl_sync_params {
     uint32_t    version;
@@ -1402,4 +1433,3 @@ struct apple80211_driver_available_data {
 static_assert(sizeof(struct apple80211_driver_available_data) == 0xB8, "invalid struct apple80211_driver_available_data");
 
 #endif // _APPLE80211_IOCTL_H_
-

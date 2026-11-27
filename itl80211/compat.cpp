@@ -149,23 +149,32 @@ void pci_intr_disestablish(pci_chipset_tag_t pc, void *ih) {
 }
 
 uint64_t bus_space_read_8(bus_space_tag_t space, bus_space_handle_t handle, bus_size_t offset) {
-    return *((uint64_t*)(handle + offset));
+    return *((volatile uint64_t*)(handle + offset));
 }
 
 void bus_space_write_8(bus_space_tag_t space, bus_space_handle_t handle, bus_size_t offset, uint64_t value) {
-    *((uint64_t*)(handle + offset)) = value;
+#ifdef AIRPORT_VTD
+    OSSynchronizeIO();
+#endif
+    *((volatile uint64_t*)(handle + offset)) = value;
 }
 
 uint32_t bus_space_read_4(bus_space_tag_t space, bus_space_handle_t handle, bus_size_t offset) {
-	return *((uint32_t*)(handle + offset));
+	return *((volatile uint32_t*)(handle + offset));
 }
 
 void bus_space_write_1(bus_space_tag_t space, bus_space_handle_t handle, bus_size_t offset, uint8_t value) {
-    *((uint8_t*)(handle + offset)) = value;
+#ifdef AIRPORT_VTD
+    OSSynchronizeIO();
+#endif
+    *((volatile uint8_t*)(handle + offset)) = value;
 }
 
 void bus_space_write_4(bus_space_tag_t space, bus_space_handle_t handle, bus_size_t offset, uint32_t value) {
-	*((uint32_t*)(handle + offset)) = value;
+#ifdef AIRPORT_VTD
+    OSSynchronizeIO();
+#endif
+	*((volatile uint32_t*)(handle + offset)) = value;
 }
 
 void bus_space_barrier(bus_space_tag_t space, bus_space_handle_t handle, bus_size_t offset, bus_size_t length, int flags) {
@@ -175,12 +184,29 @@ void bus_space_barrier(bus_space_tag_t space, bus_space_handle_t handle, bus_siz
 int bus_dmamap_create(bus_dma_tag_t tag, bus_size_t size, int nsegments, bus_size_t maxsegsz, bus_size_t boundary, int flags, bus_dmamap_t *dmamp) {
 	if (dmamp == 0)
 		return 1;
-	*dmamp = new bus_dmamap;
+	*dmamp = new bus_dmamap();
+    if (!*dmamp)
+        return ENOMEM;
+#ifdef AIRPORT_VTD
+    auto map = *dmamp;
+    if (!tag || !size || !maxsegsz || nsegments <= 0 || nsegments > 23 || boundary ||
+        !tag->allocate(MAX(size, 4096U), 4096, map->dma)) {
+        delete map;
+        *dmamp = nullptr;
+        return ENOMEM;
+    }
+    map->maxSegmentSize = maxsegsz;
+    map->maxSegments = nsegments;
+    return 0;
+#else
 	(*dmamp)->cursor = IOMbufNaturalMemoryCursor::withSpecification(maxsegsz, nsegments);
-	if ((*dmamp)->cursor == 0)
+	if ((*dmamp)->cursor == 0) {
+        delete *dmamp;
+        *dmamp = nullptr;
 		return 1;
-	else
+    } else
 		return 0;
+#endif
 }
 
 IOBufferMemoryDescriptor* alloc_dma_memory(size_t size, mach_vm_address_t alignment,/* void** vaddr, mach_vm_address_t* paddr, */IOOptionBits opts);
@@ -262,7 +288,11 @@ bus_addr_t bus_dmamap_get_paddr(bus_dma_segment_t seg) {
 }
 
 void bus_dmamap_sync(bus_dma_tag_t tag, bus_dmamap_t dmam, bus_addr_t offset, bus_size_t len, int ops) {
+#ifdef AIRPORT_VTD
+    OSSynchronizeIO();
+#else
 	return; // no syncing, we mapped the memory with cache inhibition so pray it works
+#endif
 }
 
 void bus_dmamem_unmap(bus_dma_segment_t seg) {
@@ -283,19 +313,107 @@ void bus_dmamem_free(bus_dma_tag_t tag, bus_dma_segment_t *segs, int nsegs) {
 void bus_dmamap_destroy(bus_dma_tag_t tag, bus_dmamap_t dmam) {
 	if (dmam == 0)
 		return;
-	if (dmam->cursor == 0)
-		return;
-	dmam->cursor->release();
-	dmam->cursor = 0;
-	delete dmam;
+#ifdef AIRPORT_VTD
+    if (dmam->dma.arena)
+        dmam->dma.arena->deallocate(dmam->dma);
+#endif
+    if (dmam->cursor)
+        dmam->cursor->release();
+    dmam->cursor = nullptr;
+    delete dmam;
 }
 
 int bus_dmamap_load(bus_dmamap_t map, mbuf_t mb) {
 	if (map == 0 || mb == 0)
 		return 1;
-	map->dm_nsegs = map->cursor->getPhysicalSegmentsWithCoalesce(mb, map->dm_segs, 1);
+	map->dm_nsegs = bus_dmamap_packet(map, mb, map->dm_segs, 1, false);
 	if (map->dm_nsegs == 0)
 		return 1;
 	else
 		return 0;
+}
+
+UInt32 bus_dmamap_packet(bus_dmamap_t map, mbuf_t m, IOPhysicalSegment *segments, UInt32 count, bool receive)
+{
+    if (!map || !m || !segments || !count)
+        return 0;
+#ifdef AIRPORT_VTD
+    const size_t size = mbuf_pkthdr_len(m);
+    if (!size || size > map->dma.size || !map->dma.arena)
+        return 0;
+    count = MIN(count, map->maxSegments);
+    const uint32_t segmentSize = (receive || count == 1) ? map->dma.size : MIN(map->maxSegmentSize, 4092U);
+    const uint32_t needed = uint32_t((size + segmentSize - 1) / segmentSize);
+    if (needed > count || (receive && (mbuf_next(m) || mbuf_len(m) < size)))
+        return 0;
+    if (!receive && !bus_dmamap_write(map, m))
+        return 0;
+    size_t remaining = size;
+    for (uint32_t i = 0, offset = 0; i < needed; i++) {
+        segments[i].location = map->dma.address + offset;
+        segments[i].length = MIN(remaining, size_t(segmentSize));
+        offset += uint32_t(segments[i].length);
+        remaining -= segments[i].length;
+    }
+    return needed;
+#else
+    return receive ? map->cursor->getPhysicalSegments(m, segments, count) :
+        map->cursor->getPhysicalSegmentsWithCoalesce(m, segments, count);
+#endif
+}
+
+bool bus_dmamap_read(bus_dmamap_t map, mbuf_t m, size_t size)
+{
+#ifdef AIRPORT_VTD
+    if (!map || !map->dma.arena || !m || size > map->dma.size || mbuf_next(m) || mbuf_len(m) < size)
+        return false;
+    OSSynchronizeIO();
+    memcpy(mbuf_data(m), map->dma.vaddr, size);
+#endif
+    return true;
+}
+
+/*
+ * Returns the bounce buffer the device wrote into, so the caller can find
+ * how much of it holds packets before copying. Returns NULL when the device
+ * DMAs straight into the mbuf (no bounce buffer, nothing to copy).
+ */
+const void *bus_dmamap_rx_data(bus_dmamap_t map, size_t size)
+{
+#ifdef AIRPORT_VTD
+    if (!map || !map->dma.arena || size > map->dma.size)
+        return NULL;
+    OSSynchronizeIO();
+    return map->dma.vaddr;
+#else
+    return NULL;
+#endif
+}
+
+/*
+ * Like bus_dmamap_read(), but copies only the first 'used' bytes and zeroes
+ * the rest of the mbuf up to 'size', so stale bytes left in a recycled mbuf
+ * can never be parsed as packets.
+ */
+bool bus_dmamap_read_used(bus_dmamap_t map, mbuf_t m, size_t used, size_t size)
+{
+#ifdef AIRPORT_VTD
+    if (!map || !map->dma.arena || !m || used > size || size > map->dma.size || mbuf_next(m) || mbuf_len(m) < size)
+        return false;
+    OSSynchronizeIO();
+    memcpy(mbuf_data(m), map->dma.vaddr, used);
+    bzero((uint8_t *)mbuf_data(m) + used, size - used);
+#endif
+    return true;
+}
+
+bool bus_dmamap_write(bus_dmamap_t map, mbuf_t m)
+{
+#ifdef AIRPORT_VTD
+    if (!map || !map->dma.arena || !m || mbuf_pkthdr_len(m) > map->dma.size)
+        return false;
+    return mbuf_copydata(m, 0, mbuf_pkthdr_len(m), map->dma.vaddr) == 0;
+#else
+    return true;
+#endif
 }

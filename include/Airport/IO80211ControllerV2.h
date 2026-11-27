@@ -6,6 +6,13 @@
 //  Copyright © 2023 钟先耀. All rights reserved.
 //
 
+#ifdef AIRPORT_WCL
+#if __IO80211_TARGET == __MAC_15_2
+#include "macOS15/IO80211ControllerV2.h"
+#else
+#include "macOS26/IO80211ControllerV2.h"
+#endif
+#else
 #ifndef _IO80211CONTROLLER_H
 #define _IO80211CONTROLLER_H
 
@@ -161,7 +168,7 @@ public:
     virtual bool createWorkQueue();
     virtual IO80211WorkQueue *getWorkQueue();
     virtual void requestPacketTx(void*, UInt);
-    virtual IOCommandGate *getIO80211CommandGate();
+    virtual IOCommandGate *getIO80211CommandGate() const;
     virtual IOReturn getHardwareAddressForInterface(IOEthernetAddress *);
     virtual bool useAppleRSNSupplicant(IO80211VirtualInterface *);
     virtual IO80211SkywalkInterface* getPrimarySkywalkInterface(void);
@@ -171,15 +178,15 @@ public:
     virtual SInt32 apple80211VirtualRequest(UInt,int,IO80211VirtualInterface *,void *);
     virtual SInt32 apple80211SkywalkRequest(UInt,int,IO80211SkywalkInterface *,void *);
     virtual SInt32 apple80211SkywalkRequest(UInt,int,IO80211SkywalkInterface *,void *,void *);
-    
+
     virtual SInt32 handleCardSpecific(IO80211SkywalkInterface *,unsigned long,void *,bool) = 0;
-    
+
     virtual UInt32 hardwareOutputQueueDepth();
     virtual SInt32 performCountryCodeOperation(IO80211CountryCodeOp);
-    
+
     virtual void dataLinkLayerAttachComplete();
     virtual SInt32 enableFeature(IO80211FeatureCode, void*) = 0;
-    
+
     virtual IOReturn getDRIVER_VERSION(IO80211SkywalkInterface *,apple80211_version_data *) = 0;
     virtual IOReturn getHARDWARE_VERSION(IO80211SkywalkInterface *,apple80211_version_data *) = 0;
     virtual IOReturn getCARD_CAPABILITIES(IO80211SkywalkInterface *,apple80211_capability_data *) = 0;
@@ -188,7 +195,7 @@ public:
     virtual IOReturn getCOUNTRY_CODE(IO80211SkywalkInterface *,apple80211_country_code_data *) = 0;
     virtual IOReturn setCOUNTRY_CODE(IO80211SkywalkInterface *,apple80211_country_code_data *) = 0;
     virtual IOReturn setGET_DEBUG_INFO(IO80211SkywalkInterface *,apple80211_debug_command *) = 0;
-    
+
     virtual SInt32 setVirtualHardwareAddress(IO80211VirtualInterface *,ether_addr *);
     virtual SInt32 enableVirtualInterface(IO80211VirtualInterface *);
     virtual SInt32 disableVirtualInterface(IO80211VirtualInterface *);
@@ -207,14 +214,14 @@ public:
     virtual IOReturn disablePacketTimestamping(void) {
         return kIOReturnUnsupported;
     }
-    
+
     virtual UInt getPacketTSCounter();
     virtual void *getDriverTextLog();
-    
+
     virtual UInt32 selfDiagnosticsReport(int,char const*,UInt);
-    
+
     virtual void *getFaultReporterFromDriver();
-    
+
     virtual UInt32 getDataQueueDepth(OSObject *);
     virtual bool isAssociatedToMovingNetwork(void) { return false; }
     virtual bool wasDynSARInFailSafeMode(void) { return false; }
@@ -231,7 +238,7 @@ public:
     virtual bool detachVirtualInterface(IO80211VirtualInterface *,bool);
     virtual IOReturn enable(IO80211SkywalkInterface *);
     virtual IOReturn disable(IO80211SkywalkInterface *);
-    
+
     OSMetaClassDeclareReservedUnused( IO80211Controller,  0);
     OSMetaClassDeclareReservedUnused( IO80211Controller,  1);
     OSMetaClassDeclareReservedUnused( IO80211Controller,  2);
@@ -248,7 +255,7 @@ public:
     OSMetaClassDeclareReservedUnused( IO80211Controller, 13);
     OSMetaClassDeclareReservedUnused( IO80211Controller, 14);
     OSMetaClassDeclareReservedUnused( IO80211Controller, 15);
-    
+
     virtual void postMessage(UInt,void *,unsigned long,UInt,void *);
     virtual IOReturn setMulticastList(ether_addr const*, UInt);
 
@@ -259,3 +266,5 @@ protected:
 #endif /* defined(KERNEL) && defined(__cplusplus) */
 
 #endif /* !_IO80211CONTROLLER_H */
+
+#endif

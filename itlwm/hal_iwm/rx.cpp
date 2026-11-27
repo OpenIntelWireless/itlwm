@@ -126,7 +126,7 @@ void ItlIwm::
 iwm_disable_rx_dma(struct iwm_softc *sc)
 {
     int ntries;
-    
+
     if (iwm_nic_lock(sc)) {
         if (sc->sc_mqrx_supported) {
             iwm_write_prph(sc, IWM_RFH_RXF_DMA_CFG, 0);
@@ -158,26 +158,26 @@ iwm_reset_rx_ring(struct iwm_softc *sc, struct iwm_rx_ring *ring)
     memset(ring->stat, 0, sizeof(*ring->stat));
     //    bus_dmamap_sync(sc->sc_dmat, ring->stat_dma.map, 0,
     //        ring->stat_dma.size, BUS_DMASYNC_POSTWRITE);
-    
+
 }
 
 void ItlIwm::
 iwm_free_rx_ring(struct iwm_softc *sc, struct iwm_rx_ring *ring)
 {
     int count, i;
-    
+
     iwm_dma_contig_free(&ring->free_desc_dma);
     iwm_dma_contig_free(&ring->stat_dma);
     iwm_dma_contig_free(&ring->used_desc_dma);
-    
+
     if (sc->sc_mqrx_supported)
         count = IWM_RX_MQ_RING_COUNT;
     else
         count = IWM_RX_RING_COUNT;
-    
+
     for (i = 0; i < count; i++) {
         struct iwm_rx_data *data = &ring->data[i];
-        
+
         if (data->m != NULL) {
             //            bus_dmamap_sync(sc->sc_dmat, data->map, 0,
             //                data->map->dm_mapsize, BUS_DMASYNC_POSTREAD);
@@ -198,9 +198,9 @@ iwm_alloc_rx_ring(struct iwm_softc *sc, struct iwm_rx_ring *ring)
     bus_size_t size;
     size_t descsz;
     int count, i, err;
-    
+
     ring->cur = 0;
-    
+
     if (sc->sc_mqrx_supported) {
         count = IWM_RX_MQ_RING_COUNT;
         descsz = sizeof(uint64_t);
@@ -208,7 +208,7 @@ iwm_alloc_rx_ring(struct iwm_softc *sc, struct iwm_rx_ring *ring)
         count = IWM_RX_RING_COUNT;
         descsz = sizeof(uint32_t);
     }
-    
+
     /* Allocate RX descriptors (256-byte aligned). */
     size = count * descsz;
     err = iwm_dma_contig_alloc(sc->sc_dmat, &ring->free_desc_dma, size, 256);
@@ -239,10 +239,10 @@ iwm_alloc_rx_ring(struct iwm_softc *sc, struct iwm_rx_ring *ring)
             goto fail;
         }
     }
-    
+
     for (i = 0; i < count; i++) {
         struct iwm_rx_data *data = &ring->data[i];
-        
+
         memset(data, 0, sizeof(*data));
         err = bus_dmamap_create(sc->sc_dmat, IWM_RBUF_SIZE, 1,
                                 IWM_RBUF_SIZE, 0, BUS_DMA_NOWAIT,
@@ -252,13 +252,13 @@ iwm_alloc_rx_ring(struct iwm_softc *sc, struct iwm_rx_ring *ring)
                   DEVNAME(sc));
             goto fail;
         }
-        
+
         err = iwm_rx_addbuf(sc, IWM_RBUF_SIZE, i);
         if (err)
             goto fail;
     }
     return 0;
-    
+
 fail:    iwm_free_rx_ring(sc, ring);
     return err;
 }
@@ -273,9 +273,9 @@ iwm_rx_addbuf(struct iwm_softc *sc, int size, int idx)
     int fatal = 0;
     unsigned int maxChunks = 1;
     IOPhysicalSegment seg;
-    
+
 //    mbuf_allocpacket(MBUF_WAITOK, size, NULL, &m);
-    
+
     m = getController()->allocatePacket(size);
 //
     if (m == NULL) {
@@ -300,12 +300,12 @@ iwm_rx_addbuf(struct iwm_softc *sc, int size, int idx)
 //    //        bus_dmamap_unload(sc->sc_dmat, data->map);
 //            fatal = 1;
 //        }
-    
+
 //        mbuf_setlen(m, size);
 //        mbuf_pkthdr_setlen(m, size);
     //    m->m_len = m->m_pkthdr.len = m->m_ext.ext_size;
 //    err = bus_dmamap_load(data->map, m);
-    data->map->dm_nsegs = data->map->cursor->getPhysicalSegments(m, &seg, 1);
+    data->map->dm_nsegs = bus_dmamap_packet(data->map, m, &seg, 1, true);
 //    XYLog("map rx dm_nsegs=%d\n", data->map->dm_nsegs);
     if (data->map->dm_nsegs == 0) {
         XYLog("RX Map new address FAIL!!!!\n");
@@ -317,7 +317,7 @@ iwm_rx_addbuf(struct iwm_softc *sc, int size, int idx)
     }
     data->m = m;
     //    bus_dmamap_sync(sc->sc_dmat, data->map, 0, size, BUS_DMASYNC_PREREAD);
-    
+
     /* Update RX descriptor. */
     if (sc->sc_mqrx_supported) {
         ((uint64_t *)ring->desc)[idx] =
@@ -332,7 +332,7 @@ iwm_rx_addbuf(struct iwm_softc *sc, int size, int idx)
         //            idx * sizeof(uint32_t), sizeof(uint32_t),
         //            BUS_DMASYNC_PREWRITE);
     }
-    
+
     return 0;
 }
 
@@ -341,10 +341,10 @@ iwm_rx_rx_phy_cmd(struct iwm_softc *sc, struct iwm_rx_packet *pkt,
                   struct iwm_rx_data *data)
 {
     struct iwm_rx_phy_info *phy_info = (struct iwm_rx_phy_info *)pkt->data;
-    
+
     //    bus_dmamap_sync(sc->sc_dmat, data->map, sizeof(*pkt),
     //        sizeof(*phy_info), BUS_DMASYNC_POSTREAD);
-    
+
     memcpy(&sc->sc_last_phy_info, phy_info, sizeof(sc->sc_last_phy_info));
 }
 
@@ -362,12 +362,18 @@ iwm_rx_mpdu(struct iwm_softc *sc, mbuf_t m, void *pktdata,
     uint32_t len;
     uint32_t rx_pkt_status;
     int rssi, chanidx, rate_n_flags;
-    
+
     memset(&rxi, 0, sizeof(rxi));
     memset(&rx_status, 0, sizeof(struct ieee80211_rx_status));
-    
+
     phy_info = &sc->sc_last_phy_info;
     rx_res = (struct iwm_rx_mpdu_res_start *)pktdata;
+    // The descriptor, the frame and the 4-byte status word after it must all be present (N04).
+    if (maxlen < sizeof(*rx_res) + sizeof(uint32_t)) {
+        IC2IFP(ic)->netStat->inputErrors++;
+        mbuf_freem(m);
+        return;
+    }
     len = le16toh(rx_res->byte_count);
     if (ic->ic_opmode == IEEE80211_M_MONITOR) {
         /* Allow control frames in monitor mode. */
@@ -383,35 +389,35 @@ iwm_rx_mpdu(struct iwm_softc *sc, mbuf_t m, void *pktdata,
         mbuf_freem(m);
         return;
     }
-    if (len > maxlen - sizeof(*rx_res)) {
+    if (len > maxlen - sizeof(*rx_res) - sizeof(uint32_t)) {
         IC2IFP(ic)->netStat->inputErrors++;
         mbuf_freem(m);
         return;
     }
-    
+
     if (phy_info->cfg_phy_cnt > 20) {
         mbuf_freem(m);
         return;
     }
-    
+
     rx_pkt_status = le32toh(*(uint32_t *)((uint8_t*)pktdata + sizeof(*rx_res) + len));
     if (!(rx_pkt_status & IWM_RX_MPDU_RES_STATUS_CRC_OK) ||
         !(rx_pkt_status & IWM_RX_MPDU_RES_STATUS_OVERRUN_OK)) {
         mbuf_freem(m);
         return; /* drop */
     }
-    
+
     //    m->m_data = pktdata + sizeof(*rx_res);
     //    m->m_pkthdr.len = m->m_len = len;
     mbuf_setdata(m, ((uint8_t*)pktdata + sizeof(*rx_res)), len);
     mbuf_pkthdr_setlen(m, len);
     mbuf_setlen(m, len);
-    
+
     if (iwm_rx_hwdecrypt(sc, m, rx_pkt_status, &rxi)) {
         mbuf_freem(m);
         return;
     }
-    
+
     chanidx = letoh32(phy_info->channel);
     device_timestamp = le32toh(phy_info->system_timestamp);
     phy_flags = letoh16(phy_info->phy_flags);
@@ -425,7 +431,7 @@ iwm_rx_mpdu(struct iwm_softc *sc, mbuf_t m, void *pktdata,
     rxi.rxi_rssi = rssi;
     rxi.rxi_tstamp = device_timestamp;
     rxi.rxi_chan = chanidx;
-    
+
     iwm_rx_frame(sc, m, chanidx, rx_pkt_status,
                  (phy_flags & IWM_PHY_INFO_FLAG_SHPREAMBLE),
                  rate_n_flags, device_timestamp, &rxi, ml);
@@ -436,7 +442,7 @@ iwm_flip_address(uint8_t *addr)
 {
     int i;
     uint8_t mac_addr[ETHER_ADDR_LEN];
-    
+
     for (i = 0; i < ETHER_ADDR_LEN; i++)
         mac_addr[i] = addr[ETHER_ADDR_LEN - i - 1];
     IEEE80211_ADDR_COPY(addr, mac_addr);
@@ -461,28 +467,28 @@ iwm_detect_duplicate(struct iwm_softc *sc, mbuf_t m,
     uint8_t subtype = wh->i_fc[0] & IEEE80211_FC0_SUBTYPE_MASK;
     int hasqos = ieee80211_has_qos(wh);
     uint16_t seq;
-    
+
     if (type == IEEE80211_FC0_TYPE_CTL ||
         (hasqos && (subtype & IEEE80211_FC0_SUBTYPE_NODATA)) ||
         IEEE80211_IS_MULTICAST(wh->i_addr1))
         return 0;
-    
+
     if (hasqos) {
         tid = (ieee80211_get_qos(wh) & IEEE80211_QOS_TID);
         if (tid > IWM_MAX_TID_COUNT)
             tid = IWM_MAX_TID_COUNT;
     }
-    
+
     /* If this wasn't a part of an A-MSDU the sub-frame index will be 0 */
     subframe_idx = desc->amsdu_info &
     IWM_RX_MPDU_AMSDU_SUBFRAME_IDX_MASK;
-    
+
     seq = letoh16(*(u_int16_t *)wh->i_seq) >> IEEE80211_SEQ_SEQ_SHIFT;
     if ((wh->i_fc[1] & IEEE80211_FC1_RETRY) &&
         dup_data->last_seq[tid] == seq &&
         dup_data->last_sub_frame[tid] >= subframe_idx)
         return 1;
-    
+
     /*
      * Allow the same frame sequence number for all A-MSDU subframes
      * following the first subframe.
@@ -493,10 +499,10 @@ iwm_detect_duplicate(struct iwm_softc *sc, mbuf_t m,
         (desc->mac_flags2 & IWM_RX_MPDU_MFLG2_AMSDU)) {
         rxi->rxi_flags |= IEEE80211_RXI_SAME_SEQ;
     }
-    
+
     dup_data->last_seq[tid] = seq;
     dup_data->last_sub_frame[tid] = subframe_idx;
-    
+
     return 0;
 }
 
@@ -519,18 +525,18 @@ iwm_release_frames(struct iwm_softc *sc, struct ieee80211_node *ni,
 {
     struct iwm_reorder_buf_entry *entries = &rxba->entries[0];
     uint16_t ssn = reorder_buf->head_sn;
-    
+
     /* ignore nssn smaller than head sn - this can happen due to timeout */
     if (iwm_is_sn_less(nssn, ssn, reorder_buf->buf_size))
         goto set_timer;
-    
+
     while (iwm_is_sn_less(ssn, nssn, reorder_buf->buf_size)) {
         int index = ssn % reorder_buf->buf_size;
         mbuf_t m;
         int chanidx, is_shortpre;
         uint32_t rx_pkt_status, rate_n_flags, device_timestamp;
         struct ieee80211_rxinfo *rxi;
-        
+
         /* This data is the same for all A-MSDU subframes. */
         chanidx = entries[index].chanidx;
         rx_pkt_status = entries[index].rx_pkt_status;
@@ -538,7 +544,7 @@ iwm_release_frames(struct iwm_softc *sc, struct ieee80211_node *ni,
         rate_n_flags = entries[index].rate_n_flags;
         device_timestamp = entries[index].device_timestamp;
         rxi = &entries[index].rxi;
-        
+
         /*
          * Empty the list. Will have more than one frame for A-MSDU.
          * Empty list is valid as well since nssn indicates frames were
@@ -548,7 +554,7 @@ iwm_release_frames(struct iwm_softc *sc, struct ieee80211_node *ni,
             iwm_rx_frame(sc, m, chanidx, rx_pkt_status, is_shortpre,
                          rate_n_flags, device_timestamp, rxi, ml);
             reorder_buf->num_stored--;
-            
+
             /*
              * Allow the same frame sequence number and CCMP PN for
              * all A-MSDU subframes following the first subframe.
@@ -557,11 +563,11 @@ iwm_release_frames(struct iwm_softc *sc, struct ieee80211_node *ni,
             rxi->rxi_flags |= IEEE80211_RXI_SAME_SEQ;
             rxi->rxi_flags |= IEEE80211_RXI_HWDEC_SAME_PN;
         }
-        
+
         ssn = (ssn + 1) & 0xfff;
     }
     reorder_buf->head_sn = nssn;
-    
+
 set_timer:
     if (reorder_buf->num_stored && !reorder_buf->removed) {
         timeout_add_usec(&reorder_buf->reorder_timer,
@@ -575,17 +581,17 @@ iwm_oldsn_workaround(struct iwm_softc *sc, struct ieee80211_node *ni, int tid,
                      struct iwm_reorder_buffer *buffer, uint32_t reorder_data, uint32_t gp2)
 {
     struct ieee80211com *ic = &sc->sc_ic;
-    
+
     if (gp2 != buffer->consec_oldsn_ampdu_gp2) {
         /* we have a new (A-)MPDU ... */
-        
+
         /*
          * reset counter to 0 if we didn't have any oldsn in
          * the last A-MPDU (as detected by GP2 being identical)
          */
         if (!buffer->consec_oldsn_prev_drop)
             buffer->consec_oldsn_drops = 0;
-        
+
         /* either way, update our tracking state */
         buffer->consec_oldsn_ampdu_gp2 = gp2;
     } else if (buffer->consec_oldsn_prev_drop) {
@@ -597,15 +603,15 @@ iwm_oldsn_workaround(struct iwm_softc *sc, struct ieee80211_node *ni, int tid,
          */
         return 0;
     }
-    
+
     /* return unless this MPDU has old SN */
     if (!(reorder_data & IWM_RX_MPDU_REORDER_BA_OLD_SN))
         return 0;
-    
+
     /* update state */
     buffer->consec_oldsn_prev_drop = 1;
     buffer->consec_oldsn_drops++;
-    
+
     /* if limit is reached, send del BA and reset state */
     if (buffer->consec_oldsn_drops == IWM_AMPDU_CONSEC_DROPS_DELBA) {
         XYLog("reached %d old SN frames, stopping BA session on TID %d\n",
@@ -616,7 +622,7 @@ iwm_oldsn_workaround(struct iwm_softc *sc, struct ieee80211_node *ni, int tid,
         buffer->consec_oldsn_drops = 0;
         return 1;
     }
-    
+
     return 0;
 }
 
@@ -648,14 +654,14 @@ iwm_rx_reorder(struct iwm_softc *sc, mbuf_t m, int chanidx,
     uint16_t nssn, sn;
     uint8_t baid, type, subtype;
     int hasqos;
-    
+
     wh = mtod(m, struct ieee80211_frame *);
     hasqos = ieee80211_has_qos(wh);
     tid = hasqos ? ieee80211_get_qos(wh) & IEEE80211_QOS_TID : 0;
-    
+
     type = wh->i_fc[0] & IEEE80211_FC0_TYPE_MASK;
     subtype = wh->i_fc[0] & IEEE80211_FC0_SUBTYPE_MASK;
-    
+
     /*
      * We are only interested in Block Ack requests and unicast QoS data.
      */
@@ -669,43 +675,43 @@ iwm_rx_reorder(struct iwm_softc *sc, mbuf_t m, int chanidx,
             subtype != IEEE80211_FC0_SUBTYPE_BAR)
             return 0;
     }
-    
+
     baid = (reorder_data & IWM_RX_MPDU_REORDER_BAID_MASK) >>
     IWM_RX_MPDU_REORDER_BAID_SHIFT;
     if (baid == IWM_RX_REORDER_DATA_INVALID_BAID ||
         baid >= nitems(sc->sc_rxba_data))
         return 0;
-    
+
     rxba = &sc->sc_rxba_data[baid];
     if (rxba->reorder_buf.buf_size == 0 || tid != rxba->tid || rxba->sta_id != IWM_STATION_ID)
         return 0;
-    
+
     if (rxba->timeout != 0)
         getmicrouptime(&rxba->last_rx);
-    
+
     /* Bypass A-MPDU re-ordering in net80211. */
     rxi->rxi_flags |= IEEE80211_RXI_AMPDU_DONE;
-    
+
     nssn = reorder_data & IWM_RX_MPDU_REORDER_NSSN_MASK;
     sn = (reorder_data & IWM_RX_MPDU_REORDER_SN_MASK) >>
     IWM_RX_MPDU_REORDER_SN_SHIFT;
-    
+
     buffer = &rxba->reorder_buf;
     entries = &rxba->entries[0];
-    
+
     if (!buffer->valid) {
         if (reorder_data & IWM_RX_MPDU_REORDER_BA_OLD_SN)
             return 0;
         buffer->valid = 1;
     }
-    
+
     ni = ieee80211_find_rxnode(ic, wh);
     if (type == IEEE80211_FC0_TYPE_CTL &&
         subtype == IEEE80211_FC0_SUBTYPE_BAR) {
         iwm_release_frames(sc, ni, rxba, buffer, nssn, ml);
         goto drop;
     }
-    
+
     /*
      * If there was a significant jump in the nssn - adjust.
      * If the SN is smaller than the NSSN it might need to first go into
@@ -720,21 +726,21 @@ iwm_rx_reorder(struct iwm_softc *sc, mbuf_t m, int chanidx,
         ic->ic_stats.is_ht_rx_frame_above_ba_winend++;
         iwm_release_frames(sc, ni, rxba, buffer, min_sn, ml);
     }
-    
+
     if (iwm_oldsn_workaround(sc, ni, tid, buffer, reorder_data,
                              device_timestamp)) {
         /* BA session will be torn down. */
         ic->ic_stats.is_ht_rx_ba_window_jump++;
         goto drop;
-        
+
     }
-    
+
     /* drop any outdated packets */
     if (SEQ_LT(sn, buffer->head_sn)) {
         ic->ic_stats.is_ht_rx_frame_below_ba_winstart++;
         goto drop;
     }
-    
+
     /* release immediately if allowed by nssn and no stored frames */
     if (!buffer->num_stored && SEQ_LT(sn, nssn)) {
         if (iwm_is_sn_less(buffer->head_sn, nssn, buffer->buf_size) &&
@@ -743,7 +749,7 @@ iwm_rx_reorder(struct iwm_softc *sc, mbuf_t m, int chanidx,
         ieee80211_release_node(ic, ni);
         return 0;
     }
-    
+
     /*
      * release immediately if there are no stored frames, and the sn is
      * equal to the head.
@@ -758,9 +764,9 @@ iwm_rx_reorder(struct iwm_softc *sc, mbuf_t m, int chanidx,
         ieee80211_release_node(ic, ni);
         return 0;
     }
-    
+
     index = sn % buffer->buf_size;
-    
+
     /*
      * Check if we already stored this frame
      * As AMSDU is either received or not as whole, logic is simple:
@@ -786,17 +792,17 @@ iwm_rx_reorder(struct iwm_softc *sc, mbuf_t m, int chanidx,
         entries[index].device_timestamp = device_timestamp;
         memcpy(&entries[index].rxi, rxi, sizeof(entries[index].rxi));
     }
-    
+
     /* put in reorder buffer */
     ml_enqueue(&entries[index].frames, m);
     buffer->num_stored++;
     getmicrouptime(&entries[index].reorder_time);
-    
+
     if (is_amsdu) {
         buffer->last_amsdu = sn;
         buffer->last_sub_index = subframe_idx;
     }
-    
+
     /*
      * We cannot trust NSSN for AMSDU sub-frames that are not the last.
      * The reason is that NSSN advances on the first sub-frame, and may
@@ -810,10 +816,10 @@ iwm_rx_reorder(struct iwm_softc *sc, mbuf_t m, int chanidx,
      */
     if (!is_amsdu || last_subframe)
         iwm_release_frames(sc, ni, rxba, buffer, nssn, ml);
-    
+
     ieee80211_release_node(ic, ni);
     return 1;
-    
+
 drop:
     mbuf_freem(m);
     ieee80211_release_node(ic, ni);
@@ -832,18 +838,24 @@ iwm_rx_mpdu_mq(struct iwm_softc *sc, mbuf_t m, void *pktdata,
     int rssi;
     uint8_t chanidx;
     uint16_t phy_info;
-    
+
     memset(&rxi, 0, sizeof(rxi));
     memset(&rx_status, 0, sizeof(struct ieee80211_rx_status));
-    
+
     desc = (struct iwm_rx_mpdu_desc *)pktdata;
-    
+    // The whole descriptor must be present before any field of it is read (N04).
+    if (maxlen < sizeof(*desc)) {
+        IC2IFP(ic)->netStat->inputErrors++;
+        mbuf_freem(m);
+        return;
+    }
+
     if (!(desc->status & htole16(IWM_RX_MPDU_RES_STATUS_CRC_OK)) ||
         !(desc->status & htole16(IWM_RX_MPDU_RES_STATUS_OVERRUN_OK))) {
         mbuf_freem(m);
         return; /* drop */
     }
-    
+
     len = le16toh(desc->mpdu_len);
     if (ic->ic_opmode == IEEE80211_M_MONITOR) {
         /* Allow control frames in monitor mode. */
@@ -864,13 +876,13 @@ iwm_rx_mpdu_mq(struct iwm_softc *sc, mbuf_t m, void *pktdata,
         mbuf_freem(m);
         return;
     }
-    
+
     //    m->m_data = pktdata + sizeof(*desc);
     //    m->m_pkthdr.len = m->m_len = len;
     mbuf_setdata(m, (uint8_t*)pktdata + sizeof(*desc), len);
     mbuf_pkthdr_setlen(m, len);
     mbuf_setlen(m, len);
-    
+
     /* Account for padding following the frame header. */
     if (desc->mac_flags2 & IWM_RX_MPDU_MFLG2_PAD) {
         struct ieee80211_frame *wh = mtod(m, struct ieee80211_frame *);
@@ -889,18 +901,25 @@ iwm_rx_mpdu_mq(struct iwm_softc *sc, mbuf_t m, void *pktdata,
             }
         } else
             hdrlen = ieee80211_get_hdrlen(wh);
-        
+
         if ((le16toh(desc->status) &
              IWM_RX_MPDU_RES_STATUS_SEC_ENC_MSK) ==
             IWM_RX_MPDU_RES_STATUS_SEC_CCM_ENC) {
             /* Padding is inserted after the IV. */
             hdrlen += IEEE80211_CCMP_HDRLEN;
         }
-        
+        // The header, its IV and the two padding bytes must all lie inside the frame.
+        if (hdrlen + 2 > len) {
+            ic->ic_stats.is_rx_tooshort++;
+            IC2IFP(ic)->netStat->inputErrors++;
+            mbuf_freem(m);
+            return;
+        }
+
         memmove((uint8_t*)mbuf_data(m) + 2, mbuf_data(m), hdrlen);
         mbuf_adj(m, 2);
     }
-    
+
     /*
      * Hardware de-aggregates A-MSDUs and copies the same MAC header
      * in place for each subframe. But it leaves the 'A-MSDU present'
@@ -920,7 +939,7 @@ iwm_rx_mpdu_mq(struct iwm_softc *sc, mbuf_t m, void *pktdata,
             struct ieee80211_qosframe_addr4 *qwh4 = mtod(m,
                                                          struct ieee80211_qosframe_addr4 *);
             qwh4->i_qos[0] &= htole16(~IEEE80211_QOS_AMSDU);
-            
+
             /* HW reverses addr3 and addr4. */
             iwm_flip_address(qwh4->i_addr3);
             iwm_flip_address(qwh4->i_addr4);
@@ -929,12 +948,12 @@ iwm_rx_mpdu_mq(struct iwm_softc *sc, mbuf_t m, void *pktdata,
             struct ieee80211_qosframe *qwh = mtod(m,
                                                   struct ieee80211_qosframe *);
             qwh->i_qos[0] &= htole16(~IEEE80211_QOS_AMSDU);
-            
+
             /* HW reverses addr3. */
             iwm_flip_address(qwh->i_addr3);
         }
     }
-    
+
     /*
      * Verify decryption before duplicate detection. The latter uses
      * the TID supplied in QoS frame headers and this TID is implicitly
@@ -944,31 +963,31 @@ iwm_rx_mpdu_mq(struct iwm_softc *sc, mbuf_t m, void *pktdata,
         mbuf_freem(m);
         return;
     }
-    
+
     if (iwm_detect_duplicate(sc, m, desc, &rxi)) {
         mbuf_freem(m);
         return;
     }
-    
+
     phy_info = le16toh(desc->phy_info);
     rate_n_flags = le32toh(desc->v1.rate_n_flags);
     chanidx = desc->v1.channel;
     device_timestamp = desc->v1.gp2_on_air_rise;
-    
+
     rssi = iwm_rxmq_get_signal_strength(sc, &rx_status, rate_n_flags, desc);
     rs_update_last_rssi(sc, &rx_status);
     rssi = (0 - IWM_MIN_DBM) + rssi;    /* normalize */
     rssi = MIN(rssi, ic->ic_max_rssi);    /* clip to max. 100% */
-    
+
     rxi.rxi_rssi = rssi;
     rxi.rxi_tstamp = le64toh(desc->v1.tsf_on_air_rise);
     rxi.rxi_chan = chanidx;
-    
+
     if (iwm_rx_reorder(sc, m, chanidx, desc,
                        (phy_info & IWM_RX_MPDU_PHY_SHORT_PREAMBLE),
                        rate_n_flags, device_timestamp, &rxi, ml))
         return;
-    
+
     iwm_rx_frame(sc, m, chanidx, le16toh(desc->status),
                  (phy_info & IWM_RX_MPDU_PHY_SHORT_PREAMBLE),
                  rate_n_flags, device_timestamp, &rxi, ml);
@@ -978,14 +997,18 @@ int ItlIwm::
 iwm_rx_pkt_valid(struct iwm_rx_packet *pkt)
 {
     int qid, idx, code;
-    
+
     qid = pkt->hdr.qid & ~0x80;
     idx = pkt->hdr.idx;
     code = IWM_WIDE_ID(pkt->hdr.flags, pkt->hdr.code);
-    
+
     return (!(qid == 0 && idx == 0 && code == 0) &&
             pkt->len_n_flags != htole32(IWM_FH_RSCSR_FRAME_INVALID));
 }
+
+// Whether a notification's payload holds a whole T. iwm_rx_pkt has already refused a record shorter
+// than its header, so the payload length can't wrap (audit HL05, the IWM half).
+#define IWM_NOTIF_FITS(pkt, T) (iwm_rx_packet_payload_len(pkt) >= sizeof(T))
 
 #define SYNC_RESP_STRUCT(_var_, _pkt_, t)                    \
 do {                                    \
@@ -1003,41 +1026,48 @@ iwm_rx_pkt(struct iwm_softc *sc, struct iwm_rx_data *data, struct mbuf_list *ml)
     mbuf_t m0, m = NULL;
     const size_t minsz = sizeof(pkt->len_n_flags) + sizeof(pkt->hdr);
     int qid, idx, code, handled = 1;
-    
+
     //    bus_dmamap_sync(sc->sc_dmat, data->map, 0, IWM_RBUF_SIZE,
     //        BUS_DMASYNC_POSTREAD);
+    if (!bus_dmamap_read(data->map, data->m, IWM_RBUF_SIZE)) {
+        ifp->netStat->inputErrors++;
+        return;
+    }
     m0 = data->m;
     while (m0 && offset + minsz < IWM_RBUF_SIZE) {
         pkt = (struct iwm_rx_packet *)((uint8_t*)mbuf_data(m0) + offset);
         qid = pkt->hdr.qid;
         idx = pkt->hdr.idx;
-        
+
         code = IWM_WIDE_ID(pkt->hdr.flags, pkt->hdr.code);
-        
+
         if (!iwm_rx_pkt_valid(pkt))
             break;
-        
+
         len = sizeof(pkt->len_n_flags) + iwm_rx_packet_len(pkt);
         if (len < minsz || len > (IWM_RBUF_SIZE - offset))
             break;
-        
+
         if (code == IWM_REPLY_RX_MPDU_CMD && ++nmpdu == 1) {
             /* Take mbuf m0 off the RX ring. */
             if (iwm_rx_addbuf(sc, IWM_RBUF_SIZE, sc->rxq.cur)) {
                 ifp->netStat->inputErrors++;
                 break;
             }
-            
+
 //            KASSERT(data->m != m0, "data->m != m0");
         }
-        
+
         switch (code) {
             case IWM_REPLY_RX_PHY_CMD:
-                iwm_rx_rx_phy_cmd(sc, pkt, data);
+                if (IWM_NOTIF_FITS(pkt, struct iwm_rx_phy_info))
+                    iwm_rx_rx_phy_cmd(sc, pkt, data);
                 break;
-                
+
             case IWM_REPLY_RX_MPDU_CMD: {
-                size_t maxlen = IWM_RBUF_SIZE - offset - minsz;
+                // This notification's own payload length (checked above against the buffer), not the
+                // space left in the buffer (security audit N04).
+                size_t maxlen = iwm_rx_packet_payload_len(pkt);
                 nextoff = offset +
                 roundup(len, IWM_FH_RSCSR_FRAME_ALIGN);
                 nextpkt = (struct iwm_rx_packet *)
@@ -1076,24 +1106,25 @@ iwm_rx_pkt(struct iwm_softc *sc, struct iwm_rx_data *data, struct mbuf_list *ml)
                         iwm_rx_mpdu(sc, m, pkt->data,
                                     maxlen, ml);
                 }
-                
+
                 break;
             }
-                
+
             case IWM_TX_CMD:
                 iwm_rx_tx_cmd(sc, pkt, data);
                 break;
             case IWM_BA_NOTIF:
                 iwm_rx_tx_ba_notif(sc, pkt, data);
                 break;
-                
+
             case IWM_MISSED_BEACONS_NOTIFICATION:
-                iwm_rx_bmiss(sc, pkt, data);
+                if (IWM_NOTIF_FITS(pkt, struct iwm_missed_beacons_notif))
+                    iwm_rx_bmiss(sc, pkt, data);
                 break;
-                
+
             case IWM_MFUART_LOAD_NOTIFICATION:
                 break;
-                
+
             case IWM_ALIVE: {
                 struct iwm_alive_resp_v1 *resp1;
                 struct iwm_alive_resp_v2 *resp2;
@@ -1113,7 +1144,7 @@ iwm_rx_pkt(struct iwm_softc *sc, struct iwm_rx_data *data, struct mbuf_list *ml)
                     else
                         sc->sc_uc.uc_ok = 0;
                 }
-                
+
                 if (iwm_rx_packet_payload_len(pkt) == sizeof(*resp2)) {
                     SYNC_RESP_STRUCT(resp2, pkt, struct iwm_alive_resp_v2 *);
                     sc->sc_uc.uc_error_event_table
@@ -1128,7 +1159,7 @@ iwm_rx_pkt(struct iwm_softc *sc, struct iwm_rx_data *data, struct mbuf_list *ml)
                     else
                         sc->sc_uc.uc_ok = 0;
                 }
-                
+
                 if (iwm_rx_packet_payload_len(pkt) == sizeof(*resp3)) {
                     SYNC_RESP_STRUCT(resp3, pkt, struct iwm_alive_resp_v3 *);
                     sc->sc_uc.uc_error_event_table
@@ -1143,36 +1174,46 @@ iwm_rx_pkt(struct iwm_softc *sc, struct iwm_rx_data *data, struct mbuf_list *ml)
                     else
                         sc->sc_uc.uc_ok = 0;
                 }
-                
+
                 sc->sc_uc.uc_intr = 1;
                 wakeupOn(&sc->sc_uc);
                 break;
             }
-                
+
             case IWM_CALIB_RES_NOTIF_PHY_DB: {
                 struct iwm_calib_res_notif_phy_db *phy_db_notif;
                 SYNC_RESP_STRUCT(phy_db_notif, pkt, struct iwm_calib_res_notif_phy_db *);
-                iwm_phy_db_set_section(sc, phy_db_notif);
+                // The section is copied with the length the notification states: it must lie inside
+                // the payload, or the copy reads past the receive buffer. Init still completes, so a bad
+                // section can't hang the firmware start; that section is just missing.
+                if (IWM_NOTIF_FITS(pkt, struct iwm_calib_res_notif_phy_db) &&
+                    sizeof(*phy_db_notif) + le16toh(phy_db_notif->length) <= iwm_rx_packet_payload_len(pkt))
+                    iwm_phy_db_set_section(sc, phy_db_notif);
+                else
+                    XYLog("%s: PHY DB section longer than its notification, ignored\n", DEVNAME(sc));
                 sc->sc_init_complete |= IWM_CALIB_COMPLETE;
                 //                wakeupOn(&sc->sc_init_complete);
                 break;
             }
-                
+
             case IWM_STATISTICS_NOTIFICATION: {
                 struct iwm_notif_statistics *stats;
                 SYNC_RESP_STRUCT(stats, pkt, struct iwm_notif_statistics *);
+                if (!IWM_NOTIF_FITS(pkt, struct iwm_notif_statistics))
+                    break;
                 memcpy(&sc->sc_stats, stats, sizeof(sc->sc_stats));
                 sc->sc_noise = iwm_get_noise(&stats->rx.general);
                 break;
             }
-                
+
             case IWM_MCC_CHUB_UPDATE_CMD: {
                 struct iwm_mcc_chub_notif *notif;
                 SYNC_RESP_STRUCT(notif, pkt, struct iwm_mcc_chub_notif *);
-                iwm_mcc_update(sc, notif);
+                if (IWM_NOTIF_FITS(pkt, struct iwm_mcc_chub_notif))
+                    iwm_mcc_update(sc, notif);
                 break;
             }
-                
+
             case IWM_DTS_MEASUREMENT_NOTIFICATION:
             case IWM_WIDE_ID(IWM_PHY_OPS_GROUP,
                              IWM_DTS_MEASUREMENT_NOTIF_WIDE):
@@ -1184,14 +1225,15 @@ iwm_rx_pkt(struct iwm_softc *sc, struct iwm_rx_data *data, struct mbuf_list *ml)
                              IWM_CT_KILL_NOTIFICATION): {
                 struct iwm_ct_kill_notif *notif;
                 SYNC_RESP_STRUCT(notif, pkt, struct iwm_ct_kill_notif *);
+                // The device is stopped either way; only the temperature needs the whole notification.
                 XYLog("%s: device at critical temperature (%u degC), "
                        "stopping device\n",
-                       DEVNAME(sc), le16toh(notif->temperature));
+                       DEVNAME(sc), IWM_NOTIF_FITS(pkt, struct iwm_ct_kill_notif) ? le16toh(notif->temperature) : 0);
                 sc->sc_flags |= IWM_FLAG_HW_ERR;
                 task_add(systq, &sc->init_task);
                 break;
             }
-                
+
             case IWM_ADD_STA_KEY:
             case IWM_PHY_CONFIGURATION_CMD:
             case IWM_TX_ANT_CONFIGURATION_CMD:
@@ -1221,16 +1263,16 @@ iwm_rx_pkt(struct iwm_softc *sc, struct iwm_rx_data *data, struct mbuf_list *ml)
             case IWM_MCC_UPDATE_CMD:
             case IWM_TIME_EVENT_CMD: {
                 size_t pkt_len;
-                
+
                 if (sc->sc_cmd_resp_pkt[idx] == NULL)
                     break;
-                
+
                 //            bus_dmamap_sync(sc->sc_dmat, data->map, 0,
                 //                sizeof(*pkt), BUS_DMASYNC_POSTREAD);
-                
+
                 pkt_len = sizeof(pkt->len_n_flags) +
                 iwm_rx_packet_len(pkt);
-                
+
                 if ((pkt->hdr.flags & IWM_CMD_FAILED_MSK) ||
                     pkt_len < sizeof(*pkt) ||
                     pkt_len > sc->sc_cmd_resp_len[idx]) {
@@ -1238,63 +1280,67 @@ iwm_rx_pkt(struct iwm_softc *sc, struct iwm_rx_data *data, struct mbuf_list *ml)
                     sc->sc_cmd_resp_pkt[idx] = NULL;
                     break;
                 }
-                
+
                 //            bus_dmamap_sync(sc->sc_dmat, data->map, sizeof(*pkt),
                 //                pkt_len - sizeof(*pkt), BUS_DMASYNC_POSTREAD);
                 memcpy(sc->sc_cmd_resp_pkt[idx], pkt, pkt_len);
                 break;
             }
-                
+
                 /* ignore */
             case IWM_PHY_DB_CMD:
                 break;
-                
+
             case IWM_INIT_COMPLETE_NOTIF:
                 sc->sc_init_complete |= IWM_INIT_COMPLETE;
                 wakeupOn(&sc->sc_init_complete);
                 break;
-                
+
             case IWM_SCAN_OFFLOAD_COMPLETE: {
                 struct iwm_periodic_scan_complete *notif;
                 SYNC_RESP_STRUCT(notif, pkt, struct iwm_periodic_scan_complete *);
                 break;
             }
-                
+
             case IWM_SCAN_ITERATION_COMPLETE: {
                 struct iwm_lmac_scan_complete_notif *notif;
                 SYNC_RESP_STRUCT(notif, pkt, struct iwm_lmac_scan_complete_notif *);
                 iwm_endscan(sc);
                 break;
             }
-                
+
             case IWM_SCAN_COMPLETE_UMAC: {
                 struct iwm_umac_scan_complete *notif;
                 SYNC_RESP_STRUCT(notif, pkt, struct iwm_umac_scan_complete *);
                 iwm_endscan(sc);
                 break;
             }
-                
+
             case IWM_SCAN_ITERATION_COMPLETE_UMAC: {
                 struct iwm_umac_scan_iter_complete_notif *notif;
                 SYNC_RESP_STRUCT(notif, pkt, struct iwm_umac_scan_iter_complete_notif *);
                 iwm_endscan(sc);
                 break;
             }
-                
+
             case IWM_REPLY_ERROR: {
                 struct iwm_error_resp *resp;
                 SYNC_RESP_STRUCT(resp, pkt, struct iwm_error_resp *);
+                if (!IWM_NOTIF_FITS(pkt, struct iwm_error_resp))
+                    break;
                 XYLog("%s: firmware error 0x%x, cmd 0x%x\n",
                       DEVNAME(sc), le32toh(resp->error_type),
                       resp->cmd_id);
                 break;
             }
-                
+
             case IWM_TIME_EVENT_NOTIFICATION: {
                 struct iwm_time_event_notif *notif;
                 uint32_t action;
                 SYNC_RESP_STRUCT(notif, pkt, struct iwm_time_event_notif *);
-                
+                if (!IWM_NOTIF_FITS(pkt, struct iwm_time_event_notif))
+                    break;
+
                 if (sc->sc_time_event_uid != le32toh(notif->unique_id))
                     break;
                 action = le32toh(notif->action);
@@ -1302,34 +1348,34 @@ iwm_rx_pkt(struct iwm_softc *sc, struct iwm_rx_data *data, struct mbuf_list *ml)
                     sc->sc_flags &= ~IWM_FLAG_TE_ACTIVE;
                 break;
             }
-                
+
             case IWM_WIDE_ID(IWM_SYSTEM_GROUP,
                              IWM_FSEQ_VER_MISMATCH_NOTIFICATION):
                 break;
-                
+
                 /*
                  * Firmware versions 21 and 22 generate some DEBUG_LOG_MSG
                  * messages. Just ignore them for now.
                  */
             case IWM_DEBUG_LOG_MSG:
                 break;
-                
+
             case IWM_MCAST_FILTER_CMD:
                 break;
-                
+
             case IWM_SCD_QUEUE_CFG: {
                 struct iwm_scd_txq_cfg_rsp *rsp;
                 SYNC_RESP_STRUCT(rsp, pkt, struct iwm_scd_txq_cfg_rsp *);
-                
+
                 break;
             }
-                
+
             case IWM_WIDE_ID(IWM_DATA_PATH_GROUP, IWM_DQA_ENABLE_CMD):
                 break;
 
             case IWM_WIDE_ID(IWM_SYSTEM_GROUP, IWM_SOC_CONFIGURATION_CMD):
                 break;
-                
+
             default:
                 handled = 0;
                 XYLog("%s: unhandled firmware response 0x%x/0x%x "
@@ -1338,7 +1384,7 @@ iwm_rx_pkt(struct iwm_softc *sc, struct iwm_rx_data *data, struct mbuf_list *ml)
                       (qid & ~0x80), idx);
                 break;
         }
-        
+
         /*
          * uCode sets bit 0x80 when it originates the notification,
          * i.e. when the notification is not a direct response to a
@@ -1349,10 +1395,10 @@ iwm_rx_pkt(struct iwm_softc *sc, struct iwm_rx_data *data, struct mbuf_list *ml)
         if (handled && !(qid & (1 << 7))) {
             iwm_cmd_done(sc, qid, idx, code);
         }
-        
+
         offset += roundup(len, IWM_FH_RSCSR_FRAME_ALIGN);
     }
-    
+
     if (m0 && m0 != data->m && mbuf_type(m0) != MBUF_TYPE_FREE) {
         mbuf_freem(m0);
     }

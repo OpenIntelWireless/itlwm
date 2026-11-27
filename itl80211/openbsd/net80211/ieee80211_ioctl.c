@@ -151,6 +151,8 @@ ieee80211_node2req(struct ieee80211com *ic, const struct ieee80211_node *ni,
 		nr->nr_rsnakms |= IEEE80211_WPA_AKM_SHA256_8021X;
 	if (ni->ni_supported_rsnakms & IEEE80211_AKM_SHA256_PSK)
 		nr->nr_rsnakms |= IEEE80211_WPA_AKM_SHA256_PSK;
+	if (ni->ni_supported_rsnakms & IEEE80211_AKM_SAE)
+		nr->nr_rsnakms |= IEEE80211_WPA_AKM_SAE;
 
 	/* Node flags */
 	nr->nr_flags = 0;
@@ -209,7 +211,7 @@ ieee80211_disable_wep(struct ieee80211com *ic)
 {
 	struct ieee80211_key *k;
 	int i;
-	
+
 	for (i = 0; i < IEEE80211_WEP_NKID; i++) {
 		k = &ic->ic_nw_keys[i];
 		if (k->k_cipher != IEEE80211_CIPHER_NONE)
@@ -224,6 +226,16 @@ ieee80211_disable_rsn(struct ieee80211com *ic)
 {
 	ic->ic_flags &= ~(IEEE80211_F_PSK | IEEE80211_F_RSNON);
 	memset(ic->ic_psk, 0, sizeof(ic->ic_psk));
+	/*
+	 * Drop the SAE password token as well.  It is derived from a
+	 * specific password + SSID pair, so keeping it would make a later
+	 * join to a different network reuse stale material.
+	 */
+	explicit_bzero(ic->ic_sae_pt, sizeof(ic->ic_sae_pt));
+	explicit_bzero(ic->ic_sae_pwe, sizeof(ic->ic_sae_pwe));
+	ic->ic_sae_pt_valid = 0;
+	ic->ic_sae_pwe_valid = 0;
+	ic->ic_xflags &= ~IEEE80211_F_SAE_PWE;
 	ic->ic_rsnprotos = 0;
 	ic->ic_rsnakms = 0;
 	ic->ic_rsngroupcipher = (enum ieee80211_cipher)0;
@@ -348,6 +360,8 @@ ieee80211_ioctl_setwpaparms(struct ieee80211com *ic,
 		ic->ic_rsnakms |= IEEE80211_AKM_8021X;
 	if (wpa->i_akms & IEEE80211_WPA_AKM_SHA256_8021X)
 		ic->ic_rsnakms |= IEEE80211_AKM_SHA256_8021X;
+	if (wpa->i_akms & IEEE80211_WPA_AKM_SAE)
+		ic->ic_rsnakms |= IEEE80211_AKM_SAE;
 	if (ic->ic_rsnakms == 0)	/* set to default (PSK) */
 		ic->ic_rsnakms = IEEE80211_AKM_PSK;
 
@@ -405,6 +419,8 @@ ieee80211_ioctl_getwpaparms(struct ieee80211com *ic,
 		wpa->i_akms |= IEEE80211_WPA_AKM_8021X;
 	if (ic->ic_rsnakms & IEEE80211_AKM_SHA256_8021X)
 		wpa->i_akms |= IEEE80211_WPA_AKM_SHA256_8021X;
+	if (ic->ic_rsnakms & IEEE80211_AKM_SAE)
+		wpa->i_akms |= IEEE80211_WPA_AKM_SAE;
 
 	if (ic->ic_rsngroupcipher == IEEE80211_CIPHER_WEP40)
 		wpa->i_groupcipher = IEEE80211_WPA_CIPHER_WEP40;
@@ -576,7 +592,7 @@ ieee80211_ioctl(struct _ifnet *ifp, u_long cmd, caddr_t data)
                 memcmp(join.i_nwid, ic->ic_des_essid,
                        join.i_len) == 0) {
                 struct ieee80211_node *ni;
-                
+
                 ieee80211_deselect_ess(ic);
                 ni = ieee80211_find_node(ic,
                     ic->ic_bss->ni_bssid);

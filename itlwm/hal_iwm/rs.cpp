@@ -8,6 +8,15 @@
 
 #include "ItlIwm.hpp"
 
+#ifdef AIRPORT_VTD
+template <typename Action>
+static IOReturn rs_run_gated(struct iwm_softc *sc, Action action)
+{
+    ItlIwm *that = container_of(sc, ItlIwm, com);
+    return that->runRateControlAction(action);
+}
+#endif
+
 #define IWL_RATE_MAX_WINDOW        62    /* # tx in history window */
 
 /* Calculations of success ratio are done in fixed point where 12800 is 100%.
@@ -603,7 +612,7 @@ static void rs_tl_turn_on_agg(struct iwm_softc *sc,
     struct iwm_tx_ba *tid_data;
     struct ieee80211_tx_ba *tx_ba;
     struct ieee80211com *ic = &sc->sc_ic;
-    
+
     if ((ic->ic_caps & IEEE80211_C_TX_AMPDU_SETUP_IN_RS) == 0)
         return;
 
@@ -1375,7 +1384,7 @@ static u32 rs_bw_from_sta_bw(struct ieee80211_node *ni)
         .vht_cap_info = cpu_to_le32(ni->ni_vhtcaps),
         .supp_mcs = ni->ni_vht_mcsinfo,
     };
-    
+
     if (ni->ni_chw == IEEE80211_CHAN_WIDTH_40 &&
         IEEE80211_IS_CHAN_2GHZ(ni->ni_chan))
         return RATE_MCS_CHAN_WIDTH_20;
@@ -1554,6 +1563,19 @@ int iwl_mvm_send_lq_cmd(struct iwm_softc *sc, struct iwm_lq_cmd *lq)
     };
 
     return that->iwm_send_cmd(sc, &cmd);;
+}
+
+int iwl_mvm_rs_set_agg_limit(struct iwm_softc *sc, u8 limit)
+{
+#ifdef AIRPORT_VTD
+    return rs_run_gated(sc, [=]() -> IOReturn {
+        sc->lq_sta.rs_drv.lq.agg_frame_cnt_limit = limit;
+        return iwl_mvm_send_lq_cmd(sc, &sc->lq_sta.rs_drv.lq);
+    });
+#else
+    sc->lq_sta.rs_drv.lq.agg_frame_cnt_limit = limit;
+    return iwl_mvm_send_lq_cmd(sc, &sc->lq_sta.rs_drv.lq);
+#endif
 }
 
 /*
@@ -2091,7 +2113,7 @@ static void rs_rate_scale_perform(struct iwm_softc *mvm,
     u8 prev_agg = lq_sta->is_agg;
     struct rs_rate *rate;
     int i;
-    
+
     lq_sta->is_agg = false;
     for (i = 0; i <= IWM_MAX_TID_COUNT; i++) {
         if (mvm->sc_tx_ba[i].wn != NULL) {
@@ -2626,6 +2648,16 @@ out:
 void rs_update_last_rssi(struct iwm_softc *mvm,
              struct ieee80211_rx_status *rx_status)
 {
+#ifdef AIRPORT_VTD
+    ItlIwm *that = container_of(mvm, ItlIwm, com);
+    if (!that->inRateControlGate()) {
+        rs_run_gated(mvm, [=]() -> IOReturn {
+            rs_update_last_rssi(mvm, rx_status);
+            return kIOReturnSuccess;
+        });
+        return;
+    }
+#endif
     struct iwl_lq_sta *lq_sta = &mvm->lq_sta.rs_drv;
     int i;
 
@@ -2704,9 +2736,21 @@ static void rs_drv_get_rate(struct iwm_softc *mvm, struct ieee80211_node *sta,
     if (!sta)
         return;
 
+#ifdef AIRPORT_VTD
+    ItlIwm *that = container_of(mvm, ItlIwm, com);
+    if (!that->inRateControlGate()) {
+        rs_run_gated(mvm, [=]() -> IOReturn {
+            rs_drv_get_rate(mvm, sta, r);
+            return kIOReturnSuccess;
+        });
+        return;
+    }
+#endif
     lq_sta = &mvm->lq_sta.rs_drv;
-    
+
+#ifndef AIRPORT_VTD
     IOSimpleLockLock(mvm->lq_sta.rs_drv.pers.lock);
+#endif
     iwl_mvm_hwrate_to_tx_rate(lq_sta->last_rate_n_flags,
                   IEEE80211_IS_CHAN_2GHZ(sta->ni_chan) ? NL80211_BAND_2GHZ : NL80211_BAND_5GHZ, r);
 
@@ -2720,11 +2764,23 @@ static void rs_drv_get_rate(struct iwm_softc *mvm, struct ieee80211_node *sta,
         iwl_mvm_hwrate_to_tx_rate(last_ucode_rate, IEEE80211_IS_CHAN_2GHZ(sta->ni_chan) ? NL80211_BAND_2GHZ : NL80211_BAND_5GHZ,
                       r);
     }
+#ifndef AIRPORT_VTD
     IOSimpleLockUnlock(mvm->lq_sta.rs_drv.pers.lock);
+#endif
 }
 
 void *rs_drv_alloc_sta(iwm_softc *sc, struct ieee80211_node *ni)
 {
+#ifdef AIRPORT_VTD
+    ItlIwm *that = container_of(sc, ItlIwm, com);
+    if (!that->inRateControlGate()) {
+        IOReturn result = rs_run_gated(sc, [=]() -> IOReturn {
+            rs_drv_alloc_sta(sc, ni);
+            return kIOReturnSuccess;
+        });
+        return result == kIOReturnSuccess ? &sc->lq_sta.rs_drv : nullptr;
+    }
+#endif
     struct iwl_lq_sta *lq_sta = &sc->lq_sta.rs_drv;
 
     IWL_DEBUG_RATE(mvm, "create station rate scale window\n");
@@ -2925,8 +2981,6 @@ static void rs_drv_rate_init(struct iwm_softc *mvm, struct ieee80211_node *sta,
     ItlIwm *that = container_of(mvm, ItlIwm, com);
     uint8_t rate;
 
-//    lockdep_assert_held(&mvmsta->lq_sta.rs_drv.pers.lock);
-
     /* clear all non-persistent lq data */
     memset(lq_sta, 0, offsetof(typeof(*lq_sta), pers));
 
@@ -3005,6 +3059,16 @@ void rs_drv_rate_update(struct iwm_softc *mvm,
                    struct ieee80211_node *sta,
                    enum nl80211_band band, u32 changed)
 {
+#ifdef AIRPORT_VTD
+    ItlIwm *that = container_of(mvm, ItlIwm, com);
+    if (!that->inRateControlGate()) {
+        rs_run_gated(mvm, [=]() -> IOReturn {
+            rs_drv_rate_update(mvm, sta, band, changed);
+            return kIOReturnSuccess;
+        });
+        return;
+    }
+#endif
     /* Stop any ongoing aggregations as rs starts off assuming no agg */
     ieee80211_stop_ampdu_tx(&mvm->sc_ic, sta, 0);
 
@@ -3221,7 +3285,7 @@ static void __iwl_mvm_rs_tx_status(struct iwm_softc *mvm,
         int index = iwl_mvm_legacy_rate_to_mac80211_idx(lq_sta->last_rate_n_flags, (enum nl80211_band)info->band);
         if (index < 0 || index >= ieee80211_std_rateset_11g.rs_nrates)
             goto done;
-        
+
         sta->ni_txrate = ieee80211_std_rateset_11g.rs_rates[index] / 2;
     }
     IWL_DEBUG_RATE(mvm, "reduced txpower: %d\n", reduced_txp);
@@ -3234,6 +3298,12 @@ done:
 void iwl_mvm_rs_tx_status(struct iwm_softc *mvm, struct ieee80211_node *sta,
               int tid, struct ieee80211_tx_info *info, bool ndp)
 {
+#ifdef AIRPORT_VTD
+    rs_run_gated(mvm, [=]() -> IOReturn {
+        __iwl_mvm_rs_tx_status(mvm, sta, tid, info, ndp);
+        return kIOReturnSuccess;
+    });
+#else
     /* If it's locked we are in middle of init flow
      * just wait for next tx status to update the lq_sta data
      */
@@ -3242,6 +3312,7 @@ void iwl_mvm_rs_tx_status(struct iwm_softc *mvm, struct ieee80211_node *sta,
 
     __iwl_mvm_rs_tx_status(mvm, sta, tid, info, ndp);
     IOSimpleLockUnlock(mvm->lq_sta.rs_drv.pers.lock);
+#endif
 }
 
 static void rs_fill_rates_for_column(struct iwm_softc *mvm,
@@ -3591,9 +3662,16 @@ int rs_pretty_print_rate(char *buf, int bufsz, const u32 rate)
 void iwl_mvm_rs_rate_init(struct iwm_softc *mvm, struct ieee80211_node *sta,
               enum nl80211_band band, bool update)
 {
+#ifdef AIRPORT_VTD
+    rs_run_gated(mvm, [=]() -> IOReturn {
+        rs_drv_rate_init(mvm, sta, band);
+        return kIOReturnSuccess;
+    });
+#else
     IOSimpleLockLock(mvm->lq_sta.rs_drv.pers.lock);
     rs_drv_rate_init(mvm, sta, band);
     IOSimpleLockUnlock(mvm->lq_sta.rs_drv.pers.lock);
+#endif
 }
 
 static int rs_drv_tx_protection(struct iwm_softc *mvm,
@@ -3623,19 +3701,29 @@ static int rs_drv_tx_protection(struct iwm_softc *mvm,
 int iwl_mvm_tx_protection(struct iwm_softc *mvm,
               bool enable)
 {
+#ifdef AIRPORT_VTD
+    return rs_run_gated(mvm, [=]() -> IOReturn {
+        return rs_drv_tx_protection(mvm, enable);
+    });
+#else
     return rs_drv_tx_protection(mvm, enable);
+#endif
 }
 
 void
 iwm_rs_alloc(struct iwm_softc *sc)
 {
+#ifndef AIRPORT_VTD
     sc->lq_sta.rs_drv.pers.lock = IOSimpleLockAlloc();
+#endif
 }
 
 void iwm_rs_free(struct iwm_softc *sc)
 {
+#ifndef AIRPORT_VTD
     if (sc->lq_sta.rs_drv.pers.lock) {
         IOSimpleLockFree(sc->lq_sta.rs_drv.pers.lock);
         sc->lq_sta.rs_drv.pers.lock = NULL;
     }
+#endif
 }

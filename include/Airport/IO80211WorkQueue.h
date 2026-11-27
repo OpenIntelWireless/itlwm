@@ -1,4 +1,11 @@
 
+#ifdef AIRPORT_WCL
+#if __IO80211_TARGET == __MAC_15_2
+#include "macOS15/IO80211WorkQueue.h"
+#else
+#include "macOS26/IO80211WorkQueue.h"
+#endif
+#else
 #ifndef _IO80211WORKQUEUE_H
 #define _IO80211WORKQUEUE_H
 
@@ -30,5 +37,7 @@ public:
 public:
     uint8_t filter[0x50];
 };
+
+#endif
 
 #endif

@@ -110,6 +110,7 @@
 
 #include <IOKit/network/IOMbufMemoryCursor.h>
 #include <IOKit/IODMACommand.h>
+#include <HAL/ItlTx.hpp>
 
 #define IWL_CFG_ANY (~0)
 
@@ -320,6 +321,9 @@ struct iwx_host_cmd {
  */
 
 struct iwx_dma_info {
+#ifdef AIRPORT_VTD
+    ItlDmaBuffer mapping;
+#endif
 	IOBufferMemoryDescriptor* buffer;
     bus_addr_t        paddr;
     void             *vaddr;
@@ -335,6 +339,8 @@ struct iwx_tx_data {
 	struct iwx_node *in;
     int flags;
 #define IWX_TXDATA_FLAG_CMD_IS_NARROW  0x01
+#define IWX_TXDATA_FLAG_CMD_PENDING    0x02
+#define IWX_TXDATA_FLAG_CMD_WAITING    0x04
     uint8_t type;
 };
 
@@ -601,10 +607,10 @@ struct iwx_softc {
 
 	/* Task for firmware BlockAck setup/teardown and its arguments. */
 	struct task	ba_task;
-    
+
     struct iwx_ba_task_data    ba_rx;
     struct iwx_ba_task_data    ba_tx;
-    
+
     struct iwx_tid_data sc_tid_data[IWX_MAX_TID_COUNT + 1];//per tid data + mgmt. Look at %iwx_tid_data.
 
     /* Task for ERP/HT prot/slot-time/EDCA updates. */
@@ -623,7 +629,7 @@ struct iwx_softc {
 	/* TX/RX rings. */
 	struct iwx_tx_ring txq[IWX_MAX_TVQM_QUEUES];
 	struct iwx_rx_ring rxq;
-	int qfullmsk;
+	ItlQueueMask<IWX_MAX_TVQM_QUEUES> qfullmsk;
     struct iwx_tx_ring sc_tvqm_ring;
     int first_data_qid;
 
@@ -659,6 +665,7 @@ struct iwx_softc {
 	int sc_init_complete;
 #define IWX_INIT_COMPLETE	0x01
 #define IWX_CALIB_COMPLETE	0x02
+#define IWX_PNVM_COMPLETE    0x04
 
 	struct iwx_ucode_status sc_uc;
 	char sc_fwver[32];
@@ -707,13 +714,13 @@ struct iwx_softc {
 	int sc_scan_last_antenna;
 
 	int sc_fixed_ridx;
-    
+
     uint8_t sc_mgmt_last_antenna_idx; /* for MGMT frames using*/
 
 	int sc_staid;
 	int sc_nodecolor;
 
-	uint8_t *sc_cmd_resp_pkt[IWX_TFD_QUEUE_SIZE_MAX_GEN3];	
+	uint8_t *sc_cmd_resp_pkt[IWX_TFD_QUEUE_SIZE_MAX_GEN3];
 	size_t sc_cmd_resp_len[IWX_TFD_QUEUE_SIZE_MAX_GEN3];
 	int sc_nic_locks;
 
@@ -740,7 +747,7 @@ struct iwx_softc {
     int sc_ltr_delay;
     int sc_xtal_latency;
     int sc_low_latency_xtal;
-    
+
     int sc_uhb_supported;
 
 #if NBPFILTER > 0
@@ -769,7 +776,7 @@ struct iwx_node {
 
 	uint16_t in_id;
 	uint16_t in_color;
-    
+
     struct iwx_rxq_dup_data dup_data;
 };
 #define IWX_STATION_ID 0

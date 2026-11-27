@@ -151,10 +151,10 @@ u_int
 ieee80211_get_hdrlen(const struct ieee80211_frame *wh)
 {
     u_int size = sizeof(*wh);
-    
+
     /* NB: does not work with control frames */
     _KASSERT(ieee80211_has_seq(wh));
-    
+
     if (ieee80211_has_addr4(wh))
         size += IEEE80211_ADDR_LEN;    /* i_addr4 */
     if (ieee80211_has_qos(wh))
@@ -176,7 +176,7 @@ ieee80211_input_hwdecrypt(struct ieee80211com *ic, struct ieee80211_node *ni,
 
    k = ieee80211_get_rxkey(ic, m, ni);
    if (k == NULL)
-       return NULL;
+       goto drop;
 
    wh = mtod(m, struct ieee80211_frame *);
    hdrlen = ieee80211_get_hdrlen(wh);
@@ -201,15 +201,15 @@ ieee80211_input_hwdecrypt(struct ieee80211com *ic, struct ieee80211_node *ni,
            break;
        }
            if (ieee80211_ccmp_get_pn(&pn, &prsc, m, k) != 0)
-               return NULL;
+               goto drop;
            if (rxi->rxi_flags & IEEE80211_RXI_HWDEC_SAME_PN) {
                if (pn < *prsc) {
                    ic->ic_stats.is_ccmp_replays++;
-                   return NULL;
+                   goto drop;
                }
            } else if (pn <= *prsc) {
                ic->ic_stats.is_ccmp_replays++;
-               return NULL;
+               goto drop;
            }
 
        /* Update last-seen packet number. */
@@ -231,16 +231,16 @@ ieee80211_input_hwdecrypt(struct ieee80211com *ic, struct ieee80211_node *ni,
            break;
        }
        if (ieee80211_tkip_get_tsc(&pn, &prsc, m, k) != 0)
-           return NULL;
+           goto drop;
 
        if (rxi->rxi_flags & IEEE80211_RXI_HWDEC_SAME_PN) {
            if (pn < *prsc) {
                ic->ic_stats.is_tkip_replays++;
-               return NULL;
+               goto drop;
                }
            } else if (pn <= *prsc) {
            ic->ic_stats.is_tkip_replays++;
-           return NULL;
+           goto drop;
        }
 
        /* Update last-seen packet number. */
@@ -258,6 +258,13 @@ ieee80211_input_hwdecrypt(struct ieee80211com *ic, struct ieee80211_node *ni,
    }
 
    return m;
+drop:
+   /*
+    * Every rejection consumes the frame: the caller only sees NULL, so a
+    * frame that wasn't freed here was leaked.
+    */
+   mbuf_freem(m);
+   return NULL;
 }
 
 /*
@@ -285,13 +292,13 @@ ieee80211_inputm(struct _ifnet *ifp, mbuf_t m, struct ieee80211_node *ni,
     u_int16_t *orxseq, nrxseq, qos;
     u_int8_t dir, type, subtype, tid;
     int hdrlen, hasqos;
-    
+
     _KASSERT(ni != NULL);
-    
+
     /* in monitor mode, send everything directly to bpf */
     if (ic->ic_opmode == IEEE80211_M_MONITOR)
         goto out;
-    
+
     /*
      * Do not process frames without an Address 2 field any further.
      * Only CTS and ACK control frames do not have this field.
@@ -301,7 +308,7 @@ ieee80211_inputm(struct _ifnet *ifp, mbuf_t m, struct ieee80211_node *ni,
         ic->ic_stats.is_rx_tooshort++;
         goto out;
     }
-    
+
     wh = mtod(m, struct ieee80211_frame *);
     if ((wh->i_fc[0] & IEEE80211_FC0_VERSION_MASK) !=
         IEEE80211_FC0_VERSION_0) {
@@ -309,11 +316,11 @@ ieee80211_inputm(struct _ifnet *ifp, mbuf_t m, struct ieee80211_node *ni,
         ic->ic_stats.is_rx_badversion++;
         goto err;
     }
-    
+
     dir = wh->i_fc[1] & IEEE80211_FC1_DIR_MASK;
     type = wh->i_fc[0] & IEEE80211_FC0_TYPE_MASK;
     subtype = wh->i_fc[0] & IEEE80211_FC0_SUBTYPE_MASK;
-    
+
     if (type != IEEE80211_FC0_TYPE_CTL) {
         hdrlen = ieee80211_get_hdrlen(wh);
         if (mbuf_len(m) < hdrlen) {
@@ -330,7 +337,7 @@ ieee80211_inputm(struct _ifnet *ifp, mbuf_t m, struct ieee80211_node *ni,
         qos = 0;
         tid = 0;
     }
-    
+
     if (ic->ic_state == IEEE80211_S_RUN &&
         type == IEEE80211_FC0_TYPE_DATA && hasqos &&
         (subtype & IEEE80211_FC0_SUBTYPE_NODATA) == 0 &&
@@ -340,7 +347,7 @@ ieee80211_inputm(struct _ifnet *ifp, mbuf_t m, struct ieee80211_node *ni,
 #endif
         ) {
         int ba_state = ni->ni_rx_ba[tid].ba_state;
-        
+
 #ifndef IEEE80211_STA_ONLY
         if (ic->ic_opmode == IEEE80211_M_HOSTAP) {
             if (!IEEE80211_ADDR_EQ(wh->i_addr1,
@@ -369,7 +376,7 @@ ieee80211_inputm(struct _ifnet *ifp, mbuf_t m, struct ieee80211_node *ni,
                                   IEEE80211_REASON_SETUP_REQUIRED << 16 | tid);
             goto err;
         }
-        
+
         /*
          * Check if we have an explicit or implicit
          * Block Ack Request for a valid BA agreement.
@@ -395,7 +402,7 @@ ieee80211_inputm(struct _ifnet *ifp, mbuf_t m, struct ieee80211_node *ni,
             return;    /* don't free m! */
         }
     }
-    
+
     /*
      * We do not yet support fragments. Drop any fragmented packets.
      * Counter-measure against attacks where an arbitrary packet is
@@ -409,7 +416,7 @@ ieee80211_inputm(struct _ifnet *ifp, mbuf_t m, struct ieee80211_node *ni,
             (rxseq & IEEE80211_SEQ_FRAG_MASK))
             goto err;
     }
-    
+
     /* duplicate detection (see 9.2.9) */
     if (ieee80211_has_seq(wh) &&
         ic->ic_state != IEEE80211_S_SCAN) {
@@ -437,7 +444,7 @@ ieee80211_inputm(struct _ifnet *ifp, mbuf_t m, struct ieee80211_node *ni,
         ni->ni_rssi = rxi->rxi_rssi;
         ni->ni_rstamp = rxi->rxi_tstamp;
         ni->ni_inact = 0;
-        
+
         if (ic->ic_state == IEEE80211_S_RUN && ic->ic_bgscan_start) {
             /* Cancel or start background scan based on RSSI. */
             if ((*ic->ic_node_checkrssi)(ic, ni))
@@ -449,7 +456,7 @@ ieee80211_inputm(struct _ifnet *ifp, mbuf_t m, struct ieee80211_node *ni,
                                  500 * (ic->ic_bgscan_fail + 1));
         }
     }
-    
+
 #ifndef IEEE80211_STA_ONLY
     if (ic->ic_opmode == IEEE80211_M_HOSTAP &&
         (ic->ic_caps & IEEE80211_C_APPMGT) &&
@@ -463,14 +470,14 @@ ieee80211_inputm(struct _ifnet *ifp, mbuf_t m, struct ieee80211_node *ni,
             }
         } else if (ni->ni_pwrsave == IEEE80211_PS_DOZE) {
             mbuf_t m;
-            
+
             /* turn off PS mode */
             ni->ni_pwrsave = IEEE80211_PS_AWAKE;
             DPRINTF(("PS mode off for %s\n",
                      ether_sprintf(wh->i_addr2)));
-            
+
             (*ic->ic_set_tim)(ic, ni->ni_associd, 0);
-            
+
             /* dequeue buffered unicast frames */
             while ((m = mq_dequeue(&ni->ni_savedq)) != NULL) {
                 mq_enqueue(&ic->ic_pwrsaveq, m);
@@ -574,7 +581,7 @@ ieee80211_inputm(struct _ifnet *ifp, mbuf_t m, struct ieee80211_node *ni,
                     /* can't get there */
                     goto out;
             }
-            
+
             /* Do not process "no data" frames any further. */
             if (subtype & IEEE80211_FC0_SUBTYPE_NODATA) {
 #if NBPFILTER > 0
@@ -583,7 +590,7 @@ ieee80211_inputm(struct _ifnet *ifp, mbuf_t m, struct ieee80211_node *ni,
 #endif
                 goto out;
             }
-            
+
             if ((ic->ic_flags & IEEE80211_F_WEPON) ||
                 ((ic->ic_flags & IEEE80211_F_RSNON) &&
                  (ni->ni_flags & IEEE80211_NODE_RXPROT))) {
@@ -612,20 +619,24 @@ ieee80211_inputm(struct _ifnet *ifp, mbuf_t m, struct ieee80211_node *ni,
                 ic->ic_stats.is_rx_nowep++;
                 goto out;
             }
-            
+
 #if NBPFILTER > 0
             /* copy to listener after decrypt */
             if (ic->ic_rawbpf)
                 bpf_mtap(ic->ic_rawbpf, m, BPF_DIRECTION_IN);
 #endif
-            
+
+#ifdef AIRPORT_WCL
+            if (ic->ic_opmode == IEEE80211_M_STA)
+                ++ic->ic_wcl_rx_packets[hasqos ? ieee80211_wcl_ac(tid) : EDCA_AC_BE];
+#endif
             if ((ni->ni_flags & IEEE80211_NODE_HT) &&
                 hasqos && (qos & IEEE80211_QOS_AMSDU))
                 ieee80211_amsdu_decap(ic, m, ni, hdrlen, ml);
             else
                 ieee80211_decap(ic, m, ni, hdrlen, ml);
             return;
-            
+
         case IEEE80211_FC0_TYPE_MGT:
             if (dir != IEEE80211_FC1_DIR_NODS) {
                 ic->ic_stats.is_rx_wrongdir++;
@@ -645,19 +656,40 @@ ieee80211_inputm(struct _ifnet *ifp, mbuf_t m, struct ieee80211_node *ni,
                     goto out;
                 }
             }
-            
+
             if (ni->ni_flags & IEEE80211_NODE_RXMGMTPROT) {
-                /* MMPDU protection is on for Rx */
-                if (subtype == IEEE80211_FC0_SUBTYPE_DISASSOC ||
-                    subtype == IEEE80211_FC0_SUBTYPE_DEAUTH ||
-                    subtype == IEEE80211_FC0_SUBTYPE_ACTION) {
+                /*
+                 * MMPDU protection is on for Rx.  Only robust frames are
+                 * protected: an unprotected action frame of a non-robust
+                 * category (public, HT, VHT, vendor ...) is taken as is.
+                 * A protected frame's category is encrypted, so it counts
+                 * as robust.
+                 */
+                int robust = subtype == IEEE80211_FC0_SUBTYPE_DISASSOC ||
+                    subtype == IEEE80211_FC0_SUBTYPE_DEAUTH;
+                if (subtype == IEEE80211_FC0_SUBTYPE_ACTION) {
+                    u_int8_t category;
+                    robust = (wh->i_fc[1] & IEEE80211_FC1_PROTECTED) ||
+                        mbuf_copydata(m, sizeof(*wh), 1, &category) != 0 ||
+                        ieee80211_action_is_robust(category);
+                }
+                if (robust) {
                     if (!IEEE80211_IS_MULTICAST(wh->i_addr1) &&
                         !(wh->i_fc[1] & IEEE80211_FC1_PROTECTED)) {
                         /* unicast mgmt not encrypted */
                         goto out;
                     }
-                    /* do software decryption */
-                    m = ieee80211_decrypt(ic, m, ni);
+                    /*
+                     * The driver decrypted it with the pairwise key, which
+                     * lives in hardware only: check the replay counter and
+                     * strip the CCMP header as for data frames.  Software
+                     * decryption would drop it (the key has no software
+                     * copy).  Group frames use BIP in software.
+                     */
+                    if (rxi->rxi_flags & IEEE80211_RXI_HWDEC)
+                        m = ieee80211_input_hwdecrypt(ic, ni, m, rxi);
+                    else
+                        m = ieee80211_decrypt(ic, m, ni);
                     if (m == NULL) {
                         /* XXX stats */
                         goto out;
@@ -665,11 +697,12 @@ ieee80211_inputm(struct _ifnet *ifp, mbuf_t m, struct ieee80211_node *ni,
                     wh = mtod(m, struct ieee80211_frame *);
                 }
             } else if ((ic->ic_flags & IEEE80211_F_RSNON) &&
-                       (wh->i_fc[1] & IEEE80211_FC1_PROTECTED)) {
+                       ((wh->i_fc[1] & IEEE80211_FC1_PROTECTED) ||
+                        (rxi->rxi_flags & IEEE80211_RXI_HWDEC))) {
                 /* encrypted but MMPDU Rx protection off for TA */
                 goto out;
             }
-            
+
 #if NBPFILTER > 0
             if (bpf_mtap(ic->ic_rawbpf, m, BPF_DIRECTION_IN) != 0) {
                 /*
@@ -684,7 +717,7 @@ ieee80211_inputm(struct _ifnet *ifp, mbuf_t m, struct ieee80211_node *ni,
             (*ic->ic_recv_mgmt)(ic, m, ni, rxi, subtype);
             mbuf_freem(m);
             return;
-            
+
         case IEEE80211_FC0_TYPE_CTL:
             switch (subtype) {
 #ifndef IEEE80211_STA_ONLY
@@ -700,7 +733,7 @@ ieee80211_inputm(struct _ifnet *ifp, mbuf_t m, struct ieee80211_node *ni,
                     break;
             }
             goto out;
-            
+
         default:
             DPRINTF(("bad frame type %x\n", type));
             /* should not come here */
@@ -724,7 +757,7 @@ ieee80211_input(struct _ifnet *ifp, mbuf_t m, struct ieee80211_node *ni,
                 struct ieee80211_rxinfo *rxi)
 {
     struct mbuf_list ml = MBUF_LIST_INITIALIZER();
-    
+
     ieee80211_inputm(ifp, m, ni, rxi, &ml);
     if_input(ifp, &ml);
 }
@@ -742,15 +775,15 @@ ieee80211_defrag(struct ieee80211com *ic, mbuf_t m, int hdrlen)
     u_int16_t rxseq, seq;
     u_int8_t frag;
     int i;
-    
+
     wh = mtod(m, struct ieee80211_frame *);
     rxseq = letoh16(*(const u_int16_t *)wh->i_seq);
     seq = rxseq >> IEEE80211_SEQ_SEQ_SHIFT;
     frag = rxseq & IEEE80211_SEQ_FRAG_MASK;
-    
+
     if (frag == 0 && !(wh->i_fc[1] & IEEE80211_FC1_MORE_FRAG))
         return m;	/* not fragmented */
-    
+
     if (frag == 0) {
         /* first fragment, setup entry in the fragment cache */
         if (++ic->ic_defrag_cur == IEEE80211_DEFRAG_SIZE)
@@ -764,7 +797,7 @@ ieee80211_defrag(struct ieee80211com *ic, mbuf_t m, int hdrlen)
         timeout_add_sec(&df->df_to, 1);
         return NULL;	/* MSDU or MMPDU not yet complete */
     }
-    
+
     /* find matching entry in the fragment cache */
     for (i = 0; i < IEEE80211_DEFRAG_SIZE; i++) {
         df = &ic->ic_defrag[i];
@@ -787,16 +820,16 @@ ieee80211_defrag(struct ieee80211com *ic, mbuf_t m, int hdrlen)
         mbuf_freem(m);
         return NULL;
     }
-    
+
     df->df_frag = frag;
     /* strip 802.11 header and concatenate fragment */
     mbuf_adj(m, hdrlen);
     m_cat(df->df_m, m);
     mbuf_pkthdr_setlen(df->df_m, mbuf_pkthdr_len(df->df_m) + mbuf_pkthdr_len(m));
-    
+
     if (wh->i_fc[1] & IEEE80211_FC1_MORE_FRAG)
         return NULL;	/* MSDU or MMPDU not yet complete */
-    
+
     /* MSDU or MMPDU complete */
     timeout_del(&df->df_to);
     m = df->df_m;
@@ -812,11 +845,11 @@ ieee80211_defrag_timeout(void *arg)
 {
     struct ieee80211_defrag *df = (struct ieee80211_defrag *)arg;
     int s = splnet();
-    
+
     /* discard all received fragments */
     mbuf_freem(df->df_m);
     df->df_m = NULL;
-    
+
     splx(s);
 }
 #endif
@@ -835,14 +868,14 @@ ieee80211_input_ba(struct ieee80211com *ic, mbuf_t m,
     struct ieee80211_frame *wh;
     int idx, count;
     u_int16_t sn;
-    
+
     wh = mtod(m, struct ieee80211_frame *);
     sn = letoh16(*(u_int16_t *)wh->i_seq) >> IEEE80211_SEQ_SEQ_SHIFT;
-    
+
     /* reset Block Ack inactivity timer */
     if (ba->ba_timeout_val != 0)
         timeout_add_usec(&ba->ba_to, ba->ba_timeout_val);
-    
+
     if (SEQ_LT(sn, ba->ba_winstart)) {	/* SN < WinStartB */
         ic->ic_stats.is_ht_rx_frame_below_ba_winstart++;
         mbuf_freem(m);	/* discard the MPDU */
@@ -869,11 +902,12 @@ ieee80211_input_ba(struct ieee80211com *ic, mbuf_t m,
                 else
                     ba->ba_winmiss = 0;
                 ba->ba_missedsn = sn;
+                ic->ic_stats.is_ht_rx_ba_winmiss++;
                 ifp->netStat->inputErrors++;
                 mbuf_freem(m);	/* discard the MPDU */
                 return;
             }
-            
+
             /* It appears the window has moved for real. */
             ic->ic_stats.is_ht_rx_ba_window_jump++;
             ba->ba_winmiss = 0;
@@ -887,13 +921,14 @@ ieee80211_input_ba(struct ieee80211com *ic, mbuf_t m,
         }
     }
     /* WinStartB <= SN <= WinEndB */
-    
+
     ba->ba_winmiss = 0;
     ba->ba_missedsn = 0;
     idx = (sn - ba->ba_winstart) & 0xfff;
     idx = (ba->ba_head + idx) % IEEE80211_BA_MAX_WINSZ;
     /* store the received MPDU in the buffer */
     if (ba->ba_buf[idx].m != NULL) {
+        ic->ic_stats.is_ht_rx_ba_dup++;
         ifp->netStat->inputErrors++;
         ic->ic_stats.is_ht_rx_ba_no_buf++;
         mbuf_freem(m);
@@ -907,11 +942,11 @@ ieee80211_input_ba(struct ieee80211com *ic, mbuf_t m,
 
     if (ba->ba_buf[ba->ba_head].m == NULL && ba->ba_gapwait == 1)
         timeout_add_msec(&ba->ba_gap_to, IEEE80211_BA_GAP_TIMEOUT);
-    
+
     ieee80211_input_ba_flush(ic, ni, ba, ml);
 }
 
-/* 
+/*
  * Forward buffered frames with sequence number lower than max_seq.
  * See 802.11-2012 9.21.7.6.2 b.
  */
@@ -924,7 +959,7 @@ ieee80211_input_ba_seq(struct ieee80211com *ic, struct ieee80211_node *ni,
     struct ieee80211_frame *wh;
     uint16_t seq;
     int i = 0;
-    
+
     while (i++ < ba->ba_winsize) {
         /* gaps may exist */
         if (ba->ba_buf[ba->ba_head].m != NULL) {
@@ -955,31 +990,31 @@ ieee80211_input_ba_flush(struct ieee80211com *ic, struct ieee80211_node *ni,
 
 {
     struct _ifnet *ifp = &ic->ic_if;
-    
+
     /* Do not re-arm the gap timeout if we made no progress. */
     if (ba->ba_buf[ba->ba_head].m == NULL)
         return;
-    
+
     /* pass reordered MPDUs up to the next MAC process */
     while (ba->ba_buf[ba->ba_head].m != NULL) {
         ieee80211_inputm(ifp, ba->ba_buf[ba->ba_head].m, ni,
                          &ba->ba_buf[ba->ba_head].rxi, ml);
         ba->ba_buf[ba->ba_head].m = NULL;
         ba->ba_gapwait--;
-        
+
         ba->ba_head = (ba->ba_head + 1) % IEEE80211_BA_MAX_WINSZ;
         /* move window forward */
         ba->ba_winstart = (ba->ba_winstart + 1) & 0xfff;
     }
     ba->ba_winend = (ba->ba_winstart + ba->ba_winsize - 1) & 0xfff;
-    
+
     if (timeout_pending(&ba->ba_gap_to))
         timeout_del(&ba->ba_gap_to);
     if (ba->ba_gapwait)
         timeout_add_msec(&ba->ba_gap_to, IEEE80211_BA_GAP_TIMEOUT);
 }
 
-/* 
+/*
  * Forcibly move the BA window forward to remove a leading gap which has
  * been causing frames to linger in the reordering buffer for too long.
  * A leading gap will occur if a particular A-MPDU subframe never arrives
@@ -1009,11 +1044,11 @@ ieee80211_input_ba_gap_timeout(void *arg)
     struct ieee80211_node *ni = ba->ba_ni;
     struct ieee80211com *ic = ni->ni_ic;
     int s, skipped;
-    
+
     ic->ic_stats.is_ht_rx_ba_window_gap_timeout++;
-    
+
     s = splnet();
-    
+
     skipped = ieee80211_input_ba_gap_skip(ba);
     ic->ic_stats.is_ht_rx_ba_frame_lost += skipped;
     if (skipped) {
@@ -1021,7 +1056,7 @@ ieee80211_input_ba_gap_timeout(void *arg)
         ieee80211_input_ba_flush(ic, ni, ba, &ml);
         if_input(&ic->ic_if, &ml);
     }
-    
+
     splx(s);
 }
 
@@ -1037,9 +1072,9 @@ ieee80211_ba_move_window(struct ieee80211com *ic, struct ieee80211_node *ni,
     struct _ifnet *ifp = &ic->ic_if;
     struct ieee80211_rx_ba *ba = &ni->ni_rx_ba[tid];
     int count;
-    
+
     /* assert(WinStartB <= SSN) */
-    
+
     count = (ssn - ba->ba_winstart) & 0xfff;
     if (count > ba->ba_winsize)    /* no overlap */
         count = ba->ba_winsize;
@@ -1057,7 +1092,7 @@ ieee80211_ba_move_window(struct ieee80211com *ic, struct ieee80211_node *ni,
     /* move window forward */
     ba->ba_winstart = ssn;
     ba->ba_winend = (ba->ba_winstart + ba->ba_winsize - 1) & 0xfff;
-    
+
     ieee80211_input_ba_flush(ic, ni, ba, ml);
 }
 
@@ -1069,9 +1104,9 @@ ieee80211_enqueue_data(struct ieee80211com *ic, mbuf_t m,
     struct ether_header *eh;
     mbuf_t m1;
     mbuf_t m2;
-    
+
     eh = mtod(m, struct ether_header *);
-    
+
     if ((ic->ic_flags & IEEE80211_F_RSNON) && !ni->ni_port_valid &&
         eh->ether_type != htons(ETHERTYPE_PAE)) {
         DPRINTF(("port not valid: %s\n",
@@ -1080,7 +1115,7 @@ ieee80211_enqueue_data(struct ieee80211com *ic, mbuf_t m,
         mbuf_freem(m);
         return;
     }
-    
+
     /*
      * Perform as a bridge within the AP.  Notice that we do not
      * bridge EAPOL frames as suggested in C.1.1 of IEEE Std 802.1X.
@@ -1092,7 +1127,7 @@ ieee80211_enqueue_data(struct ieee80211com *ic, mbuf_t m,
         !(ic->ic_userflags & IEEE80211_F_NOBRIDGE) &&
         eh->ether_type != htons(ETHERTYPE_PAE)) {
         struct ieee80211_node *ni1;
-        
+
         if (ETHER_IS_MULTICAST(eh->ether_dhost)) {
             m1 = m_dup_pkt(m, ETHER_ALIGN, MBUF_DONTWAIT);
             if (m1 == NULL) {
@@ -1129,15 +1164,23 @@ ieee80211_enqueue_data(struct ieee80211com *ic, mbuf_t m,
             if (ifp->if_bpf && m1 == NULL)
                 bpf_mtap(ifp->if_bpf, m, BPF_DIRECTION_IN);
 #endif
-#ifdef USE_APPLE_SUPPLICANT
+#if defined(AIRPORT_WCL)
+            if (ic->ic_wcl_enterprise) {
+                mbuf_t eapCopy = NULL;
+                if (mbuf_dup(m, MBUF_DONTWAIT, &eapCopy) == 0 && eapCopy)
+                    ml_enqueue(ml, eapCopy);
+            }
+            ieee80211_eapol_key_input(ic, m, ni);
+#elif defined(USE_APPLE_SUPPLICANT)
             ml_enqueue(ml, m);
 #else
 #ifdef IO80211FAMILY_V2
+            // 802.1X: a copy goes to user space with the other received frames, as in the WCL branch
+            // (audit NX02: the copy was delivered straight to ifp->iface without checking it or mbuf_dup).
             if (ieee80211_is_8021x_akm((enum ieee80211_akm)ni->ni_rsnakms)) {
-                XYLog("%s Duplicate EAPOL packet to user space\n", __FUNCTION__);
-                mbuf_dup(m, MBUF_DONTWAIT, &m2);
-                if (m2 != NULL)
-                    ifp->iface->inputPacket(m2, mbuf_len(m2));
+                m2 = NULL;
+                if (mbuf_dup(m, MBUF_DONTWAIT, &m2) == 0 && m2)
+                    ml_enqueue(ml, m2);
             }
 #endif
             ieee80211_eapol_key_input(ic, m, ni);
@@ -1156,7 +1199,7 @@ ieee80211_decap(struct ieee80211com *ic, mbuf_t m,
     struct ieee80211_frame *wh;
     struct llc *llc;
     int mcast;
-    
+
     if (mbuf_len(m) < hdrlen + LLC_SNAPFRAMELEN &&
         mbuf_pullup(&m, hdrlen + LLC_SNAPFRAMELEN)) {
         ic->ic_stats.is_rx_decap++;
@@ -1217,8 +1260,8 @@ ieee80211_amsdu_decap_validate(struct ieee80211com *ic, mbuf_t m,
     const uint8_t llc_hdr_mac[ETHER_ADDR_LEN] = {
         /* MAC address matching the 802.2 LLC header. */
         LLC_SNAP_LSAP, LLC_SNAP_LSAP, LLC_UI, 0, 0, 0
-    }; 
-    
+    };
+
     /*
      * We are sorry, but this particular MAC address cannot be used.
      * This mitigates an attack where a single 802.11 frame is interpreted
@@ -1228,7 +1271,7 @@ ieee80211_amsdu_decap_validate(struct ieee80211com *ic, mbuf_t m,
      */
     if (ETHER_IS_EQ(eh->ether_dhost, llc_hdr_mac))
         return 1;
-    
+
     switch (ic->ic_opmode) {
 #ifndef IEEE80211_STA_ONLY
         case IEEE80211_M_HOSTAP:
@@ -1249,7 +1292,7 @@ ieee80211_amsdu_decap_validate(struct ieee80211com *ic, mbuf_t m,
             /* Ignore MONITOR/IBSS modes for now. */
             break;
     }
-    
+
     return 0;
 }
 
@@ -1266,18 +1309,21 @@ ieee80211_amsdu_decap(struct ieee80211com *ic, mbuf_t m,
     int len, pad, mcast;
     struct ieee80211_frame *wh;
     struct mbuf_list subframes = MBUF_LIST_INITIALIZER();
-    
+
     wh = mtod(m, struct ieee80211_frame *);
     mcast = IEEE80211_IS_MULTICAST(wh->i_addr1);
-    
+
     /* strip 802.11 header */
     mbuf_adj(m, hdrlen);
-    
+
     while (mbuf_pkthdr_len(m) >= ETHER_HDR_LEN + LLC_SNAPFRAMELEN) {
         /* process an A-MSDU subframe */
-        mbuf_pullup(&m, ETHER_HDR_LEN + LLC_SNAPFRAMELEN);
-        if (m == NULL)
-            break;
+        if (mbuf_len(m) < ETHER_HDR_LEN + LLC_SNAPFRAMELEN &&
+            mbuf_pullup(&m, ETHER_HDR_LEN + LLC_SNAPFRAMELEN)) {
+            ic->ic_stats.is_rx_decap++;
+            ml_purge(&subframes);
+            return;
+        }
         eh = mtod(m, struct ether_header *);
         /* examine 802.3 header */
         len = ntohs(eh->ether_type);
@@ -1314,36 +1360,38 @@ ieee80211_amsdu_decap(struct ieee80211com *ic, mbuf_t m,
             mbuf_freem(m);
             return;
         }
-        
+
         /* "detach" our A-MSDU subframe from the others */
-        mbuf_split(m, len, MBUF_DONTWAIT, &n);
-        if (n == NULL) {
+        n = NULL;
+        if (mbuf_split(m, len, MBUF_DONTWAIT, &n) != 0 || n == NULL) {
             /* stop processing A-MSDU subframes */
             ic->ic_stats.is_rx_decap++;
             ml_purge(&subframes);
             mbuf_freem(m);
             return;
         }
-        
+
         if (ieee80211_amsdu_decap_validate(ic, m, ni)) {
             /* stop processing A-MSDU subframes */
             ic->ic_stats.is_rx_decap++;
             ml_purge(&subframes);
             mbuf_freem(m);
+            /* The split left the remaining subframes in n; they're ours too. */
+            mbuf_freem(n);
             return;
         }
-        
+
         ml_enqueue(&subframes, m);
-        
+
         m = n;
         /* remove padding */
         pad = ((len + 3) & ~3) - len;
         mbuf_adj(m, pad);
     }
-    
+
     while ((n = ml_dequeue(&subframes)) != NULL)
         ieee80211_enqueue_data(ic, n, ni, mcast, ml);
-    
+
     mbuf_freem(m);
 }
 
@@ -1355,7 +1403,7 @@ ieee80211_parse_edca_params_body(struct ieee80211com *ic, const u_int8_t *frm)
 {
     u_int updtcount;
     int aci;
-    
+
     /*
      * Check if EDCA parameters have changed XXX if we miss more than
      * 15 consecutive beacons, we might not detect changes to EDCA
@@ -1365,13 +1413,13 @@ ieee80211_parse_edca_params_body(struct ieee80211com *ic, const u_int8_t *frm)
     if (updtcount == ic->ic_edca_updtcount)
         return 0;    /* no changes to EDCA parameters, ignore */
     ic->ic_edca_updtcount = updtcount;
-    
+
     frm += 2;    /* skip QoS Info & Reserved fields */
-    
+
     /* parse AC Parameter Records */
     for (aci = 0; aci < EDCA_NUM_AC; aci++) {
         struct ieee80211_edca_ac_params *ac = &ic->ic_edca_ac[aci];
-        
+
         ac->ac_acm       = (frm[0] >> 4) & 0x1;
         ac->ac_aifsn     = frm[0] & 0xf;
         ac->ac_ecwmin    = frm[1] & 0xf;
@@ -1382,7 +1430,7 @@ ieee80211_parse_edca_params_body(struct ieee80211com *ic, const u_int8_t *frm)
     /* give drivers a chance to update their settings */
     if ((ic->ic_flags & IEEE80211_F_QOS) && ic->ic_updateedca != NULL)
         (*ic->ic_updateedca)(ic);
-    
+
     return 0;
 }
 
@@ -1463,6 +1511,8 @@ ieee80211_parse_rsn_akm(const u_int8_t selector[4])
                 return IEEE80211_AKM_SHA256_8021X;
             case 6:    /* PSK with SHA256 KDF */
                 return IEEE80211_AKM_SHA256_PSK;
+            case 8:    /* SAE (WPA3-Personal) */
+                return IEEE80211_AKM_SAE;
         }
     }
     return IEEE80211_AKM_NONE;    /* ignore unknown AKMs */
@@ -1477,16 +1527,16 @@ ieee80211_parse_rsn_body(struct ieee80211com *ic, const u_int8_t *frm,
 {
     const u_int8_t *efrm;
     u_int16_t m, n, s;
-    
+
     efrm = frm + len;
-    
+
     /* check Version field */
     if (LE_READ_2(frm) != 1)
         return IEEE80211_STATUS_RSN_IE_VER_UNSUP;
     frm += 2;
-    
+
     /* all fields after the Version field are optional */
-    
+
     /* if Cipher Suite missing, default to CCMP */
     rsn->rsn_groupcipher = IEEE80211_CIPHER_CCMP;
     rsn->rsn_nciphers = 1;
@@ -1499,7 +1549,7 @@ ieee80211_parse_rsn_body(struct ieee80211com *ic, const u_int8_t *frm,
     /* if RSN capabilities missing, default to 0 */
     rsn->rsn_caps = 0;
     rsn->rsn_npmkids = 0;
-    
+
     /* read Group Data Cipher Suite field */
     if (frm + 4 > efrm)
         return 0;
@@ -1509,13 +1559,13 @@ ieee80211_parse_rsn_body(struct ieee80211com *ic, const u_int8_t *frm,
         rsn->rsn_groupcipher == IEEE80211_CIPHER_BIP)
         return IEEE80211_STATUS_BAD_GROUP_CIPHER;
     frm += 4;
-    
+
     /* read Pairwise Cipher Suite Count field */
     if (frm + 2 > efrm)
         return 0;
     m = rsn->rsn_nciphers = LE_READ_2(frm);
     frm += 2;
-    
+
     /* read Pairwise Cipher Suite List */
     if (frm + m * 4 > efrm)
         return IEEE80211_STATUS_IE_INVALID;
@@ -1530,13 +1580,13 @@ ieee80211_parse_rsn_body(struct ieee80211com *ic, const u_int8_t *frm,
         if (rsn->rsn_groupcipher == IEEE80211_CIPHER_CCMP)
             return IEEE80211_STATUS_BAD_PAIRWISE_CIPHER;
     }
-    
+
     /* read AKM Suite List Count field */
     if (frm + 2 > efrm)
         return 0;
     n = rsn->rsn_nakms = LE_READ_2(frm);
     frm += 2;
-    
+
     /* read AKM Suite List */
     if (frm + n * 4 > efrm)
         return IEEE80211_STATUS_IE_INVALID;
@@ -1545,19 +1595,19 @@ ieee80211_parse_rsn_body(struct ieee80211com *ic, const u_int8_t *frm,
         rsn->rsn_akms |= ieee80211_parse_rsn_akm(frm);
         frm += 4;
     }
-    
+
     /* read RSN Capabilities field */
     if (frm + 2 > efrm)
         return 0;
     rsn->rsn_caps = LE_READ_2(frm);
     frm += 2;
-    
+
     /* read PMKID Count field */
     if (frm + 2 > efrm)
         return 0;
     s = rsn->rsn_npmkids = LE_READ_2(frm);
     frm += 2;
-    
+
     /* read PMKID List */
     if (frm + s * IEEE80211_PMKID_LEN > efrm)
         return IEEE80211_STATUS_IE_INVALID;
@@ -1565,14 +1615,14 @@ ieee80211_parse_rsn_body(struct ieee80211com *ic, const u_int8_t *frm,
         rsn->rsn_pmkids = frm;
         frm += s * IEEE80211_PMKID_LEN;
     }
-    
+
     /* read Group Management Cipher Suite field */
     if (frm + 4 > efrm)
         return 0;
     rsn->rsn_groupmgmtcipher = ieee80211_parse_rsn_cipher(frm);
     if (rsn->rsn_groupmgmtcipher != IEEE80211_CIPHER_BIP)
         return IEEE80211_STATUS_BAD_GROUP_CIPHER;
-    
+
     return IEEE80211_STATUS_SUCCESS;
 }
 
@@ -1606,7 +1656,7 @@ ieee80211_save_ie(const u_int8_t *frm, u_int8_t **ie)
 {
     int olen = *ie ? 2 + (*ie)[1] : 0;
     int len = 2 + frm[1];
-    
+
     if (*ie == NULL || olen != len) {
         if (*ie != NULL)
             free(*ie);
@@ -1625,7 +1675,7 @@ int
 ieee80211_save_ie_tlv(const u_int8_t *frm, u_int8_t **ie, uint32_t *accept_len, uint32_t len)
 {
     int olen = *accept_len;
-    
+
     if (*ie == NULL || olen != len) {
         if (*ie != NULL && *accept_len > 0)
             free(*ie);
@@ -1636,6 +1686,42 @@ ieee80211_save_ie_tlv(const u_int8_t *frm, u_int8_t **ie, uint32_t *accept_len, 
     *accept_len = len;
     memcpy(*ie, frm, len);
     return 0;
+}
+
+/* The frame walker has already checked each complete IE's boundary. */
+static void
+ieee80211_update_he_params(struct ieee80211com *ic, struct ieee80211_node *ni,
+    const uint8_t *hecap, const uint8_t *heopmode, const uint8_t *he_mu_edca)
+{
+    uint32_t old_he_op = ni->ni_he_oper_params;
+    bool he_changed = false;
+    /* Beacon omissions must not erase a live association's HE context. */
+    if (ni != ic->ic_bss || ic->ic_state != IEEE80211_S_RUN)
+        ni->ni_flags &= ~(IEEE80211_NODE_HECAP | IEEE80211_NODE_HEOP | IEEE80211_NODE_HE_MU_EDCA);
+    if (hecap != NULL && heopmode != NULL) {
+        bool live_he = ni == ic->ic_bss && ic->ic_state == IEEE80211_S_RUN &&
+            (ni->ni_flags & IEEE80211_NODE_HE);
+        if (!live_he)
+            ieee80211_setup_hecaps(ni, hecap + 3, hecap[1] - 1);
+        if (!live_he || (heopmode[1] >= 7 &&
+            ieee80211_he_oper_size(heopmode + 3) <= heopmode[1]))
+            ieee80211_setup_heop(ni, heopmode + 3, heopmode[1] - 1);
+        he_changed = old_he_op != ni->ni_he_oper_params;
+    }
+    if (he_mu_edca != NULL) {
+        bool valid = true;
+        for (unsigned ac = 0; ac < 4; ac++)
+            if (((he_mu_edca[1 + 3 * ac] >> 5) & 3) != ac) valid = false;
+        if (valid) {
+            he_changed |= !(ni->ni_flags & IEEE80211_NODE_HE_MU_EDCA) ||
+                memcmp(ni->ni_he_mu_edca, he_mu_edca, 13) != 0;
+            memcpy(ni->ni_he_mu_edca, he_mu_edca, 13);
+            ni->ni_flags |= IEEE80211_NODE_HE_MU_EDCA;
+        }
+    }
+    if (he_changed && ni == ic->ic_bss && ic->ic_state == IEEE80211_S_RUN &&
+        (ni->ni_flags & IEEE80211_NODE_HE) && ic->ic_updateprot)
+        ic->ic_updateprot(ic);
 }
 
 /*-
@@ -1662,16 +1748,17 @@ ieee80211_recv_probe_resp(struct ieee80211com *ic, mbuf_t m,
     const struct ieee80211_frame *wh;
     const u_int8_t *frm, *efrm;
     const u_int8_t *tstamp, *ssid, *rates, *xrates, *edcaie, *wmmie;
-    const u_int8_t *rsnie, *wpaie, *htcaps, *htop;
+    const u_int8_t *rsnie, *rsnxeie, *wpaie, *htcaps, *htop;
     const uint8_t *csa;
     const uint8_t *vhtcap;
     const uint8_t *vhtopmode;
     const uint8_t *hecap;
     const uint8_t *heopmode;
+    const uint8_t *he_mu_edca = NULL;
     u_int16_t capinfo, bintval;
     u_int8_t chan, bchan, erp, dtim_count, dtim_period;
     int is_new;
-    
+
     /*
      * We process beacon/probe response frames for:
      *    o station mode: to collect state
@@ -1702,13 +1789,14 @@ ieee80211_recv_probe_resp(struct ieee80211com *ic, mbuf_t m,
     wh = mtod(m, struct ieee80211_frame *);
     frm = (const u_int8_t *)&wh[1];
     efrm = mtod(m, u_int8_t *) + mbuf_len(m);
-    
+
     tstamp  = frm; frm += 8;
     bintval = LE_READ_2(frm); frm += 2;
     capinfo = LE_READ_2(frm); frm += 2;
-    
+
     ssid = rates = xrates = edcaie = wmmie = rsnie = wpaie = csa = vhtcap = vhtopmode = hecap = heopmode = NULL;
     htcaps = htop = NULL;
+    rsnxeie = NULL;
     if (rxi->rxi_chan)
          bchan = rxi->rxi_chan;
      else
@@ -1757,6 +1845,9 @@ ieee80211_recv_probe_resp(struct ieee80211com *ic, mbuf_t m,
             case IEEE80211_ELEMID_RSN:
                 rsnie = frm;
                 break;
+            case IEEE80211_ELEMID_RSNXE:
+                rsnxeie = frm;
+                break;
             case IEEE80211_ELEMID_EDCAPARMS:
                 edcaie = frm;
                 break;
@@ -1786,8 +1877,11 @@ ieee80211_recv_probe_resp(struct ieee80211com *ic, mbuf_t m,
                 }
                 break;
             case IEEE80211_ELEMID_EXTENSION:
+                if (frm[1] < 1)
+                    break;
                 switch (frm[2]) {
                     case IEEE80211_ELEMID_EXT_HE_MU_EDCA:
+                        if (frm[1] == 14) he_mu_edca = frm + 3;
                         break;
                     case IEEE80211_ELEMID_EXT_HE_CAPABILITY:
                         hecap = frm;
@@ -1860,7 +1954,45 @@ ieee80211_recv_probe_resp(struct ieee80211com *ic, mbuf_t m,
         ic->ic_stats.is_rx_chanmismatch++;
         return;
     }
-    
+
+    /*
+     * Beacon hint, as Linux's regulatory code does: an AP beaconing on the
+     * channel it was heard on shows that initiating there is allowed, even
+     * when the NVM marks the channel passive. Only beacons received on their
+     * own channel count. An AP operating at 80 MHz on 149-161 (VHT centre 155)
+     * covers all four 20 MHz channels. Radar (DFS) flags are not affected:
+     * users of the hint still refuse DFS channels.
+     */
+    if (!isprobe && rxi->rxi_chan != 0 && chan == rxi->rxi_chan &&
+        (capinfo & IEEE80211_CAPINFO_ESS) &&
+        !(ic->ic_channels[chan].ic_flags & IEEE80211_CHAN_DFS)) {
+        setbit(ic->ic_beacon_hint, chan);
+        if (vhtopmode != NULL && chan >= 149 && chan <= 161 &&
+            ((const struct ieee80211_ie_vht_operation *)vhtopmode)->chan_width == 1 &&
+            ((const struct ieee80211_ie_vht_operation *)vhtopmode)->center_freq_seg1_idx == 155) {
+            for (unsigned c = 149; c <= 161; c += 4)
+                if (!(ic->ic_channels[c].ic_flags & IEEE80211_CHAN_DFS))
+                    setbit(ic->ic_beacon_hint, c);
+        }
+        /*
+         * The same for 36-48 (VHT centre 42), the block Apple's AWDL uses at
+         * 80 MHz on channel 44 where 149 isn't allowed (Japan, for example).
+         * A 160 MHz AP on 36-64 signals centre 42 with a second segment of 50,
+         * or, in the older form, width 2 with centre 50; either covers 36-48.
+         */
+        if (vhtopmode != NULL && chan >= 36 && chan <= 48) {
+            const struct ieee80211_ie_vht_operation *op =
+                (const struct ieee80211_ie_vht_operation *)vhtopmode;
+            if ((op->chan_width == 1 && (op->center_freq_seg1_idx == 42 ||
+                                         op->center_freq_seg1_idx == 50)) ||
+                (op->chan_width == 2 && op->center_freq_seg1_idx == 50)) {
+                for (unsigned c = 36; c <= 48; c += 4)
+                    if (!(ic->ic_channels[c].ic_flags & IEEE80211_CHAN_DFS))
+                        setbit(ic->ic_beacon_hint, c);
+            }
+        }
+    }
+
 #ifdef IEEE80211_DEBUG
     if (ieee80211_debug > 1 &&
         (ni == NULL || ic->ic_state == IEEE80211_S_SCAN ||
@@ -1875,7 +2007,7 @@ ieee80211_recv_probe_resp(struct ieee80211com *ic, mbuf_t m,
               __func__, capinfo, bintval, erp);
     }
 #endif
-    
+
     if ((ni = ieee80211_find_node(ic, wh->i_addr2)) == NULL) {
         ni = ieee80211_alloc_node(ic, wh->i_addr2);
         if (ni == NULL)
@@ -1883,29 +2015,26 @@ ieee80211_recv_probe_resp(struct ieee80211com *ic, mbuf_t m,
         is_new = 1;
     } else
         is_new = 0;
-    
+
     ni->ni_chan = &ic->ic_channels[chan];
-    
+
     if (htcaps)
         ieee80211_setup_htcaps(ni, htcaps + 2, htcaps[1]);
     if (htop && !ieee80211_setup_htop(ni, htop + 2, htop[1], 1))
         htop = NULL; /* invalid HTOP */
-    
+
     if (vhtcap != NULL && vhtopmode != NULL) {
         ieee80211_setup_vhtcaps(ic, ni, vhtcap);
         ieee80211_setup_vhtopmode(ni, vhtopmode);
     }
-    if (hecap != NULL && heopmode != NULL) {
-        ieee80211_setup_hecaps(ni, hecap + 3, hecap[1] - 1);
-        ieee80211_setup_heop(ni, heopmode + 3, heopmode[1] - 1);
-    }
-    
+    ieee80211_update_he_params(ic, ni, hecap, heopmode, he_mu_edca);
+
     ni->ni_dtimcount = dtim_count;
     ni->ni_dtimperiod = dtim_period;
 #ifdef AIRPORT
     ni->ni_age_ts = airport_up_time();
 #endif
-    
+
     /*
      * When operating in station mode, check for state updates
      * while we're associated.
@@ -1975,7 +2104,7 @@ ieee80211_recv_probe_resp(struct ieee80211com *ic, mbuf_t m,
             }
         } else if (htop)
             ic->ic_bss->ni_htop0 = ni->ni_htop0;
-        
+
         /*
          * Check if AP short slot time setting has changed
          * since last beacon and give the driver a chance to
@@ -1987,15 +2116,15 @@ ieee80211_recv_probe_resp(struct ieee80211com *ic, mbuf_t m,
                                         ic->ic_curmode == IEEE80211_MODE_11A ||
                                         (capinfo & IEEE80211_CAPINFO_SHORT_SLOTTIME));
         }
-        
+
         if (!ic->ic_bss->ni_dtimperiod) {
             ic->ic_bss->ni_dtimcount = ni->ni_dtimcount;
             ic->ic_bss->ni_dtimperiod = ni->ni_dtimperiod ?: 1;
-            
+
             if (ic->ic_updatedtim != NULL)
                 ic->ic_updatedtim(ic);
         }
-        
+
         /*
          * Reset management timer. If it is non-zero in RUN state, the
          * driver sent a probe request after a missed beacon event.
@@ -2019,12 +2148,16 @@ ieee80211_recv_probe_resp(struct ieee80211com *ic, mbuf_t m,
         else
             ni->ni_flags &= ~IEEE80211_NODE_QOS;
     }
-    
+
+
     if (ic->ic_state == IEEE80211_S_SCAN ||
         (ic->ic_flags & IEEE80211_F_BGSCAN)) {
         struct ieee80211_rsnparams rsn, wpa;
-        
-        uint32_t tlv_len = (mtod(m, u_int8_t *) + mbuf_len(m)) - (u_int8_t *)&wh[1] + 1 - 8 - 2 - 2;
+        int preserve_rsnxe;
+
+        // Elements start after the 8-byte timestamp, 2-byte interval and 2-byte capabilities. The non-WCL
+        // form had a stray + 1 and saved one byte past the frame (audit NX01).
+        uint32_t tlv_len = (mtod(m, u_int8_t *) + mbuf_len(m)) - (u_int8_t *)&wh[1] - 8 - 2 - 2;
         ieee80211_save_ie_tlv(((u_int8_t *)&wh[1]) + 8 + 2 + 2, &ni->ni_rsnie_tlv, &ni->ni_rsnie_tlv_len, tlv_len);
         ni->ni_rsnprotos = IEEE80211_PROTO_NONE;
         ni->ni_supported_rsnprotos = IEEE80211_PROTO_NONE;
@@ -2034,7 +2167,19 @@ ieee80211_recv_probe_resp(struct ieee80211com *ic, mbuf_t m,
         ni->ni_rsngroupcipher = (enum ieee80211_cipher)0;
         ni->ni_rsngroupmgmtcipher = (enum ieee80211_cipher)0;
         ni->ni_rsncaps = 0;
-        
+        /*
+         * A beacon refresh of the associated node must not lose the RSNXE
+         * snapshot the 4-way handshake checks against, e.g. if this beacon
+         * omitted the element.
+         */
+        preserve_rsnxe = (ni == ic->ic_bss &&
+            ic->ic_state != IEEE80211_S_SCAN);
+        if (!preserve_rsnxe) {
+            ni->ni_rsnxecaps = 0;
+            explicit_bzero(ni->ni_rsnxe, sizeof(ni->ni_rsnxe));
+            ni->ni_rsnxe_len = 0;
+        }
+
         if (rsnie != NULL &&
             ieee80211_parse_rsn(ic, rsnie, &rsn) == 0) {
             ni->ni_supported_rsnprotos |= IEEE80211_PROTO_RSN;
@@ -2045,7 +2190,7 @@ ieee80211_recv_probe_resp(struct ieee80211com *ic, mbuf_t m,
             ni->ni_supported_rsnprotos |= IEEE80211_PROTO_WPA;
             ni->ni_supported_rsnakms |= wpa.rsn_akms;
         }
-        
+
         /*
          * If the AP advertises both WPA and RSN IEs (WPA1+WPA2),
          * we only use the highest protocol version we support.
@@ -2065,6 +2210,18 @@ ieee80211_recv_probe_resp(struct ieee80211com *ic, mbuf_t m,
                 ni->ni_rsngroupmgmtcipher =
                 rsn.rsn_groupmgmtcipher;
                 ni->ni_rsncaps = rsn.rsn_caps;
+                /*
+                 * Remember the AP's RSNXE verbatim.  The 4-way handshake
+                 * requires message 3 to carry the exact same element, and
+                 * SAE needs the H2E bit to pick the PWE derivation.
+                 */
+                if (!preserve_rsnxe && rsnxeie != NULL &&
+                    ieee80211_rsnxe_valid(rsnxeie,
+                        (size_t)rsnxeie[1] + 2)) {
+                    ni->ni_rsnxecaps = rsnxeie[2];
+                    ni->ni_rsnxe_len = rsnxeie[1] + 2;
+                    memcpy(ni->ni_rsnxe, rsnxeie, ni->ni_rsnxe_len);
+                }
             }
         } else if (wpaie != NULL &&
                    (ni->ni_supported_rsnprotos & IEEE80211_PROTO_WPA) &&
@@ -2084,7 +2241,7 @@ ieee80211_recv_probe_resp(struct ieee80211com *ic, mbuf_t m,
             }
         }
     }
-    
+
     /*
      * Set our SSID if we do not know it yet.
      * If we are doing a directed scan for an AP with a hidden SSID
@@ -2120,6 +2277,18 @@ ieee80211_recv_probe_resp(struct ieee80211com *ic, mbuf_t m,
     ni->ni_erp = erp;
     /* NB: must be after ni_chan is setup */
     ieee80211_setup_rates(ic, ni, rates, xrates, IEEE80211_F_DOSORT);
+#ifdef AIRPORT_WCL
+    if (ic->ic_event_handler) {
+        const uint8_t *ies = (const uint8_t *)&wh[1] + 12;
+        const uint8_t *end = mtod(m, const uint8_t *) + mbuf_len(m);
+        if (end >= ies) {
+            struct ieee80211_beacon_event event = {ni, ies, (size_t)(end - ies),
+                (const uint8_t *)wh, (size_t)(end - (const uint8_t *)wh)};
+            ic->ic_event_handler(ic, IEEE80211_EVT_BEACON, &event);
+        }
+    }
+#endif
+
 #ifndef IEEE80211_STA_ONLY
     if (ic->ic_opmode == IEEE80211_M_IBSS && is_new && isprobe) {
         /*
@@ -2149,15 +2318,15 @@ ieee80211_recv_probe_req(struct ieee80211com *ic, mbuf_t m,
     const u_int8_t *frm, *efrm;
     const u_int8_t *ssid, *rates, *xrates, *htcaps;
     u_int8_t rate;
-    
+
     if (ic->ic_opmode == IEEE80211_M_STA ||
         ic->ic_state != IEEE80211_S_RUN)
         return;
-    
+
     wh = mtod(m, struct ieee80211_frame *);
     frm = (const u_int8_t *)&wh[1];
     efrm = mtod(m, u_int8_t *) + mbuf_len(m);
-    
+
     ssid = rates = xrates = htcaps = NULL;
     while (frm + 2 <= efrm) {
         if (frm + 2 + frm[1] > efrm) {
@@ -2203,7 +2372,7 @@ ieee80211_recv_probe_req(struct ieee80211com *ic, mbuf_t m,
         ic->ic_stats.is_rx_ssidmismatch++;
         return;
     }
-    
+
     if (ni == ic->ic_bss) {
         ni = ieee80211_find_node(ic, wh->i_addr2);
         if (ni == NULL)
@@ -2244,7 +2413,7 @@ ieee80211_recv_auth(struct ieee80211com *ic, mbuf_t m,
     const struct ieee80211_frame *wh;
     const u_int8_t *frm;
     u_int16_t algo, seq, status;
-    
+
     /* make sure all mandatory fixed fields are present */
     if (mbuf_len(m) < sizeof(*wh) + 6) {
         DPRINTF(("frame too short\n"));
@@ -2252,13 +2421,18 @@ ieee80211_recv_auth(struct ieee80211com *ic, mbuf_t m,
     }
     wh = mtod(m, struct ieee80211_frame *);
     frm = (const u_int8_t *)&wh[1];
-    
+
     algo   = LE_READ_2(frm); frm += 2;
     seq    = LE_READ_2(frm); frm += 2;
     status = LE_READ_2(frm); frm += 2;
     DPRINTF(("auth %d seq %d from %s\n", algo, seq,
              ether_sprintf((u_int8_t *)wh->i_addr2)));
-    
+
+    if (algo == IEEE80211_AUTH_ALG_SAE) {
+        ieee80211_auth_sae(ic, wh, frm, mbuf_len(m) - sizeof(*wh) - 6,
+            ni, rxi, seq, status);
+        return;
+    }
     /* only "open" auth mode is supported */
     if (algo != IEEE80211_AUTH_ALG_OPEN) {
         DPRINTF(("unsupported auth algorithm %d from %s\n",
@@ -2304,11 +2478,11 @@ ieee80211_recv_assoc_req(struct ieee80211com *ic, mbuf_t m,
     struct ieee80211_rsnparams rsn;
     u_int8_t rate;
     const u_int8_t *saveie = NULL;
-    
+
     if (ic->ic_opmode != IEEE80211_M_HOSTAP ||
         ic->ic_state != IEEE80211_S_RUN)
         return;
-    
+
     /* make sure all mandatory fixed fields are present */
     if (mbuf_len(m) < sizeof(*wh) + (reassoc ? 10 : 4)) {
         DPRINTF(("frame too short\n"));
@@ -2317,7 +2491,7 @@ ieee80211_recv_assoc_req(struct ieee80211com *ic, mbuf_t m,
     wh = mtod(m, struct ieee80211_frame *);
     frm = (const u_int8_t *)&wh[1];
     efrm = mtod(m, u_int8_t *) + mbuf_len(m);
-    
+
     if (!IEEE80211_ADDR_EQ(wh->i_addr3, ic->ic_bss->ni_bssid)) {
         DPRINTF(("ignore other bss from %s\n",
                  ether_sprintf((u_int8_t *)wh->i_addr2)));
@@ -2333,7 +2507,7 @@ ieee80211_recv_assoc_req(struct ieee80211com *ic, mbuf_t m,
         resp = IEEE80211_FC0_SUBTYPE_REASSOC_RESP;
     } else
         resp = IEEE80211_FC0_SUBTYPE_ASSOC_RESP;
-    
+
     ssid = rates = xrates = rsnie = wpaie = wmeie = htcaps = NULL;
     while (frm + 2 <= efrm) {
         if (frm + 2 + frm[1] > efrm) {
@@ -2391,7 +2565,7 @@ ieee80211_recv_assoc_req(struct ieee80211com *ic, mbuf_t m,
         ic->ic_stats.is_rx_ssidmismatch++;
         return;
     }
-    
+
     if (ni->ni_state != IEEE80211_STA_AUTH &&
         ni->ni_state != IEEE80211_STA_ASSOC) {
         DPRINTF(("deny %sassoc from %s, not authenticated\n",
@@ -2408,7 +2582,7 @@ ieee80211_recv_assoc_req(struct ieee80211com *ic, mbuf_t m,
         ic->ic_stats.is_rx_assoc_notauth++;
         return;
     }
-    
+
     if (ni->ni_state == IEEE80211_STA_ASSOC &&
         (ni->ni_flags & IEEE80211_NODE_MFP)) {
         if (ni->ni_flags & IEEE80211_NODE_SA_QUERY_FAILED) {
@@ -2429,7 +2603,7 @@ ieee80211_recv_assoc_req(struct ieee80211com *ic, mbuf_t m,
         }
         return;
     }
-    
+
     if (!(capinfo & IEEE80211_CAPINFO_ESS)) {
         ic->ic_stats.is_rx_assoc_capmismatch++;
         status = IEEE80211_STATUS_CAPINFO;
@@ -2443,7 +2617,7 @@ ieee80211_recv_assoc_req(struct ieee80211com *ic, mbuf_t m,
         status = IEEE80211_STATUS_BASIC_RATE;
         goto end;
     }
-    
+
     ni->ni_rsnprotos = IEEE80211_PROTO_NONE;
     ni->ni_supported_rsnprotos = IEEE80211_PROTO_NONE;
     ni->ni_rsnakms = 0;
@@ -2452,7 +2626,7 @@ ieee80211_recv_assoc_req(struct ieee80211com *ic, mbuf_t m,
     ni->ni_rsngroupcipher = (enum ieee80211_cipher)0;
     ni->ni_rsngroupmgmtcipher = (enum ieee80211_cipher)0;
     ni->ni_rsncaps = 0;
-    
+
     /*
      * A station should never include both a WPA and an RSN IE
      * in its (Re)Association Requests, but if it does, we only
@@ -2482,14 +2656,14 @@ ieee80211_recv_assoc_req(struct ieee80211com *ic, mbuf_t m,
             saveie = wpaie;
         }
     }
-    
+
     if (ic->ic_flags & IEEE80211_F_QOS) {
         if (wmeie != NULL)
             ni->ni_flags |= IEEE80211_NODE_QOS;
         else    /* for Reassociation */
             ni->ni_flags &= ~IEEE80211_NODE_QOS;
     }
-    
+
     if (ic->ic_flags & IEEE80211_F_RSNON) {
         if (ni->ni_rsnprotos == IEEE80211_PROTO_NONE) {
             /*
@@ -2523,7 +2697,7 @@ ieee80211_recv_assoc_req(struct ieee80211com *ic, mbuf_t m,
             ni->ni_rsnprotos = IEEE80211_PROTO_NONE;
             goto end;
         }
-        
+
         if ((ic->ic_bss->ni_rsncaps & IEEE80211_RSNCAP_MFPR) &&
             !(rsn.rsn_caps & IEEE80211_RSNCAP_MFPC)) {
             status = IEEE80211_STATUS_MFP_POLICY;
@@ -2551,7 +2725,7 @@ ieee80211_recv_assoc_req(struct ieee80211com *ic, mbuf_t m,
             ni->ni_rsnprotos = IEEE80211_PROTO_NONE;
             goto end;
         }
-        
+
         /*
          * Disallow new associations using TKIP if countermeasures
          * are active.
@@ -2563,7 +2737,7 @@ ieee80211_recv_assoc_req(struct ieee80211com *ic, mbuf_t m,
             ni->ni_rsnprotos = IEEE80211_PROTO_NONE;
             goto end;
         }
-        
+
         /* everything looks fine, save IE and parameters */
         if (saveie == NULL ||
             ieee80211_save_ie(saveie, &ni->ni_rsnie) != 0) {
@@ -2576,7 +2750,7 @@ ieee80211_recv_assoc_req(struct ieee80211com *ic, mbuf_t m,
         ni->ni_rsngroupcipher = ic->ic_bss->ni_rsngroupcipher;
         ni->ni_rsngroupmgmtcipher = ic->ic_bss->ni_rsngroupmgmtcipher;
         ni->ni_rsncaps = rsn.rsn_caps;
-        
+
         if (ieee80211_is_8021x_akm((enum ieee80211_akm)ni->ni_rsnakms)) {
             struct ieee80211_pmk *pmk = NULL;
             const u_int8_t *pmkid = rsn.rsn_pmkids;
@@ -2599,7 +2773,7 @@ ieee80211_recv_assoc_req(struct ieee80211com *ic, mbuf_t m,
             }
         }
     }
-    
+
     ni->ni_rssi = rxi->rxi_rssi;
     ni->ni_rstamp = rxi->rxi_tstamp;
     ni->ni_intval = bintval;
@@ -2642,15 +2816,16 @@ ieee80211_recv_assoc_resp(struct ieee80211com *ic, mbuf_t m,
     const uint8_t *vhtopmode;
     const uint8_t *hecap;
     const uint8_t *heopmode;
+    const uint8_t *he_mu_edca = NULL;
     u_int16_t capinfo, status, associd;
     u_int8_t rate;
-    
+
     if (ic->ic_opmode != IEEE80211_M_STA ||
         ic->ic_state != IEEE80211_S_ASSOC) {
         ic->ic_stats.is_rx_mgtdiscard++;
         return;
     }
-    
+
     /* make sure all mandatory fixed fields are present */
     if (mbuf_len(m) < sizeof(*wh) + 6) {
         DPRINTF(("frame too short\n"));
@@ -2659,17 +2834,20 @@ ieee80211_recv_assoc_resp(struct ieee80211com *ic, mbuf_t m,
     wh = mtod(m, struct ieee80211_frame *);
     frm = (const u_int8_t *)&wh[1];
     efrm = mtod(m, u_int8_t *) + mbuf_len(m);
-    
+
     capinfo = LE_READ_2(frm); frm += 2;
     status =  LE_READ_2(frm); frm += 2;
 
     ic->ic_assoc_status = status;
-    if (status == IEEE80211_STATUS_SUCCESS) {
+#ifndef AIRPORT_WCL
+    if (status == IEEE80211_STATUS_SUCCESS)
+#endif
+    { // WCL must also receive failed association responses.
         if (ic->ic_event_handler) {
             (*ic->ic_event_handler)(ic, IEEE80211_EVT_STA_ASSOC_DONE, NULL);
         }
     }
-    
+
     if (status != IEEE80211_STATUS_SUCCESS) {
         if (ifp->if_flags & IFF_DEBUG)
             XYLog("%s: %sassociation failed (status %d)"
@@ -2682,7 +2860,7 @@ ieee80211_recv_assoc_resp(struct ieee80211com *ic, mbuf_t m,
         return;
     }
     associd = LE_READ_2(frm); frm += 2;
-    
+
     rates = xrates = edcaie = wmmie = htcaps = htop = vhtcap = vhtopmode = hecap = heopmode = NULL;
     while (frm + 2 <= efrm) {
         if (frm + 2 + frm[1] > efrm) {
@@ -2722,8 +2900,11 @@ ieee80211_recv_assoc_resp(struct ieee80211com *ic, mbuf_t m,
                 }
                 break;
             case IEEE80211_ELEMID_EXTENSION:
+                if (frm[1] < 1)
+                    break;
                 switch (frm[2]) {
                     case IEEE80211_ELEMID_EXT_HE_MU_EDCA:
+                        if (frm[1] == 14) he_mu_edca = frm + 3;
                         break;
                     case IEEE80211_ELEMID_EXT_HE_CAPABILITY:
                         hecap = frm;
@@ -2765,7 +2946,7 @@ ieee80211_recv_assoc_resp(struct ieee80211com *ic, mbuf_t m,
     if (edcaie != NULL || wmmie != NULL) {
         /* force update of EDCA parameters */
         ic->ic_edca_updtcount = -1;
-        
+
         if ((edcaie != NULL &&
              ieee80211_parse_edca_params(ic, edcaie) == 0) ||
             (wmmie != NULL &&
@@ -2778,21 +2959,24 @@ ieee80211_recv_assoc_resp(struct ieee80211com *ic, mbuf_t m,
         ieee80211_setup_htcaps(ni, htcaps + 2, htcaps[1]);
     if (htop)
         ieee80211_setup_htop(ni, htop + 2, htop[1], 0);
+    /* As the beacon parser does: a short VHT element is ignored, and the pair is applied only when both
+     * are whole. The association response passed them on unchecked (audit P-V01). */
+    if (vhtcap != NULL && vhtcap[1] < sizeof(struct ieee80211_ie_vhtcap) - 2)
+        vhtcap = NULL;
+    if (vhtopmode != NULL && vhtopmode[1] < sizeof(struct ieee80211_ie_vht_operation) - 2)
+        vhtopmode = NULL;
     if (vhtcap != NULL && vhtopmode != NULL) {
         ieee80211_setup_vhtcaps(ic, ni, vhtcap);
         ieee80211_setup_vhtopmode(ni, vhtopmode);
     }
-    if (hecap != NULL && heopmode != NULL) {
-        ieee80211_setup_hecaps(ni, hecap + 3, hecap[1] - 1);
-        ieee80211_setup_heop(ni, heopmode + 3, heopmode[1] - 1);
-    }
+    ieee80211_update_he_params(ic, ni, hecap, heopmode, he_mu_edca);
 
+    if (hecap == NULL || heopmode == NULL)
+        ni->ni_flags &= ~(IEEE80211_NODE_HECAP | IEEE80211_NODE_HEOP);
     ieee80211_ht_negotiate(ic, ni);
     ieee80211_vht_negotiate(ic, ni);
-    if (hecap != NULL && heopmode != NULL) {
-        ieee80211_he_negotiate(ic, ni);
-    }
-    
+    ieee80211_he_negotiate(ic, ni);
+
     /* Hop into 11n/11ac/11ax mode after associating to an HT AP in a legacy mode. */
     if (ni->ni_flags & IEEE80211_NODE_HE)
         ieee80211_setmode(ic, IEEE80211_MODE_11AX);
@@ -2802,14 +2986,14 @@ ieee80211_recv_assoc_resp(struct ieee80211com *ic, mbuf_t m,
         ieee80211_setmode(ic, IEEE80211_MODE_11N);
     else
         ieee80211_setmode(ic, ieee80211_chan2mode(ic, ni->ni_chan));
-    
+
     ieee80211_sta_set_rx_nss(ic, ni);
     /*
      * Reset the erp state (mostly the slot time) now that
      * our operating mode has been nailed down.
      */
     ieee80211_reset_erp(ic);
-    
+
     /*
      * Configure state now that we are associated.
      */
@@ -2818,7 +3002,7 @@ ieee80211_recv_assoc_resp(struct ieee80211com *ic, mbuf_t m,
         ic->ic_flags |= IEEE80211_F_SHPREAMBLE;
     else
         ic->ic_flags &= ~IEEE80211_F_SHPREAMBLE;
-    
+
     ieee80211_set_shortslottime(ic,
                                 ic->ic_curmode == IEEE80211_MODE_11A ||
                                 (ni->ni_capinfo & IEEE80211_CAPINFO_SHORT_SLOTTIME));
@@ -2841,7 +3025,7 @@ ieee80211_recv_assoc_resp(struct ieee80211com *ic, mbuf_t m,
         ni->ni_rsn_supp_state = RSNA_SUPP_PTKSTART;
     } else if (ic->ic_flags & IEEE80211_F_WEPON)
         ni->ni_flags |= IEEE80211_NODE_TXRXPROT;
-    
+
     ieee80211_new_state(ic, IEEE80211_S_RUN,
                         IEEE80211_FC0_SUBTYPE_ASSOC_RESP);
 }
@@ -2858,7 +3042,7 @@ ieee80211_recv_deauth(struct ieee80211com *ic, mbuf_t m,
     const struct ieee80211_frame *wh;
     const u_int8_t *frm;
     u_int16_t reason;
-    
+
     /* make sure all mandatory fixed fields are present */
     if (mbuf_len(m) < sizeof(*wh) + 2) {
         DPRINTF(("frame too short\n"));
@@ -2866,7 +3050,7 @@ ieee80211_recv_deauth(struct ieee80211com *ic, mbuf_t m,
     }
     wh = mtod(m, struct ieee80211_frame *);
     frm = (const u_int8_t *)&wh[1];
-    
+
     reason = LE_READ_2(frm);
 
     XYLog("Deauth received, reason %d\n", reason);
@@ -2874,7 +3058,7 @@ ieee80211_recv_deauth(struct ieee80211com *ic, mbuf_t m,
     if (ic->ic_event_handler) {
         (*ic->ic_event_handler)(ic, IEEE80211_EVT_STA_DEAUTH, NULL);
     }
-    
+
     ic->ic_stats.is_rx_deauth++;
     switch (ic->ic_opmode) {
         case IEEE80211_M_STA: {
@@ -2924,7 +3108,7 @@ ieee80211_recv_disassoc(struct ieee80211com *ic, mbuf_t m,
     const struct ieee80211_frame *wh;
     const u_int8_t *frm;
     u_int16_t reason;
-    
+
     /* make sure all mandatory fixed fields are present */
     if (mbuf_len(m) < sizeof(*wh) + 2) {
         DPRINTF(("frame too short\n"));
@@ -2932,11 +3116,11 @@ ieee80211_recv_disassoc(struct ieee80211com *ic, mbuf_t m,
     }
     wh = mtod(m, struct ieee80211_frame *);
     frm = (const u_int8_t *)&wh[1];
-    
+
     reason = LE_READ_2(frm);
-    
+
     XYLog("Disassoc received, reason %d\n", reason);
-    
+
     ic->ic_stats.is_rx_disassoc++;
     switch (ic->ic_opmode) {
         case IEEE80211_M_STA: {
@@ -2986,12 +3170,19 @@ ieee80211_recv_addba_req(struct ieee80211com *ic, mbuf_t m,
     u_int16_t params, ssn, bufsz, timeout;
     u_int8_t token, tid;
     int err = 0;
-    
-    /* Ignore if we are not ready to receive data frames. */
-    if (ic->ic_state != IEEE80211_S_RUN ||
-        ((ic->ic_flags & IEEE80211_F_RSNON) && !ni->ni_port_valid))
+
+    /*
+     * Ignore if we are not associated.  A request that comes before the RSN
+     * port is valid is answered too, as Linux mac80211 does: with 802.1X the
+     * EAP exchange takes seconds, and an AP whose early ADDBA went unanswered
+     * may never aggregate to us (#69).  Data frames other than EAPOL stay
+     * dropped until the port is valid, whatever the agreement.
+     */
+    if (ic->ic_state != IEEE80211_S_RUN)
         return;
-    
+    if ((ic->ic_flags & IEEE80211_F_RSNON) && !ni->ni_port_valid)
+        ic->ic_stats.is_ht_rx_ba_unauth++;
+
     if (!(ni->ni_flags & IEEE80211_NODE_HT)) {
         DPRINTF(("received ADDBA req from non-HT STA %s\n",
                  ether_sprintf(ni->ni_macaddr)));
@@ -3001,11 +3192,11 @@ ieee80211_recv_addba_req(struct ieee80211com *ic, mbuf_t m,
         DPRINTF(("frame too short\n"));
         return;
     }
-    
+
     /* MLME-ADDBA.indication */
     wh = mtod(m, struct ieee80211_frame *);
     frm = (const u_int8_t *)&wh[1];
-    
+
     token = frm[2];
     params = LE_READ_2(&frm[3]);
     tid = ((params & IEEE80211_ADDBA_TID_MASK) >>
@@ -3014,7 +3205,7 @@ ieee80211_recv_addba_req(struct ieee80211com *ic, mbuf_t m,
     IEEE80211_ADDBA_BUFSZ_SHIFT;
     timeout = LE_READ_2(&frm[5]);
     ssn = LE_READ_2(&frm[7]) >> 4;
-    
+
     ba = &ni->ni_rx_ba[tid];
     /* The driver is still processing an ADDBA request for this tid. */
     if (ba->ba_state == IEEE80211_BA_REQUESTED)
@@ -3030,12 +3221,12 @@ ieee80211_recv_addba_req(struct ieee80211com *ic, mbuf_t m,
         /* reset Block Ack inactivity timer */
         if (ba->ba_timeout_val != 0)
             timeout_add_usec(&ba->ba_to, ba->ba_timeout_val);
-        
+
         /* check if it's a Protected Block Ack agreement */
         if (!(ni->ni_flags & IEEE80211_NODE_MFP) ||
             !(ni->ni_rsncaps & IEEE80211_RSNCAP_PBAC))
             return;    /* not a PBAC, ignore */
-        
+
         /* PBAC: treat the ADDBA Request like a BlockAckReq */
         if (SEQ_LT(ba->ba_winstart, ssn)) {
             struct mbuf_list ml = MBUF_LIST_INITIALIZER();
@@ -3044,7 +3235,7 @@ ieee80211_recv_addba_req(struct ieee80211com *ic, mbuf_t m,
         }
         return;
     }
-    
+
     /* if PBAC required but RA does not support it, refuse request */
     if ((ic->ic_flags & IEEE80211_F_PBAR) &&
         (!(ni->ni_flags & IEEE80211_NODE_MFP) ||
@@ -3056,12 +3247,12 @@ ieee80211_recv_addba_req(struct ieee80211com *ic, mbuf_t m,
      */
     if (ic->ic_tid_noack & (1 << tid))
         goto refuse;
-    
+
     /* check that we support the requested Block Ack Policy */
     if (!(ic->ic_htcaps & IEEE80211_HTCAP_DELAYEDBA) &&
         !(params & IEEE80211_ADDBA_BA_POLICY))
         goto refuse;
-    
+
     /* setup Block Ack agreement */
     ba->ba_state = IEEE80211_BA_REQUESTED;
     ba->ba_timeout_val = timeout * IEEE80211_DUR_TU;
@@ -3085,9 +3276,9 @@ ieee80211_recv_addba_req(struct ieee80211com *ic, mbuf_t m,
     ba->ba_buf = (struct ieee80211_ba_buf*)malloc(IEEE80211_BA_MAX_WINSZ * sizeof(struct ieee80211_ba_buf), 0, 0);
     if (ba->ba_buf == NULL)
         goto refuse;
-    
+
     ba->ba_head = 0;
-    
+
     /* notify drivers of this new Block Ack agreement */
     if (ic->ic_ampdu_rx_start != NULL)
         err = ic->ic_ampdu_rx_start(ic, ni, tid);
@@ -3100,7 +3291,7 @@ ieee80211_recv_addba_req(struct ieee80211com *ic, mbuf_t m,
     } else
         ieee80211_addba_req_accept(ic, ni, tid);
     return;
-    
+
 refuse:
     /* MLME-ADDBA.response */
     IEEE80211_SEND_ACTION(ic, ni, IEEE80211_CATEG_BA,
@@ -3113,13 +3304,13 @@ ieee80211_addba_req_accept(struct ieee80211com *ic, struct ieee80211_node *ni,
                            uint8_t tid)
 {
     struct ieee80211_rx_ba *ba = &ni->ni_rx_ba[tid];
-    
+
     ba->ba_state = IEEE80211_BA_AGREED;
     ic->ic_stats.is_ht_rx_ba_agreements++;
     /* start Block Ack inactivity timer */
     if (ba->ba_timeout_val != 0)
         timeout_add_usec(&ba->ba_to, ba->ba_timeout_val);
-    
+
     /* MLME-ADDBA.response */
     IEEE80211_SEND_ACTION(ic, ni, IEEE80211_CATEG_BA,
                           IEEE80211_ACTION_ADDBA_RESP,
@@ -3131,11 +3322,11 @@ ieee80211_addba_req_refuse(struct ieee80211com *ic, struct ieee80211_node *ni,
                            uint8_t tid)
 {
     struct ieee80211_rx_ba *ba = &ni->ni_rx_ba[tid];
-    
+
     free(ba->ba_buf);
     ba->ba_buf = NULL;
     ba->ba_state = IEEE80211_BA_INIT;
-    
+
     /* MLME-ADDBA.response */
     IEEE80211_SEND_ACTION(ic, ni, IEEE80211_CATEG_BA,
                           IEEE80211_ACTION_ADDBA_RESP,
@@ -3161,24 +3352,24 @@ ieee80211_recv_addba_resp(struct ieee80211com *ic, mbuf_t m,
     u_int16_t status, params, bufsz, timeout;
     u_int8_t token, tid;
     int err = 0;
-    
+
     if (mbuf_len(m) < sizeof(*wh) + 9) {
         DPRINTF(("frame too short\n"));
         return;
     }
     wh = mtod(m, struct ieee80211_frame *);
     frm = (const u_int8_t *)&wh[1];
-    
+
     token = frm[2];
     status = LE_READ_2(&frm[3]);
     params = LE_READ_2(&frm[5]);
     tid = (params >> 2) & 0xf;
     bufsz = (params >> 6) & 0x3ff;
     timeout = LE_READ_2(&frm[7]);
-    
+
     DPRINTF(("received ADDBA resp from %s, TID %d, status %d\n",
              ether_sprintf(ni->ni_macaddr), tid, status));
-    
+
     /*
      * Ignore if no ADDBA request has been sent for this RA/TID or
      * if we already have a Block Ack agreement.
@@ -3195,14 +3386,14 @@ ieee80211_recv_addba_resp(struct ieee80211com *ic, mbuf_t m,
     }
     /* we got an ADDBA Response matching our request, stop timeout */
     timeout_del(&ba->ba_to);
-    
+
     if (status != IEEE80211_STATUS_SUCCESS) {
         if (ni->ni_addba_req_intval[tid] <
             IEEE80211_ADDBA_REQ_INTVAL_MAX)
             ni->ni_addba_req_intval[tid]++;
-        
+
         ieee80211_addba_resp_refuse(ic, ni, tid, status);
-        
+
         /*
          * In case the peer believes there is an existing
          * block ack agreement with us, try to delete it.
@@ -3212,11 +3403,11 @@ ieee80211_recv_addba_resp(struct ieee80211com *ic, mbuf_t m,
                               IEEE80211_REASON_SETUP_REQUIRED << 16 | 1 << 8 | tid);
         return;
     }
-    
+
     /* notify drivers of this new Block Ack agreement */
     if (ic->ic_ampdu_tx_start != NULL)
         err = ic->ic_ampdu_tx_start(ic, ni, tid);
-    
+
     if (err == EBUSY) {
         /* driver will accept or refuse agreement when done */
         return;
@@ -3233,16 +3424,16 @@ ieee80211_addba_resp_accept(struct ieee80211com *ic,
                             struct ieee80211_node *ni, uint8_t tid)
 {
     struct ieee80211_tx_ba *ba = &ni->ni_tx_ba[tid];
-    
+
     /* MLME-ADDBA.confirm(Success) */
     ba->ba_state = IEEE80211_BA_AGREED;
     ic->ic_stats.is_ht_tx_ba_agreements++;
-    
+
     ni->ni_qos_txseqs[tid] = ba->ba_winstart;
-    
+
     /* Reset ADDBA request interval. */
     ni->ni_addba_req_intval[tid] = 1;
-    
+
     /* start Block Ack inactivity timeout */
     if (ba->ba_timeout_val != 0)
         timeout_add_usec(&ba->ba_to, ba->ba_timeout_val);
@@ -3253,7 +3444,7 @@ ieee80211_addba_resp_refuse(struct ieee80211com *ic,
                             struct ieee80211_node *ni, uint8_t tid, uint16_t status)
 {
     struct ieee80211_tx_ba *ba = &ni->ni_tx_ba[tid];
-    
+
     /* MLME-ADDBA.confirm(Failure) */
     ba->ba_state = IEEE80211_BA_INIT;
 }
@@ -3274,25 +3465,25 @@ ieee80211_recv_delba(struct ieee80211com *ic, mbuf_t m,
     u_int16_t params, reason;
     u_int8_t tid;
     int i;
-    
+
     if (mbuf_len(m) < sizeof(*wh) + 6) {
         DPRINTF(("frame too short\n"));
         return;
     }
     wh = mtod(m, struct ieee80211_frame *);
     frm = (const u_int8_t *)&wh[1];
-    
+
     params = LE_READ_2(&frm[2]);
     reason = LE_READ_2(&frm[4]);
     tid = params >> 12;
-    
+
     XYLog("received DELBA from %s, TID %d, reason %d\n",
              ether_sprintf(ni->ni_macaddr), tid, reason);
-    
+
     if (params & IEEE80211_DELBA_INITIATOR) {
         /* MLME-DELBA.indication(Originator) */
         struct ieee80211_rx_ba *ba = &ni->ni_rx_ba[tid];
-        
+
         if (ba->ba_state != IEEE80211_BA_AGREED) {
             DPRINTF(("no matching Block Ack agreement\n"));
             return;
@@ -3300,13 +3491,13 @@ ieee80211_recv_delba(struct ieee80211com *ic, mbuf_t m,
         /* notify drivers of the end of the Block Ack agreement */
         if (ic->ic_ampdu_rx_stop != NULL)
             ic->ic_ampdu_rx_stop(ic, ni, tid);
-        
+
         ba->ba_state = IEEE80211_BA_INIT;
         /* stop Block Ack inactivity timer */
         timeout_del(&ba->ba_to);
         timeout_del(&ba->ba_gap_to);
         ba->ba_gapwait = 0;
-        
+
         if (ba->ba_buf != NULL) {
             /* free all MSDUs stored in reordering buffer */
             for (i = 0; i < IEEE80211_BA_MAX_WINSZ; i++)
@@ -3318,7 +3509,7 @@ ieee80211_recv_delba(struct ieee80211com *ic, mbuf_t m,
     } else {
         /* MLME-DELBA.indication(Recipient) */
         struct ieee80211_tx_ba *ba = &ni->ni_tx_ba[tid];
-        
+
         if (ba->ba_state != IEEE80211_BA_AGREED) {
             DPRINTF(("no matching Block Ack agreement\n"));
             return;
@@ -3326,7 +3517,7 @@ ieee80211_recv_delba(struct ieee80211com *ic, mbuf_t m,
         /* notify drivers of the end of the Block Ack agreement */
         if (ic->ic_ampdu_tx_stop != NULL)
             ic->ic_ampdu_tx_stop(ic, ni, tid);
-        
+
         ba->ba_state = IEEE80211_BA_INIT;
         /* stop Block Ack inactivity timer */
         timeout_del(&ba->ba_to);
@@ -3345,7 +3536,7 @@ ieee80211_recv_sa_query_req(struct ieee80211com *ic, mbuf_t m,
 {
     const struct ieee80211_frame *wh;
     const u_int8_t *frm;
-    
+
     if (ic->ic_opmode != IEEE80211_M_STA ||
         !(ni->ni_flags & IEEE80211_NODE_MFP)) {
         DPRINTF(("unexpected SA Query req from %s\n",
@@ -3358,12 +3549,12 @@ ieee80211_recv_sa_query_req(struct ieee80211com *ic, mbuf_t m,
     }
     wh = mtod(m, struct ieee80211_frame *);
     frm = (const u_int8_t *)&wh[1];
-    
+
     /* MLME-SAQuery.indication */
-    
+
     /* save Transaction Identifier for SA Query Response */
     ni->ni_sa_query_trid = LE_READ_2(&frm[2]);
-    
+
     /* MLME-SAQuery.response */
     IEEE80211_SEND_ACTION(ic, ni, IEEE80211_CATEG_SA_QUERY,
                           IEEE80211_ACTION_SA_QUERY_RESP, 0);
@@ -3382,7 +3573,7 @@ ieee80211_recv_sa_query_resp(struct ieee80211com *ic, mbuf_t m,
 {
     const struct ieee80211_frame *wh;
     const u_int8_t *frm;
-    
+
     /* ignore if we're not engaged in an SA Query with that STA */
     if (!(ni->ni_flags & IEEE80211_NODE_SA_QUERY)) {
         DPRINTF(("unexpected SA Query resp from %s\n",
@@ -3395,7 +3586,7 @@ ieee80211_recv_sa_query_resp(struct ieee80211com *ic, mbuf_t m,
     }
     wh = mtod(m, struct ieee80211_frame *);
     frm = (const u_int8_t *)&wh[1];
-    
+
     /* check that Transaction Identifier matches */
     if (ni->ni_sa_query_trid != LE_READ_2(&frm[2])) {
         DPRINTF(("transaction identifier does not match\n"));
@@ -3418,14 +3609,14 @@ ieee80211_recv_action(struct ieee80211com *ic, mbuf_t m,
 {
     const struct ieee80211_frame *wh;
     const u_int8_t *frm;
-    
+
     if (mbuf_len(m) < sizeof(*wh) + 2) {
         DPRINTF(("frame too short\n"));
         return;
     }
     wh = mtod(m, struct ieee80211_frame *);
     frm = (const u_int8_t *)&wh[1];
-    
+
     switch (frm[0]) {
         case IEEE80211_CATEG_BA:
             switch (frm[1]) {
@@ -3520,12 +3711,12 @@ ieee80211_recv_pspoll(struct ieee80211com *ic, mbuf_t m,
     struct ieee80211_frame_pspoll *psp;
     struct ieee80211_frame *wh;
     u_int16_t aid;
-    
+
     if (ic->ic_opmode != IEEE80211_M_HOSTAP ||
         !(ic->ic_caps & IEEE80211_C_APPMGT) ||
         ni->ni_state != IEEE80211_STA_ASSOC)
         return;
-    
+
     if (mbuf_len(m) < sizeof(*psp)) {
         DPRINTF(("frame too short, len %u\n", mbuf_len(m)));
         ic->ic_stats.is_rx_tooshort++;
@@ -3544,7 +3735,7 @@ ieee80211_recv_pspoll(struct ieee80211com *ic, mbuf_t m,
                  ether_sprintf(psp->i_ta)));
         return;
     }
-    
+
     /* take the first queued frame and put it out.. */
     m = mq_dequeue(&ni->ni_savedq);
     if (m == NULL)
@@ -3573,7 +3764,7 @@ ieee80211_recv_bar(struct ieee80211com *ic, mbuf_t m,
     const u_int8_t *frm;
     u_int16_t ctl, ssn;
     u_int8_t tid, ntids;
-    
+
     if (!(ni->ni_flags & IEEE80211_NODE_HT)) {
         DPRINTF(("received BlockAckReq from non-HT STA %s\n",
                  ether_sprintf(ni->ni_macaddr)));
@@ -3585,16 +3776,16 @@ ieee80211_recv_bar(struct ieee80211com *ic, mbuf_t m,
     }
     wh = mtod(m, struct ieee80211_frame_min *);
     frm = (const u_int8_t *)&wh[1];
-    
+
     /* read BlockAckReq Control field */
     ctl = LE_READ_2(&frm[0]);
     tid = ctl >> 12;
-    
+
     /* determine BlockAckReq frame variant */
     if (ctl & IEEE80211_BA_MULTI_TID) {
         /* Multi-TID BlockAckReq variant (PSMP only) */
         ntids = tid + 1;
-        
+
         if (mbuf_len(m) < sizeof(*wh) + 2 + 4 * ntids) {
             DPRINTF(("MTBAR frame too short\n"));
             return;
@@ -3623,7 +3814,7 @@ ieee80211_bar_tid(struct ieee80211com *ic, struct ieee80211_node *ni,
                   u_int8_t tid, u_int16_t ssn)
 {
     struct ieee80211_rx_ba *ba = &ni->ni_rx_ba[tid];
-    
+
     /* check if we have a Block Ack agreement for RA/TID */
     if (ba->ba_state != IEEE80211_BA_AGREED) {
         /* XXX not sure in PBAC case */
@@ -3645,7 +3836,7 @@ ieee80211_bar_tid(struct ieee80211com *ic, struct ieee80211_node *ni,
     /* reset Block Ack inactivity timer */
     if (ba->ba_timeout_val != 0)
         timeout_add_usec(&ba->ba_to, ba->ba_timeout_val);
-    
+
     if (SEQ_LT(ba->ba_winstart, ssn)) {
         struct mbuf_list ml = MBUF_LIST_INITIALIZER();
         ieee80211_ba_move_window(ic, ni, tid, ssn, &ml);

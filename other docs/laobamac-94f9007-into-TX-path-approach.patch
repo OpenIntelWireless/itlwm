@@ -1,0 +1,470 @@
+diff --git a/AirportItlwm/WCL/WCL.cpp b/AirportItlwm/WCL/WCL.cpp
+index 7b5ee47..e038bc6 100644
+--- a/AirportItlwm/WCL/WCL.cpp
++++ b/AirportItlwm/WCL/WCL.cpp
+@@ -898,8 +898,14 @@ IOReturn AirportItlwmSkywalkInterface::setWCL_UPDATE_FAST_LANE(apple80211_fastla
+ {
+     if (!data)
+         return kIOReturnBadArgument;
+-    const auto bytes = reinterpret_cast<const uint8_t *>(data);
+-    return (bytes[0] || bytes[1]) ? kIOReturnUnsupported : kIOReturnSuccess;
++    /*
++     * Cisco/Apple Fast Lane: macOS asks the driver to enable it right after
++     * the association completes when the AP advertises it (e.g. Aironet 3800).
++     * This adapter has no Fast Lane QoS marking, but returning an error here
++     * makes WCL treat it as "Update Bss fail" and tear the link down ~0.4 s
++     * after LINK_STATE_IS_UP. Accept the request and ignore it.
++     */
++    return kIOReturnSuccess;
+ }
+ 
+ IOReturn AirportItlwmSkywalkInterface::getWCL_LOW_LATENCY_INFO(apple80211_low_latency_info *data)
+diff --git a/AirportItlwm/WCL/WCL.hpp b/AirportItlwm/WCL/WCL.hpp
+index 5d45f4c..e3820dd 100644
+--- a/AirportItlwm/WCL/WCL.hpp
++++ b/AirportItlwm/WCL/WCL.hpp
+@@ -290,20 +290,25 @@ inline TrafficCounters makeTrafficCounters(const uint64_t *tx, const uint64_t *r
+ struct ScanTiming {
+     uint32_t maxOutTU;
+     bool fragmented;
++    uint32_t suspendTU;
+ };
+ 
++// Off-channel timing for scans while associated, after Linux iwlwifi's scan
++// types: a 120 TU visit fits a whole passive dwell (110 TU), followed by 120 TU
++// back on the home channel. Passive dwells are split into short fragments
++// (44 TU out, 95 TU home) only when the caller asks for a short away time,
++// i.e. low latency. Splitting by default made each passive channel cost
++// ~0.8 s and full scans ~20 s. A 30 TU home time on quiet links (Linux's
++// lighter setting) coincided with firmware resets on AX210, so it is not used.
+ inline ScanTiming scanTiming(uint32_t awayMilliseconds, bool associated,
+                              bool supportsFragmentation)
+ {
+     if (!associated)
+-        return {0, false};
+-    if (!awayMilliseconds)
+-        return {120, false};
++        return {0, false, 0};
+     uint64_t requested = uint64_t(awayMilliseconds) * 1000 / 1024;
+-    uint32_t minimum = supportsFragmentation ? 44 : 110;
+-    uint32_t maxOut = requested < minimum ? minimum :
+-        requested > 120 ? 120 : uint32_t(requested);
+-    return {maxOut, maxOut < 110};
++    if (awayMilliseconds && requested < 100 && supportsFragmentation)
++        return {requested < 44 ? 44 : uint32_t(requested), true, 95};
++    return {120, false, 120};
+ }
+ 
+ inline uint16_t read16(const uint8_t *p) {
+diff --git a/itl80211/compat.cpp b/itl80211/compat.cpp
+index 902192a..3cc386a 100644
+--- a/itl80211/compat.cpp
++++ b/itl80211/compat.cpp
+@@ -373,6 +373,40 @@ bool bus_dmamap_read(bus_dmamap_t map, mbuf_t m, size_t size)
+     return true;
+ }
+ 
++/*
++ * Returns the bounce buffer the device wrote into, so the caller can find
++ * how much of it holds packets before copying. Returns NULL when the device
++ * DMAs straight into the mbuf (no bounce buffer, nothing to copy).
++ */
++const void *bus_dmamap_rx_data(bus_dmamap_t map, size_t size)
++{
++#ifdef AIRPORT_VTD
++    if (!map || !map->dma.arena || size > map->dma.size)
++        return NULL;
++    OSSynchronizeIO();
++    return map->dma.vaddr;
++#else
++    return NULL;
++#endif
++}
++
++/*
++ * Like bus_dmamap_read(), but copies only the first 'used' bytes and zeroes
++ * the rest of the mbuf up to 'size', so stale bytes left in a recycled mbuf
++ * can never be parsed as packets.
++ */
++bool bus_dmamap_read_used(bus_dmamap_t map, mbuf_t m, size_t used, size_t size)
++{
++#ifdef AIRPORT_VTD
++    if (!map || !map->dma.arena || !m || used > size || size > map->dma.size || mbuf_next(m) || mbuf_len(m) < size)
++        return false;
++    OSSynchronizeIO();
++    memcpy(mbuf_data(m), map->dma.vaddr, used);
++    bzero((uint8_t *)mbuf_data(m) + used, size - used);
++#endif
++    return true;
++}
++
+ bool bus_dmamap_write(bus_dmamap_t map, mbuf_t m)
+ {
+ #ifdef AIRPORT_VTD
+diff --git a/itl80211/compat.h b/itl80211/compat.h
+index 7355f0a..57a2050 100644
+--- a/itl80211/compat.h
++++ b/itl80211/compat.h
+@@ -304,6 +304,8 @@ void		bus_dmamap_destroy(bus_dma_tag_t tag, bus_dmamap_t dmam);
+ int		bus_dmamap_load(bus_dmamap_t map, mbuf_t m);
+ UInt32 bus_dmamap_packet(bus_dmamap_t map, mbuf_t m, IOPhysicalSegment *segments, UInt32 count, bool receive);
+ bool bus_dmamap_read(bus_dmamap_t map, mbuf_t m, size_t size);
++const void *bus_dmamap_rx_data(bus_dmamap_t map, size_t size);
++bool bus_dmamap_read_used(bus_dmamap_t map, mbuf_t m, size_t used, size_t size);
+ bool bus_dmamap_write(bus_dmamap_t map, mbuf_t m);
+ #define bus_dmamap_load_mbuf bus_dmamap_load
+ 
+diff --git a/itl80211/openbsd/net80211/ieee80211_output.c b/itl80211/openbsd/net80211/ieee80211_output.c
+index 42b1766..80ae72a 100644
+--- a/itl80211/openbsd/net80211/ieee80211_output.c
++++ b/itl80211/openbsd/net80211/ieee80211_output.c
+@@ -1531,6 +1531,9 @@ ieee80211_get_assoc_req(struct ieee80211com *ic, struct ieee80211_node *ni,
+ 	mbuf_t m;
+ 	u_int8_t *frm;
+ 	u_int16_t capinfo;
++	/* VHT is only defined for 5 GHz; do not advertise it on 2.4 GHz. */
++	int vht_on = (ic->ic_flags & IEEE80211_F_VHTON) &&
++	    !IEEE80211_IS_CHAN_2GHZ(ni->ni_chan);
+ 
+ 	m = ieee80211_getmgmt(MBUF_DONTWAIT, MT_DATA,
+ 	    2 + 2 +
+@@ -1548,7 +1551,7 @@ ieee80211_get_assoc_req(struct ieee80211com *ic, struct ieee80211_node *ni,
+ 	      (ni->ni_rsnprotos & IEEE80211_PROTO_WPA)) ?
+ 		2 + IEEE80211_WPAIE_MAXLEN : 0) +
+ 	    ((ic->ic_flags & IEEE80211_F_HTON) ? sizeof(struct ieee80211_ie_htcap) + sizeof(struct ieee80211_wme_info) : 0) +
+-        ((ic->ic_flags & IEEE80211_F_VHTON) ? sizeof(struct ieee80211_ie_vhtcap) + 2 : 0) +
++        (vht_on ? sizeof(struct ieee80211_ie_vhtcap) + 2 : 0) +
+         ((ic->ic_flags & IEEE80211_F_HEON) ? (sizeof(struct ieee80211_he_cap_elem) + 2 + 1 + sizeof(struct ieee80211_he_mcs_nss_supp) + IEEE80211_HE_PPE_THRES_MAX_LEN) : 0));
+ 	if (m == NULL)
+ 		return NULL;
+@@ -1601,7 +1604,7 @@ ieee80211_get_assoc_req(struct ieee80211com *ic, struct ieee80211_node *ni,
+ 		frm = ieee80211_add_wme_info(frm, ic);
+ 	}
+     
+-    if (ic->ic_flags & IEEE80211_F_VHTON)
++    if (vht_on)
+         frm = ieee80211_add_vhtcaps(frm, ic);
+     
+     ni->ni_he_requested = ieee80211_he_supported(ic, ni);
+@@ -1612,6 +1615,14 @@ ieee80211_get_assoc_req(struct ieee80211com *ic, struct ieee80211_node *ni,
+     mbuf_pkthdr_setlen(m, l);
+     mbuf_setlen(m, l);
+ 
++#if defined(AIRPORT_WCL) && defined(DEBUG)
++    XYLog("%s capinfo=0x%04x listen=%d rates=%d ht=%d wmm=%d vht=%d he=%d len=%zu\n",
++        __FUNCTION__, (unsigned int)capinfo, ic->ic_lintval, rs->rs_nrates,
++        !!(ic->ic_flags & IEEE80211_F_HTON),
++        !!(ic->ic_flags & IEEE80211_F_HTON),
++        !!vht_on, ni->ni_he_requested, l);
++#endif
++
+ 	return m;
+ }
+ 
+diff --git a/itl80211/openbsd/net80211/ieee80211_proto.c b/itl80211/openbsd/net80211/ieee80211_proto.c
+index 873a325..392366e 100644
+--- a/itl80211/openbsd/net80211/ieee80211_proto.c
++++ b/itl80211/openbsd/net80211/ieee80211_proto.c
+@@ -667,6 +667,76 @@ ieee80211_ht_negotiate(struct ieee80211com *ic, struct ieee80211_node *ni)
+     XYLog("%s chan_width=%s\n", __FUNCTION__, ieee80211_chan_width_name[ni->ni_chw]);
+ }
+ 
++/*
++ * Some APs (seen on MikroTik) advertise a 160MHz block such as channels
++ * 52-80, which is not a valid 802.11 channel. The firmware asserts
++ * when told to tune it. Like cfg80211_chandef_usable(), require the control
++ * channel to be on the 20MHz raster of the block and every 20MHz subchannel
++ * to be one we support with the VHT80/VHT160 permission for this width.
++ */
++static int
++ieee80211_vht_chandef_usable(struct ieee80211com *ic,
++    struct ieee80211_channel *c, int center, int width)
++{
++    int ctrl = c->ic_freq;
++    int freq;
++    u_int chan;
++    uint32_t perm;
++
++    if (width == 160)
++        perm = IEEE80211_CHAN_VHT160;
++    else if (width == 80)
++        perm = IEEE80211_CHAN_VHT80;
++    else
++        return 0;
++
++    if (center == 0 || ctrl <= center - width / 2 ||
++        ctrl >= center + width / 2 ||
++        (ctrl - (center - width / 2) - 10) % 20 != 0)
++        return 0;
++
++    for (freq = center - width / 2 + 10; freq < center + width / 2;
++         freq += 20) {
++        chan = ieee80211_mhz2ieee(freq, c->ic_flags);
++        if (chan == 0 || chan > IEEE80211_CHAN_MAX ||
++            ic->ic_channels[chan].ic_freq != freq ||
++            (ic->ic_channels[chan].ic_flags & perm) == 0)
++            return 0;
++    }
++    return 1;
++}
++
++/*
++ * Check an HT40 definition: the control channel must allow HT40 towards the
++ * secondary channel, and the secondary channel must be one we support.
++ */
++static int
++ieee80211_ht40_chandef_usable(struct ieee80211com *ic,
++    struct ieee80211_channel *c, int center)
++{
++    int ctrl = c->ic_freq;
++    int sec;
++    u_int chan;
++
++    if (center == ctrl + 10) {
++        if (!IEEE80211_IS_CHAN_HT40U(c))
++            return 0;
++        sec = ctrl + 20;
++    } else if (center == ctrl - 10) {
++        if (!IEEE80211_IS_CHAN_HT40D(c))
++            return 0;
++        sec = ctrl - 20;
++    } else
++        return 0;
++
++    chan = ieee80211_mhz2ieee(sec, c->ic_flags);
++    if (chan == 0 || chan > IEEE80211_CHAN_MAX ||
++        ic->ic_channels[chan].ic_flags == 0 ||
++        ic->ic_channels[chan].ic_freq != sec)
++        return 0;
++    return 1;
++}
++
+ void
+ ieee80211_vht_negotiate(struct ieee80211com *ic, struct ieee80211_node *ni)
+ {
+@@ -809,7 +879,36 @@ ieee80211_vht_negotiate(struct ieee80211com *ic, struct ieee80211_node *ni)
+         default:
+             return;
+     }
+-    
++
++    if (ni->ni_chw == IEEE80211_CHAN_WIDTH_160 &&
++        !ieee80211_vht_chandef_usable(ic, ni->ni_chan,
++        ni->ni_chan->ic_center_freq1, 160)) {
++        XYLog("%s unusable 160MHz center=%d ctrl=%d, trying 80MHz\n",
++              __FUNCTION__, ni->ni_chan->ic_center_freq1, ni->ni_chan->ic_freq);
++        /* Fall back to the 80MHz half that holds the control channel. */
++        ni->ni_chw = IEEE80211_CHAN_WIDTH_80;
++        if (ni->ni_chan->ic_freq < ni->ni_chan->ic_center_freq1)
++            ni->ni_chan->ic_center_freq1 -= 40;
++        else
++            ni->ni_chan->ic_center_freq1 += 40;
++    }
++    if (ni->ni_chw == IEEE80211_CHAN_WIDTH_80 &&
++        !ieee80211_vht_chandef_usable(ic, ni->ni_chan,
++        ni->ni_chan->ic_center_freq1, 80)) {
++        XYLog("%s unusable 80MHz center=%d ctrl=%d, using HT width\n",
++              __FUNCTION__, ni->ni_chan->ic_center_freq1, ni->ni_chan->ic_freq);
++        ieee80211_ht_negotiate_chw(ic, ni);
++        if (ni->ni_chw == IEEE80211_CHAN_WIDTH_40 &&
++            !ieee80211_ht40_chandef_usable(ic, ni->ni_chan,
++            ni->ni_chan->ic_center_freq1)) {
++            XYLog("%s unusable 40MHz center=%d ctrl=%d, using 20MHz\n",
++                  __FUNCTION__, ni->ni_chan->ic_center_freq1,
++                  ni->ni_chan->ic_freq);
++            ni->ni_chw = IEEE80211_CHAN_WIDTH_20;
++            ni->ni_chan->ic_center_freq1 = ni->ni_chan->ic_freq;
++        }
++    }
++
+     ni->ni_flags |= IEEE80211_NODE_VHT;
+     
+     if (ieee80211_node_supports_vht_sgi80(ni))
+@@ -1607,7 +1706,7 @@ justcleanup:
+                     " HE enabled" : "");
+ 			}
+ #if defined(AIRPORT_WCL)
+-            if (!(ic->ic_flags & IEEE80211_F_RSNON)) {
++            if (!(ic->ic_flags & IEEE80211_F_RSNON) || ni->ni_port_valid) {
+ #elif defined(USE_APPLE_SUPPLICANT)
+             {
+ #elif (defined IO80211FAMILY_V2)
+@@ -1642,6 +1741,13 @@ ieee80211_set_link_state(struct ieee80211com *ic, int nstate)
+ {
+ 	struct _ifnet *ifp = &ic->ic_if;
+     int link_state;
++
++#ifdef AIRPORT_WCL
++    if (ic->ic_opmode == IEEE80211_M_STA &&
++        (ic->ic_flags & IEEE80211_F_RSNON) &&
++        nstate == LINK_STATE_UP && ic->ic_state != IEEE80211_S_RUN)
++        return;
++#endif
+     
+ 	switch (ic->ic_opmode) {
+ #ifndef IEEE80211_STA_ONLY
+diff --git a/itlwm/hal_iwm/scan.cpp b/itlwm/hal_iwm/scan.cpp
+index f4ec3c2..138026b 100644
+--- a/itlwm/hal_iwm/scan.cpp
++++ b/itlwm/hal_iwm/scan.cpp
+@@ -418,6 +418,7 @@ iwm_lmac_scan(struct iwm_softc *sc, int bgscan)
+     }
+ #ifdef AIRPORT_WCL
+     req->max_out_time = htole32(timing.maxOutTU);
++    req->suspend_time = htole32(timing.suspendTU);
+ #endif
+     req->scan_prio = htole32(IWM_SCAN_PRIORITY_HIGH);
+     req->rx_chain_select = iwm_scan_rx_chain(sc);
+@@ -715,10 +716,11 @@ iwm_umac_scan(struct iwm_softc *sc, int bgscan)
+     }
+     
+     if (bgscan) {
+-        const uint32_t timeout = htole32(120);
+ #ifdef AIRPORT_WCL
++        const uint32_t timeout = htole32(timing.suspendTU);
+         const uint32_t maxOut = htole32(timing.maxOutTU);
+ #else
++        const uint32_t timeout = htole32(120);
+         const uint32_t maxOut = timeout;
+ #endif
+         if (isset(sc->sc_ucode_api,
+diff --git a/itlwm/hal_iwx/ItlIwx.cpp b/itlwm/hal_iwx/ItlIwx.cpp
+index 22eeab8..90959c4 100644
+--- a/itlwm/hal_iwx/ItlIwx.cpp
++++ b/itlwm/hal_iwx/ItlIwx.cpp
+@@ -2292,15 +2292,26 @@ iwx_write_mem32(struct iwx_softc *sc, uint32_t addr, uint32_t val)
+     return iwx_write_mem(sc, addr, &val, 1);
+ }
+ 
++/*
++ * A register that reads as all ones means the device is not answering on
++ * the bus. That can happen briefly while the PCIe link comes back after
++ * resume, so an all-ones read never counts as success but polling goes on
++ * until the caller's timeout.
++ */
+ int ItlIwx::
+ iwx_poll_bit(struct iwx_softc *sc, int reg, uint32_t bits, uint32_t mask,
+              int timo)
+ {
++    uint32_t val;
++    
+     for (;;) {
+-        if ((IWX_READ(sc, reg) & mask) == (bits & mask)) {
++        val = IWX_READ(sc, reg);
++        if (val != 0xffffffff && (val & mask) == (bits & mask))
+             return 1;
+-        }
+         if (timo < 10) {
++            if (val == 0xffffffff)
++                XYLog("%s: device not responding (reg 0x%x reads 0xffffffff)\n",
++                      DEVNAME(sc), reg);
+             return 0;
+         }
+         timo -= 10;
+@@ -8076,12 +8087,13 @@ iwx_umac_scan(struct iwx_softc *sc, int bgscan)
+     struct iwx_scan_umac_chan_param *chanparam;
+     size_t req_len;
+     int err, async = bgscan;
+-    const uint32_t timeout = bgscan ?  htole32(120) : htole32(0);
+ #ifdef AIRPORT_WCL
+     const auto timing = AirportWCL::scanTiming(ic->ic_wcl_scan_away_time_ms, bgscan,
+         isset(sc->sc_ucode_api, IWX_UCODE_TLV_API_FRAGMENTED_SCAN));
++    const uint32_t timeout = htole32(timing.suspendTU);
+     const uint32_t maxOut = htole32(timing.maxOutTU);
+ #else
++    const uint32_t timeout = bgscan ?  htole32(120) : htole32(0);
+     const uint32_t maxOut = timeout;
+ #endif
+     uint8_t scan_ver = iwx_lookup_cmd_ver(sc, IWX_LONG_GROUP, IWX_SCAN_REQ_UMAC);
+@@ -8275,12 +8287,13 @@ iwx_umac_scan_v12(struct iwx_softc *sc, int bgscan)
+     struct iwx_scan_req_umac_v12 *req;
+     size_t req_len;
+     uint16_t gen_flags = 0;
+-    const uint32_t timeout = bgscan ?  htole32(120) : htole32(0);
+ #ifdef AIRPORT_WCL
+     const auto timing = AirportWCL::scanTiming(ic->ic_wcl_scan_away_time_ms, bgscan,
+         isset(sc->sc_ucode_api, IWX_UCODE_TLV_API_FRAGMENTED_SCAN));
++    const uint32_t timeout = htole32(timing.suspendTU);
+     const uint32_t maxOut = htole32(timing.maxOutTU);
+ #else
++    const uint32_t timeout = bgscan ?  htole32(120) : htole32(0);
+     const uint32_t maxOut = timeout;
+ #endif
+     struct iwx_scan_general_params_v10 *general_params;
+@@ -8404,12 +8417,13 @@ iwx_umac_scan_v14(struct iwx_softc *sc, int bgscan)
+     uint16_t gen_flags = 0;
+     struct iwx_scan_general_params_v10 *general_params;
+     struct iwx_scan_channel_params_v6 *cp;
+-    const uint32_t timeout = bgscan ?  htole32(120) : htole32(0);
+ #ifdef AIRPORT_WCL
+     const auto timing = AirportWCL::scanTiming(ic->ic_wcl_scan_away_time_ms, bgscan,
+         isset(sc->sc_ucode_api, IWX_UCODE_TLV_API_FRAGMENTED_SCAN));
++    const uint32_t timeout = htole32(timing.suspendTU);
+     const uint32_t maxOut = htole32(timing.maxOutTU);
+ #else
++    const uint32_t timeout = bgscan ?  htole32(120) : htole32(0);
+     const uint32_t maxOut = timeout;
+ #endif
+     struct iwx_host_cmd hcmd = {
+@@ -11393,6 +11407,32 @@ struct iwl_pnvm_init_complete_ntfy {
+     uint32_t status;
+ } __packed; /* PNVM_INIT_COMPLETE_NTFY_S_VER_1 */
+ 
++/*
++ * Number of bytes of an RX buffer that iwx_rx_pkt() will consume. Must
++ * stop exactly where the packet loop in iwx_rx_pkt() stops; the bytes
++ * after this point are zeroed instead of copied from the bounce buffer.
++ */
++size_t ItlIwx::
++iwx_rx_buf_used(struct iwx_softc *sc, const uint8_t *buf)
++{
++    struct iwx_rx_packet *pkt;
++    const size_t minsz = sizeof(pkt->len_n_flags) + sizeof(pkt->hdr);
++    uint32_t offset = 0, len;
++    
++    while (offset + minsz < IWX_RBUF_SIZE) {
++        pkt = (struct iwx_rx_packet *)(buf + offset);
++        if (!iwx_rx_pkt_valid(pkt))
++            break;
++        len = sizeof(pkt->len_n_flags) + iwx_rx_packet_len(pkt);
++        if (len < minsz || len > (IWX_RBUF_SIZE - offset))
++            break;
++        offset += roundup(len, IWX_FH_RSCSR_FRAME_ALIGN);
++        if (sc->sc_device_family >= IWX_DEVICE_FAMILY_AX210)
++            break;
++    }
++    return MIN(offset, IWX_RBUF_SIZE);
++}
++
+ void ItlIwx::
+ iwx_rx_pkt(struct iwx_softc *sc, struct iwx_rx_data *data, struct mbuf_list *ml)
+ {
+@@ -11406,7 +11446,15 @@ iwx_rx_pkt(struct iwx_softc *sc, struct iwx_rx_data *data, struct mbuf_list *ml)
+     //    bus_dmamap_sync(sc->sc_dmat, data->map, 0, IWX_RBUF_SIZE,
+     //        BUS_DMASYNC_POSTREAD);
+     
+-    if (!bus_dmamap_read(data->map, data->m, IWX_RBUF_SIZE)) {
++    const uint8_t *rxbuf = (const uint8_t *)bus_dmamap_rx_data(data->map, IWX_RBUF_SIZE);
++    if (rxbuf) {
++        /* Copy only the packets the firmware wrote, zero the rest. */
++        if (!bus_dmamap_read_used(data->map, data->m,
++            iwx_rx_buf_used(sc, rxbuf), IWX_RBUF_SIZE)) {
++            ifp->netStat->inputErrors++;
++            return;
++        }
++    } else if (!bus_dmamap_read(data->map, data->m, IWX_RBUF_SIZE)) {
+         ifp->netStat->inputErrors++;
+         return;
+     }
+diff --git a/itlwm/hal_iwx/ItlIwx.hpp b/itlwm/hal_iwx/ItlIwx.hpp
+index 0148c50..8360ff1 100644
+--- a/itlwm/hal_iwx/ItlIwx.hpp
++++ b/itlwm/hal_iwx/ItlIwx.hpp
+@@ -473,6 +473,7 @@ public:
+             struct iwx_rx_mpdu_desc *, int, int, uint32_t,
+             struct ieee80211_rxinfo *, struct mbuf_list *);
+     int    iwx_rx_pkt_valid(struct iwx_rx_packet *);
++    size_t iwx_rx_buf_used(struct iwx_softc *, const uint8_t *);
+     void    iwx_rx_pkt(struct iwx_softc *, struct iwx_rx_data *,
+             struct mbuf_list *);
+     void    iwx_notif_intr(struct iwx_softc *);

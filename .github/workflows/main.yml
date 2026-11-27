@@ -1,81 +1,118 @@
-name: CD
+name: Build
 
 on:
-  push:
-    branches: master
+  workflow_dispatch:
 
-env:
-  BUILD_OUTPUT: 'build/Build/Products/Debug'
+permissions:
+  contents: read
+
+concurrency:
+  group: build-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
-
   build:
-    
-    runs-on: macos-latest
-
+    name: ${{ matrix.platform }} (${{ matrix.configuration }})
+    runs-on: macos-15-intel
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [Sequoia, Tahoe]
+        configuration: [Debug, Release]
     steps:
+      - uses: actions/checkout@v4
+      - name: Install MacKernelSDK
+        uses: actions/checkout@v4
+        with:
+          repository: acidanthera/MacKernelSDK
+          ref: 3f750085caa17ec3a7880f11c11bf4f48cd6a164
+          path: MacKernelSDK
+      - name: Build AirportItlwm for ${{ matrix.platform }}
+        env:
+          CONFIGURATION: ${{ matrix.configuration }}
+          PLATFORM: ${{ matrix.platform }}
+        run: |
+          set -euo pipefail
+          mkdir -p logs
+          xcodebuild -project itlwm.xcodeproj -scheme "AirportItlwm-$PLATFORM" \
+            -configuration "$CONFIGURATION" -jobs 3 ARCHS=x86_64 \
+            SYMROOT="$PWD/build/products" OBJROOT="$PWD/build/obj" \
+            CODE_SIGNING_ALLOWED=NO GIT_COMMIT="_$(git rev-parse --short HEAD)" \
+            build > "logs/AirportItlwm-$PLATFORM.log" 2>&1 || { tail -100 "logs/AirportItlwm-$PLATFORM.log"; exit 1; }
+      - name: Package kernel extension
+        env:
+          CONFIGURATION: ${{ matrix.configuration }}
+          PLATFORM: ${{ matrix.platform }}
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts
+          products="$PWD/build/products/$CONFIGURATION"
+          version=$(awk '/MODULE_VERSION =/ {gsub(/;/, "", $3); print $3; exit}' itlwm.xcodeproj/project.pbxproj)
+          short_sha=$(git rev-parse --short HEAD)
+          configuration=$(printf '%s' "$CONFIGURATION" | tr '[:lower:]' '[:upper:]')
+          suffix="v$version-$configuration-alpha-$short_sha"
+          ditto -c -k --keepParent "$products/$PLATFORM/AirportItlwm.kext" "artifacts/AirportItlwm-$PLATFORM-$suffix.zip"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: AirportItlwm-${{ matrix.platform }}-${{ matrix.configuration }}
+          path: artifacts/AirportItlwm-${{ matrix.platform }}-*.zip
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: build-logs-${{ matrix.platform }}-${{ matrix.configuration }}
+          path: logs
 
-    - uses: actions/checkout@v2
-      with:
-        fetch-depth: '5'
+  prerelease:
+    name: Publish development build
+    needs: build
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 5
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: AirportItlwm-*
+          path: artifacts
+          merge-multiple: true
+      - name: Publish alpha artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          version=$(awk '/MODULE_VERSION =/ {gsub(/;/, "", $3); print $3; exit}' itlwm.xcodeproj/project.pbxproj)
+          tag="v$version-alpha"
+          printf '%s\n\n' 'Development build. Hardware validation is required before daily use.' > ReleaseNotes.md
+          git log -5 --format='- %h %s' >> ReleaseNotes.md
+          if gh release view "$tag" --json isPrerelease > current-release.json 2>/dev/null; then
+            # Never replace a stable release with development artifacts.
+            jq -e '.isPrerelease == true' current-release.json > /dev/null
+            gh api --method PATCH "repos/$GITHUB_REPOSITORY/git/refs/tags/$tag" \
+              -f sha="$GITHUB_SHA" -F force=true
+            gh release edit "$tag" --prerelease --notes-file ReleaseNotes.md
+          else
+            gh release create "$tag" --target "$GITHUB_SHA" --prerelease --title "$tag" --notes-file ReleaseNotes.md
+          fi
+          gh release upload "$tag" artifacts/AirportItlwm-*.zip --clobber
 
-    - name: Manage Version
-      run: |
-        git fetch --prune --unshallow --tags
-        GIT_SHA="$(git rev-parse --short HEAD)"
-        CUR_TAG="$(git tag -l | grep 'alpha\|beta' | tail -1)"
-        eval $(grep -m 1 "MODULE_VERSION =" itlwm.xcodeproj/project.pbxproj | tr -d ';' | tr -d '\t' | tr -d " ")
-        echo "SHORT_SHA=$GIT_SHA" >> $GITHUB_ENV
-        echo "ITLWM_VER=$MODULE_VERSION" >> $GITHUB_ENV
-        if [[ -z $CUR_TAG ]]; then
-          echo "OLD_PRE_TAG=NULL" >> $GITHUB_ENV
-        else
-          echo "OLD_PRE_TAG=$CUR_TAG" >> $GITHUB_ENV
-        fi
+          # Remove obsolete assets only after the replacement set has uploaded.
+          gh api "repos/$GITHUB_REPOSITORY/releases/tags/$tag" \
+            --jq '.assets[] | [.id, .name] | @tsv' > release-assets.tsv
+          while IFS=$'\t' read -r asset_id asset_name; do
+            if [[ ! -f "artifacts/$asset_name" ]]; then
+              gh api --method DELETE "repos/$GITHUB_REPOSITORY/releases/assets/$asset_id"
+            fi
+          done < release-assets.tsv
 
-    - name: Install MacKernelSDK
-      run: |
-        git clone --depth=1 https://github.com/acidanthera/MacKernelSDK.git
-
-    - name: Build itlwm
-      run: |
-        xcodebuild -scheme itlwm -configuration Debug -derivedDataPath build GIT_COMMIT=_${SHORT_SHA} | xcpretty && exit ${PIPESTATUS[0]}
-
-    - name: Build AirportItlwm
-      run: |
-        xcodebuild -scheme "AirportItlwm (all)" -configuration Debug -derivedDataPath build GIT_COMMIT=_${SHORT_SHA} | xcpretty && exit ${PIPESTATUS[0]}
-
-    - name: Pack Artifacts
-      run: |
-        cd $BUILD_OUTPUT
-          zip -r itlwm-v${ITLWM_VER}-DEBUG-alpha-${SHORT_SHA}.zip itlwm.kext
-          while read -r tgt ; do
-            zip -r AirportItlwm-${tgt// /_}-v${ITLWM_VER}-DEBUG-alpha-${SHORT_SHA}.zip "$tgt"
-          done < <(find . -mindepth 1 -maxdepth 1 -type d -not -path "*.kext" | cut -c 3-)
-        cd -
-
-    - name: Generate Prerelease Release Notes
-      run: |
-        echo '### Disclaimer:' >> ReleaseNotes.md
-        echo '***This alpha version is for testing only.***' >> ReleaseNotes.md
-        echo 'It is not ready for daily use and we do not guarantee its usability.' >> ReleaseNotes.md
-        echo 'If you discovered an issue and you do not have debugging skills, please check with the [Gitter Chat Room](https://gitter.im/OpenIntelWireless/itlwm) in advance before opening an Issue.' >> ReleaseNotes.md
-        echo '### The latest five updates are:' >> ReleaseNotes.md
-        git log -"5" --format="- %H %s" | sed '/^$/d' >> ReleaseNotes.md
-
-    - name: Delete Old Prerelease
-      uses: dev-drprasad/delete-tag-and-release@v0.2.1
-      with:
-        tag_name: ${{ env.OLD_PRE_TAG }}
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-    - name: Publish GitHub Release
-      if: contains(github.event.head_commit.message, 'Bump version') == false
-      uses: ncipollo/release-action@v1.12.0
-      with:
-        prerelease: true
-        bodyFile: ReleaseNotes.md
-        artifacts: "${{ env.BUILD_OUTPUT }}/*.zip"
-        tag: "v${{ env.ITLWM_VER }}-alpha"
-        token: ${{ secrets.GITHUB_TOKEN }}
+          # Keep exactly one prerelease; stable releases are retained.
+          gh api --paginate "repos/$GITHUB_REPOSITORY/releases" \
+            --jq '.[] | select(.prerelease and (.draft | not)) | .tag_name' > prereleases.txt
+          while IFS= read -r old_tag; do
+            if [[ "$old_tag" != "$tag" ]]; then
+              gh release delete "$old_tag" --yes --cleanup-tag
+            fi
+          done < prereleases.txt
